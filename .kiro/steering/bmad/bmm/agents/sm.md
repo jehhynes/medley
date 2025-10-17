@@ -1,7 +1,5 @@
 ---
-description: BMAD BMM Agent: Scrum Master
-globs: 
-alwaysApply: false
+inclusion: manual
 ---
 
 <!-- Powered by BMAD-CORE™ -->

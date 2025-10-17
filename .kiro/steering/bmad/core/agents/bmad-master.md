@@ -1,7 +1,5 @@
 ---
-description: BMAD CORE Agent: BMad Master Executor, Knowledge Custodian, and Workflow Orchestrator
-globs: 
-alwaysApply: false
+inclusion: manual
 ---
 
 <!-- Powered by BMAD-CORE™ -->

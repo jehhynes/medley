@@ -1,7 +1,5 @@
 ---
-description: BMAD BMM Agent: Product Manager
-globs: 
-alwaysApply: false
+inclusion: manual
 ---
 
 <!-- Powered by BMAD-CORE™ -->

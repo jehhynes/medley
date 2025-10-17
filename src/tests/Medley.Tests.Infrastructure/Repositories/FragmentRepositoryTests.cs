@@ -3,22 +3,39 @@ using Medley.Domain.Entities;
 using Medley.Infrastructure.Data;
 using Medley.Infrastructure.Data.Repositories;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Xunit;
 
 namespace Medley.Tests.Infrastructure.Repositories;
 
 [Collection("Database")]
-public class FragmentRepositoryTests : IClassFixture<DatabaseFixture>
+public class FragmentRepositoryTests : IClassFixture<DatabaseFixture>, IAsyncLifetime
 {
     private readonly DatabaseFixture _fixture;
-    private readonly ApplicationDbContext _context;
-    private readonly IFragmentRepository _repository;
+    private ApplicationDbContext _context = null!;
+    private IFragmentRepository _repository = null!;
+    private IDbContextTransaction _transaction = null!;
 
     public FragmentRepositoryTests(DatabaseFixture fixture)
     {
         _fixture = fixture;
+    }
+
+    public async Task InitializeAsync()
+    {
         _context = _fixture.CreateDbContext();
         _repository = new FragmentRepository(_context);
+        
+        // Start a transaction for test isolation
+        _transaction = await _context.Database.BeginTransactionAsync();
+    }
+
+    public async Task DisposeAsync()
+    {
+        // Rollback transaction to undo all changes made during the test
+        await _transaction.RollbackAsync();
+        await _transaction.DisposeAsync();
+        await _context.DisposeAsync();
     }
 
     [Fact]
@@ -41,10 +58,6 @@ public class FragmentRepositoryTests : IClassFixture<DatabaseFixture>
         Assert.NotNull(result);
         Assert.Equal(fragment.Id, result.Id);
         Assert.Equal(fragment.Content, result.Content);
-
-        // Cleanup
-        _context.Fragments.Remove(fragment);
-        await _context.SaveChangesAsync();
     }
 
     [Fact]
@@ -78,10 +91,6 @@ public class FragmentRepositoryTests : IClassFixture<DatabaseFixture>
         var saved = await _context.Fragments.FindAsync(fragment.Id);
         Assert.NotNull(saved);
         Assert.Equal(fragment.Content, saved.Content);
-
-        // Cleanup
-        _context.Fragments.Remove(fragment);
-        await _context.SaveChangesAsync();
     }
 
     [Fact]
@@ -101,13 +110,157 @@ public class FragmentRepositoryTests : IClassFixture<DatabaseFixture>
         var result = _repository.Query().ToList();
 
         // Assert
-        Assert.True(result.Count >= 3, $"Expected at least 3 fragments, but found {result.Count}");
+        Assert.Equal(3, result.Count);
         Assert.Contains(result, f => f.Content == "Fragment 1");
         Assert.Contains(result, f => f.Content == "Fragment 2");
         Assert.Contains(result, f => f.Content == "Fragment 3");
+    }
 
-        // Cleanup
-        _context.Fragments.RemoveRange(fragments);
+    [Fact]
+    public async Task FindSimilarAsync_ShouldReturnSimilarFragments_OrderedByDistance()
+    {
+        // Arrange - Create test fragments with embeddings
+        var baseEmbedding = CreateTestEmbedding(1.0f, 0.0f);
+        var similarEmbedding = CreateTestEmbedding(0.9f, 0.1f);
+        var differentEmbedding = CreateTestEmbedding(0.0f, 1.0f);
+
+        var fragments = new[]
+        {
+            new Fragment
+            {
+                Id = Guid.NewGuid(),
+                Content = "Base fragment",
+                Embedding = baseEmbedding,
+                CreatedAt = DateTimeOffset.UtcNow
+            },
+            new Fragment
+            {
+                Id = Guid.NewGuid(),
+                Content = "Similar fragment",
+                Embedding = similarEmbedding,
+                CreatedAt = DateTimeOffset.UtcNow
+            },
+            new Fragment
+            {
+                Id = Guid.NewGuid(),
+                Content = "Different fragment",
+                Embedding = differentEmbedding,
+                CreatedAt = DateTimeOffset.UtcNow
+            }
+        };
+
+        await _context.Fragments.AddRangeAsync(fragments);
         await _context.SaveChangesAsync();
+
+        // Act - Find similar fragments to base embedding
+        var results = await _repository.FindSimilarAsync(baseEmbedding, 2);
+        var resultList = results.ToList();
+
+        // Assert
+        Assert.Equal(2, resultList.Count);
+        Assert.Equal("Base fragment", resultList[0].Fragment.Content); // Most similar (identical)
+        Assert.Equal("Similar fragment", resultList[1].Fragment.Content); // Second most similar
+        Assert.True(resultList[0].Distance <= resultList[1].Distance); // Ordered by distance
+    }
+
+    [Fact]
+    public async Task FindSimilarAsync_WithThreshold_ShouldFilterByDistance()
+    {
+        // Arrange
+        var queryEmbedding = CreateTestEmbedding(1.0f, 0.0f);
+        var similarEmbedding = CreateTestEmbedding(0.95f, 0.05f);
+        var differentEmbedding = CreateTestEmbedding(0.0f, 1.0f);
+
+        var fragments = new[]
+        {
+            new Fragment
+            {
+                Id = Guid.NewGuid(),
+                Content = "Similar fragment",
+                Embedding = similarEmbedding,
+                CreatedAt = DateTimeOffset.UtcNow
+            },
+            new Fragment
+            {
+                Id = Guid.NewGuid(),
+                Content = "Different fragment",
+                Embedding = differentEmbedding,
+                CreatedAt = DateTimeOffset.UtcNow
+            }
+        };
+
+        await _context.Fragments.AddRangeAsync(fragments);
+        await _context.SaveChangesAsync();
+
+        // Act - Find similar with threshold that filters out very different embeddings
+        // The cosine distance between similar embeddings is ~2.0, and very different is ~39
+        var results = await _repository.FindSimilarAsync(queryEmbedding, 10, 10.0);
+        var resultList = results.ToList();
+
+        // Assert - Should only return the similar fragment, not the different one
+        Assert.Single(resultList);
+        Assert.Equal("Similar fragment", resultList[0].Fragment.Content);
+    }
+
+    [Fact]
+    public async Task FindSimilarAsync_ShouldHandleEmptyDatabase()
+    {
+        // Arrange
+        var queryEmbedding = CreateTestEmbedding(1.0f, 0.0f);
+
+        // Act
+        var results = await _repository.FindSimilarAsync(queryEmbedding, 10);
+        var resultList = results.ToList();
+
+        // Assert
+        Assert.Empty(resultList);
+    }
+
+    [Fact]
+    public async Task FindSimilarAsync_ShouldIgnoreFragmentsWithoutEmbeddings()
+    {
+        // Arrange
+        var queryEmbedding = CreateTestEmbedding(1.0f, 0.0f);
+        var fragments = new[]
+        {
+            new Fragment
+            {
+                Id = Guid.NewGuid(),
+                Content = "Fragment with embedding",
+                Embedding = queryEmbedding,
+                CreatedAt = DateTimeOffset.UtcNow
+            },
+            new Fragment
+            {
+                Id = Guid.NewGuid(),
+                Content = "Fragment without embedding",
+                Embedding = null,
+                CreatedAt = DateTimeOffset.UtcNow
+            }
+        };
+
+        await _context.Fragments.AddRangeAsync(fragments);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var results = await _repository.FindSimilarAsync(queryEmbedding, 10);
+        var resultList = results.ToList();
+
+        // Assert
+        Assert.Single(resultList);
+        Assert.Equal("Fragment with embedding", resultList[0].Fragment.Content);
+    }
+
+    /// <summary>
+    /// Creates a test embedding vector with specified values
+    /// </summary>
+    private static float[] CreateTestEmbedding(float primaryValue, float secondaryValue)
+    {
+        var embedding = new float[1536];
+        for (int i = 0; i < 1536; i++)
+        {
+            embedding[i] = i % 2 == 0 ? primaryValue : secondaryValue;
+        }
+        return embedding;
     }
 }

@@ -30,7 +30,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Medley.Web.Prog
 
             // Add DbContext with Testcontainers connection string
             services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseNpgsql(_fixture.ConnectionString)
+                options.UseNpgsql(_fixture.ConnectionString, o => o.UseVector())
                     .ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
         });
     }

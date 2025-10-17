@@ -1,7 +1,5 @@
 ---
-description: BMAD BMM Agent: Architect
-globs: 
-alwaysApply: false
+inclusion: manual
 ---
 
 <!-- Powered by BMAD-CORE™ -->

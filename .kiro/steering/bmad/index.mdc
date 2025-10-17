@@ -1,7 +1,5 @@
 ---
-description: BMAD Method - Master Index
-globs: 
-alwaysApply: true
+inclusion: manual
 ---
 
 # BMAD Method - Cursor Rules Index

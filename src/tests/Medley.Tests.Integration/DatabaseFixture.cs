@@ -27,7 +27,7 @@ public class DatabaseFixture : IAsyncLifetime
 
         // Create and migrate the database once
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseNpgsql(ConnectionString)
+            .UseNpgsql(ConnectionString, o => o.UseVector())
             .ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning))
             .Options;
 
@@ -46,7 +46,7 @@ public class DatabaseFixture : IAsyncLifetime
     public ApplicationDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseNpgsql(ConnectionString)
+            .UseNpgsql(ConnectionString, o => o.UseVector())
             .ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning))
             .Options;
 

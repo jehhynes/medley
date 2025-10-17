@@ -41,7 +41,7 @@ public class UnitOfWorkDatabaseFixture : IAsyncLifetime
         var connectionString = _baseConnectionString.Replace("Database=postgres", $"Database={databaseName}");
 
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseNpgsql(connectionString)
+            .UseNpgsql(connectionString, o => o.UseVector())
             .ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning))
             .Options;
 

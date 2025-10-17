@@ -1,5 +1,6 @@
 using Medley.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Testcontainers.PostgreSql;
 using Xunit;
 
@@ -13,7 +14,7 @@ public class DatabaseFixture : IAsyncLifetime
     public DatabaseFixture()
     {
         _dbContainer = new PostgreSqlBuilder()
-            .WithImage("postgres:16-alpine")
+            .WithImage("pgvector/pgvector:pg16")
             .WithDatabase("medley_test")
             .WithUsername("postgres")
             .WithPassword("postgres")
@@ -25,13 +26,22 @@ public class DatabaseFixture : IAsyncLifetime
         await _dbContainer.StartAsync();
         ConnectionString = _dbContainer.GetConnectionString();
 
+        //Ensures both EF and direct Npgsql queries can use the vector type mapping
+        var dataSourceBuilder = new NpgsqlDataSourceBuilder(ConnectionString);
+        dataSourceBuilder.UseVector();
+        var dataSource = dataSourceBuilder.Build();
+
         // Create and migrate the database once
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseNpgsql(ConnectionString)
+            .UseNpgsql(dataSource, o => o.UseVector())
             .ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning))
             .Options;
 
         using var context = new ApplicationDbContext(options);
+        
+        // Ensure pgvector extension is installed
+        await context.Database.ExecuteSqlRawAsync("CREATE EXTENSION IF NOT EXISTS vector");
+        
         await context.Database.MigrateAsync();
     }
 
@@ -46,7 +56,7 @@ public class DatabaseFixture : IAsyncLifetime
     public ApplicationDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseNpgsql(ConnectionString)
+            .UseNpgsql(ConnectionString, o => o.UseVector())
             .ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning))
             .Options;
 
