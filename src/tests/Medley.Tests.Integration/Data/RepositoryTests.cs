@@ -4,33 +4,19 @@ using Medley.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore.Storage;
 using Xunit;
 
-namespace Medley.Tests.Infrastructure.Data;
+namespace Medley.Tests.Integration.Data;
 
-public class RepositoryTests : IClassFixture<DatabaseFixture>, IAsyncLifetime
+public class RepositoryTests : DatabaseTestBase
 {
-    private readonly DatabaseFixture _fixture;
-    private ApplicationDbContext _dbContext = null!;
-    private IDbContextTransaction _transaction = null!;
     private IRepository<User> _repository = null!;
-
-    public RepositoryTests(DatabaseFixture fixture)
+    public RepositoryTests(DatabaseFixture fixture) : base(fixture)
     {
-        _fixture = fixture;
     }
 
-    public async Task InitializeAsync()
+    public override async Task InitializeAsync()
     {
-        _dbContext = _fixture.CreateDbContext();
-        _transaction = await _dbContext.Database.BeginTransactionAsync();
+        await base.InitializeAsync();
         _repository = new Repository<User>(_dbContext);
-    }
-
-
-    public async Task DisposeAsync()
-    {
-        await _transaction.RollbackAsync();
-        await _transaction.DisposeAsync();
-        await _dbContext.DisposeAsync();
     }
 
     [Fact]

@@ -3,7 +3,7 @@ using Medley.Domain.Entities;
 using Medley.Infrastructure.Data;
 using Xunit;
 
-namespace Medley.Tests.Infrastructure.Data;
+namespace Medley.Tests.Integration.Data;
 
 public class UnitOfWorkTests : IClassFixture<UnitOfWorkDatabaseFixture>
 {

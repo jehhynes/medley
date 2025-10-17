@@ -6,6 +6,7 @@ using Medley.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 
 namespace Medley.Infrastructure;
 
@@ -20,8 +21,15 @@ public static class DependencyInjection
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
-        services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseNpgsql(connectionString, o => o.UseVector()));
+        // Register NpgsqlDataSource as singleton for proper connection pool management
+        services.AddSingleton<NpgsqlDataSource>(sp => ApplicationDbContextFactory.CreateDataSource(connectionString));
+
+        // Register DbContext using the singleton data source
+        services.AddDbContext<ApplicationDbContext>((sp, options) =>
+        {
+            var dataSource = sp.GetRequiredService<NpgsqlDataSource>();
+            options.UseNpgsql(dataSource, o => o.UseVector());
+        });
 
         // Register repositories and unit of work
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));

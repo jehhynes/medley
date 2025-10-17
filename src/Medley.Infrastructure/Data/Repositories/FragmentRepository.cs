@@ -13,10 +13,12 @@ namespace Medley.Infrastructure.Data.Repositories;
 public class FragmentRepository : Repository<Fragment>, IFragmentRepository
 {
     private readonly ApplicationDbContext _context;
+    private readonly NpgsqlDataSource _dataSource;
 
-    public FragmentRepository(ApplicationDbContext context) : base(context)
+    public FragmentRepository(ApplicationDbContext context, NpgsqlDataSource dataSource) : base(context)
     {
         _context = context;
+        _dataSource = dataSource;
     }
 
     /// <summary>
@@ -26,35 +28,52 @@ public class FragmentRepository : Repository<Fragment>, IFragmentRepository
     {
         var idsWithDistances = new List<(Guid Id, double Distance)>();
 
+        // Get the connection from EF Core context (which uses the data source with vector support)
         var connection = (NpgsqlConnection)_context.Database.GetDbConnection();
+        var shouldCloseConnection = false;
 
-        // Ensure connection is open
-        if (connection.State != System.Data.ConnectionState.Open)
+        try
         {
-            await connection.OpenAsync();
-        }
-
-        // Format embedding as PostgreSQL vector literal: '[1,2,3]'
-        var vectorString = $"[{string.Join(",", embedding)}]";
-
-        var sql = $@"SELECT ""Id"", ""Embedding""::vector <-> @embedding AS distance
-                     FROM ""Fragments""
-                     WHERE ""Embedding"" IS NOT NULL
-                     {(threshold.HasValue ? $"AND \"Embedding\"::vector <-> @embedding <= {threshold.Value}" : "")}
-                     ORDER BY ""Embedding""::vector <-> @embedding
-                     LIMIT @limit";
-
-        await using (var cmd = new NpgsqlCommand(sql, connection))
-        {
-            cmd.Parameters.AddWithValue("@embedding", new Vector(embedding));
-            cmd.Parameters.AddWithValue("@limit", limit);
-
-            await using (var reader = await cmd.ExecuteReaderAsync())
+            // Ensure connection is open
+            if (connection.State != System.Data.ConnectionState.Open)
             {
-                while (await reader.ReadAsync())
+                await connection.OpenAsync();
+                shouldCloseConnection = true;
+            }
+
+            // Reload types to ensure vector extension is recognized
+            await connection.ReloadTypesAsync();
+
+            // Format embedding as PostgreSQL vector literal: '[1,2,3]'
+            var vectorString = $"[{string.Join(",", embedding)}]";
+
+            var sql = $@"SELECT ""Id"", ""Embedding""::vector <-> @embedding AS distance
+                         FROM ""Fragments""
+                         WHERE ""Embedding"" IS NOT NULL
+                         {(threshold.HasValue ? $"AND \"Embedding\"::vector <-> @embedding <= {threshold.Value}" : "")}
+                         ORDER BY ""Embedding""::vector <-> @embedding
+                         LIMIT @limit";
+
+            await using (var cmd = new NpgsqlCommand(sql, connection))
+            {
+                cmd.Parameters.AddWithValue("@embedding", new Vector(embedding));
+                cmd.Parameters.AddWithValue("@limit", limit);
+
+                await using (var reader = await cmd.ExecuteReaderAsync())
                 {
-                    idsWithDistances.Add((reader.GetGuid(0), reader.GetDouble(1)));
+                    while (await reader.ReadAsync())
+                    {
+                        idsWithDistances.Add((reader.GetGuid(0), reader.GetDouble(1)));
+                    }
                 }
+            }
+        }
+        finally
+        {
+            // Only close if we opened it
+            if (shouldCloseConnection && connection.State == System.Data.ConnectionState.Open)
+            {
+                await connection.CloseAsync();
             }
         }
 

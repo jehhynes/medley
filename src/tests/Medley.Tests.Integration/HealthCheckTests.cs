@@ -15,7 +15,7 @@ public class HealthCheckTests : IClassFixture<DatabaseFixture>
     public async Task HealthCheck_WithRealDatabase_ReturnsHealthy()
     {
         // Arrange - Integration tests use shared database (no isolation needed for health checks)
-        using var factory = new CustomWebApplicationFactory(_fixture);
+        using var factory = new TestWebApplicationFactory(_fixture);
         var client = factory.CreateClient();
 
         // Act

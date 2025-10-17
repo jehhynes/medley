@@ -1,5 +1,6 @@
 using Medley.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Testcontainers.PostgreSql;
 using Xunit;
 
@@ -8,12 +9,13 @@ namespace Medley.Tests.Integration;
 public class DatabaseFixture : IAsyncLifetime
 {
     private readonly PostgreSqlContainer _dbContainer;
+    private NpgsqlDataSource? _dataSource;
     public string ConnectionString { get; private set; } = null!;
 
     public DatabaseFixture()
     {
         _dbContainer = new PostgreSqlBuilder()
-            .WithImage("postgres:16-alpine")
+            .WithImage("pgvector/pgvector:pg16")
             .WithDatabase("medley_test")
             .WithUsername("postgres")
             .WithPassword("postgres")
@@ -25,31 +27,42 @@ public class DatabaseFixture : IAsyncLifetime
         await _dbContainer.StartAsync();
         ConnectionString = _dbContainer.GetConnectionString();
 
-        // Create and migrate the database once
-        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseNpgsql(ConnectionString, o => o.UseVector())
-            .ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning))
-            .Options;
+        // Create data source once for the fixture lifetime
+        _dataSource = ApplicationDbContextFactory.CreateDataSource(ConnectionString);
 
-        using var context = new ApplicationDbContext(options);
+        // Create and migrate the database once
+        using var context = ApplicationDbContextFactory.CreateDbContext(_dataSource);
+        
+        // Ensure pgvector extension is installed
+        await context.Database.ExecuteSqlRawAsync("CREATE EXTENSION IF NOT EXISTS vector");
+        
         await context.Database.MigrateAsync();
     }
 
     public async Task DisposeAsync()
     {
+        _dataSource?.Dispose();
         await _dbContainer.DisposeAsync();
     }
 
     /// <summary>
-    /// Creates a new DbContext instance for testing
+    /// Gets the data source for creating connections with vector support
+    /// </summary>
+    public NpgsqlDataSource DataSource
+    {
+        get
+        {
+            if (_dataSource == null)
+                throw new InvalidOperationException("DatabaseFixture not initialized. Ensure InitializeAsync was called.");
+            return _dataSource;
+        }
+    }
+
+    /// <summary>
+    /// Creates a new DbContext instance for testing using the shared data source
     /// </summary>
     public ApplicationDbContext CreateDbContext()
     {
-        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseNpgsql(ConnectionString, o => o.UseVector())
-            .ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning))
-            .Options;
-
-        return new ApplicationDbContext(options);
+        return ApplicationDbContextFactory.CreateDbContext(DataSource);
     }
 }

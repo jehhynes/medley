@@ -6,36 +6,20 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Xunit;
 
-namespace Medley.Tests.Infrastructure.Repositories;
+namespace Medley.Tests.Integration.Repositories;
 
-[Collection("Database")]
-public class FragmentRepositoryTests : IClassFixture<DatabaseFixture>, IAsyncLifetime
+public class FragmentRepositoryTests : DatabaseTestBase
 {
-    private readonly DatabaseFixture _fixture;
-    private ApplicationDbContext _context = null!;
-    private IFragmentRepository _repository = null!;
-    private IDbContextTransaction _transaction = null!;
+    protected IFragmentRepository _repository = null!;
 
-    public FragmentRepositoryTests(DatabaseFixture fixture)
+    public FragmentRepositoryTests(DatabaseFixture fixture) : base(fixture)
     {
-        _fixture = fixture;
     }
 
-    public async Task InitializeAsync()
+    public override async Task InitializeAsync()
     {
-        _context = _fixture.CreateDbContext();
-        _repository = new FragmentRepository(_context);
-        
-        // Start a transaction for test isolation
-        _transaction = await _context.Database.BeginTransactionAsync();
-    }
-
-    public async Task DisposeAsync()
-    {
-        // Rollback transaction to undo all changes made during the test
-        await _transaction.RollbackAsync();
-        await _transaction.DisposeAsync();
-        await _context.DisposeAsync();
+        await base.InitializeAsync();
+        _repository = new FragmentRepository(_dbContext, _fixture.DataSource);
     }
 
     [Fact]
@@ -48,8 +32,8 @@ public class FragmentRepositoryTests : IClassFixture<DatabaseFixture>, IAsyncLif
             Content = "Test content",
             CreatedAt = DateTimeOffset.UtcNow
         };
-        await _context.Fragments.AddAsync(fragment);
-        await _context.SaveChangesAsync();
+        await _dbContext.Fragments.AddAsync(fragment);
+        await _dbContext.SaveChangesAsync();
 
         // Act
         var result = await _repository.GetByIdAsync(fragment.Id);
@@ -88,7 +72,7 @@ public class FragmentRepositoryTests : IClassFixture<DatabaseFixture>, IAsyncLif
         await _repository.SaveAsync(fragment);
 
         // Assert
-        var saved = await _context.Fragments.FindAsync(fragment.Id);
+        var saved = await _dbContext.Fragments.FindAsync(fragment.Id);
         Assert.NotNull(saved);
         Assert.Equal(fragment.Content, saved.Content);
     }
@@ -103,8 +87,8 @@ public class FragmentRepositoryTests : IClassFixture<DatabaseFixture>, IAsyncLif
             new Fragment { Id = Guid.NewGuid(), Content = "Fragment 2", CreatedAt = DateTimeOffset.UtcNow },
             new Fragment { Id = Guid.NewGuid(), Content = "Fragment 3", CreatedAt = DateTimeOffset.UtcNow }
         };
-        await _context.Fragments.AddRangeAsync(fragments);
-        await _context.SaveChangesAsync();
+        await _dbContext.Fragments.AddRangeAsync(fragments);
+        await _dbContext.SaveChangesAsync();
 
         // Act
         var result = _repository.Query().ToList();
@@ -149,8 +133,8 @@ public class FragmentRepositoryTests : IClassFixture<DatabaseFixture>, IAsyncLif
             }
         };
 
-        await _context.Fragments.AddRangeAsync(fragments);
-        await _context.SaveChangesAsync();
+        await _dbContext.Fragments.AddRangeAsync(fragments);
+        await _dbContext.SaveChangesAsync();
 
         // Act - Find similar fragments to base embedding
         var results = await _repository.FindSimilarAsync(baseEmbedding, 2);
@@ -189,8 +173,8 @@ public class FragmentRepositoryTests : IClassFixture<DatabaseFixture>, IAsyncLif
             }
         };
 
-        await _context.Fragments.AddRangeAsync(fragments);
-        await _context.SaveChangesAsync();
+        await _dbContext.Fragments.AddRangeAsync(fragments);
+        await _dbContext.SaveChangesAsync();
 
         // Act - Find similar with threshold that filters out very different embeddings
         // The cosine distance between similar embeddings is ~2.0, and very different is ~39
@@ -239,8 +223,8 @@ public class FragmentRepositoryTests : IClassFixture<DatabaseFixture>, IAsyncLif
             }
         };
 
-        await _context.Fragments.AddRangeAsync(fragments);
-        await _context.SaveChangesAsync();
+        await _dbContext.Fragments.AddRangeAsync(fragments);
+        await _dbContext.SaveChangesAsync();
 
         // Act
         var results = await _repository.FindSimilarAsync(queryEmbedding, 10);
