@@ -15,9 +15,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Medley.Application\Medley.Application.csproj" />
-    <ProjectReference Include="..\Medley.Domain\Medley.Domain.csproj" />
-    <ProjectReference Include="..\Medley.Infrastructure\Medley.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Medley.Application\Medley.Application.csproj" />
+    <ProjectReference Include="..\..\Medley.Infrastructure\Medley.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

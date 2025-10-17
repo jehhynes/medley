@@ -17,7 +17,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\Medley.Domain\Medley.Domain.csproj" />
+	  <ProjectReference Include="..\Medley.Application\Medley.Application.csproj" />
 	</ItemGroup>
 	
 </Project>

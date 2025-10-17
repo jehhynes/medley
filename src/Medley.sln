@@ -13,13 +13,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{02EA681E
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medley.Application", "Medley.Application\Medley.Application.csproj", "{11B9B894-FC9F-441A-B8A1-F327A2C8BF66}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medley.Tests.Web", "Medley.Tests.Web\Medley.Tests.Web.csproj", "{021C4E09-3D92-49C6-AED2-47404B994B50}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medley.Tests.Web", "tests\Medley.Tests.Web\Medley.Tests.Web.csproj", "{021C4E09-3D92-49C6-AED2-47404B994B50}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medley.Tests.Integration", "Medley.Tests.Integration\Medley.Tests.Integration.csproj", "{F69B152B-D1F7-453D-93DB-7BF5D00C8AC4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medley.Tests.Integration", "tests\Medley.Tests.Integration\Medley.Tests.Integration.csproj", "{F69B152B-D1F7-453D-93DB-7BF5D00C8AC4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medley.Tests.Domain", "Medley.Tests.Domain\Medley.Tests.Domain.csproj", "{8ACE47C0-6002-47AC-9C6B-B4F0BC1C458D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medley.Tests.Domain", "tests\Medley.Tests.Domain\Medley.Tests.Domain.csproj", "{8ACE47C0-6002-47AC-9C6B-B4F0BC1C458D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medley.Tests.Application", "Medley.Tests.Application\Medley.Tests.Application.csproj", "{CF93F536-69E6-43F8-8DA2-11E9555A8A44}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medley.Tests.Application", "tests\Medley.Tests.Application\Medley.Tests.Application.csproj", "{CF93F536-69E6-43F8-8DA2-11E9555A8A44}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -16,7 +16,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Medley.Application\Medley.Application.csproj" />
-    <ProjectReference Include="..\Medley.Core\Medley.Application.csproj" />
   </ItemGroup>
 
 </Project>
