@@ -31,7 +31,7 @@
 | 1-Analysis | research (optional) | Analyst | Market/technical research | Optional |
 | 1-Analysis | product-brief | Analyst | Strategic product foundation | Planned |
 | 2-Plan | prd | PM | Create Product Requirements Document and epics | Complete |
-| 2-Plan | ux-spec | UX Expert | UX/UI specification (user flows, wireframes, components) | Planned |
+| 2-Plan | ux-spec | UX Expert | UX/UI specification (user flows, wireframes, components) | Complete |
 | 3-Solutioning | solution-architecture | Architect | Design overall architecture | Planned |
 | 3-Solutioning | tech-spec (per epic, JIT) | Architect | Epic-specific technical specs | Planned |
 | 4-Implementation | create-story (iterative) | SM | Draft stories from backlog | Planned |
@@ -58,14 +58,15 @@
 | Product Brief | Complete | docs/product-brief-Medley-2024-12-17.md | 2024-12-17 |
 | PRD | Complete | docs/PRD.md | 2025-01-17 |
 | Epic Breakdown | Complete | docs/epics.md | 2025-01-17 |
+| UX Specification | Complete | docs/ux-specification.md | 2025-01-17 |
 
 ### Next Action Required
 
-**What to do next:** Proceed to UX specification for user experience design
+**What to do next:** Proceed to Solution Architecture design for Level 3 project
 
-**Command to run:** ux-spec
+**Command to run:** solution-architecture
 
-**Agent to load:** UX Expert (Sally)
+**Agent to load:** Architect (Winston)
 
 ---
 
