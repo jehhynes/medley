@@ -440,6 +440,7 @@ medley/
 │   │   ├── Medley.Application.Tests/
 │   │   ├── Medley.Infrastructure.Tests/
 │   │   └── Medley.Web.Tests/
+├───|── Medley.sln
 ├── docs/
 │   ├── solution-architecture.md
 │   ├── tech-spec-epic-1.md
@@ -453,7 +454,6 @@ medley/
 ├── .github/
 │   └── workflows/
 │       └── ci-cd.yml
-├── Medley.sln
 └── README.md
 ```
 

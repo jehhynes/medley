@@ -4,7 +4,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Medley.Migrations
+namespace Medley.Infrastructure.Migrations
 {
     /// <inheritdoc />
     public partial class CreateIdentitySchema : Migration

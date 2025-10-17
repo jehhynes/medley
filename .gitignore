@@ -2,3 +2,4 @@ src/**/.vs/
 src/**/bin/
 src/**/obj/
 /.vs
+/src/Medley.Web/logs

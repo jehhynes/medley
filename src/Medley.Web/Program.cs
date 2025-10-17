@@ -1,24 +1,42 @@
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-namespace Medley.Web
-{
-    public class Program
+using Medley.Infrastructure;
+using Medley.Infrastructure.Data;
+using Serilog;
+
+namespace Medley.Web;
+
+public class Program
     {
         public static void Main(string[] args)
         {
-            var builder = WebApplication.CreateBuilder(args);
+            // Configure Serilog
+            Log.Logger = new LoggerConfiguration()
+                .WriteTo.Console()
+                .WriteTo.File("logs/medley-.txt", rollingInterval: RollingInterval.Day)
+                .CreateLogger();
 
-            // Add services to the container.
-            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-            builder.Services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseNpgsql(connectionString));
-            builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+            try
+            {
+                Log.Information("Starting Medley application");
 
-            builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
-                .AddEntityFrameworkStores<ApplicationDbContext>();
-            builder.Services.AddControllersWithViews();
+                var builder = WebApplication.CreateBuilder(args);
 
-            var app = builder.Build();
+                // Add Serilog
+                builder.Host.UseSerilog();
+
+                // Add services to the container.
+                builder.Services.AddInfrastructure(builder.Configuration);
+                builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+                builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
+                    .AddEntityFrameworkStores<ApplicationDbContext>();
+                builder.Services.AddControllersWithViews();
+
+                // Add health checks
+                builder.Services.AddHealthChecks()
+                    .AddDbContextCheck<ApplicationDbContext>();
+
+                var app = builder.Build();
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
@@ -39,12 +57,23 @@ namespace Medley.Web
 
             app.UseAuthorization();
 
+            // Map health check endpoint
+            app.MapHealthChecks("/health");
+
             app.MapControllerRoute(
                 name: "default",
                 pattern: "{controller=Home}/{action=Index}/{id?}");
             app.MapRazorPages();
 
             app.Run();
+            }
+            catch (Exception ex)
+            {
+                Log.Fatal(ex, "Application terminated unexpectedly");
+            }
+            finally
+            {
+                Log.CloseAndFlush();
+            }
         }
-    }
 }
