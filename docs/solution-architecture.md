@@ -574,7 +574,8 @@ medley/
 ### 17.3 API Security
 
 **External Integrations:**
-- OAuth 2.0 for Fellow.ai API authentication
+- OAuth 2.0 for future API authentication
+- API keys for Fellow.ai integration
 - API key management for AWS Bedrock and S3
 - Rate limiting and request throttling
 - Input validation and sanitization
