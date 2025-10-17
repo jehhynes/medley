@@ -10,9 +10,9 @@
 ## Workflow Status Tracker
 
 **Current Phase:** 4-Implementation
-**Current Workflow:** story-approved (Story 1.1) - Complete
+**Current Workflow:** story-context (Story 1.2) - Complete
 **Current Agent:** Scrum Master
-**Overall Progress:** 88%
+**Overall Progress:** 91%
 
 ### Phase Completion Status
 
@@ -49,8 +49,6 @@
 
 | Epic | Story | ID  | Title | File |
 | ---- | ----- | --- | ----- | ---- |
-| 1 | 2 | 1.2 | User Authentication and Authorization System | story-1.2.md |
-| 1 | 3 | 1.3 | Vector Database Setup with pgvector | story-1.3.md |
 | 1 | 4 | 1.4 | Core Data Models and Database Schema | story-1.4.md |
 | 1 | 5 | 1.5 | Background Processing Infrastructure | story-1.5.md |
 | 1 | 6 | 1.6 | AWS Integration Setup | story-1.6.md |
@@ -68,13 +66,13 @@
 | 2 | 10 | 2.10 | Fragment Storage and Indexing | story-2.10.md |
 | 2 | 11 | 2.11 | Fragment Search Interface | story-2.11.md |
 
-**Total in backlog:** 18 stories (Epic 1-2 detailed, Epic 3-5 to be detailed)
+**Total in backlog:** 16 stories (Epic 1-2 detailed, Epic 3-5 to be detailed)
 
 #### TODO (Needs Drafting)
 
-- **Story ID:** 1.3
-- **Story Title:** Vector Database Setup with pgvector
-- **Story File:** `story-1.3.md`
+- **Story ID:** 1.4
+- **Story Title:** Core Data Models and Database Schema
+- **Story File:** `story-1.4.md`
 - **Status:** Not created
 - **Action:** SM should run `create-story` workflow to draft this story
 
@@ -83,9 +81,17 @@
 - **Story ID:** 1.2
 - **Story Title:** User Authentication and Authorization System
 - **Story File:** `story-1.2.md`
-- **Status:** Not created
-- **Context File:** Context not yet generated
-- **Action:** SM should run `create-story` workflow to draft this story
+- **Story Status:** Ready
+- **Context File:** `story-context-1.2.xml`
+- **Action:** DEV should run `dev-story` workflow to implement this story
+
+#### DRAFT (Needs Review)
+
+- **Story ID:** 1.3
+- **Story Title:** Vector Database Setup with pgvector
+- **Story File:** `story-1.3.md`
+- **Status:** Draft
+- **Action:** Review story and run `story-ready` when satisfied
 
 #### DONE (Completed Stories)
 
@@ -117,11 +123,11 @@
 
 ### Next Action Required
 
-**What to do next:** Draft story 1.2 (User Authentication and Authorization System)
+**What to do next:** Implement Story 1.2 (User Authentication and Authorization System)
 
-**Command to run:** Load SM agent and run 'create-story' workflow
+**Command to run:** Load DEV agent and run 'dev-story' workflow
 
-**Agent to load:** Scrum Master (Bob)
+**Agent to load:** Developer (Amelia) - bmad/bmm/agents/dev.md
 
 ---
 
@@ -210,6 +216,10 @@ Start with brainstorm-project workflow to validate your AI-powered documentation
 - **2025-01-17**: Story 1.1 (Project Setup and Development Environment) marked ready for development by SM agent. Status updated to Ready. Ready for DEV agent implementation.
 - **2025-01-17**: Completed dev-story for Story 1.1 (Project Setup and Development Environment). All tasks complete, tests passing. Story status: Ready for Review. Next: User reviews and runs story-approved when satisfied with implementation.
 - **2025-01-17**: Story 1.1 (Project Setup and Development Environment) approved and marked done by DEV agent. Moved from IN PROGRESS → DONE. Story 1.2 moved from TODO → IN PROGRESS. Story 1.3 moved from BACKLOG → TODO.
+- **2025-01-17**: Completed create-story for Story 1.3 (Vector Database Setup with pgvector). Story file: story-1.3.md. Status: Draft (needs review via story-ready). Next: Review and approve story.
+- **2025-01-17**: Completed create-story for Story 1.2 (User Authentication and Authorization System). Story file: story-1.2.md. Status: Draft (needs review via story-ready). Next: Review and approve story.
+- **2025-01-17**: Story 1.2 (User Authentication and Authorization System) marked ready for development by SM agent. Moved from DRAFT → IN PROGRESS. Ready for DEV agent implementation.
+- **2025-01-17**: Completed story-context for Story 1.2 (User Authentication and Authorization System). Context file: docs/stories/story-context-1.2.xml. Next: DEV agent should run dev-story to implement.
 
 ---
 

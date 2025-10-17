@@ -4,7 +4,7 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <RootNamespace>Medley</RootNamespace>
+    <RootNamespace>Medley.Application</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

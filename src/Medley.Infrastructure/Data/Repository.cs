@@ -18,17 +18,17 @@ public class Repository<T> : IRepository<T> where T : class
         _dbSet = context.Set<T>();
     }
 
-    public async Task<T?> GetAsync(int id)
+    public virtual async Task<T?> GetAsync(int id)
     {
         return await _dbSet.FindAsync(id);
     }
 
-    public IQueryable<T> Query()
+    public virtual IQueryable<T> Query()
     {
         return _dbSet.AsQueryable();
     }
 
-    public async Task SaveAsync(T entity)
+    public virtual async Task SaveAsync(T entity)
     {
         var entry = _context.Entry(entity);
         if (entry.State == EntityState.Detached)

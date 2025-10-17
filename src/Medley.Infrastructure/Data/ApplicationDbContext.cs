@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using Medley.Domain.Entities;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace Medley.Infrastructure.Data;
@@ -6,18 +8,23 @@ namespace Medley.Infrastructure.Data;
 /// <summary>
 /// Application database context for Entity Framework Core
 /// </summary>
-public class ApplicationDbContext : IdentityDbContext
+public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, Guid>
 {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)
     {
     }
 
+    /// <summary>
+    /// User audit log entries for authentication and authorization events
+    /// </summary>
+    public DbSet<UserAuditLog> UserAuditLogs { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
         
-        // Configure entity relationships and constraints here
-        // This will be expanded as domain entities are added
+        // Additional entity configurations can be added here if needed
+        // Most configuration is handled via data annotations on entities
     }
 }

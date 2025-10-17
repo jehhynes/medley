@@ -1,5 +1,7 @@
 using Medley.Application.Interfaces;
+using Medley.Application.Services;
 using Medley.Infrastructure.Data;
+using Medley.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,6 +25,10 @@ public static class DependencyInjection
         // Register repositories and unit of work
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+        // Register application services
+        services.AddScoped<IUserAuditLogService, UserAuditLogService>();
+        services.AddScoped<IEmailService, EmailService>();
 
         return services;
     }

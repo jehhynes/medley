@@ -1,6 +1,6 @@
 using Medley.Application.Interfaces;
+using Medley.Domain.Entities;
 using Medley.Infrastructure.Data;
-using Microsoft.AspNetCore.Identity;
 using Xunit;
 
 namespace Medley.Tests.Infrastructure.Data;
@@ -21,9 +21,9 @@ public class UnitOfWorkTests : IClassFixture<UnitOfWorkDatabaseFixture>
         using var dbContext = await _fixture.CreateIsolatedDbContextAsync();
         using var unitOfWork = new UnitOfWork(dbContext);
         
-        var user = new IdentityUser 
+        var user = new User 
         { 
-            Id = Guid.NewGuid().ToString(), 
+            Id = Guid.NewGuid(), 
             UserName = "testuser",
             Email = "testuser@test.com"
         };
@@ -62,15 +62,15 @@ public class UnitOfWorkTests : IClassFixture<UnitOfWorkDatabaseFixture>
         using var dbContext = await _fixture.CreateIsolatedDbContextAsync();
         using var unitOfWork = new UnitOfWork(dbContext);
         
-        var user1 = new IdentityUser 
+        var user1 = new User 
         { 
-            Id = Guid.NewGuid().ToString(), 
+            Id = Guid.NewGuid(), 
             UserName = "user1",
             Email = "user1@test.com"
         };
-        var user2 = new IdentityUser 
+        var user2 = new User 
         { 
-            Id = Guid.NewGuid().ToString(), 
+            Id = Guid.NewGuid(), 
             UserName = "user2",
             Email = "user2@test.com"
         };

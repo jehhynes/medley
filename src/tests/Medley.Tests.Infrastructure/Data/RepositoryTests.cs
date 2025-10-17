@@ -1,6 +1,6 @@
 using Medley.Application.Interfaces;
+using Medley.Domain.Entities;
 using Medley.Infrastructure.Data;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore.Storage;
 using Xunit;
 
@@ -11,7 +11,7 @@ public class RepositoryTests : IClassFixture<DatabaseFixture>, IAsyncLifetime
     private readonly DatabaseFixture _fixture;
     private ApplicationDbContext _dbContext = null!;
     private IDbContextTransaction _transaction = null!;
-    private IRepository<IdentityUser> _repository = null!;
+    private IRepository<User> _repository = null!;
 
     public RepositoryTests(DatabaseFixture fixture)
     {
@@ -22,8 +22,9 @@ public class RepositoryTests : IClassFixture<DatabaseFixture>, IAsyncLifetime
     {
         _dbContext = _fixture.CreateDbContext();
         _transaction = await _dbContext.Database.BeginTransactionAsync();
-        _repository = new Repository<IdentityUser>(_dbContext);
+        _repository = new Repository<User>(_dbContext);
     }
+
 
     public async Task DisposeAsync()
     {
@@ -36,8 +37,8 @@ public class RepositoryTests : IClassFixture<DatabaseFixture>, IAsyncLifetime
     public async Task Query_ReturnsQueryableCollection()
     {
         // Arrange - Transaction isolation handles cleanup automatically
-        var user1 = new IdentityUser { Id = Guid.NewGuid().ToString(), UserName = "user1", Email = "user1@test.com" };
-        var user2 = new IdentityUser { Id = Guid.NewGuid().ToString(), UserName = "user2", Email = "user2@test.com" };
+        var user1 = new User { Id = Guid.NewGuid(), UserName = "user1", Email = "user1@test.com" };
+        var user2 = new User { Id = Guid.NewGuid(), UserName = "user2", Email = "user2@test.com" };
         
         _dbContext.Users.AddRange(user1, user2);
         await _dbContext.SaveChangesAsync();
@@ -56,8 +57,8 @@ public class RepositoryTests : IClassFixture<DatabaseFixture>, IAsyncLifetime
     public async Task SaveAsync_WithNewEntity_AddsToDatabase()
     {
         // Arrange - Transaction isolation handles cleanup automatically
-        var userId = Guid.NewGuid().ToString();
-        var user = new IdentityUser { Id = userId, UserName = "newuser", Email = "newuser@test.com" };
+        var userId = Guid.NewGuid();
+        var user = new User { Id = userId, UserName = "newuser", Email = "newuser@test.com" };
 
         // Act
         await _repository.SaveAsync(user);
@@ -73,8 +74,8 @@ public class RepositoryTests : IClassFixture<DatabaseFixture>, IAsyncLifetime
     public async Task SaveAsync_WithExistingEntity_UpdatesDatabase()
     {
         // Arrange - Transaction isolation handles cleanup automatically
-        var userId = Guid.NewGuid().ToString();
-        var user = new IdentityUser { Id = userId, UserName = "originaluser", Email = "original@test.com" };
+        var userId = Guid.NewGuid();
+        var user = new User { Id = userId, UserName = "originaluser", Email = "original@test.com" };
         
         _dbContext.Users.Add(user);
         await _dbContext.SaveChangesAsync();
