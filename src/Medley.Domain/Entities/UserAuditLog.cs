@@ -10,14 +10,8 @@ namespace Medley.Domain.Entities;
 [Index(nameof(Timestamp))]
 [Index(nameof(UserId))]
 [Index(nameof(Action))]
-public class UserAuditLog
+public class UserAuditLog : BaseEntity
 {
-    /// <summary>
-    /// Unique identifier for the audit log entry
-    /// </summary>
-    [Key]
-    public Guid Id { get; set; }
-
     /// <summary>
     /// User identifier associated with the action
     /// </summary>

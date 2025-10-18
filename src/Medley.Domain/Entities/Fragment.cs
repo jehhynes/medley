@@ -6,14 +6,8 @@ namespace Medley.Domain.Entities;
 /// <summary>
 /// Represents a knowledge fragment extracted from organizational data sources
 /// </summary>
-public class Fragment
+public class Fragment : BaseEntity
 {
-    /// <summary>
-    /// Unique identifier for the fragment
-    /// </summary>
-    [Key]
-    public Guid Id { get; set; }
-
     /// <summary>
     /// The text content of the fragment
     /// </summary>
