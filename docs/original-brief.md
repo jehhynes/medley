@@ -1,8 +1,8 @@
 # Project Brief: AI-Powered Product Intelligence Platform
 
 **Document Status:** Draft v1.0  
-**Created:** December 10, 2024  
-**Last Updated:** December 10, 2024
+**Created:** October 10, 2025  
+**Last Updated:** October 10, 2025
 
 ---
 

@@ -1,7 +1,7 @@
 # Tech Spec: Epic 1 - Foundation & Core Infrastructure
 
 **Epic:** Foundation & Core Infrastructure  
-**Date:** 2025-01-17  
+**Date:** 2025-10-17  
 **Author:** Medley Developer  
 **Architecture Reference:** [Solution Architecture](./solution-architecture.md)
 
