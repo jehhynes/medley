@@ -33,9 +33,6 @@ public class DatabaseFixture : IAsyncLifetime
         // Create and migrate the database once
         using var context = ApplicationDbContextFactory.CreateDbContext(_dataSource);
         
-        // Ensure pgvector extension is installed
-        await context.Database.ExecuteSqlRawAsync("CREATE EXTENSION IF NOT EXISTS vector");
-        
         await context.Database.MigrateAsync();
     }
 
