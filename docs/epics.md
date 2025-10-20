@@ -88,7 +88,7 @@ I want to establish ALL data models needed for the complete system,
 So that I can store and retrieve organizational data efficiently across all epics.
 
 **Acceptance Criteria:**
-1. Entity models created for Users, Organizations, Integrations, Sources, Fragments, Clusters, Documents, and Templates
+1. Entity models created for Users, Organizations, Integrations, Sources, Fragments, Clusters, Articles, and Templates
 2. Database migrations implemented and tested for all entities with proper relationships
 3. Repository pattern implemented for data access abstraction
 4. Basic CRUD operations implemented for all core entities
@@ -102,11 +102,11 @@ So that I can store and retrieve organizational data efficiently across all epic
 ### Story 1.5: Background Processing Infrastructure
 
 As a developer,
-I want to establish background processing capabilities using ASP.NET Core Hosted Services,
+I want to establish background processing capabilities using Hangfire,
 So that long-running AI operations don't block web requests.
 
 **Acceptance Criteria:**
-1. ASP.NET Core Hosted Services configured for background processing
+1. Hangfire configured for background processing
 2. Queue-based job processing system implemented for AI operations
 3. Job status tracking and monitoring capabilities implemented
 4. Error handling and retry logic for background jobs configured

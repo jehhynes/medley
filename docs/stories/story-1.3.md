@@ -1,6 +1,6 @@
 # Story 1.3: Vector Database Setup with pgvector
 
-Status: Ready for Review
+Status: Done
 
 ## Story
 
@@ -23,7 +23,7 @@ So that I can perform efficient similarity matching and clustering of fragments.
   - [x] Verify PostgreSQL version 16.0+ installed and running
   - [x] Install pgvector extension using CREATE EXTENSION command
   - [x] Verify extension installation with SELECT * FROM pg_extension
-  - [x] Document installation steps in README or setup guide
+  - [x] Article installation steps in README or setup guide
   - [x] Test basic vector operations (vector creation, distance calculations)
 
 - [x] Task 2: Add Vector Support to Fragment Entity (AC: #2)
@@ -37,7 +37,7 @@ So that I can perform efficient similarity matching and clustering of fragments.
   - [x] Research HNSW vs IVFFlat indexing for 1536-dimensional vectors (Claude embeddings)
   - [x] Select HNSW for high recall and performance (recommended for <1M vectors)
   - [x] Configure index creation in migration using raw SQL or HasIndex with custom SQL
-  - [x] Document indexing strategy rationale and performance characteristics
+  - [x] Article indexing strategy rationale and performance characteristics
   - [x] Add index parameters (m=16, ef_construction=64 for HNSW)
 
 - [x] Task 4: Create and Test Database Migration (AC: #4)
@@ -173,6 +173,11 @@ src/tests/Medley.Tests.Infrastructure/
 Claude 3.5 Sonnet (via Kiro IDE)
 
 ### Debug Log References
+
+### Completion Notes
+
+**Completed:** 2025-10-20
+**Definition of Done:** All acceptance criteria met, code reviewed, tests passing, deployed
 
 ### Completion Notes List
 

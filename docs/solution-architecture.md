@@ -52,7 +52,7 @@ Application Layer (Business Logic)
 └── → Domain Layer
 
 Domain Layer (Core Business Logic)
-├── Entities (User, Fragment, Document, Cluster, etc.)
+├── Entities (User, Fragment, Article, Cluster, etc.)
 ├── Value Objects
 ├── Domain Services (if needed)
 └── No dependencies (center of architecture)
@@ -136,7 +136,7 @@ public interface IFileStorageService
 - `/` - Dashboard and overview
 - `/Integrations` - Fellow.ai and external service management
 - `/Fragments` - Fragment explorer and search
-- `/Documents` - Document generation and management
+- `/Articles` - Article generation and management
 - `/Review` - AI content review interface
 - `/Analytics` - Usage and performance metrics
 
@@ -197,13 +197,13 @@ public interface IFileStorageService
 - `GET /Fragments/Search` - Advanced search form
 - `POST /Fragments/Search` - Process search query
 
-**DocumentController:**
-- `GET /Documents` - Document library
-- `GET /Documents/Generate` - Document generation form
-- `POST /Documents/Generate` - Create new document
-- `GET /Documents/Review/{id}` - Review interface
-- `POST /Documents/Review/{id}` - Submit review
-- `GET /Documents/Export/{id}` - Export document
+**ArticleController:**
+- `GET /Articles` - Article library
+- `GET /Articles/Generate` - Article generation form
+- `POST /Articles/Generate` - Create new article
+- `GET /Articles/Review/{id}` - Review interface
+- `POST /Articles/Review/{id}` - Submit review
+- `GET /Articles/Export/{id}` - Export article
 
 ### 4.2 View Structure
 
@@ -391,7 +391,7 @@ medley/
 │   │   ├── Enums/
 │   │   │   ├── IntegrationType.cs
 │   │   │   ├── FragmentType.cs
-│   │   │   └── DocumentStatus.cs
+│   │   │   └── ArticleStatus.cs
 │   │   └── ValueObjects/
 │   ├── Medley.Application/
 │   │   ├── Services/

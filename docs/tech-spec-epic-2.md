@@ -34,7 +34,7 @@ Implement comprehensive Fellow.ai integration and AI-powered fragment extraction
 | AI Processing | AWS Bedrock (Claude 4.5) | `IAiProcessingService` | Advanced reasoning, large context window |
 | Meeting Data | Fellow.ai API v1 | `IMeetingDataService` | Primary meeting transcript source |
 | Code Data | GitHub API v4 | `ICodeDataService` | Development activity tracking |
-| Background Jobs | ASP.NET Hosted Services | `IBackgroundJobService` | Async AI processing |
+| Background Jobs | Hangfire | `IBackgroundJobService` | Async job processing |
 | Search | PostgreSQL Full-Text | `ISearchService` | Built-in search capabilities |
 
 ### Data Models (Epic 2)

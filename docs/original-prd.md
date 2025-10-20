@@ -130,7 +130,7 @@ The project will use a single repository structure with clear separation between
 
 - **Web UI Module:** ASP.NET Core MVC with Razor Pages for the user interface
 - **API Module:** ASP.NET Core Web API for external integrations and internal service communication
-- **Background Processing Module:** Hosted services for data ingestion and AI processing tasks
+- **Background Processing Module:** Hangfire for data ingestion and AI processing tasks
 - **Data Access Module:** Entity Framework Core for data persistence and management
 
 This architecture supports the MVP requirements while providing a clear path for future microservices migration if needed.
@@ -150,7 +150,7 @@ This approach ensures reliability for the AI processing components while maintai
 - **Database:** PostgreSQL with pgvector extension for both structured data and vector similarity matching for fragment clustering and semantic search
 - **AI/ML Services:** OpenAI GPT-4 or Azure OpenAI Service for LLM processing with custom RAG implementation for context retrieval
 - **Authentication:** ASP.NET Core Identity with OAuth 2.0 for third-party integrations
-- **Background Processing:** ASP.NET Core Hosted Services for asynchronous data ingestion and processing
+- **Background Processing:** Hangfire for asynchronous data ingestion and processing
 - **API Integrations:** REST API integrations with Fellow.ai and GitHub APIs for Phase 1, expanding to Jira and Microsoft Graph APIs in Phase 2
 - **Security:** Encryption at rest and in transit, GDPR compliance for data handling
 - **Deployment:** Platform-agnostic deployment supporting cloud providers (AWS, Azure, GCP) or self-hosted solutions
@@ -278,7 +278,7 @@ I want to establish background processing capabilities,
 so that long-running AI operations don't block web requests.
 
 **Acceptance Criteria:**
-1. ASP.NET Core Hosted Services configured for background processing
+1. Hangfire configured for background processing
 2. Hangfire job scheduling system implemented and configured
 3. Job queue management and monitoring dashboard
 4. Error handling and retry logic for background jobs

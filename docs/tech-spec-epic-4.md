@@ -1,20 +1,20 @@
-# Tech Spec: Epic 4 - Document Generation & Review Interface
+# Tech Spec: Epic 4 - Article Generation & Review Interface
 
-**Epic:** Document Generation & Review Interface  
+**Epic:** Article Generation & Review Interface  
 **Date:** 2025-10-17  
 **Author:** Medley Developer  
 **Architecture Reference:** [Solution Architecture](./solution-architecture.md)
 
 ## Epic Overview
 
-Build AI-powered document generation and side-by-side review interface for human-AI collaboration in creating comprehensive documentation.
+Build AI-powered article generation and side-by-side review interface for human-AI collaboration in creating comprehensive documentation.
 
-**Value Delivery:** Core value proposition - AI document generation with transparent review process enabling efficient documentation creation.
+**Value Delivery:** Core value proposition - AI article generation with transparent review process enabling efficient documentation creation.
 
 ## Key Components
 
 ### Technology Stack
-- **Document Generation:** Claude 4.5 via AWS Bedrock
+- **Article Generation:** Claude 4.5 via AWS Bedrock
 - **Template Engine:** Razor templates with custom extensions
 - **Real-time Updates:** SignalR for review collaboration
 - **File Export:** Multiple formats (Markdown, HTML, PDF)
@@ -24,7 +24,7 @@ Build AI-powered document generation and side-by-side review interface for human
 public interface IDocumentGenerationService
 {
     Task<GeneratedDocument> GenerateDocumentAsync(DocumentRequest request);
-    Task<DocumentTemplate> GetTemplateAsync(DocumentType type);
+    Task<DocumentTemplate> GetTemplateAsync(ArticleType type);
     Task<IEnumerable<DocumentSuggestion>> GetSuggestionsAsync(IEnumerable<Fragment> fragments);
 }
 
@@ -39,12 +39,12 @@ public interface IReviewWorkflowService
 
 ### Data Models
 ```csharp
-public class Document : BaseEntity
+public class Article : BaseEntity
 {
     public string Title { get; set; }
-    public DocumentType Type { get; set; }
+    public ArticleType Type { get; set; }
     public string Content { get; set; }
-    public DocumentStatus Status { get; set; }
+    public ArticleStatus Status { get; set; }
     public string GeneratedBy { get; set; } // AI model
     public DateTime GeneratedAt { get; set; }
     public string ReviewedBy { get; set; }
@@ -66,7 +66,7 @@ public class ReviewSession : BaseEntity
 
 ## Implementation Guidance
 
-**Document Generation Pipeline:**
+**Article Generation Pipeline:**
 1. Select relevant fragments based on user criteria
 2. Apply document template with AI content generation
 3. Generate structured content with source attribution
@@ -79,7 +79,7 @@ public class ReviewSession : BaseEntity
 - Approval workflow with version control
 
 **Success Criteria:**
-- ✅ Document generation completing in under 30 seconds
+- ✅ Article generation completing in under 30 seconds
 - ✅ Review interface supporting real-time collaboration
 - ✅ Export functionality working for all formats
 - ✅ Source attribution maintaining full traceability

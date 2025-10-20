@@ -205,7 +205,7 @@ This matrix maps each epic to its corresponding architectural components, ensuri
 | 1.2 Authentication | ASP.NET Core Identity, User Entities | Security, Authorization |
 | 1.3 Vector Database | pgvector, PostgreSQL | Database Indexing |
 | 1.4 Data Models | All Domain Entities, EF Core | Repository Pattern |
-| 1.5 Background Jobs | Hosted Services, Job Processing | Queue Management |
+| 1.5 Background Jobs | Hangfire, Job Processing | Queue Management |
 | 1.6 AWS Integration | S3 File Storage, Bedrock Setup | AWS SDK Configuration |
 | 1.7 CI/CD Pipeline | Deployment Automation | Testing Infrastructure |
 | 1.8 UI Framework | Bootstrap UI, Navigation | Responsive Design |

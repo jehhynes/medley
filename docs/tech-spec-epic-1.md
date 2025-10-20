@@ -32,7 +32,7 @@ Establish the foundational infrastructure for the AI-Powered Product Intelligenc
 | Database | PostgreSQL 16.0+ | `IDbContextFactory<T>` | pgvector extension, ACID compliance |
 | ORM | Entity Framework Core 8.0+ | `IRepository<T>` | Code-first migrations, LINQ |
 | Authentication | ASP.NET Core Identity 8.0 | `IUserManager` | Built-in security, role management |
-| Background Jobs | ASP.NET Hosted Services | `IBackgroundJobService` | Native .NET integration |
+| Background Jobs | Hangfire | `IBackgroundJobService` | Async job processing |
 | File Storage | AWS S3 | `IFileStorageService` | Scalable object storage |
 | UI Framework | Bootstrap 5.3 | CSS framework agnostic | Responsive, accessibility |
 
@@ -166,7 +166,7 @@ Infrastructure Layer (Medley.Infrastructure)
    - Create database migrations and seed data
 
 4. **Background Processing (Story 1.5)**
-   - Implement ASP.NET Hosted Services for background jobs
+   - Implement Hangfire for background jobs
    - Create job queue and status tracking
    - Add error handling and retry logic
 
@@ -247,7 +247,7 @@ src/
   "Providers": {
     "Database": "PostgreSQL",
     "FileStorage": "LocalFileSystem",
-    "BackgroundJobs": "HostedServices"
+    "BackgroundJobs": "Hangfire"
   }
 }
 ```
@@ -265,7 +265,7 @@ src/
   "Providers": {
     "Database": "PostgreSQL",
     "FileStorage": "S3",
-    "BackgroundJobs": "HostedServices"
+    "BackgroundJobs": "Hangfire"
   }
 }
 ```

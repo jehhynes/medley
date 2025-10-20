@@ -68,7 +68,7 @@ The Medley project demonstrates strong cohesion between requirements, architectu
 | NFR ID | Requirement | Architectural Solution | Implementation Details | Status |
 |--------|-------------|----------------------|----------------------|---------|
 | NFR001 | Sub-2-second response times | ASP.NET Core MVC SSR, Redis caching, optimized queries | Performance monitoring, database indexing | ✅ Addressed |
-| NFR002 | 10,000+ fragments/hour | Background processing, queue management, batch operations | ASP.NET Hosted Services, parallel processing | ✅ Addressed |
+| NFR002 | 10,000+ fragments/hour | Background processing, queue management, batch operations | Hangfire, parallel processing | ✅ Addressed |
 | NFR003 | 99.9% uptime SLA | Health checks, error handling, monitoring | Application monitoring, automated deployment | ✅ Addressed |
 | NFR004 | AES-256 encryption | PostgreSQL encryption, HTTPS, secure storage | Data at rest and in transit encryption | ✅ Addressed |
 | NFR005 | GDPR compliance | Data protection policies, user consent, data deletion | Privacy controls, audit logging | ✅ Addressed |
@@ -138,7 +138,7 @@ The Medley project demonstrates strong cohesion between requirements, architectu
 | **Database** | PostgreSQL | 16.0+ | Excellent - pgvector, ACID compliance | `IDbContextFactory<T>` | ✅ Optimal |
 | **ORM** | Entity Framework Core | 8.0+ | Good - LINQ support, migrations | `IRepository<T>` | ✅ Good |
 | **AI Processing** | AWS Bedrock (Claude 4.5) | Latest | Excellent - Advanced reasoning | `IAiProcessingService` | ✅ Optimal |
-| **Background Jobs** | ASP.NET Hosted Services | 8.0 | Good - Native integration | `IBackgroundJobService` | ✅ Good |
+| **Background Jobs** | Hangfire | Latest | Good - Native integration | `IBackgroundJobService` | ✅ Good |
 | **File Storage** | AWS S3 | Latest | Excellent - Scalability | `IFileStorageService` | ✅ Optimal |
 | **Caching** | Redis | 7.2 | Good - Distributed caching | `IDistributedCache` | ✅ Good |
 | **Authentication** | ASP.NET Core Identity | 8.0 | Excellent - Built-in security | `IUserManager` | ✅ Optimal |
