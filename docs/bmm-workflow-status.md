@@ -49,6 +49,7 @@
 
 | Epic | Story | ID  | Title | File |
 | ---- | ----- | --- | ----- | ---- |
+| 1 | 6 | 1.6 | AWS Integration Setup | story-1.6.md |
 | 1 | 7 | 1.7 | CI/CD Pipeline Foundation | story-1.7.md |
 | 1 | 8 | 1.8 | Basic UI Framework and Navigation | story-1.8.md |
 | 2 | 1 | 2.1 | Integration Management Interface | story-2.1.md |
@@ -63,35 +64,37 @@
 | 2 | 10 | 2.10 | Fragment Storage and Indexing | story-2.10.md |
 | 2 | 11 | 2.11 | Fragment Search Interface | story-2.11.md |
 
-**Total in backlog:** 12 stories (Epic 1-2 detailed, Epic 3-5 to be detailed)
+**Total in backlog:** 13 stories (Epic 1-2 detailed, Epic 3-5 to be detailed)
 
 #### TODO (Needs Drafting)
 
-- **Story ID:** 1.6
-- **Story Title:** AWS Integration Setup
-- **Story File:** `story-1.6.md`
+- **Story ID:** 1.7
+- **Story Title:** CI/CD Pipeline Foundation
+- **Story File:** `story-1.7.md`
 - **Status:** Not created
 - **Action:** SM should run `create-story` workflow to draft this story
 
 #### IN PROGRESS (Approved for Development)
 
-(No stories currently in progress - Story 1.5 completed)
+(No stories currently in progress)
 
 #### DRAFT (Needs Review)
 
-(No stories currently in draft - all stories are approved or complete)
+(No stories currently in draft)
 
 #### DONE (Completed Stories)
 
 | Story ID | File | Completed Date | Points |
 | -------- | ---- | -------------- | ------ |
+| 1.5 | story-1.5.md | 2025-10-20 | 8 |
+| 1.6 | story-1.6.md | 2025-10-20 | 8 |
 | 1.4 | story-1.4.md | 2025-10-20 | 8 |
 | 1.3 | story-1.3.md | 2025-10-20 | 8 |
 | 1.2 | story-1.2.md | 2025-10-20 | 8 |
 | 1.1 | story-1.1.md | 2025-10-17 | 5 |
 
-**Total completed:** 4 stories
-**Total points completed:** 29 points
+**Total completed:** 6 stories
+**Total points completed:** 45 points
 
 ### Artifacts Generated
 
@@ -114,11 +117,11 @@
 
 ### Next Action Required
 
-**What to do next:** Generate context for story 1.5, then implement it
+**What to do next:** Draft Story 1.7 (CI/CD Pipeline Foundation)
 
-**Command to run:** Run 'story-context' workflow to generate implementation context (or skip to dev-story)
+**Command to run:** Run 'create-story' workflow to draft the next story
 
-**Agent to load:** bmad/bmm/agents/sm.md (for story-context) OR bmad/bmm/agents/dev.md (for dev-story)
+**Agent to load:** bmad/bmm/agents/sm.md (for create-story)
 
 ---
 
@@ -220,6 +223,12 @@ Start with brainstorm-project workflow to validate your AI-powered documentation
 - **2025-10-20**: Completed story-context for Story 1.4 (Core Data Models and Database Schema). Context file: docs/stories/story-context-1.4.xml. Next: DEV agent should run dev-story to implement.
 - **2025-10-20**: Story 1.4 (Core Data Models and Database Schema) approved and marked done by DEV agent. Moved from IN PROGRESS → DONE. Story 1.5 moved from TODO → IN PROGRESS. Story 1.6 moved from BACKLOG → TODO.
 - **2025-10-20**: Story 1.5 (Background Processing Infrastructure) marked ready for development by SM agent. Story rewritten to leverage Hangfire's built-in capabilities, reducing custom implementation requirements. Status updated to Ready. Ready for DEV agent implementation.
+- **2025-10-20**: Completed create-story for Story 1.6 (AWS Integration Setup). Story file: story-1.6.md. Status: Draft (needs review via story-ready). Next: Review and approve story.
+- **2025-10-20**: Completed story-context for Story 1.6 (AWS Integration Setup). Context file: docs/stories/story-context-1.6.xml. Next: Review story and run story-ready when satisfied.
+- **2025-10-20**: Story 1.6 (AWS Integration Setup) marked ready for development by SM agent. Moved from DRAFT → IN PROGRESS. Ready for DEV agent implementation.
+- **2025-10-20**: Completed story-context for Story 1.5 (Background Processing Infrastructure). Context file: docs/stories/story-context-1.5.xml. Next: DEV agent should run dev-story to implement.
+- **2025-10-20**: Story 1.6 (AWS Integration Setup) approved and marked done by DEV agent. Moved from IN PROGRESS → DONE. Story 1.7 moved from BACKLOG → TODO.
+- **2025-10-20**: Story 1.5 (Background Processing Infrastructure) approved and marked done by DEV agent. Moved from IN PROGRESS → DONE.
 
 ---
 

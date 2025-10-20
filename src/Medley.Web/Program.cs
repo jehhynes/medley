@@ -93,8 +93,20 @@ public class Program
             builder.Services.AddControllersWithViews();
 
             // Add health checks
-            builder.Services.AddHealthChecks()
+            var healthChecksBuilder = builder.Services.AddHealthChecks()
                 .AddDbContextCheck<ApplicationDbContext>();
+
+            // Add AWS health checks only when not in test environment and AWS credentials are available
+            var awsSettings = builder.Configuration.GetSection("AWS").Get<Medley.Application.Configuration.AwsSettings>();
+            var hasCredentials = !string.IsNullOrEmpty(awsSettings?.AccessKeyId) && !string.IsNullOrEmpty(awsSettings?.SecretAccessKey);
+            var isTestEnvironment = builder.Environment.EnvironmentName == "Testing";
+
+            if (hasCredentials && !isTestEnvironment)
+            {
+                healthChecksBuilder
+                    .AddCheck<Medley.Infrastructure.HealthChecks.S3HealthCheck>("aws-s3", tags: new[] { "aws", "s3", "storage" })
+                    .AddCheck<Medley.Infrastructure.HealthChecks.BedrockHealthCheck>("aws-bedrock", tags: new[] { "aws", "bedrock", "ai" });
+            }
 
             var app = builder.Build();
 

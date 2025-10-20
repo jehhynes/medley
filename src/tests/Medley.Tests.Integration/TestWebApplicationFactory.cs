@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 
@@ -20,6 +21,21 @@ public class TestWebApplicationFactory : WebApplicationFactory<Medley.Web.Progra
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        builder.UseEnvironment("Testing");
+        
+        builder.ConfigureAppConfiguration((context, config) =>
+        {
+            // Override configuration for integration tests
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["FileStorage:Provider"] = "Local",
+                ["FileStorage:LocalPath"] = Path.GetTempPath(),
+                ["AWS:Region"] = "us-east-1",
+                ["AWS:AccessKeyId"] = "",
+                ["AWS:SecretAccessKey"] = ""
+            });
+        });
+
         builder.ConfigureTestServices(services =>
         {
             // Remove existing DbContext and NpgsqlDataSource registrations
