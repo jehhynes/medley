@@ -1,0 +1,99 @@
+﻿[data-bs-theme="light"] {
+    --bs-tertiary-bg: #f3f4f7;
+    --bs-tertiary-bg-rgb: 243, 244, 247;
+
+    body {
+        background-color: var(--bs-tertiary-bg);
+    }
+
+    .footer {
+        background-color: var(--bs-body-bg);
+    }
+}
+
+[data-bs-theme="dark"] {
+    body {
+        background-color: var(--bs-dark-bg-subtle);
+    }
+
+    .footer {
+        --bs-footer-bg: var(--bs-body-bg);
+    }
+}
+
+/* Navigation active state */
+.nav-link.active {
+    background-color: rgba(var(--bs-primary-rgb), 0.1);
+    color: var(--bs-primary);
+    border-left: 3px solid var(--bs-primary);
+}
+
+/* CoreUI Sidebar Layout */
+.wrapper {
+    width: 100%;
+    padding-inline: var(--bs-sidebar-occupy-start, 0) var(--bs-sidebar-occupy-end, 0);
+    will-change: auto;
+    transition: padding 0.15s;
+}
+
+@media (min-width: 992px) {
+    /* Hide the header toggler on desktop since sidebar is always visible */
+    .header-toggler {
+        display: none !important;
+    }
+}
+
+.header > .container-fluid,
+.sidebar-header {
+    min-height: calc(4rem + 1px);
+}
+
+.sidebar-brand-full {
+    margin-left: 3px;
+}
+
+.footer {
+    min-height: calc(3rem + 1px);
+}
+
+/* Sidebar Brand Styling */
+.sidebar-logo {
+    height: 42px;
+    float: left;
+}
+
+.sidebar-brand-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-brand-title {
+    font-variant: small-caps;
+    font-size: 30px;
+    line-height: 1;
+}
+
+.sidebar-brand-subtitle {
+    font-size: 12px;
+    margin-top: 2px;
+    line-height: 1;
+    color: var(--bs-secondary);
+}
+
+/* Header Toggler Styling */
+.header-toggler {
+    margin-inline-start: -14px;
+}
+
+/* Dropdown Menu Styling */
+.dropdown-menu-custom {
+    --bs-dropdown-min-width: 8rem;
+}
+
+/* Navigation Section Dividers */
+.nav-divider {
+    height: 1px;
+    background-color: var(--bs-border-color);
+    margin: 0.5rem 0;
+    border: none;
+}

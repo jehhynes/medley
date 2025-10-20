@@ -3,3 +3,6 @@ src/**/bin/
 src/**/obj/
 /.vs
 /src/Medley.Web/logs
+/src/Medley.Web/wwwroot/css/site.min.css
+/src/Medley.Web/wwwroot/css/site.css
+/src/Medley.Web/appsettings.Development.json

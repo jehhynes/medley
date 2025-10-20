@@ -10,7 +10,7 @@
 ## Workflow Status Tracker
 
 **Current Phase:** 4-Implementation
-**Current Workflow:** story-ready (Story 1.5) - Complete
+**Current Workflow:** story-ready (Story 1.8) - Complete
 **Current Agent:** Scrum Master
 **Overall Progress:** 100%
 
@@ -76,11 +76,14 @@
 
 #### IN PROGRESS (Approved for Development)
 
-(No stories currently in progress)
+- **Story ID:** 1.8
+- **Story Title:** Basic UI Framework and Navigation
+- **Story File:** `story-1.8.md`
+- **Story Status:** Ready
+- **Context File:** `docs/stories/story-context-1.8.xml`
+- **Action:** DEV should run `dev-story` workflow to implement this story
 
-#### DRAFT (Needs Review)
 
-(No stories currently in draft)
 
 #### DONE (Completed Stories)
 
@@ -117,11 +120,11 @@
 
 ### Next Action Required
 
-**What to do next:** Draft Story 1.7 (CI/CD Pipeline Foundation)
+**What to do next:** Implement Story 1.8 (Basic UI Framework and Navigation)
 
-**Command to run:** Run 'create-story' workflow to draft the next story
+**Command to run:** Run 'dev-story' workflow to implement the story
 
-**Agent to load:** bmad/bmm/agents/sm.md (for create-story)
+**Agent to load:** bmad/bmm/agents/dev.md (for dev-story)
 
 ---
 
@@ -229,6 +232,9 @@ Start with brainstorm-project workflow to validate your AI-powered documentation
 - **2025-10-20**: Completed story-context for Story 1.5 (Background Processing Infrastructure). Context file: docs/stories/story-context-1.5.xml. Next: DEV agent should run dev-story to implement.
 - **2025-10-20**: Story 1.6 (AWS Integration Setup) approved and marked done by DEV agent. Moved from IN PROGRESS → DONE. Story 1.7 moved from BACKLOG → TODO.
 - **2025-10-20**: Story 1.5 (Background Processing Infrastructure) approved and marked done by DEV agent. Moved from IN PROGRESS → DONE.
+- **2025-10-20**: Completed create-story for Story 1.8 (Basic UI Framework and Navigation). Story file: story-1.8.md. Status: Draft (needs review via story-ready). Next: Review and approve story.
+- **2025-10-20**: Completed story-context for Story 1.8 (Basic UI Framework and Navigation). Context file: docs/stories/story-context-1.8.xml. Next: Review story and run story-ready when satisfied.
+- **2025-10-20**: Story 1.8 (Basic UI Framework and Navigation) marked ready for development by SM agent. Moved from DRAFT → IN PROGRESS. Ready for DEV agent implementation.
 
 ---
 

@@ -90,7 +90,10 @@ public class Program
                 });
             */
 
-            builder.Services.AddControllersWithViews();
+            var mvc = builder.Services.AddControllersWithViews();
+#if DEBUG
+            mvc.AddRazorRuntimeCompilation();
+#endif
 
             // Add health checks
             var healthChecksBuilder = builder.Services.AddHealthChecks()

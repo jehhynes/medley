@@ -1,0 +1,230 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.8</storyId>
+    <title>Basic UI Framework and Navigation</title>
+    <status>Draft</status>
+    <generatedAt>2025-10-20</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/story-1.8.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>user</asA>
+    <iWant>to access a clean, responsive web interface with basic navigation</iWant>
+    <soThat>I can interact with the platform effectively across different devices</soThat>
+    <tasks>
+      - Task 1: Bootstrap UI Framework Setup (AC: 1)
+      - Task 2: Main Navigation Menu (AC: 2, 8)
+      - Task 3: Dashboard Page (AC: 3)
+      - Task 4: User Profile Management (AC: 4)
+      - Task 5: Error Handling and Error Pages (AC: 5)
+      - Task 6: Accessibility Compliance (AC: 6)
+      - Task 7: Mobile Responsive Design (AC: 7)
+      - Task 8: Shared Layout Components (AC: 1, 2)
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1">Responsive Bootstrap-based UI framework implemented</criterion>
+    <criterion id="2">Main navigation menu with placeholder sections for all major features</criterion>
+    <criterion id="3">Dashboard page with system status and recent activity overview</criterion>
+    <criterion id="4">User profile management interface implemented</criterion>
+    <criterion id="5">Basic error handling and user-friendly error pages created</criterion>
+    <criterion id="6">Accessibility compliance (WCAG AA) implemented for core UI components</criterion>
+    <criterion id="7">Mobile-responsive design tested across common device sizes</criterion>
+    <criterion id="8">Authentication-aware navigation (login/logout, role-based menu items)</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/PRD.md</path>
+        <title>Product Requirements Document</title>
+        <section>User Interface Design Goals</section>
+        <snippet>Primary Platform: Web-responsive application optimized for desktop use during intensive review sessions, fully functional on tablets and mobile for quick approvals. Design Constraints: WCAG AA compliance with proper keyboard navigation, screen reader compatibility, and sufficient color contrast ratios. Browser Support: Modern browsers (Chrome, Firefox, Safari, Edge) with JavaScript enabled.</snippet>
+      </doc>
+      <doc>
+        <path>docs/PRD.md</path>
+        <title>Product Requirements Document</title>
+        <section>UX Design Principles</section>
+        <snippet>Transparency First - Users can always see the source material that informed AI decisions through a "glass box" approach. Efficiency for Busy Teams - Streamlined workflows that respect developers' time constraints, with bulk operations, keyboard shortcuts, and progressive disclosure to minimize cognitive load. Human-AI Partnership - The interface positions AI as an intelligent research assistant.</snippet>
+      </doc>
+      <doc>
+        <path>docs/solution-architecture.md</path>
+        <title>Solution Architecture Document</title>
+        <section>2.2 Server-Side Rendering Strategy</section>
+        <snippet>ASP.NET Core MVC with Razor Pages for optimal performance and SEO: Server-side rendering for all pages (no SPA complexity), Razor Pages for simple CRUD operations, MVC Controllers for complex workflows, Partial views for reusable components, HTMX for dynamic interactions without full page reloads.</snippet>
+      </doc>
+      <doc>
+        <path>docs/solution-architecture.md</path>
+        <title>Solution Architecture Document</title>
+        <section>2.3 Page Routing and Navigation</section>
+        <snippet>Conventional routing with area-based organization: / - Dashboard and overview, /Integrations - Fellow.ai and external service management, /Fragments - Fragment explorer and search, /Articles - Article generation and management, /Review - AI content review interface, /Analytics - Usage and performance metrics. Sidebar-first navigation with Bootstrap responsive design and progressive disclosure.</snippet>
+      </doc>
+      <doc>
+        <path>docs/solution-architecture.md</path>
+        <title>Solution Architecture Document</title>
+        <section>7. UI/UX Architecture</section>
+        <snippet>Bootstrap 5.3 with auto dark/light mode support, responsive grid system, and accessibility features built-in. Component Structure: Shared layout with navigation, partial views for reusable components, ViewModels for data binding and validation. Styling Approach: Bootstrap-based with custom CSS overrides for brand-specific styling. Responsive Design: Mobile-first approach with breakpoints for tablets and desktop. Accessibility: WCAG AA compliance required for all UI components.</snippet>
+      </doc>
+      <doc>
+        <path>docs/tech-spec-epic-1.md</path>
+        <title>Tech Spec: Epic 1 - Foundation & Core Infrastructure</title>
+        <section>MVC Controllers and Views (Epic 1)</section>
+        <snippet>AuthController: GET /Auth/Login, POST /Auth/Login, GET /Auth/Register, POST /Auth/Register, POST /Auth/Logout. HomeController: GET / - Dashboard with system status overview, GET /Health - Health check page. IntegrationController: GET /Integrations, GET /Integrations/Create, POST /Integrations/Create, GET /Integrations/Edit/{id}, POST /Integrations/Edit/{id}. Views and Forms: Server-rendered Razor views with Bootstrap styling, Form validation using ASP.NET Core model validation, Anti-forgery tokens for security, Responsive design for mobile compatibility.</snippet>
+      </doc>
+      <doc>
+        <path>docs/epics.md</path>
+        <title>Epic Breakdown</title>
+        <section>Story 1.8: Basic UI Framework and Navigation</section>
+        <snippet>As a user, I want to access a clean, responsive web interface with basic navigation, So that I can interact with the platform effectively across different devices. Acceptance Criteria: 1. Responsive Bootstrap-based UI framework implemented 2. Main navigation menu with placeholder sections for all major features 3. Dashboard page with system status and recent activity overview 4. User profile management interface implemented 5. Basic error handling and user-friendly error pages created 6. Accessibility compliance (WCAG AA) implemented for core UI components 7. Mobile-responsive design tested across common device sizes 8. Authentication-aware navigation (login/logout, role-based menu items). Prerequisites: Story 1.2 completed.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>src/Medley.Web/Views/Shared/_Layout.cshtml</path>
+        <kind>view</kind>
+        <symbol>_Layout</symbol>
+        <lines>1-50</lines>
+        <reason>Existing layout file that needs enhancement with proper navigation menu, accessibility features, and responsive design improvements per Story 1.8 requirements</reason>
+      </artifact>
+      <artifact>
+        <path>src/Medley.Web/Views/Shared/_LoginPartial.cshtml</path>
+        <kind>view</kind>
+        <symbol>_LoginPartial</symbol>
+        <lines>1-35</lines>
+        <reason>Existing authentication UI component that implements role-based navigation (Admin sees User Management link), needs to be integrated into enhanced navigation menu</reason>
+      </artifact>
+      <artifact>
+        <path>src/Medley.Web/Views/Home/Index.cshtml</path>
+        <kind>view</kind>
+        <symbol>Index</symbol>
+        <lines>1-10</lines>
+        <reason>Current dashboard page that needs to be enhanced with system status indicators, recent activity overview, and proper dashboard layout per AC 3</reason>
+      </artifact>
+      <artifact>
+        <path>src/Medley.Web/Controllers/HomeController.cs</path>
+        <kind>controller</kind>
+        <symbol>HomeController</symbol>
+        <lines>all</lines>
+        <reason>Existing controller that needs to be enhanced to provide system status data and recent activity for the dashboard view</reason>
+      </artifact>
+      <artifact>
+        <path>src/Medley.Web/Controllers/AuthController.cs</path>
+        <kind>controller</kind>
+        <symbol>AuthController</symbol>
+        <lines>all</lines>
+        <reason>Existing authentication controller that handles login/logout functionality referenced in navigation menu</reason>
+      </artifact>
+      <artifact>
+        <path>src/Medley.Web/Program.cs</path>
+        <kind>configuration</kind>
+        <symbol>Program</symbol>
+        <lines>1-150</lines>
+        <reason>Application startup configuration where error handling middleware needs to be configured per AC 5, and health check endpoints are already configured</reason>
+      </artifact>
+      <artifact>
+        <path>src/Medley.Web/Views/Shared/Error.cshtml</path>
+        <kind>view</kind>
+        <symbol>Error</symbol>
+        <lines>all</lines>
+        <reason>Existing error page that needs enhancement with user-friendly messages and recovery guidance per AC 5</reason>
+      </artifact>
+      <artifact>
+        <path>src/Medley.Web/wwwroot/css/site.css</path>
+        <kind>stylesheet</kind>
+        <symbol>site.css</symbol>
+        <lines>all</lines>
+        <reason>Custom CSS file where brand-specific styling overrides and accessibility improvements (color contrast, focus indicators) should be added</reason>
+      </artifact>
+      <artifact>
+        <path>src/Medley.Web/wwwroot/lib/bootstrap</path>
+        <kind>library</kind>
+        <symbol>Bootstrap</symbol>
+        <lines>n/a</lines>
+        <reason>Bootstrap 5.3 library already installed locally, needs to be verified for proper version and auto dark/light mode support per AC 1</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <dotnet>
+        <package name="Microsoft.AspNetCore.Identity.EntityFrameworkCore" version="9.0.10" />
+        <package name="Microsoft.AspNetCore.Identity.UI" version="9.0.10" />
+        <package name="Microsoft.Extensions.Diagnostics.HealthChecks" version="9.0.10" />
+        <package name="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" version="9.0.10" />
+        <package name="Serilog.AspNetCore" version="9.0.0" />
+      </dotnet>
+      <frontend>
+        <library name="Bootstrap" version="5.3" location="wwwroot/lib/bootstrap" />
+        <library name="jQuery" version="latest" location="wwwroot/lib/jquery" />
+        <library name="jQuery Validation" version="latest" location="wwwroot/lib/jquery-validation" />
+        <library name="jQuery Validation Unobtrusive" version="latest" location="wwwroot/lib/jquery-validation-unobtrusive" />
+      </frontend>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>Server-side rendering only - No SPA complexity, all pages must be server-rendered using ASP.NET Core MVC with Razor views</constraint>
+    <constraint>Bootstrap 5.3 required - Must use Bootstrap 5.3 with auto dark/light mode support and responsive grid system</constraint>
+    <constraint>WCAG AA compliance mandatory - All UI components must meet WCAG AA accessibility standards including proper ARIA labels, keyboard navigation, color contrast ratios, and screen reader support</constraint>
+    <constraint>Sub-2-second response times - All interactive elements must respond within 2 seconds per NFR001 from PRD</constraint>
+    <constraint>Mobile-responsive design - Must be fully functional on mobile devices (320px+), tablets (768px+), and desktop with touch targets at least 44x44px</constraint>
+    <constraint>Authentication-aware navigation - Navigation menu must show/hide items based on user authentication status and role (Admin, Editor, Viewer)</constraint>
+    <constraint>Clean Architecture adherence - Controllers should call Application Services, which coordinate Repository operations per established architecture pattern</constraint>
+    <constraint>Error handling integration - All errors must be logged using Serilog and display user-friendly messages with recovery guidance</constraint>
+    <constraint>Browser support - Must support modern browsers (Chrome, Firefox, Safari, Edge) with JavaScript enabled per NFR006</constraint>
+  </constraints>
+
+  <interfaces>
+    <interface>
+      <name>HomeController.Index</name>
+      <kind>MVC Action</kind>
+      <signature>public IActionResult Index()</signature>
+      <path>src/Medley.Web/Controllers/HomeController.cs</path>
+    </interface>
+    <interface>
+      <name>AuthController.Login</name>
+      <kind>MVC Action</kind>
+      <signature>public async Task&lt;IActionResult&gt; Login(LoginViewModel model, string? returnUrl = null)</signature>
+      <path>src/Medley.Web/Controllers/AuthController.cs</path>
+    </interface>
+    <interface>
+      <name>AuthController.Logout</name>
+      <kind>MVC Action</kind>
+      <signature>public async Task&lt;IActionResult&gt; Logout()</signature>
+      <path>src/Medley.Web/Controllers/AuthController.cs</path>
+    </interface>
+    <interface>
+      <name>Health Check Endpoint</name>
+      <kind>REST Endpoint</kind>
+      <signature>GET /health - Returns health status of database and AWS services</signature>
+      <path>src/Medley.Web/Program.cs</path>
+    </interface>
+    <interface>
+      <name>ASP.NET Core Identity</name>
+      <kind>Framework Service</kind>
+      <signature>SignInManager&lt;User&gt;, UserManager&lt;User&gt;, User.IsInRole(string role)</signature>
+      <path>Microsoft.AspNetCore.Identity</path>
+    </interface>
+  </interfaces>
+
+  <tests>
+    <standards>
+      Testing framework: xUnit with Moq for mocking. Unit tests should mock all external dependencies and test controller actions, view models, and business logic in isolation. Integration tests should test the full MVC pipeline including routing, model binding, and view rendering. UI tests should verify responsive design across different viewport sizes, accessibility compliance using automated tools, and keyboard navigation functionality. All tests should follow AAA pattern (Arrange, Act, Assert) and use descriptive test method names.
+    </standards>
+    <locations>
+      - src/tests/Medley.Tests.Web/ (Web layer unit tests)
+      - src/tests/Medley.Tests.Integration/ (Integration tests for full MVC pipeline)
+    </locations>
+    <ideas>
+      <test ac="1">Verify Bootstrap 5.3 is properly loaded and responsive grid system works across breakpoints (xs, sm, md, lg, xl)</test>
+      <test ac="2">Test navigation menu renders all placeholder sections (Dashboard, Integrations, Fragments, Articles, Analytics) and active page highlighting works</test>
+      <test ac="3">Verify dashboard displays system status indicators (database connection, AWS services) and recent activity overview</test>
+      <test ac="4">Test user profile management interface allows editing name, email, and password with proper validation</test>
+      <test ac="5">Verify custom error pages (404, 500, 403) display user-friendly messages and error logging works with Serilog</test>
+      <test ac="6">Test accessibility compliance: ARIA labels present, keyboard navigation works, color contrast meets WCAG AA, screen reader compatibility</test>
+      <test ac="7">Verify mobile responsive design at breakpoints: 320px, 375px, 414px (mobile), 768px, 1024px (tablet), touch targets 44x44px minimum</test>
+      <test ac="8">Test authentication-aware navigation: logged-out users see Login/Register, logged-in users see Logout and name, Admin users see User Management link</test>
+    </ideas>
+  </tests>
+</story-context>

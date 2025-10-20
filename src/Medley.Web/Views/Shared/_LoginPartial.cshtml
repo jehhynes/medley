@@ -3,31 +3,57 @@
 @inject SignInManager<User> SignInManager
 @inject UserManager<User> UserManager
 
-<ul class="navbar-nav">
 @if (SignInManager.IsSignedIn(User))
 {
-    <li class="nav-item">
-        <span class="nav-link text-dark">Hello @User.Identity?.Name!</span>
-    </li>
+    <a class="dropdown-item" href="#">
+        <i class="icon me-2 cil-bell"></i> Updates<span class="badge badge-sm bg-info ms-2">42</span>
+    </a>
+    <a class="dropdown-item" href="#">
+        <i class="icon me-2 cil-envelope-open"></i> Messages<span class="badge badge-sm bg-success ms-2">42</span>
+    </a>
+    <a class="dropdown-item" href="#">
+        <i class="icon me-2 cil-task"></i> Tasks<span class="badge badge-sm bg-danger ms-2">42</span>
+    </a>
+    <a class="dropdown-item" href="#">
+        <i class="icon me-2 cil-comment-square"></i> Comments<span class="badge badge-sm bg-warning ms-2">42</span>
+    </a>
+    <div class="dropdown-header bg-body-tertiary text-body-secondary fw-semibold my-2">
+        <div class="fw-semibold">Settings</div>
+    </div>
+    <a class="dropdown-item" href="#">
+        <i class="icon me-2 cil-user"></i> Profile
+    </a>
+    <a class="dropdown-item" href="#">
+        <i class="icon me-2 cil-settings"></i> Settings
+    </a>
     @if (User.IsInRole("Admin"))
     {
-        <li class="nav-item">
-            <a class="nav-link text-dark" asp-controller="UserManagement" asp-action="Index">User Management</a>
-        </li>
+        <a class="dropdown-item" asp-controller="UserManagement" asp-action="Index">
+            <i class="icon me-2 cil-people"></i> User Management<span class="badge badge-sm bg-secondary ms-2">Admin</span>
+        </a>
     }
-    <li class="nav-item">
-        <form class="form-inline" asp-controller="Auth" asp-action="Logout" method="post">
-            <button type="submit" class="nav-link btn btn-link text-dark">Logout</button>
-        </form>
-    </li>
+    <a class="dropdown-item" href="#">
+        <i class="icon me-2 cil-credit-card"></i> Payments<span class="badge badge-sm bg-secondary ms-2">42</span>
+    </a>
+    <a class="dropdown-item" href="#">
+        <i class="icon me-2 cil-file"></i> Projects<span class="badge badge-sm bg-primary ms-2">42</span>
+    </a>
+    <div class="dropdown-divider"></div>
+    <a class="dropdown-item" href="#">
+        <i class="icon me-2 cil-lock-locked"></i> Lock Account
+    </a>
+    <form class="form-inline" asp-controller="Auth" asp-action="Logout" method="post">
+        <button type="submit" class="dropdown-item">
+            <i class="icon me-2 cil-account-logout"></i> Logout
+        </button>
+    </form>
 }
 else
 {
-    <li class="nav-item">
-        <a class="nav-link text-dark" asp-controller="Auth" asp-action="Register">Register</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link text-dark" asp-controller="Auth" asp-action="Login">Login</a>
-    </li>
+    <a class="dropdown-item" asp-controller="Auth" asp-action="Register">
+        <i class="icon me-2 cil-user-plus"></i> Register
+    </a>
+    <a class="dropdown-item" asp-controller="Auth" asp-action="Login">
+        <i class="icon me-2 cil-account-login"></i> Login
+    </a>
 }
-</ul>
