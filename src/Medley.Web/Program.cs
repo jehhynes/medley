@@ -3,6 +3,8 @@ using Medley.Domain.Entities;
 using Medley.Infrastructure;
 using Medley.Infrastructure.Data;
 using Serilog;
+using Hangfire;
+using Hangfire.Dashboard;
 
 namespace Medley.Web;
 
@@ -120,6 +122,14 @@ public class Program
             app.UseRouting();
 
             app.UseAuthorization();
+
+            // Configure Hangfire dashboard with authentication
+            app.UseHangfireDashboard("/hangfire", new DashboardOptions
+            {
+                Authorization = new[] { new HangfireAuthorizationFilter() },
+                DashboardTitle = "Medley Background Jobs",
+                DisplayStorageConnectionString = false
+            });
 
             // Map health check endpoint
             app.MapHealthChecks("/health");

@@ -1,0 +1,227 @@
+<story-context id="bmad/bmm/workflows/4-implementation/story-context/template" v="1.0">
+  <metadata>
+    <epicId>1</epicId>
+    <storyId>1.5</storyId>
+    <title>Background Processing Infrastructure</title>
+    <status>Ready</status>
+    <generatedAt>2025-10-20</generatedAt>
+    <generator>BMAD Story Context Workflow</generator>
+    <sourceStoryPath>docs/stories/story-1.5.md</sourceStoryPath>
+  </metadata>
+
+  <story>
+    <asA>a developer</asA>
+    <iWant>to establish background processing capabilities using Hangfire</iWant>
+    <soThat>long-running AI operations don't block web requests</soThat>
+    <tasks>
+      <task id="1" ac="1">
+        <title>Configure Hangfire Infrastructure</title>
+        <subtasks>
+          <subtask id="1.1" status="complete">Install Hangfire NuGet packages (Hangfire.Core, Hangfire.SqlServer, Hangfire.AspNetCore)</subtask>
+          <subtask id="1.2" status="complete">Configure Hangfire with PostgreSQL storage using Npgsql</subtask>
+          <subtask id="1.3" status="complete">Set up Hangfire dashboard with authentication</subtask>
+          <subtask id="1.4" status="complete">Configure dependency injection for Hangfire services</subtask>
+        </subtasks>
+      </task>
+      <task id="2" ac="2">
+        <title>Implement Job Processing System</title>
+        <subtasks>
+          <subtask id="2.1" status="complete">Create IBackgroundJobService interface for abstraction</subtask>
+          <subtask id="2.2" status="complete">Implement BackgroundJobService using Hangfire's BackgroundJob.Enqueue</subtask>
+          <subtask id="2.3" status="complete">Configure job queues using Hangfire's queue system</subtask>
+          <subtask id="2.4" status="complete">Implement recurring jobs using Hangfire's RecurringJob.AddOrUpdate</subtask>
+        </subtasks>
+      </task>
+      <task id="3" ac="3">
+        <title>Configure Job Monitoring</title>
+        <subtasks>
+          <subtask id="3.1" status="complete">Set up Hangfire dashboard for job status monitoring</subtask>
+          <subtask id="3.2" status="complete">Configure job progress tracking using Hangfire's built-in progress reporting</subtask>
+          <subtask id="3.3" status="complete">Implement job result storage using Hangfire's job state management</subtask>
+          <subtask id="3.4" status="complete">Add custom job monitoring endpoints for application integration</subtask>
+        </subtasks>
+      </task>
+      <task id="4" ac="4">
+        <title>Configure Error Handling and Retry Logic</title>
+        <subtasks>
+          <subtask id="4.1" status="complete">Set up automatic retry policies using Hangfire's AutomaticRetryAttribute</subtask>
+          <subtask id="4.2" status="complete">Configure failed job handling using Hangfire's built-in failed job management</subtask>
+          <subtask id="4.3" status="complete">Add error logging integration with application logging system</subtask>
+          <subtask id="4.4" status="complete">Configure job timeout using Hangfire's job timeout settings</subtask>
+        </subtasks>
+      </task>
+      <task id="5" ac="5">
+        <title>Configure Resource Management</title>
+        <subtasks>
+          <subtask id="5.1" status="complete">Configure job concurrency limits using Hangfire's worker count settings</subtask>
+          <subtask id="5.2" status="complete">Set up job priority queues using Hangfire's queue priority system</subtask>
+          <subtask id="5.3" status="complete">Implement resource throttling using Hangfire's batch processing</subtask>
+          <subtask id="5.4" status="complete">Add performance monitoring using Hangfire's built-in metrics</subtask>
+        </subtasks>
+      </task>
+      <task id="6" ac="6">
+        <title>Integrate Logging and Monitoring</title>
+        <subtasks>
+          <subtask id="6.1" status="complete">Configure structured logging for background jobs using Hangfire's logging</subtask>
+          <subtask id="6.2" status="complete">Add performance metrics collection using Hangfire's dashboard metrics</subtask>
+          <subtask id="6.3" status="complete">Integrate with main application logging system</subtask>
+          <subtask id="6.4" status="complete">Set up health checks for background processing using Hangfire's health monitoring</subtask>
+        </subtasks>
+      </task>
+    </tasks>
+  </story>
+
+  <acceptanceCriteria>
+    <criterion id="1">Hangfire configured for background processing with PostgreSQL storage</criterion>
+    <criterion id="2">Job processing system implemented leveraging Hangfire's built-in capabilities</criterion>
+    <criterion id="3">Hangfire dashboard configured for job monitoring and management</criterion>
+    <criterion id="4">Error handling and retry logic configured using Hangfire's automatic retry features</criterion>
+    <criterion id="5">Job queues and concurrency controls configured using Hangfire's queue system</criterion>
+    <criterion id="6">Background job logging integrated with main application logging</criterion>
+  </acceptanceCriteria>
+
+  <artifacts>
+    <docs>
+      <doc>
+        <path>docs/tech-spec-epic-1.md</path>
+        <title>Tech Spec: Epic 1 - Foundation & Core Infrastructure</title>
+        <section>Background Processing (Story 1.5)</section>
+        <snippet>Hangfire configured with PostgreSQL storage for reliable job processing. Interface abstraction (IBackgroundJobService) allows swapping for other job processors. Supports 10,000+ fragments/hour processing per PRD requirements.</snippet>
+      </doc>
+      <doc>
+        <path>docs/solution-architecture.md</path>
+        <title>Solution Architecture Document</title>
+        <section>Technology Stack - Background Jobs</section>
+        <snippet>Hangfire 1.8.6 with IBackgroundJobService interface abstraction. Reliable job processing, dashboard, retry logic, persistence. Clean Architecture placement in Infrastructure layer with cross-cutting concerns.</snippet>
+      </doc>
+      <doc>
+        <path>docs/PRD.md</path>
+        <title>Medley Product Requirements Document</title>
+        <section>Non-Functional Requirements</section>
+        <snippet>NFR002: Process 10,000+ fragments per hour during peak usage. Background processing critical for AI fragment extraction without blocking web requests.</snippet>
+      </doc>
+      <doc>
+        <path>docs/epics.md</path>
+        <title>Epic Breakdown</title>
+        <section>Story 1.5: Background Processing Infrastructure</section>
+        <snippet>Establish background processing capabilities using Hangfire so that long-running AI operations don't block web requests. Foundation for Epic 2 AI processing workflows.</snippet>
+      </doc>
+    </docs>
+    <code>
+      <artifact>
+        <path>src/Medley.Application/Interfaces/IBackgroundJobService.cs</path>
+        <kind>interface</kind>
+        <symbol>IBackgroundJobService</symbol>
+        <lines>1-30</lines>
+        <reason>Core interface for background job abstraction. Defines Enqueue, Schedule, and AddOrUpdateRecurring methods for Hangfire operations.</reason>
+      </artifact>
+      <artifact>
+        <path>src/Medley.Infrastructure/Services/BackgroundJobService.cs</path>
+        <kind>service</kind>
+        <symbol>BackgroundJobService</symbol>
+        <lines>1-70</lines>
+        <reason>Hangfire implementation of IBackgroundJobService. Thin wrapper with logging and error handling around Hangfire's core functionality.</reason>
+      </artifact>
+      <artifact>
+        <path>src/Medley.Infrastructure/DependencyInjection.cs</path>
+        <kind>configuration</kind>
+        <symbol>AddInfrastructure</symbol>
+        <lines>60-80</lines>
+        <reason>Hangfire configuration with PostgreSQL storage, server options (worker count, queues, polling intervals), and service registration.</reason>
+      </artifact>
+      <artifact>
+        <path>src/Medley.Web/Program.cs</path>
+        <kind>configuration</kind>
+        <symbol>Main</symbol>
+        <lines>100-110</lines>
+        <reason>Hangfire dashboard configuration at /hangfire with HangfireAuthorizationFilter for admin-only access in production.</reason>
+      </artifact>
+      <artifact>
+        <path>src/Medley.Web/Framework/HangfireAuthorizationFilter.cs</path>
+        <kind>filter</kind>
+        <symbol>HangfireAuthorizationFilter</symbol>
+        <lines>1-25</lines>
+        <reason>Dashboard authorization requiring authenticated admin users. Implements IDashboardAuthorizationFilter.</reason>
+      </artifact>
+    </code>
+    <dependencies>
+      <dotnet>
+        <package name="Hangfire.Core" version="1.8.7" />
+        <package name="Hangfire.PostgreSql" version="1.20.4" />
+        <package name="Hangfire.AspNetCore" version="1.8.7" />
+        <package name="Npgsql.EntityFrameworkCore.PostgreSQL" version="9.0.4" />
+        <package name="Microsoft.Extensions.Logging" version="9.0.10" />
+        <package name="Serilog.AspNetCore" version="9.0.0" />
+      </dotnet>
+    </dependencies>
+  </artifacts>
+
+  <constraints>
+    <constraint>Clean Architecture: Background job services in Medley.Infrastructure, interfaces in Medley.Application, job scheduling in Medley.Web</constraint>
+    <constraint>Use PostgreSQL storage to align with existing database infrastructure from Stories 1.1 and 1.3</constraint>
+    <constraint>Leverage Hangfire's built-in features rather than custom implementation: job state management, automatic retry, queue system, dashboard monitoring</constraint>
+    <constraint>Interface abstraction (IBackgroundJobService) allows swapping Hangfire for other job processors (Azure Service Bus, AWS SQS) if needed</constraint>
+    <constraint>Performance target: Support 10,000+ fragments/hour processing per PRD requirements using Hangfire's scalable architecture</constraint>
+    <constraint>Dashboard authentication: Admin-only access in production, open in development</constraint>
+    <constraint>Worker configuration: Optimize worker count, queue priorities, and polling intervals for AI processing workloads</constraint>
+    <constraint>Maintain consistent patterns from Story 1.4: proper DI registration, comprehensive testing, structured logging</constraint>
+  </constraints>
+  <interfaces>
+    <interface>
+      <name>IBackgroundJobService</name>
+      <kind>Service Interface</kind>
+      <signature>
+        string Enqueue&lt;T&gt;(Expression&lt;Func&lt;T, Task&gt;&gt; methodCall);
+        string Schedule&lt;T&gt;(Expression&lt;Func&lt;T, Task&gt;&gt; methodCall, TimeSpan delay);
+        void AddOrUpdateRecurring&lt;T&gt;(string recurringJobId, Expression&lt;Func&lt;T, Task&gt;&gt; methodCall, string cronExpression);
+      </signature>
+      <path>src/Medley.Application/Interfaces/IBackgroundJobService.cs</path>
+    </interface>
+    <interface>
+      <name>IBackgroundJobClient</name>
+      <kind>Hangfire Interface</kind>
+      <signature>Hangfire's built-in interface for job enqueueing and scheduling</signature>
+      <path>Hangfire.Core package</path>
+    </interface>
+    <interface>
+      <name>IRecurringJobManager</name>
+      <kind>Hangfire Interface</kind>
+      <signature>Hangfire's built-in interface for recurring job management</signature>
+      <path>Hangfire.Core package</path>
+    </interface>
+    <interface>
+      <name>IDashboardAuthorizationFilter</name>
+      <kind>Hangfire Dashboard Interface</kind>
+      <signature>bool Authorize(DashboardContext context);</signature>
+      <path>Hangfire.Dashboard package</path>
+    </interface>
+  </interfaces>
+  <tests>
+    <standards>
+      xUnit for unit and integration tests. Moq for mocking dependencies. Test projects follow naming convention: Medley.Tests.[Layer]. 
+      All services require unit tests with mocked dependencies. Integration tests verify Hangfire configuration and job execution. 
+      Test coverage expected for: service methods, error handling, logging, configuration validation.
+    </standards>
+    <locations>
+      <location>src/tests/Medley.Tests.Infrastructure/Services/BackgroundJobServiceTests.cs</location>
+      <location>src/tests/Medley.Tests.Integration/BackgroundJobIntegrationTests.cs</location>
+      <location>src/tests/Medley.Tests.Web/HangfireAuthorizationFilterTests.cs</location>
+    </locations>
+    <ideas>
+      <idea ac="1">Test Hangfire configuration with PostgreSQL connection string validation</idea>
+      <idea ac="1">Test server options: worker count, queue configuration, polling intervals</idea>
+      <idea ac="2">Test BackgroundJobService.Enqueue with valid and invalid method calls</idea>
+      <idea ac="2">Test BackgroundJobService.Schedule with various delay values</idea>
+      <idea ac="2">Test BackgroundJobService.AddOrUpdateRecurring with cron expressions</idea>
+      <idea ac="2">Test error handling and logging for failed job operations</idea>
+      <idea ac="3">Test HangfireAuthorizationFilter with authenticated admin users</idea>
+      <idea ac="3">Test HangfireAuthorizationFilter denies unauthenticated users</idea>
+      <idea ac="3">Test HangfireAuthorizationFilter denies non-admin roles</idea>
+      <idea ac="4">Integration test: Verify automatic retry on job failure</idea>
+      <idea ac="4">Integration test: Verify failed job handling and logging</idea>
+      <idea ac="5">Integration test: Verify job queue priority and concurrency limits</idea>
+      <idea ac="6">Integration test: Verify job logging appears in application logs</idea>
+      <idea ac="6">Integration test: Verify Hangfire dashboard accessibility at /hangfire</idea>
+    </ideas>
+  </tests>
+</story-context>

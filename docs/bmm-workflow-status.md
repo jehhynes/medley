@@ -10,8 +10,8 @@
 ## Workflow Status Tracker
 
 **Current Phase:** 4-Implementation
-**Current Workflow:** story-approved (Story 1.4) - Complete
-**Current Agent:** Developer
+**Current Workflow:** story-ready (Story 1.5) - Complete
+**Current Agent:** Scrum Master
 **Overall Progress:** 100%
 
 ### Phase Completion Status
@@ -75,12 +75,7 @@
 
 #### IN PROGRESS (Approved for Development)
 
-- **Story ID:** 1.5
-- **Story Title:** Background Processing Infrastructure
-- **Story File:** `story-1.5.md`
-- **Story Status:** Draft (needs review via story-ready)
-- **Context File:** `docs/stories/story-context-1.5.xml` (if exists, otherwise note "Context not yet generated")
-- **Action:** DEV should run `dev-story` workflow to implement this story
+(No stories currently in progress - Story 1.5 completed)
 
 #### DRAFT (Needs Review)
 
@@ -119,11 +114,11 @@
 
 ### Next Action Required
 
-**What to do next:** Review drafted story 1.5, then mark it ready
+**What to do next:** Generate context for story 1.5, then implement it
 
-**Command to run:** Load SM agent and run 'story-ready' workflow
+**Command to run:** Run 'story-context' workflow to generate implementation context (or skip to dev-story)
 
-**Agent to load:** bmad/bmm/agents/sm.md
+**Agent to load:** bmad/bmm/agents/sm.md (for story-context) OR bmad/bmm/agents/dev.md (for dev-story)
 
 ---
 
@@ -224,6 +219,7 @@ Start with brainstorm-project workflow to validate your AI-powered documentation
 - **2025-10-20**: Story 1.4 (Core Data Models and Database Schema) updated with Observations and Insights entities, then marked ready for development by SM agent. Story 1.6 moved from BACKLOG → TODO.
 - **2025-10-20**: Completed story-context for Story 1.4 (Core Data Models and Database Schema). Context file: docs/stories/story-context-1.4.xml. Next: DEV agent should run dev-story to implement.
 - **2025-10-20**: Story 1.4 (Core Data Models and Database Schema) approved and marked done by DEV agent. Moved from IN PROGRESS → DONE. Story 1.5 moved from TODO → IN PROGRESS. Story 1.6 moved from BACKLOG → TODO.
+- **2025-10-20**: Story 1.5 (Background Processing Infrastructure) marked ready for development by SM agent. Story rewritten to leverage Hangfire's built-in capabilities, reducing custom implementation requirements. Status updated to Ready. Ready for DEV agent implementation.
 
 ---
 

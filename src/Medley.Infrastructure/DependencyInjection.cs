@@ -7,6 +7,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
+using Hangfire;
+using Hangfire.PostgreSql;
 
 namespace Medley.Infrastructure;
 
@@ -42,6 +44,29 @@ public static class DependencyInjection
         // Register application services
         services.AddScoped<IUserAuditLogService, UserAuditLogService>();
         services.AddScoped<IEmailService, EmailService>();
+
+        // Configure Hangfire
+        services.AddHangfire(configuration => configuration
+            .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+            .UseSimpleAssemblyNameTypeSerializer()
+            .UseRecommendedSerializerSettings()
+            .UsePostgreSqlStorage(options =>
+            {
+                options.UseNpgsqlConnection(connectionString);
+            }));
+
+        // Register Hangfire server
+        services.AddHangfireServer(options =>
+        {
+            options.WorkerCount = 4; //Environment.ProcessorCount * 2;
+            //options.Queues = new[] { "default", "high", "low" };
+            //options.ServerTimeout = TimeSpan.FromMinutes(4);
+            //options.ServerCheckInterval = TimeSpan.FromMinutes(1);
+            //options.SchedulePollingInterval = TimeSpan.FromSeconds(15);
+        });
+
+        // Register background job service
+        services.AddScoped<IBackgroundJobService, BackgroundJobService>();
 
         return services;
     }
