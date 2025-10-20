@@ -1,4 +1,4 @@
-﻿using Medley.Domain.Entities;
+using Medley.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -25,6 +25,15 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     /// Knowledge fragments with vector embeddings for semantic similarity
     /// </summary>
     public DbSet<Fragment> Fragments { get; set; } = null!;
+    public DbSet<Organization> Organizations { get; set; } = null!;
+    public DbSet<Integration> Integrations { get; set; } = null!;
+    public DbSet<Source> Sources { get; set; } = null!;
+    public DbSet<Article> Articles { get; set; } = null!;
+    public DbSet<Insight> Insights { get; set; } = null!;
+    public DbSet<Observation> Observations { get; set; } = null!;
+    public DbSet<Finding> Findings { get; set; } = null!;
+    public DbSet<FragmentCluster> FragmentClusters { get; set; } = null!;
+    public DbSet<ObservationCluster> ObservationClusters { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

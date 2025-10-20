@@ -91,17 +91,9 @@ public class FragmentRepository : Repository<Fragment>, IFragmentRepository
             .Where(x => fragments.ContainsKey(x.Id))
             .Select(x => new FragmentSimilarityResult
             {
-                Fragment = fragments[x.Id],
+                RelatedEntity = fragments[x.Id],
                 Distance = x.Distance
             })
             .ToList();
-    }
-
-    /// <summary>
-    /// Gets a fragment by its unique identifier
-    /// </summary>
-    public async Task<Fragment?> GetByIdAsync(Guid id)
-    {
-        return await _context.Fragments.FindAsync(id);
     }
 }

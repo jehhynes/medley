@@ -34,6 +34,9 @@ public static class DependencyInjection
         // Register repositories and unit of work
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<IFragmentRepository, FragmentRepository>();
+        services.AddScoped<IObservationRepository, ObservationRepository>();
+        services.AddScoped<IFindingRepository, FindingRepository>();
+        services.AddScoped<IInsightRepository, InsightRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         // Register application services

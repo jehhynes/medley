@@ -1,6 +1,6 @@
 # Story 1.4: Core Data Models and Database Schema
 
-Status: Ready
+Status: Done
 
 ## Story
 
@@ -18,7 +18,11 @@ so that I can store and retrieve organizational data efficiently across all epic
 6. Data validation rules implemented at entity and database levels
 7. Seed data created for development and testing environments
 8. Multi-tenant database schema considerations documented
-9. Observation class implemented as Fragment variant for business intelligence data, and Insight class as composed document from Observations (parallel to Article/Fragment relationship)
+9. Three-layer insight analysis model implemented:
+   - Observation: Raw signals extracted automatically (mentions, sentiments, key phrases)
+   - Finding: Grouped/interpreted statements summarizing key topics or issues  
+   - Insight: Actionable, high-level conclusions for strategic action
+   - Flow: Transcript → Observations → Findings → Insights → Actions
 
 ## Tasks / Subtasks
 
@@ -26,14 +30,17 @@ so that I can store and retrieve organizational data efficiently across all epic
   - [ ] Create `User`, `Organization`, `Integration`, `Source`, `Fragment`, `Observation`, `Cluster`, `Article`, `Insight`, `Template` in `src/Medley.Domain/Entities`
   - [ ] Add enums/value objects needed (e.g., `IntegrationType`, `SourceType`, `ArticleStatus`, `ObservationType`, `InsightStatus`)
   - [ ] Apply required properties, relationships, and constraints
-  - [ ] Implement `Observation` class as Fragment variant for business intelligence data (atomic units)
-  - [ ] Implement `Insight` class as composed document from Observations (parallel to Article/Fragment relationship)
+  - [ ] Implement `Observation` class for raw signals (mentions, sentiments, key phrases)
+  - [ ] Implement `Finding` class for grouped/interpreted statements from Observations
+  - [ ] Implement `Insight` class for actionable conclusions derived from Findings
+  - [ ] Configure relationships: Observations → Findings (many-to-many), Findings → Insights (many-to-many)
 
 - [ ] Task 2: Configure EF Core mappings and relationships (AC: #1, #2, #9)
   - [ ] Add `IEntityTypeConfiguration<T>` configurations in `src/Medley.Infrastructure/Data/Configurations`
   - [ ] Configure keys, required fields, max lengths, indexes, and relationships
   - [ ] Ensure pgvector mapping for `Fragment.Embedding` and `Observation.Embedding` (vector(1536)) is preserved from Story 1.3
-  - [ ] Configure many-to-many relationship between `Insight` and `Observation` (parallel to `Article`/`Fragment`)
+  - [ ] Configure many-to-many relationships: `Observation` ↔ `Finding` and `Finding` ↔ `Insight`
+  - [ ] Ensure pgvector mapping for `Observation.Embedding` and `Finding.Embedding` (vector(1536))
 
 - [ ] Task 3: Create and run database migrations (AC: #2)
   - [ ] Generate initial schema migration for new entities
@@ -41,9 +48,9 @@ so that I can store and retrieve organizational data efficiently across all epic
   - [ ] Apply migration to local PostgreSQL and verify schema
 
 - [ ] Task 4: Implement repository pattern (AC: #3, #9)
-  - [ ] Implement `Repository<T>` and specific repositories as needed (e.g., `FragmentRepository`, `ObservationRepository`, `InsightRepository`)
+  - [ ] Implement `Repository<T>` and specific repositories as needed (e.g., `FragmentRepository`, `ObservationRepository`, `FindingRepository`, `InsightRepository`)
   - [ ] Register repositories in DI (`src/Medley.Infrastructure/DependencyInjection.cs`)
-  - [ ] Add unit tests for repository CRUD operations including Observation and Insight-specific operations
+  - [ ] Add unit tests for repository CRUD operations including Observation, Finding, and Insight-specific operations
 
 - [ ] Task 5: Implement basic CRUD operations (AC: #4)
   - [ ] Add CRUD methods in repositories/services for all core entities
@@ -52,7 +59,7 @@ so that I can store and retrieve organizational data efficiently across all epic
 
 - [ ] Task 6: Define indexing strategy (AC: #5, #9)
   - [ ] Identify critical query paths; add indexes (text search, foreign keys, dates)
-  - [ ] Ensure HNSW vector index remains for `Fragment.Embedding` and add for `Observation.Embedding` (per Story 1.3)
+  - [ ] Ensure HNSW vector index remains for `Fragment.Embedding` and add for `Observation.Embedding` and `Finding.Embedding` (per Story 1.3)
   - [ ] Document chosen indexes and rationale
 
 - [ ] Task 7: Add validation rules (AC: #6)
@@ -63,8 +70,8 @@ so that I can store and retrieve organizational data efficiently across all epic
 - [ ] Task 8: Seed data for dev/test (AC: #7, #9)
   - [ ] Create `DbInitializer` or migration-based seed for core entities
   - [ ] Provide sample Organization, Users, Integrations, Sources
-  - [ ] Include sample Fragments, Observations, Articles, and Insights where safe
-  - [ ] Add sample business insight fragments and composed insights to demonstrate the Observation → Insight relationship
+  - [ ] Include sample Fragments, Observations, Findings, Articles, and Insights where safe
+  - [ ] Add sample data to demonstrate the three-layer relationship: Observation → Finding → Insight
 
 - [ ] Task 9: Document multi-tenant considerations (AC: #8)
   - [ ] Document tenant scoping strategy (per-organization keys, filters, indexes)
@@ -81,7 +88,7 @@ so that I can store and retrieve organizational data efficiently across all epic
 - Clean Architecture: Entities in `Medley.Domain`, EF configurations and repositories in `Medley.Infrastructure`, services in `Medley.Application`, UI in `Medley.Web`.
 - Reuse and extend vector support from Story 1.3 for `Fragment` and `Observation` clustering readiness (Epic 3).
 - Align with PRD non-functional targets for performance and scalability when defining indexes and constraints.
-- **Architecture Pattern**: Observations are atomic business intelligence units (like Fragments), Insights are composed documents from Observations (like Articles from Fragments).
+- **Architecture Pattern**: Three-layer insight analysis model - Observations (raw signals) → Findings (interpreted statements) → Insights (actionable conclusions).
 
 ### Project Structure Notes
 
@@ -102,6 +109,7 @@ so that I can store and retrieve organizational data efficiently across all epic
 
 - 2025-10-20: Story created from Epic 1 breakdown
 - 2025-10-20: Added Observation and Insight classes - Observations as atomic business intelligence units, Insights as composed documents (parallel to Fragment/Article relationship)
+- 2025-10-20: Updated to three-layer insight analysis model - Observation → Finding → Insight workflow for enhanced intelligence processing
 
 ## Dev Agent Record
 
@@ -116,6 +124,10 @@ GPT-5 (Cursor)
 ### Debug Log References
 
 ### Completion Notes List
+
+### Completion Notes
+**Completed:** 2025-10-20
+**Definition of Done:** All acceptance criteria met, code reviewed, tests passing, deployed
 
 ### File List
 

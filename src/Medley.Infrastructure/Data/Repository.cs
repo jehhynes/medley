@@ -18,7 +18,7 @@ public class Repository<T> : IRepository<T> where T : class
         _dbSet = context.Set<T>();
     }
 
-    public virtual async Task<T?> GetAsync(int id)
+    public virtual async Task<T?> GetByIdAsync(Guid id)
     {
         return await _dbSet.FindAsync(id);
     }
@@ -28,13 +28,14 @@ public class Repository<T> : IRepository<T> where T : class
         return _dbSet.AsQueryable();
     }
 
-    public virtual async Task SaveAsync(T entity)
+    public virtual Task SaveAsync(T entity)
     {
         var entry = _context.Entry(entity);
         if (entry.State == EntityState.Detached)
         {
             _dbSet.Add(entity);
         }
-        await _context.SaveChangesAsync();
+        return Task.CompletedTask;
+        //await _context.SaveChangesAsync(); //We don't want to flush every time an entity is added.
     }
 }

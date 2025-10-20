@@ -1,4 +1,5 @@
 using Medley.Domain.Entities;
+using Medley.Domain.Enums;
 using Xunit;
 
 namespace Medley.Tests.Domain.Entities;
@@ -9,14 +10,16 @@ public class FragmentTests
     public void Fragment_ShouldInitializeWithDefaultValues()
     {
         // Arrange & Act
-        var fragment = new Fragment();
+        var fragment = new Fragment
+        {
+            Content = string.Empty,
+            Source = new Source { Type = SourceType.Meeting }
+        };
 
         // Assert
         Assert.Equal(Guid.Empty, fragment.Id);
         Assert.Equal(string.Empty, fragment.Content);
         Assert.Null(fragment.Embedding);
-        Assert.Null(fragment.SourceType);
-        Assert.Null(fragment.SourceId);
         Assert.NotEqual(DateTimeOffset.MinValue, fragment.CreatedAt);
         Assert.Null(fragment.LastModifiedAt);
     }
@@ -32,8 +35,13 @@ public class FragmentTests
         {
             embedding[i] = (float)i / 1536;
         }
-        var sourceType = "Fellow.ai";
-        var sourceId = "meeting-123";
+        var source = new Source
+        {
+            Id = Guid.NewGuid(),
+            Type = SourceType.Meeting,
+            Name = "Daily Standup",
+            ExternalId = "meeting-123"
+        };
         var createdAt = DateTimeOffset.UtcNow;
         var lastModifiedAt = DateTimeOffset.UtcNow.AddHours(1);
 
@@ -43,8 +51,7 @@ public class FragmentTests
             Id = id,
             Content = content,
             Embedding = embedding,
-            SourceType = sourceType,
-            SourceId = sourceId,
+            Source = source,
             CreatedAt = createdAt,
             LastModifiedAt = lastModifiedAt
         };
@@ -54,8 +61,10 @@ public class FragmentTests
         Assert.Equal(content, fragment.Content);
         Assert.Equal(embedding, fragment.Embedding);
         Assert.Equal(1536, fragment.Embedding!.Length);
-        Assert.Equal(sourceType, fragment.SourceType);
-        Assert.Equal(sourceId, fragment.SourceId);
+        Assert.Equal(source, fragment.Source);
+        Assert.Equal(SourceType.Meeting, fragment.Source.Type);
+        Assert.Equal("Daily Standup", fragment.Source.Name);
+        Assert.Equal("meeting-123", fragment.Source.ExternalId);
         Assert.Equal(createdAt, fragment.CreatedAt);
         Assert.Equal(lastModifiedAt, fragment.LastModifiedAt);
     }
@@ -68,7 +77,8 @@ public class FragmentTests
         {
             Id = Guid.NewGuid(),
             Content = "Test content without embedding",
-            Embedding = null
+            Embedding = null,
+            Source = new Source { Type = SourceType.Meeting }
         };
 
         // Assert
@@ -89,7 +99,8 @@ public class FragmentTests
         {
             Id = Guid.NewGuid(),
             Content = "Test content",
-            Embedding = embedding
+            Embedding = embedding,
+            Source = new Source { Type = SourceType.Meeting }
         };
 
         // Assert

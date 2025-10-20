@@ -14,8 +14,8 @@
     <iWant>to establish ALL data models needed for the complete system</iWant>
     <soThat>I can store and retrieve organizational data efficiently across all epics</soThat>
     <tasks>
-      <task id="1">Define domain entities - Create User, Organization, Integration, Source, Fragment, Observation, Cluster, Article, Insight, Template in src/Medley.Domain/Entities with proper enums and relationships</task>
-      <task id="2">Configure EF Core mappings - Add IEntityTypeConfiguration&lt;T&gt; in src/Medley.Infrastructure/Data/Configurations with pgvector support for Fragment and Observation embeddings</task>
+      <task id="1">Define domain entities - Create User, Organization, Integration, Source, Fragment, Observation, Finding, Cluster, Article, Insight, Template in src/Medley.Domain/Entities with proper enums and relationships</task>
+      <task id="2">Configure EF Core mappings - Add IEntityTypeConfiguration&lt;T&gt; in src/Medley.Infrastructure/Data/Configurations with pgvector support for Fragment, Observation, and Finding embeddings</task>
       <task id="3">Create database migrations - Generate and apply migrations for new entities with custom SQL for extensions/indexes</task>
       <task id="4">Implement repository pattern - Create repositories for all entities, register in DI, add unit tests with mocking</task>
       <task id="5">Implement CRUD operations - Add CRUD methods in repositories/services with controller endpoints and comprehensive tests</task>
@@ -28,7 +28,7 @@
   </story>
 
   <acceptanceCriteria>
-    <criterion id="1">Entity models created for Users, Organizations, Integrations, Sources, Fragments, Observations, Clusters, Articles, Insights, and Templates</criterion>
+    <criterion id="1">Entity models created for Users, Organizations, Integrations, Sources, Fragments, Observations, Findings, Clusters, Articles, Insights, and Templates</criterion>
     <criterion id="2">Database migrations implemented and tested for all entities with proper relationships</criterion>
     <criterion id="3">Repository pattern implemented for data access abstraction</criterion>
     <criterion id="4">Basic CRUD operations implemented for all core entities</criterion>
@@ -36,7 +36,7 @@
     <criterion id="6">Data validation rules implemented at entity and database levels</criterion>
     <criterion id="7">Seed data created for development and testing environments</criterion>
     <criterion id="8">Multi-tenant database schema considerations documented</criterion>
-    <criterion id="9">Observation class implemented as Fragment variant for business intelligence data, and Insight class as composed document from Observations (parallel to Article/Fragment relationship)</criterion>
+    <criterion id="9">Three-layer insight analysis model implemented: Observation (raw signals) → Finding (interpreted statements) → Insight (actionable conclusions) with proper relationships and vector embeddings</criterion>
   </acceptanceCriteria>
 
   <artifacts>

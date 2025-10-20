@@ -10,7 +10,7 @@
 ## Workflow Status Tracker
 
 **Current Phase:** 4-Implementation
-**Current Workflow:** story-context (Story 1.4) - Complete
+**Current Workflow:** story-approved (Story 1.4) - Complete
 **Current Agent:** Developer
 **Overall Progress:** 100%
 
@@ -49,7 +49,6 @@
 
 | Epic | Story | ID  | Title | File |
 | ---- | ----- | --- | ----- | ---- |
-| 1 | 5 | 1.5 | Background Processing Infrastructure | story-1.5.md |
 | 1 | 7 | 1.7 | CI/CD Pipeline Foundation | story-1.7.md |
 | 1 | 8 | 1.8 | Basic UI Framework and Navigation | story-1.8.md |
 | 2 | 1 | 2.1 | Integration Management Interface | story-2.1.md |
@@ -64,7 +63,7 @@
 | 2 | 10 | 2.10 | Fragment Storage and Indexing | story-2.10.md |
 | 2 | 11 | 2.11 | Fragment Search Interface | story-2.11.md |
 
-**Total in backlog:** 13 stories (Epic 1-2 detailed, Epic 3-5 to be detailed)
+**Total in backlog:** 12 stories (Epic 1-2 detailed, Epic 3-5 to be detailed)
 
 #### TODO (Needs Drafting)
 
@@ -76,31 +75,28 @@
 
 #### IN PROGRESS (Approved for Development)
 
-- **Story ID:** 1.4
-- **Story Title:** Core Data Models and Database Schema (with Observations and Insights)
-- **Story File:** `story-1.4.md`
-- **Story Status:** Ready
-- **Context File:** `docs/stories/story-context-1.4.xml`
-- **Action:** DEV should run `dev-story` workflow to implement this story (context ready)
-
-#### DRAFT (Needs Review)
-
 - **Story ID:** 1.5
 - **Story Title:** Background Processing Infrastructure
 - **Story File:** `story-1.5.md`
-- **Status:** Draft (needs review via story-ready)
-- **Action:** Review story content and run `story-ready` when satisfied
+- **Story Status:** Draft (needs review via story-ready)
+- **Context File:** `docs/stories/story-context-1.5.xml` (if exists, otherwise note "Context not yet generated")
+- **Action:** DEV should run `dev-story` workflow to implement this story
+
+#### DRAFT (Needs Review)
+
+(No stories currently in draft - all stories are approved or complete)
 
 #### DONE (Completed Stories)
 
 | Story ID | File | Completed Date | Points |
 | -------- | ---- | -------------- | ------ |
+| 1.4 | story-1.4.md | 2025-10-20 | 8 |
 | 1.3 | story-1.3.md | 2025-10-20 | 8 |
 | 1.2 | story-1.2.md | 2025-10-20 | 8 |
 | 1.1 | story-1.1.md | 2025-10-17 | 5 |
 
-**Total completed:** 3 stories
-**Total points completed:** 21 points
+**Total completed:** 4 stories
+**Total points completed:** 29 points
 
 ### Artifacts Generated
 
@@ -123,11 +119,11 @@
 
 ### Next Action Required
 
-**What to do next:** Implement Story 1.4 (Core Data Models and Database Schema)
+**What to do next:** Review drafted story 1.5, then mark it ready
 
-**Command to run:** Load DEV agent and run 'dev-story' workflow to implement the story
+**Command to run:** Load SM agent and run 'story-ready' workflow
 
-**Agent to load:** bmad/bmm/agents/dev.md (for dev-story)
+**Agent to load:** bmad/bmm/agents/sm.md
 
 ---
 
@@ -227,7 +223,7 @@ Start with brainstorm-project workflow to validate your AI-powered documentation
 - **2025-10-20**: Story 1.3 (Vector Database Setup with pgvector) approved and marked done by DEV agent. Moved from IN PROGRESS → DONE. Story 1.4 moved from TODO → IN PROGRESS. Story 1.5 moved from BACKLOG → TODO.
 - **2025-10-20**: Story 1.4 (Core Data Models and Database Schema) updated with Observations and Insights entities, then marked ready for development by SM agent. Story 1.6 moved from BACKLOG → TODO.
 - **2025-10-20**: Completed story-context for Story 1.4 (Core Data Models and Database Schema). Context file: docs/stories/story-context-1.4.xml. Next: DEV agent should run dev-story to implement.
-- **2025-10-20**: Completed create-story for Story 1.5 (Background Processing Infrastructure). Story file: story-1.5.md. Status: Draft (needs review via story-ready). Next: Review and approve story.
+- **2025-10-20**: Story 1.4 (Core Data Models and Database Schema) approved and marked done by DEV agent. Moved from IN PROGRESS → DONE. Story 1.5 moved from TODO → IN PROGRESS. Story 1.6 moved from BACKLOG → TODO.
 
 ---
 

@@ -20,14 +20,12 @@ public class UserAuditLog : BaseEntity
     /// <summary>
     /// Action performed
     /// </summary>
-    [Required]
-    public UserAuditAction Action { get; set; }
+    public required UserAuditAction Action { get; set; }
 
     /// <summary>
     /// Timestamp when the action occurred
     /// </summary>
-    [Required]
-    public DateTimeOffset Timestamp { get; set; } = DateTimeOffset.UtcNow;
+    public required DateTimeOffset Timestamp { get; set; }
 
     /// <summary>
     /// IP address from which the action was performed
@@ -49,5 +47,5 @@ public class UserAuditLog : BaseEntity
     /// <summary>
     /// Indicates if the action was successful
     /// </summary>
-    public bool Success { get; set; } = true;
+    public required bool Success { get; set; } = true;
 }

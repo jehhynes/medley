@@ -26,11 +26,16 @@ public class FragmentRepositoryTests : DatabaseTestBase
     public async Task GetByIdAsync_ShouldReturnFragment_WhenExists()
     {
         // Arrange
+        var source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, Name = "Meeting" };
+        await _dbContext.Sources.AddAsync(source);
+        await _dbContext.SaveChangesAsync();
+
         var fragment = new Fragment
         {
             Id = Guid.NewGuid(),
             Content = "Test content",
-            CreatedAt = DateTimeOffset.UtcNow
+            CreatedAt = DateTimeOffset.UtcNow,
+            Source = source
         };
         await _dbContext.Fragments.AddAsync(fragment);
         await _dbContext.SaveChangesAsync();
@@ -65,7 +70,8 @@ public class FragmentRepositoryTests : DatabaseTestBase
         {
             Id = Guid.NewGuid(),
             Content = "New fragment",
-            CreatedAt = DateTimeOffset.UtcNow
+            CreatedAt = DateTimeOffset.UtcNow,
+            Source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, Name = "Meeting" }
         };
 
         // Act
@@ -81,11 +87,15 @@ public class FragmentRepositoryTests : DatabaseTestBase
     public async Task Query_ShouldReturnAllFragments()
     {
         // Arrange
+        var source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, Name = "Meeting" };
+        await _dbContext.Sources.AddAsync(source);
+        await _dbContext.SaveChangesAsync();
+
         var fragments = new[]
         {
-            new Fragment { Id = Guid.NewGuid(), Content = "Fragment 1", CreatedAt = DateTimeOffset.UtcNow },
-            new Fragment { Id = Guid.NewGuid(), Content = "Fragment 2", CreatedAt = DateTimeOffset.UtcNow },
-            new Fragment { Id = Guid.NewGuid(), Content = "Fragment 3", CreatedAt = DateTimeOffset.UtcNow }
+            new Fragment { Id = Guid.NewGuid(), Content = "Fragment 1", CreatedAt = DateTimeOffset.UtcNow, Source = source },
+            new Fragment { Id = Guid.NewGuid(), Content = "Fragment 2", CreatedAt = DateTimeOffset.UtcNow, Source = source },
+            new Fragment { Id = Guid.NewGuid(), Content = "Fragment 3", CreatedAt = DateTimeOffset.UtcNow, Source = source }
         };
         await _dbContext.Fragments.AddRangeAsync(fragments);
         await _dbContext.SaveChangesAsync();
@@ -108,6 +118,10 @@ public class FragmentRepositoryTests : DatabaseTestBase
         var similarEmbedding = CreateTestEmbedding(0.9f, 0.1f);
         var differentEmbedding = CreateTestEmbedding(0.0f, 1.0f);
 
+        var source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, Name = "Meeting" };
+        await _dbContext.Sources.AddAsync(source);
+        await _dbContext.SaveChangesAsync();
+
         var fragments = new[]
         {
             new Fragment
@@ -115,21 +129,24 @@ public class FragmentRepositoryTests : DatabaseTestBase
                 Id = Guid.NewGuid(),
                 Content = "Base fragment",
                 Embedding = baseEmbedding,
-                CreatedAt = DateTimeOffset.UtcNow
+                CreatedAt = DateTimeOffset.UtcNow,
+                Source = source
             },
             new Fragment
             {
                 Id = Guid.NewGuid(),
                 Content = "Similar fragment",
                 Embedding = similarEmbedding,
-                CreatedAt = DateTimeOffset.UtcNow
+                CreatedAt = DateTimeOffset.UtcNow,
+                Source = source
             },
             new Fragment
             {
                 Id = Guid.NewGuid(),
                 Content = "Different fragment",
                 Embedding = differentEmbedding,
-                CreatedAt = DateTimeOffset.UtcNow
+                CreatedAt = DateTimeOffset.UtcNow,
+                Source = source
             }
         };
 
@@ -155,6 +172,10 @@ public class FragmentRepositoryTests : DatabaseTestBase
         var similarEmbedding = CreateTestEmbedding(0.95f, 0.05f);
         var differentEmbedding = CreateTestEmbedding(0.0f, 1.0f);
 
+        var source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, Name = "Meeting" };
+        await _dbContext.Sources.AddAsync(source);
+        await _dbContext.SaveChangesAsync();
+
         var fragments = new[]
         {
             new Fragment
@@ -162,14 +183,16 @@ public class FragmentRepositoryTests : DatabaseTestBase
                 Id = Guid.NewGuid(),
                 Content = "Similar fragment",
                 Embedding = similarEmbedding,
-                CreatedAt = DateTimeOffset.UtcNow
+                CreatedAt = DateTimeOffset.UtcNow,
+                Source = source
             },
             new Fragment
             {
                 Id = Guid.NewGuid(),
                 Content = "Different fragment",
                 Embedding = differentEmbedding,
-                CreatedAt = DateTimeOffset.UtcNow
+                CreatedAt = DateTimeOffset.UtcNow,
+                Source = source
             }
         };
 
@@ -205,6 +228,9 @@ public class FragmentRepositoryTests : DatabaseTestBase
     {
         // Arrange
         var queryEmbedding = CreateTestEmbedding(1.0f, 0.0f);
+        var source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, Name = "Meeting" };
+        await _dbContext.Sources.AddAsync(source);
+
         var fragments = new[]
         {
             new Fragment
@@ -212,14 +238,16 @@ public class FragmentRepositoryTests : DatabaseTestBase
                 Id = Guid.NewGuid(),
                 Content = "Fragment with embedding",
                 Embedding = queryEmbedding,
-                CreatedAt = DateTimeOffset.UtcNow
+                CreatedAt = DateTimeOffset.UtcNow,
+                Source = source
             },
             new Fragment
             {
                 Id = Guid.NewGuid(),
                 Content = "Fragment without embedding",
                 Embedding = null,
-                CreatedAt = DateTimeOffset.UtcNow
+                CreatedAt = DateTimeOffset.UtcNow,
+                Source = source
             }
         };
 

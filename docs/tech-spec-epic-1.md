@@ -79,6 +79,44 @@ public class Source : BaseEntity
     public Integration Integration { get; set; }
 }
 
+// Three-layer insight analysis model
+public class Observation : BaseEntity
+{
+    public string Content { get; set; }
+    public ObservationType Type { get; set; } // Mention, Sentiment, KeyPhrase
+    public float ConfidenceScore { get; set; }
+    public Vector Embedding { get; set; } // pgvector
+    public string SourceContext { get; set; }
+    public int SourceId { get; set; }
+    public Source Source { get; set; }
+    public ICollection<Finding> Findings { get; set; }
+}
+
+public class Finding : BaseEntity
+{
+    public string Content { get; set; }
+    public FindingType Type { get; set; } // Topic, Issue, Pattern
+    public float ConfidenceScore { get; set; }
+    public Vector Embedding { get; set; } // pgvector
+    public int OrganizationId { get; set; }
+    public Organization Organization { get; set; }
+    public ICollection<Observation> Observations { get; set; }
+    public ICollection<Insight> Insights { get; set; }
+}
+
+public class Insight : BaseEntity
+{
+    public string Title { get; set; }
+    public string Content { get; set; }
+    public InsightType Type { get; set; } // Strategic, Tactical, Risk
+    public InsightPriority Priority { get; set; }
+    public string ActionItems { get; set; } // JSON array
+    public InsightStatus Status { get; set; }
+    public int OrganizationId { get; set; }
+    public Organization Organization { get; set; }
+    public ICollection<Finding> Findings { get; set; }
+}
+
 // Prepared for future epics
 public class Fragment : BaseEntity
 {

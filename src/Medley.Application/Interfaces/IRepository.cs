@@ -11,7 +11,7 @@ public interface IRepository<T> where T : class
     /// </summary>
     /// <param name="id">The entity identifier</param>
     /// <returns>The entity if found, null otherwise</returns>
-    Task<T?> GetAsync(int id);
+    Task<T?> GetByIdAsync(Guid id);
 
     /// <summary>
     /// Gets a queryable collection of entities
