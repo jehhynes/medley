@@ -19,7 +19,9 @@ public class ManageController : Controller
     private readonly IIntegrationService _integrationService;
     private readonly ILogger<ManageController> _logger;
 
-    public ManageController(IIntegrationService integrationService, ILogger<ManageController> logger)
+    public ManageController(
+        IIntegrationService integrationService,
+        ILogger<ManageController> logger)
     {
         _integrationService = integrationService;
         _logger = logger;
@@ -46,19 +48,10 @@ public class ManageController : Controller
                 query = query.Where(i => i.Type == type.Value);
             }
 
-            // Apply status filter (this would require a status field in the entity)
-            // For now, we'll filter based on configuration presence
+            // Apply status filter
             if (status.HasValue)
             {
-                switch (status.Value)
-                {
-                    case ConnectionStatus.Connected:
-                        query = query.Where(i => !string.IsNullOrEmpty(i.ConfigurationJson));
-                        break;
-                    case ConnectionStatus.Disconnected:
-                        query = query.Where(i => string.IsNullOrEmpty(i.ConfigurationJson));
-                        break;
-                }
+                query = query.Where(i => i.Status == status.Value);
             }
 
             var integrations = await Task.FromResult(query.ToList());
@@ -200,10 +193,9 @@ public class ManageController : Controller
                 return Json(new { success = false, error = "Integration not found." });
             }
 
-            var isConnected = await _integrationService.TestConnectionAsync(integration);
-            var status = await _integrationService.GetConnectionStatusAsync(integration);
+            var status = await _integrationService.TestConnectionAsync(integration);
 
-            return Json(new { success = true, connected = isConnected, status = status.ToString() });
+            return Json(new { success = true, connected = status == ConnectionStatus.Connected, status = status.ToString() });
         }
         catch (Exception ex)
         {

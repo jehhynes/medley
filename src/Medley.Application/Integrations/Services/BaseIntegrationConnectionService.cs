@@ -32,7 +32,7 @@ public abstract class BaseIntegrationConnectionService : IIntegrationConnectionS
         return true;
     }
 
-    public virtual async Task<bool> TestConnectionAsync(Integration integration)
+    public virtual async Task<ConnectionStatus> TestConnectionAsync(Integration integration)
     {
         try
         {
@@ -40,7 +40,7 @@ public abstract class BaseIntegrationConnectionService : IIntegrationConnectionS
             {
                 Logger.LogWarning("Integration type {IntegrationType} does not match service type {ServiceType}", 
                     integration.Type, IntegrationType);
-                return false;
+                return ConnectionStatus.Error;
             }
 
             var config = ParseConfiguration(integration.ConfigurationJson);
@@ -48,33 +48,6 @@ public abstract class BaseIntegrationConnectionService : IIntegrationConnectionS
             {
                 Logger.LogWarning("Invalid configuration for {IntegrationType} integration {IntegrationId}", 
                     IntegrationType, integration.Id);
-                return false;
-            }
-
-            return await TestConnectionInternalAsync(config);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error testing connection for {IntegrationType} integration {IntegrationId}", 
-                IntegrationType, integration.Id);
-            return false;
-        }
-    }
-
-    public virtual async Task<ConnectionStatus> GetConnectionStatusAsync(Integration integration)
-    {
-        try
-        {
-            if (integration.Type != IntegrationType)
-            {
-                Logger.LogWarning("Integration type {IntegrationType} does not match service type {ServiceType}", 
-                    integration.Type, IntegrationType);
-                return ConnectionStatus.Disconnected;
-            }
-
-            var config = ParseConfiguration(integration.ConfigurationJson);
-            if (config == null || !ValidateConfiguration(config))
-            {
                 return ConnectionStatus.Disconnected;
             }
 
@@ -83,7 +56,7 @@ public abstract class BaseIntegrationConnectionService : IIntegrationConnectionS
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error getting connection status for {IntegrationType} integration {IntegrationId}", 
+            Logger.LogError(ex, "Error testing connection for {IntegrationType} integration {IntegrationId}", 
                 IntegrationType, integration.Id);
             return ConnectionStatus.Error;
         }

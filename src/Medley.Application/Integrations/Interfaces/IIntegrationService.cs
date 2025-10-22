@@ -13,7 +13,5 @@ public interface IIntegrationService
     IQueryable<Integration> Query();
     Task SaveAsync(Integration integration);
     Task DeleteAsync(Integration integration);
-    Task<bool> TestConnectionAsync(Integration integration);
-    Task<ConnectionStatus> GetConnectionStatusAsync(Integration integration);
-    Task UpdateHealthStatusAsync(Integration integration);
+    Task<ConnectionStatus> TestConnectionAsync(Integration integration);
 }

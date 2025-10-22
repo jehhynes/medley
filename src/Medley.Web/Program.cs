@@ -1,11 +1,11 @@
-using Microsoft.AspNetCore.Identity;
+using Hangfire;
+using Medley.Application.Interfaces;
 using Medley.Domain.Entities;
 using Medley.Infrastructure;
 using Medley.Infrastructure.Data;
-using Serilog;
-using Hangfire;
-using Hangfire.Dashboard;
 using Medley.Web.Filters;
+using Microsoft.AspNetCore.Identity;
+using Serilog;
 
 namespace Medley.Web;
 
@@ -122,6 +122,10 @@ public class Program
             {
                 app.Services.ApplyMigrations();
             }
+
+            // Initialize recurring jobs
+            var jobRegistry = app.Services.GetRequiredService<IJobRegistry>();
+            jobRegistry.InitializeRecurringJobs();
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())

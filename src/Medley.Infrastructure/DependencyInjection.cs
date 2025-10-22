@@ -4,6 +4,8 @@ using Medley.Application.Configuration;
 using Medley.Application.Enums;
 using Medley.Application.Interfaces;
 using Medley.Application.Services;
+using Medley.Application.Jobs;
+using Hangfire.RecurringJobCleanUpManager;
 using Medley.Infrastructure.Data;
 using Medley.Infrastructure.Data.Repositories;
 using Medley.Infrastructure.Services;
@@ -54,6 +56,9 @@ public static class DependencyInjection
         services.AddScoped<IUserAuditLogService, UserAuditLogService>();
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IIntegrationService, IntegrationService>();
+        //services.AddScoped<IntegrationHealthCheckJob>();
+        services.AddSingleton<RecurringJobCleanUpManager>();
+        services.AddSingleton<IJobRegistry, JobRegistry>();
 
         // Register integration connection services
         services.AddScoped<IIntegrationConnectionService, GitHubIntegrationService>();

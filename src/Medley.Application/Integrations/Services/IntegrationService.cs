@@ -47,42 +47,26 @@ public class IntegrationService : IIntegrationService
         throw new NotImplementedException("Delete functionality not yet implemented in IRepository");
     }
 
-    public async Task<bool> TestConnectionAsync(Integration integration)
+    public async Task<ConnectionStatus> TestConnectionAsync(Integration integration)
     {
         if (!_connectionServices.TryGetValue(integration.Type, out var connectionService))
         {
             _logger.LogWarning("No connection service found for integration type {IntegrationType}", integration.Type);
-            return false;
-        }
-
-        return await connectionService.TestConnectionAsync(integration);
-    }
-
-    public async Task<ConnectionStatus> GetConnectionStatusAsync(Integration integration)
-    {
-        if (!_connectionServices.TryGetValue(integration.Type, out var connectionService))
-        {
-            _logger.LogWarning("No connection service found for integration type {IntegrationType}", integration.Type);
+            integration.Status = ConnectionStatus.Error;
+            integration.LastHealthCheckAt = DateTimeOffset.UtcNow;
+            await _integrationRepository.SaveAsync(integration);
             return ConnectionStatus.Error;
         }
 
-        return await connectionService.GetConnectionStatusAsync(integration);
-    }
-
-    public async Task UpdateHealthStatusAsync(Integration integration)
-    {
-        try
-        {
-            var status = await GetConnectionStatusAsync(integration);
-            _logger.LogInformation("Health status updated for integration {IntegrationId}: {Status}", 
-                integration.Id, status);
+        var status = await connectionService.TestConnectionAsync(integration);
+        integration.Status = status;
+        integration.LastHealthCheckAt = DateTimeOffset.UtcNow;
+        
+        await _integrationRepository.SaveAsync(integration);
+        
+        _logger.LogInformation("Connection test completed for integration {IntegrationId}: {Status}", 
+            integration.Id, status);
             
-            // TODO: Update integration health status in database if needed
-            // For now, we'll just log the status
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error updating health status for integration {IntegrationId}", integration.Id);
-        }
+        return status;
     }
 }

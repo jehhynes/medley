@@ -6,9 +6,11 @@
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">Integrations</h1>
     <div class="btn-toolbar mb-2 mb-md-0">
-        <a asp-action="Add" class="btn btn-primary">
-            <i class="bi bi-plus"></i> Add Integration
-        </a>
+        <div class="btn-group me-2" role="group">
+            <a asp-action="Add" class="btn btn-primary">
+                <i class="bi bi-plus"></i> Add Integration
+            </a>
+        </div>
     </div>
 </div>
 
@@ -96,13 +98,13 @@
         {
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
-                    <thead class="table-light">
+                    <thead>
                         <tr>
-                            <th>Name</th>
-                            <th>Type</th>
-                            <th>Status</th>
-                            <th>Last Modified</th>
-                            <th width="200">Actions</th>
+                            <th class="bg-body-secondary">Name</th>
+                            <th class="bg-body-secondary">Type</th>
+                            <th class="bg-body-secondary">Status</th>
+                            <th class="bg-body-secondary">Last Modified</th>
+                            <th class="bg-body-secondary" width="200">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -145,19 +147,33 @@
                                 </td>
                                 <td>
                                     @{
-                                        var statusClass = string.IsNullOrEmpty(integration.ConfigurationJson) 
-                                            ? "bg-danger" : "bg-success";
-                                        var statusText = string.IsNullOrEmpty(integration.ConfigurationJson) 
-                                            ? "Disconnected" : "Connected";
+                                        var statusClass = integration.Status switch
+                                        {
+                                            Medley.Domain.Enums.ConnectionStatus.Connected => "bg-success",
+                                            Medley.Domain.Enums.ConnectionStatus.Disconnected => "bg-warning",
+                                            Medley.Domain.Enums.ConnectionStatus.Error => "bg-danger",
+                                            _ => "bg-secondary"
+                                        };
+                                        var statusText = integration.Status.ToString();
                                     }
                                     <span class="badge @statusClass" id="status-@integration.Id">@statusText</span>
                                 </td>
                                 <td>
-                                    @if (integration.LastModifiedAt.HasValue)
+                                    @if (integration.LastHealthCheckAt.HasValue)
+                                    {
+                                        <span title="@integration.LastHealthCheckAt.Value.ToString("yyyy-MM-dd HH:mm:ss")">
+                                            @integration.LastHealthCheckAt.Value.ToString("MMM dd, yyyy")
+                                        </span>
+                                        <br />
+                                        <small class="text-muted">Health Check</small>
+                                    }
+                                    else if (integration.LastModifiedAt.HasValue)
                                     {
                                         <span title="@integration.LastModifiedAt.Value.ToString("yyyy-MM-dd HH:mm:ss")">
                                             @integration.LastModifiedAt.Value.ToString("MMM dd, yyyy")
                                         </span>
+                                        <br />
+                                        <small class="text-muted">Modified</small>
                                     }
                                     else
                                     {
@@ -225,7 +241,11 @@
 </div>
 
 @section Scripts {
+    <script src="~/js/integration-connections.js"></script>
     <script>
+        // Set the correct test connection URL for this page
+        //window.IntegrationConnections.setTestConnectionUrl('@Url.Action("TestConnection")');
+        
         // Delete integration functionality
         document.querySelectorAll('.delete-integration').forEach(button => {
             button.addEventListener('click', function() {
@@ -239,74 +259,5 @@
                 modal.show();
             });
         });
-
-        // Test connection functionality
-        document.querySelectorAll('.test-connection').forEach(button => {
-            button.addEventListener('click', function() {
-                const id = this.dataset.id;
-                const button = this;
-                const icon = button.querySelector('i');
-                
-                // Show loading state
-                icon.className = 'bi bi-arrow-clockwise';
-                button.disabled = true;
-                
-                // Create form data
-                const formData = new FormData();
-                formData.append('id', id);
-                formData.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
-                
-                fetch('@Url.Action("TestConnection")', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Update status badge
-                        const statusBadge = document.getElementById('status-' + id);
-                        if (data.connected) {
-                            statusBadge.className = 'badge bg-success';
-                            statusBadge.textContent = 'Connected';
-                        } else {
-                            statusBadge.className = 'badge bg-danger';
-                            statusBadge.textContent = 'Error';
-                        }
-                        
-                        // Show success message
-                        showAlert('Connection test completed successfully', 'success');
-                    } else {
-                        showAlert('Connection test failed: ' + data.error, 'danger');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showAlert('An error occurred while testing the connection', 'danger');
-                })
-                .finally(() => {
-                    // Reset button state
-                    icon.className = 'bi bi-check-circle';
-                    button.disabled = false;
-                });
-            });
-        });
-
-        function showAlert(message, type) {
-            const alertDiv = document.createElement('div');
-            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-            alertDiv.innerHTML = `
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            `;
-            
-            document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('.container-fluid').firstChild);
-            
-            // Auto-dismiss after 5 seconds
-            setTimeout(() => {
-                if (alertDiv.parentNode) {
-                    alertDiv.remove();
-                }
-            }, 5000);
-        }
     </script>
 }

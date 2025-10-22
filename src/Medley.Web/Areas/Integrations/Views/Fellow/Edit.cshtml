@@ -145,62 +145,10 @@
 @if (Model.IsEdit)
 {
     @section Scripts {
+        <script src="~/js/integration-connections.js"></script>
         <script>
-            // Test connection functionality
-            document.querySelector('.test-connection').addEventListener('click', function() {
-                const id = this.dataset.id;
-                const button = this;
-                const icon = button.querySelector('i');
-                
-                // Show loading state
-                icon.className = 'bi bi-arrow-clockwise';
-                button.disabled = true;
-                
-                // Create form data
-                const formData = new FormData();
-                formData.append('id', id);
-                formData.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
-                
-                fetch('@Url.Action("TestConnection", "Manage", new { area = "Integrations" })', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        showAlert('Connection test successful! Status: ' + data.status, 'success');
-                    } else {
-                        showAlert('Connection test failed: ' + data.error, 'danger');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showAlert('An error occurred while testing the connection', 'danger');
-                })
-                .finally(() => {
-                    // Reset button state
-                    icon.className = 'bi bi-check-circle';
-                    button.disabled = false;
-                });
-            });
-
-            function showAlert(message, type) {
-                const alertDiv = document.createElement('div');
-                alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-                alertDiv.innerHTML = `
-                    ${message}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                `;
-                
-                document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('.container-fluid').firstChild);
-                
-                // Auto-dismiss after 5 seconds
-                setTimeout(() => {
-                    if (alertDiv.parentNode) {
-                        alertDiv.remove();
-                    }
-                }, 5000);
-            }
+            // Set the correct test connection URL for this page
+            //window.IntegrationConnections.setTestConnectionUrl('@Url.Action("TestConnection", "Manage", new { area = "Integrations" })');
         </script>
     }
 }

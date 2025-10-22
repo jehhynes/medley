@@ -1,6 +1,5 @@
 using Medley.Domain.Entities;
 using Medley.Domain.Enums;
-using Medley.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Medley.Web.Areas.Integrations.Models;

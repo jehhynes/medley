@@ -17,6 +17,10 @@ public class Integration : BusinessEntity
     public string? ConfigurationJson { get; set; }
 
     public DateTimeOffset? LastModifiedAt { get; set; }
+
+    public ConnectionStatus Status { get; set; } = ConnectionStatus.Unknown;
+
+    public DateTimeOffset? LastHealthCheckAt { get; set; }
 }
 
 
