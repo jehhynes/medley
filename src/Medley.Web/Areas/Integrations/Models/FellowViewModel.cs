@@ -8,7 +8,7 @@ namespace Medley.Web.Areas.Integrations.Models;
 public class FellowViewModel
 {
     public Guid? Id { get; set; }
-    public FormFields Form { get; set; } = new() { DisplayName = "", ApiKey = "", BaseUrl = "https://mycompany.fellow.app" };
+    public FormFields Form { get; set; } = new() { DisplayName = string.Empty, ApiKey = string.Empty, BaseUrl = "https://mycompany.fellow.app" };
 
     /// <summary>
     /// Indicates if this is an edit operation (has an ID)
@@ -36,14 +36,17 @@ public class FellowViewModel
     public class FormFields
     {
         [Required(ErrorMessage = "Display name is required")]
-        [StringLength(200, ErrorMessage = "Display name cannot exceed 200 characters")]
+        [MaxLength(200, ErrorMessage = "Display name cannot exceed 200 characters")]
+        [MinLength(3, ErrorMessage = "Display name must be at least 3 characters")]
         public required string DisplayName { get; set; }
 
         [Required(ErrorMessage = "API key is required")]
-        [StringLength(500, ErrorMessage = "API key cannot exceed 500 characters")]
+        [MaxLength(500, ErrorMessage = "API key cannot exceed 500 characters")]
+        [MinLength(20, ErrorMessage = "Fellow API key must be at least 20 characters")]
         public required string ApiKey { get; set; }
 
         [Url(ErrorMessage = "Base URL must be a valid URL")]
+        [RegularExpression(@"^https?://.*\.fellow\.app.*", ErrorMessage = "Base URL must be a Fellow.ai workspace URL starting with http:// or https://")]
         public required string BaseUrl { get; set; }
     }
 }

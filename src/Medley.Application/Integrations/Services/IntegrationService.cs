@@ -14,15 +14,19 @@ public class IntegrationService : IIntegrationService
     private readonly IRepository<Integration> _integrationRepository;
     private readonly ILogger<IntegrationService> _logger;
     private readonly Dictionary<IntegrationType, IIntegrationConnectionService> _connectionServices;
+    //private readonly INotificationService _notificationService;
 
     public IntegrationService(
         IRepository<Integration> integrationRepository,
         ILogger<IntegrationService> logger,
-        IEnumerable<IIntegrationConnectionService> connectionServices)
+        IEnumerable<IIntegrationConnectionService> connectionServices
+        //INotificationService notificationService
+        )
     {
         _integrationRepository = integrationRepository;
         _logger = logger;
         _connectionServices = connectionServices.ToDictionary(s => s.IntegrationType, s => s);
+        //_notificationService = notificationService;
     }
 
     public async Task<Integration?> GetByIdAsync(Guid id)
@@ -55,14 +59,36 @@ public class IntegrationService : IIntegrationService
             integration.Status = ConnectionStatus.Error;
             integration.LastHealthCheckAt = DateTimeOffset.UtcNow;
             await _integrationRepository.SaveAsync(integration);
+            
+            // Broadcast status update
+            //await _notificationService.SendIntegrationStatusUpdateAsync(
+            //    integration.Id, 
+            //    ConnectionStatus.Error, 
+            //    "No connection service available for this integration type");
+            
             return ConnectionStatus.Error;
         }
 
+        var previousStatus = integration.Status;
         var status = await connectionService.TestConnectionAsync(integration);
         integration.Status = status;
         integration.LastHealthCheckAt = DateTimeOffset.UtcNow;
         
         await _integrationRepository.SaveAsync(integration);
+        
+        // Broadcast status update if status changed
+        //if (previousStatus != status)
+        //{
+        //    var message = status switch
+        //    {
+        //        ConnectionStatus.Connected => "Connection test successful",
+        //        ConnectionStatus.Disconnected => "Connection test failed - service unavailable",
+        //        ConnectionStatus.Error => "Connection test failed - configuration error",
+        //        _ => "Connection status updated"
+        //    };
+            
+        //    await _notificationService.SendIntegrationStatusUpdateAsync(integration.Id, status, message);
+        //}
         
         _logger.LogInformation("Connection test completed for integration {IntegrationId}: {Status}", 
             integration.Id, status);

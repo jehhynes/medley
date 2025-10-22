@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
-namespace Medley.Web.Hubs;
+namespace Medley.Application.Hubs;
 
 /// <summary>
 /// SignalR hub for real-time integration status updates

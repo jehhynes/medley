@@ -1,5 +1,6 @@
 using Hangfire;
 using Medley.Application.Interfaces;
+using Medley.Application.Hubs;
 using Medley.Domain.Entities;
 using Medley.Infrastructure;
 using Medley.Infrastructure.Data;
@@ -31,6 +32,9 @@ public class Program
             // Add services to the container.
             builder.Services.AddInfrastructure(builder.Configuration);
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+            // Add SignalR
+            builder.Services.AddSignalR();
 
             // Configure ASP.NET Core Identity with custom User entity and roles
             builder.Services.AddIdentity<User, IdentityRole<Guid>>(options =>
@@ -156,6 +160,9 @@ public class Program
 
             // Map health check endpoint
             app.MapHealthChecks("/health");
+
+            // Map SignalR hub
+            app.MapHub<IntegrationStatusHub>("/integrationStatusHub");
 
             app.MapControllerRoute(
                 name: "areas",

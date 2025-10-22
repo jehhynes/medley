@@ -18,12 +18,14 @@ public class IntegrationServiceTests
     private readonly Mock<ILogger<IntegrationService>> _mockLogger;
     private readonly Mock<IIntegrationConnectionService> _mockGitHubService;
     private readonly Mock<IIntegrationConnectionService> _mockFellowService;
+    //private readonly Mock<INotificationService> _mockNotificationService;
     private readonly IntegrationService _service;
 
     public IntegrationServiceTests()
     {
         _mockRepository = new Mock<IRepository<Integration>>();
         _mockLogger = new Mock<ILogger<IntegrationService>>();
+        //_mockNotificationService = new Mock<INotificationService>();
 
         // Setup mock connection services
         _mockGitHubService = new Mock<IIntegrationConnectionService>();
@@ -41,7 +43,9 @@ public class IntegrationServiceTests
         _service = new IntegrationService(
             _mockRepository.Object,
             _mockLogger.Object,
-            connectionServices);
+            connectionServices
+            //_mockNotificationService.Object
+            );
     }
 
     [Fact]

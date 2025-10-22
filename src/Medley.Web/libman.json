@@ -1,0 +1,48 @@
+{
+  "version": "3.0",
+  "defaultProvider": "cdnjs",
+  "libraries": [
+    {
+      "provider": "unpkg",
+      "library": "@microsoft/signalr@latest",
+      "destination": "wwwroot/lib/signalr/",
+      "files": [
+        "dist/browser/signalr.js",
+        "dist/browser/signalr.min.js"
+      ]
+    },
+    {
+      "provider": "jsdelivr",
+      "library": "@coreui/coreui@5.4.3",
+      "destination": "wwwroot/lib/coreui/coreui/",
+      "files": [
+        "dist/css/themes/bootstrap/bootstrap.css",
+        "dist/css/themes/bootstrap/bootstrap.min.css",
+        "dist/js/bootstrap.bundle.js",
+        "dist/js/bootstrap.bundle.min.js"
+      ]
+    },
+    {
+      "provider": "jsdelivr",
+      "library": "@coreui/icons@2.1.0",
+      "destination": "wwwroot/lib/coreui/icons/",
+      "files": [
+        "css/all.css",
+        "css/all.min.css",
+        "fonts/*"
+      ]
+    }
+  ,
+{
+  "provider": "cdnjs",
+  "library": "bootstrap-icons@1.13.1",
+  "destination": "wwwroot/lib/bootstrap-icons/",
+  "files": [
+    "font/fonts/bootstrap-icons.woff",
+    "font/fonts/bootstrap-icons.woff2",
+    "font/bootstrap-icons.css",
+    "font/bootstrap-icons.min.css"
+  ]
+}
+]
+}

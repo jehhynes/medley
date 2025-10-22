@@ -39,7 +39,7 @@ public class ManageController : Controller
             // Apply search filter
             if (!string.IsNullOrWhiteSpace(search))
             {
-                query = query.Where(i => i.DisplayName!.Contains(search));
+                query = query.Where(i => i.DisplayName!.Contains(search, StringComparison.OrdinalIgnoreCase));
             }
 
             // Apply type filter

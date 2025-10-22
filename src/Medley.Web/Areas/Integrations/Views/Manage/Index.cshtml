@@ -11,6 +11,11 @@
                 <i class="bi bi-plus"></i> Add Integration
             </a>
         </div>
+        @* <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-info btn-sm" id="refresh-status-btn" title="Refresh all statuses">
+                <i class="bi bi-arrow-clockwise"></i> Refresh Status
+            </button>
+        </div> *@
     </div>
 </div>
 
@@ -100,11 +105,11 @@
                 <table class="table table-hover mb-0">
                     <thead>
                         <tr>
-                            <th class="bg-body-secondary">Name</th>
-                            <th class="bg-body-secondary">Type</th>
-                            <th class="bg-body-secondary">Status</th>
-                            <th class="bg-body-secondary">Last Modified</th>
-                            <th class="bg-body-secondary" width="200">Actions</th>
+                            <th class="bg-body-tertiary">Name</th>
+                            <th class="bg-body-tertiary">Type</th>
+                            <th class="bg-body-tertiary">Status</th>
+                            <th class="bg-body-tertiary">Last Modified</th>
+                            <th class="bg-body-tertiary" width="200">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -156,7 +161,8 @@
                                         };
                                         var statusText = integration.Status.ToString();
                                     }
-                                    <span class="badge @statusClass" id="status-@integration.Id">@statusText</span>
+                                    <span class="badge @statusClass" id="status-@integration.Id" data-integration-id="@integration.Id">@statusText</span>
+                                    <div class="small text-muted mt-1" id="status-message-@integration.Id" style="display: none;"></div>
                                 </td>
                                 <td>
                                     @if (integration.LastHealthCheckAt.HasValue)
@@ -241,6 +247,7 @@
 </div>
 
 @section Scripts {
+    @* <script src="~/js/integration-status-hub.js"></script> *@
     <script src="~/js/integration-connections.js"></script>
     <script>
         // Set the correct test connection URL for this page
@@ -259,5 +266,44 @@
                 modal.show();
             });
         });
+        
+        @*
+        // Refresh status button functionality
+        document.getElementById('refresh-status-btn').addEventListener('click', function() {
+            const button = this;
+            const icon = button.querySelector('i');
+            
+            // Show loading state
+            icon.className = 'bi bi-arrow-clockwise';
+            button.disabled = true;
+            
+            // Trigger health checks for all integrations
+            const testButtons = document.querySelectorAll('.test-connection');
+            let completed = 0;
+            const total = testButtons.length;
+            
+            if (total === 0) {
+                // No integrations to test
+                icon.className = 'bi bi-check-circle';
+                button.disabled = false;
+                window.IntegrationConnections.showAlert('No integrations to refresh', 'info');
+                return;
+            }
+            
+            testButtons.forEach(testButton => {
+                testButton.click();
+                
+                // Listen for completion (this is a simplified approach)
+                setTimeout(() => {
+                    completed++;
+                    if (completed === total) {
+                        icon.className = 'bi bi-check-circle';
+                        button.disabled = false;
+                        window.IntegrationConnections.showAlert('All integration statuses refreshed', 'success');
+                    }
+                }, 2000); // Assume each test takes ~2 seconds
+            });
+        });
+        *@
     </script>
 }

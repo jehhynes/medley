@@ -6,19 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
     <title>@ViewData["Title"] - Medley</title>
     
-    <!-- Favicon -->
     <link rel="icon" href="~/favicon.ico">
     
-    <!-- CoreUI CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/@@coreui/coreui@@5.4.3/dist/css/themes/bootstrap/bootstrap.min.css" rel="stylesheet" integrity="sha384-2N+IHl7TflsBD/9pe1QB8uLoBoE7kIODejp9eye2tfbvhuO+EiyissU8aWDbzxjJ" crossorigin="anonymous">
-    
-    <!-- CoreUI Icons -->
-    <link rel="stylesheet" href="https://unpkg.com/@@coreui/icons/css/all.min.css">
-    
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-    
-    <!-- Custom styles -->
+    <link rel="stylesheet" href="~/lib/coreui/coreui/dist/css/themes/bootstrap/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/coreui/icons/css/all.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body>
@@ -32,11 +24,8 @@
                         <div class="sidebar-brand-subtitle">AI Product Intelligence</div>
                     </div>
                 </div>
-                <div class="sidebar-brand-narrow">
-                    <i class="cil-music-note"></i>
-                </div>
             </div>
-            <button class="btn-close d-lg-none" type="button" data-bs-theme="dark" aria-label="Close" onclick="bootstrap.Sidebar.getInstance(document.querySelector('#sidebar')).toggle()"></button>
+            <button class="btn-close me-1 d-lg-none" type="button" data-bs-theme="dark" aria-label="Close" onclick="bootstrap.Sidebar.getInstance(document.querySelector('#sidebar')).toggle()"></button>
         </div>
         <ul class="sidebar-nav" data-coreui="navigation" data-simplebar>
             <li class="nav-item">
@@ -171,13 +160,12 @@
         </footer>
     </div>
     
-    <!-- CoreUI and necessary plugins -->
-    <script src="https://cdn.jsdelivr.net/npm/@@coreui/coreui@@5.4.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-Hlm5ZxJ1/czt1YRCXG/419o5s8Nvmvwhc0V7MzaQENhYOs5fsXdrvglp+kr+JYYq" crossorigin="anonymous"></script>
+    <script src="~/lib/coreui/coreui/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/jquery.validate.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jquery-validation-unobtrusive@3.2.12/dist/jquery.validate.unobtrusive.min.js"></script>
+    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+    <script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+    <script src="~/lib/signalr/dist/browser/signalr.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
-    
     
     @await RenderSectionAsync("Scripts", required: false)
 </body>
