@@ -1,0 +1,206 @@
+@model Medley.Web.Areas.Integrations.Models.FellowViewModel
+@{
+    ViewData["Title"] = Model.PageTitle;
+}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">@Model.PageTitle</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a asp-action="Index" asp-controller="Integrations" asp-area="" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Integrations
+        </a>
+    </div>
+</div>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Fellow Integration Details</h5>
+            </div>
+            <div class="card-body">
+                <form asp-action="Edit" method="post">
+                    @if (Model.IsEdit)
+                    {
+                        <input asp-for="Id" type="hidden" />
+                    }
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                <input asp-for="Form.DisplayName" class="form-control" placeholder="e.g., My Fellow Integration" />
+                                <label asp-for="Form.DisplayName">Display Name *</label>
+                            </div>
+                            <span asp-validation-for="Form.DisplayName" class="text-danger"></span>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                <input asp-for="Form.ApiKey" type="password" class="form-control" placeholder="Your Fellow API key" />
+                                <label asp-for="Form.ApiKey">API Key *</label>
+                            </div>
+                            <span asp-validation-for="Form.ApiKey" class="text-danger"></span>
+                            <div class="form-text">Your Fellow.ai API key</div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mt-2">
+                        <div class="col-md-12">
+                            <div class="form-floating">
+                                <input asp-for="Form.BaseUrl" class="form-control" placeholder="https://mycompany.fellow.app" />
+                                <label asp-for="Form.BaseUrl">Base URL</label>
+                            </div>
+                            <span asp-validation-for="Form.BaseUrl" class="text-danger"></span>
+                            <div class="form-text">Your Fellow.ai workspace URL</div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="@Model.SubmitButtonIcon"></i> @Model.SubmitButtonText
+                        </button>
+                        <a asp-action="Index" asp-controller="Integrations" asp-area="" class="btn btn-outline-secondary ms-2">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Fellow Integration</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <img src="~/images/fellow-app.svg" alt="Fellow.ai" class="me-3" style="width: 3rem; height: 3rem;" />
+                    <div>
+                        <div class="fw-semibold">Fellow.ai</div>
+                        <small class="text-muted">Access meeting recordings and transcripts</small>
+                    </div>
+                </div>
+                
+                <h6 class="small fw-semibold">What Fellow.ai provides:</h6>
+                <ul class="small text-muted">
+                    <li>Meeting transcripts and notes</li>
+                    <li>Action items and decisions</li>
+                </ul>
+                
+                <div class="mt-3">
+                    <h6 class="small fw-semibold">How to get an API Key:</h6>
+                    <ol class="small text-muted">
+                        <li>Log in to your Fellow.ai account</li>
+                        <li>Go to User Settings → Developer tools</li>
+                        <li>Click "Create new API key"</li>
+                        <li>Copy the generated key</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+        
+        @if (Model.IsEdit)
+        {
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Integration Info</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">ID:</dt>
+                        <dd class="col-sm-8">
+                            <code>@Model.Id!.Value.ToString("N")[..8]...</code>
+                        </dd>
+                        
+                        <dt class="col-sm-4">Type:</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge bg-success">Fellow</span>
+                        </dd>
+                        
+                        <dt class="col-sm-4">Status:</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge bg-success">Configured</span>
+                        </dd>
+                    </dl>
+                    
+                    <div class="mt-3">
+                        <button type="button" class="btn btn-outline-info btn-sm test-connection" data-id="@Model.Id">
+                            <i class="bi bi-check-circle"></i> Test Connection
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@if (Model.IsEdit)
+{
+    @section Scripts {
+        <script>
+            // Test connection functionality
+            document.querySelector('.test-connection').addEventListener('click', function() {
+                const id = this.dataset.id;
+                const button = this;
+                const icon = button.querySelector('i');
+                
+                // Show loading state
+                icon.className = 'bi bi-arrow-clockwise';
+                button.disabled = true;
+                
+                // Create form data
+                const formData = new FormData();
+                formData.append('id', id);
+                formData.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]').value);
+                
+                fetch('@Url.Action("TestConnection", "Manage", new { area = "Integrations" })', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert('Connection test successful! Status: ' + data.status, 'success');
+                    } else {
+                        showAlert('Connection test failed: ' + data.error, 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showAlert('An error occurred while testing the connection', 'danger');
+                })
+                .finally(() => {
+                    // Reset button state
+                    icon.className = 'bi bi-check-circle';
+                    button.disabled = false;
+                });
+            });
+
+            function showAlert(message, type) {
+                const alertDiv = document.createElement('div');
+                alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+                alertDiv.innerHTML = `
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                `;
+                
+                document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('.container-fluid').firstChild);
+                
+                // Auto-dismiss after 5 seconds
+                setTimeout(() => {
+                    if (alertDiv.parentNode) {
+                        alertDiv.remove();
+                    }
+                }, 5000);
+            }
+        </script>
+    }
+}

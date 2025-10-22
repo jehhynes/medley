@@ -1,0 +1,111 @@
+@model Medley.Web.Areas.Integrations.Models.AddIntegrationViewModel
+@{
+    ViewData["Title"] = "Add Integration";
+}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Add Integration</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Integrations
+        </a>
+    </div>
+</div>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Select Integration Type</h5>
+            </div>
+            <div class="card-body">
+                <form asp-action="Add" method="post">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <div class="form-floating">
+                                <select asp-for="SelectedType" asp-items="Model.IntegrationTypes" class="form-select" id="integrationType">
+                                    <option value="">Select an integration type...</option>
+                                </select>
+                                <label asp-for="SelectedType">Integration Type *</label>
+                            </div>
+                            <span asp-validation-for="SelectedType" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary" id="continueBtn" disabled>
+                            <i class="bi bi-arrow-right"></i> Continue
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary ms-2">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Available Integrations</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item d-flex align-items-center">
+                        <i class="cib-github text-primary me-3" style="font-size: 2rem;"></i>
+                        <div>
+                            <div class="fw-semibold">GitHub</div>
+                            <small class="text-muted">Access repositories, issues, and pull requests</small>
+                        </div>
+                    </div>
+                    <div class="list-group-item d-flex align-items-center">
+                        <i class="cib-slack text-primary me-3" style="font-size: 2rem;"></i>
+                        <div>
+                            <div class="fw-semibold">Slack</div>
+                            <small class="text-muted">Connect to Slack workspaces and channels</small>
+                        </div>
+                    </div>
+                    <div class="list-group-item d-flex align-items-center">
+                        <img src="~/images/fellow-app.svg" alt="Fellow.ai" class="me-3" style="width: 2rem; height: 2rem;" />
+                        <div>
+                            <div class="fw-semibold">Fellow</div>
+                            <small class="text-muted">Access meeting recordings and transcripts</small>
+                        </div>
+                    </div>
+                    <div class="list-group-item d-flex align-items-center">
+                        <i class="cib-jira text-warning me-3" style="font-size: 2rem;"></i>
+                        <div>
+                            <div class="fw-semibold">Jira</div>
+                            <small class="text-muted">Connect to Jira projects and issues</small>
+                        </div>
+                    </div>
+                    <div class="list-group-item d-flex align-items-center">
+                        <i class="cib-zendesk text-info me-3" style="font-size: 2rem;"></i>
+                        <div>
+                            <div class="fw-semibold">Zendesk</div>
+                            <small class="text-muted">Access support tickets and knowledge base</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('integrationType').addEventListener('change', function() {
+            const continueBtn = document.getElementById('continueBtn');
+            continueBtn.disabled = !this.value;
+        });
+    </script>
+}

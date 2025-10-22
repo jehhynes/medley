@@ -1,7 +1,9 @@
-using Medley.Application.Interfaces;
-using Medley.Application.Services;
+using Medley.Application.Integrations.Interfaces;
+using Medley.Application.Integrations.Services;
 using Medley.Application.Configuration;
 using Medley.Application.Enums;
+using Medley.Application.Interfaces;
+using Medley.Application.Services;
 using Medley.Infrastructure.Data;
 using Medley.Infrastructure.Data.Repositories;
 using Medley.Infrastructure.Services;
@@ -51,6 +53,11 @@ public static class DependencyInjection
         // Register application services
         services.AddScoped<IUserAuditLogService, UserAuditLogService>();
         services.AddScoped<IEmailService, EmailService>();
+        services.AddScoped<IIntegrationService, IntegrationService>();
+
+        // Register integration connection services
+        services.AddScoped<IIntegrationConnectionService, GitHubIntegrationService>();
+        services.AddScoped<IIntegrationConnectionService, FellowIntegrationService>();
 
         // Configure Hangfire
         services.AddHangfire(configuration => configuration

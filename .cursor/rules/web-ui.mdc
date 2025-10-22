@@ -1,0 +1,9 @@
+---
+globs: *.cshtml
+alwaysApply: false
+---
+
+# Web UI Rules
+
+## Form Controls
+- **Use Bootstrap floating labels** for all form inputs

@@ -5,6 +5,7 @@ using Medley.Infrastructure.Data;
 using Serilog;
 using Hangfire;
 using Hangfire.Dashboard;
+using Medley.Web.Filters;
 
 namespace Medley.Web;
 
@@ -90,7 +91,10 @@ public class Program
                 });
             */
 
-            var mvc = builder.Services.AddControllersWithViews();
+            var mvc = builder.Services.AddControllersWithViews(options =>
+            {
+                options.Filters.Add<UnitOfWorkActionFilter>();
+            });
 #if DEBUG
             mvc.AddRazorRuntimeCompilation();
 #endif
@@ -148,6 +152,10 @@ public class Program
 
             // Map health check endpoint
             app.MapHealthChecks("/health");
+
+            app.MapControllerRoute(
+                name: "areas",
+                pattern: "{area:exists}/{controller=Home}/{action=Index}/{id?}");
 
             app.MapControllerRoute(
                 name: "default",

@@ -7,6 +7,11 @@
     <UserSecretsId>aspnet-Medley.Web-1e2983dc-d9d0-4468-ba34-de1e3bf434d4</UserSecretsId>
   </PropertyGroup>
 
+	<PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+		<RazorCompileOnBuild>false</RazorCompileOnBuild>
+		<RazorCompileOnPublish>true</RazorCompileOnPublish>
+	</PropertyGroup>
+	
   <ItemGroup>
     <Content Remove="compilerconfig.json" />
   </ItemGroup>
