@@ -93,9 +93,9 @@
     </code>
     <dependencies>
       <nuget>
-        <package name="Npgsql.EntityFrameworkCore.PostgreSQL" version="8.0+" note="Already installed from Story 1.1" />
+        <package name="Npgsql.EntityFrameworkCore.PostgreSQL" version="9.0+" note="Already installed from Story 1.1" />
         <package name="Pgvector.EntityFrameworkCore" version="latest" note="Required for pgvector support in EF Core" />
-        <package name="Microsoft.EntityFrameworkCore.Tools" version="8.0+" note="For migration generation" />
+        <package name="Microsoft.EntityFrameworkCore.Tools" version="9.0+" note="For migration generation" />
       </nuget>
       <postgresql>
         <extension name="pgvector" version="0.5.0+" note="PostgreSQL extension for vector operations" />

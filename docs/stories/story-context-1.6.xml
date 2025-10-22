@@ -113,12 +113,12 @@
         <package name="AWSSDK.Core" version="latest" reason="Core AWS SDK for .NET - required for all AWS service integrations"/>
         <package name="AWSSDK.S3" version="latest" reason="AWS S3 client for file storage operations"/>
         <package name="AWSSDK.BedrockRuntime" version="latest" reason="AWS Bedrock Runtime client for Claude 4.5 AI processing"/>
-        <package name="Microsoft.Extensions.Options" version="8.0+" reason="IOptions&lt;T&gt; pattern for strongly-typed configuration"/>
-        <package name="Microsoft.Extensions.Options.ConfigurationExtensions" version="8.0+" reason="Configuration binding for IOptions&lt;T&gt;"/>
+        <package name="Microsoft.Extensions.Options" version="9.0+" reason="IOptions&lt;T&gt; pattern for strongly-typed configuration"/>
+        <package name="Microsoft.Extensions.Options.ConfigurationExtensions" version="9.0+" reason="Configuration binding for IOptions&lt;T&gt;"/>
       </nuget>
       <existing>
-        <package name="Microsoft.EntityFrameworkCore" version="8.0+" reason="Already used for database operations - Story 1.6 follows same DI patterns"/>
-        <package name="Npgsql.EntityFrameworkCore.PostgreSQL" version="8.0+" reason="Already used for PostgreSQL - Story 1.6 follows same configuration patterns"/>
+        <package name="Microsoft.EntityFrameworkCore" version="9.0+" reason="Already used for database operations - Story 1.6 follows same DI patterns"/>
+        <package name="Npgsql.EntityFrameworkCore.PostgreSQL" version="9.0+" reason="Already used for PostgreSQL - Story 1.6 follows same configuration patterns"/>
         <package name="Hangfire" version="1.8.6" reason="Already configured in Story 1.5 - Story 1.6 follows same DI registration patterns"/>
       </existing>
     </dependencies>

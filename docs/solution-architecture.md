@@ -18,14 +18,14 @@ Medley is an AI-Powered Product Intelligence Platform that transforms organizati
 
 | Category | Technology (Default) | Version | Interface Abstraction | Justification |
 |----------|---------------------|---------|----------------------|---------------|
-| Framework | ASP.NET Core MVC | 8.0 | Built-in DI | Server-side rendering, mature ecosystem, Clean Architecture support |
+| Framework | ASP.NET Core MVC | 9.0 | Built-in DI | Server-side rendering, mature ecosystem, Clean Architecture support |
 | Language | C# | 12.0 | .NET Standard | Type safety, performance, team expertise, .NET ecosystem |
 | Database | PostgreSQL | 16.0+ | `IDbContextFactory<T>` | ACID compliance, pgvector extension, easily swappable for SQL Server/MySQL |
-| ORM | Entity Framework Core | 8.0+ | `IRepository<T>`, `IUnitOfWork` | Code-first migrations, LINQ support, easily swappable for NHibernate/Dapper |
-| Authentication | ASP.NET Core Identity | 8.0 | `IUserManager`, `ISignInManager` | Built-in security, role management, extensible user model |
+| ORM | Entity Framework Core | 9.0+ | `IRepository<T>`, `IUnitOfWork` | Code-first migrations, LINQ support, easily swappable for NHibernate/Dapper |
+| Authentication | ASP.NET Core Identity | 9.0 | `IUserManager`, `ISignInManager` | Built-in security, role management, extensible user model |
 | AI Processing | AWS Bedrock (Claude 4.5) | Latest | `IAiProcessingService` | Advanced reasoning, large context, easily swappable for OpenAI/OpenRouter |
 | Background Jobs | Hangfire | 1.8.6 | `IBackgroundJobService` | Reliable job processing, dashboard, retry logic, persistence |
-| Real-time | SignalR | 8.0 | `INotificationService` | Native .NET integration, automatic fallbacks, scalable |
+| Real-time | SignalR | 9.0 | `INotificationService` | Native .NET integration, automatic fallbacks, scalable |
 | Caching | Redis | 7.2 | `IDistributedCache` | Distributed caching, session storage, high performance |
 | File Storage | AWS S3 | Latest | `IFileStorageService` | Scalable object storage, easily swappable for Azure Blob/Local FileSystem |
 | Styling | Bootstrap | 5.3 | CSS framework agnostic | Auto dark/light mode, responsive grid, accessibility |

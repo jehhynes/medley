@@ -10,7 +10,7 @@
 ## Workflow Status Tracker
 
 **Current Phase:** 4-Implementation
-**Current Workflow:** story-ready (Story 1.8) - Complete
+**Current Workflow:** story-ready (Story 2.1) - Complete
 **Current Agent:** Scrum Master
 **Overall Progress:** 100%
 
@@ -52,7 +52,7 @@
 | 1 | 6 | 1.6 | AWS Integration Setup | story-1.6.md |
 | 1 | 7 | 1.7 | CI/CD Pipeline Foundation | story-1.7.md |
 | 1 | 8 | 1.8 | Basic UI Framework and Navigation | story-1.8.md |
-| 2 | 1 | 2.1 | Integration Management Interface | story-2.1.md |
+
 | 2 | 2 | 2.2 | API Key Authentication Framework | story-2.2.md |
 | 2 | 3 | 2.3 | Fellow.ai API Connection | story-2.3.md |
 | 2 | 4 | 2.4 | Fellow.ai Meeting Data Ingestion | story-2.4.md |
@@ -64,7 +64,7 @@
 | 2 | 10 | 2.10 | Fragment Storage and Indexing | story-2.10.md |
 | 2 | 11 | 2.11 | Fragment Search Interface | story-2.11.md |
 
-**Total in backlog:** 13 stories (Epic 1-2 detailed, Epic 3-5 to be detailed)
+**Total in backlog:** 12 stories (Epic 1-2 detailed, Epic 3-5 to be detailed)
 
 #### TODO (Needs Drafting)
 
@@ -74,6 +74,8 @@
 - **Status:** Not created
 - **Action:** SM should run `create-story` workflow to draft this story
 
+**Note:** Story 2.1 was drafted out of sequence per user request
+
 #### IN PROGRESS (Approved for Development)
 
 - **Story ID:** 1.8
@@ -82,6 +84,13 @@
 - **Story Status:** Ready
 - **Context File:** `docs/stories/story-context-1.8.xml`
 - **Action:** DEV should run `dev-story` workflow to implement this story
+
+- **Story ID:** 2.1
+- **Story Title:** Integration Management Interface
+- **Story File:** `story-2.1.md`
+- **Story Status:** Ready
+- **Context File:** `docs/stories/story-context-2.1.xml`
+- **Action:** DEV should run `dev-story` workflow to implement this story (out of sequence)
 
 
 
@@ -235,6 +244,9 @@ Start with brainstorm-project workflow to validate your AI-powered documentation
 - **2025-10-20**: Completed create-story for Story 1.8 (Basic UI Framework and Navigation). Story file: story-1.8.md. Status: Draft (needs review via story-ready). Next: Review and approve story.
 - **2025-10-20**: Completed story-context for Story 1.8 (Basic UI Framework and Navigation). Context file: docs/stories/story-context-1.8.xml. Next: Review story and run story-ready when satisfied.
 - **2025-10-20**: Story 1.8 (Basic UI Framework and Navigation) marked ready for development by SM agent. Moved from DRAFT → IN PROGRESS. Ready for DEV agent implementation.
+- **2025-10-22**: Completed create-story for Story 2.1 (Integration Management Interface). Story file: story-2.1.md. Status: Draft (needs review via story-ready). Next: Review and approve story. Note: Created out of sequence per user request.
+- **2025-10-22**: Completed story-context for Story 2.1 (Integration Management Interface). Context file: docs/stories/story-context-2.1.xml. Next: Review story and run story-ready when satisfied, or load DEV agent to implement.
+- **2025-10-22**: Story 2.1 (Integration Management Interface) marked ready for development by SM agent. Status updated to Ready. Moved from BACKLOG → IN PROGRESS (out of sequence). Ready for DEV agent implementation.
 
 ---
 

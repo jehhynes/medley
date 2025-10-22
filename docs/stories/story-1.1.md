@@ -50,8 +50,8 @@ So that I have a solid foundation for building the AI-powered documentation plat
 - Follow Clean Architecture pattern with clear layer separation and dependency inversion
 - Use interface abstractions for external dependencies (Database: `IDbContextFactory<T>`, Repository: `IRepository<T>`)
 - PostgreSQL 16.0+ required for pgvector extension support for future AI vector operations
-- ASP.NET Core MVC 8.0 with server-side rendering approach
-- Entity Framework Core 8.0+ with Code-First migrations for database schema management
+- ASP.NET Core MVC 9.0 with server-side rendering approach
+- Entity Framework Core 9.0+ with Code-First migrations for database schema management
 
 ### Project Structure Notes
 

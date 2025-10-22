@@ -187,12 +187,12 @@
     </code>
     <dependencies>
       <nuget>
-        <package name="Microsoft.AspNetCore.Identity.EntityFrameworkCore" version="8.0+" status="installed" />
-        <package name="Microsoft.AspNetCore.Identity.UI" version="8.0+" status="installed" />
-        <package name="Microsoft.EntityFrameworkCore" version="8.0+" status="installed" />
-        <package name="Npgsql.EntityFrameworkCore.PostgreSQL" version="8.0+" status="installed" />
+        <package name="Microsoft.AspNetCore.Identity.EntityFrameworkCore" version="9.0+" status="installed" />
+        <package name="Microsoft.AspNetCore.Identity.UI" version="9.0+" status="installed" />
+        <package name="Microsoft.EntityFrameworkCore" version="9.0+" status="installed" />
+        <package name="Npgsql.EntityFrameworkCore.PostgreSQL" version="9.0+" status="installed" />
         <package name="Serilog.AspNetCore" version="latest" status="installed" />
-        <package name="Microsoft.AspNetCore.Authentication.OAuth" version="8.0+" status="to-add" note="Required for AC #7 - OAuth 2.0 foundation" />
+        <package name="Microsoft.AspNetCore.Authentication.OAuth" version="9.0+" status="to-add" note="Required for AC #7 - OAuth 2.0 foundation" />
       </nuget>
     </dependencies>
   </artifacts>

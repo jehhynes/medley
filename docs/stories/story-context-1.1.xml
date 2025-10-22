@@ -36,7 +36,7 @@
   <artifacts>
     <docs>
       <doc path="docs/solution-architecture.md" title="Solution Architecture Document" section="Application Architecture" snippet="Clean Architecture monolith using ASP.NET Core MVC with server-side rendering and abstracted external dependencies. The system processes meeting transcripts, extracts insights using AI services, clusters related content, and generates comprehensive documentation through a transparent human-AI review process." />
-      <doc path="docs/tech-spec-epic-1.md" title="Tech Spec: Epic 1 - Foundation & Core Infrastructure" section="Technology Stack" snippet="ASP.NET Core MVC 8.0 with Built-in DI for Clean Architecture support, PostgreSQL 16.0+ with pgvector extension for ACID compliance, Entity Framework Core 8.0+ with Code-first migrations and LINQ support." />
+      <doc path="docs/tech-spec-epic-1.md" title="Tech Spec: Epic 1 - Foundation & Core Infrastructure" section="Technology Stack" snippet="ASP.NET Core MVC 9.0 with Built-in DI for Clean Architecture support, PostgreSQL 16.0+ with pgvector extension for ACID compliance, Entity Framework Core 9.0+ with Code-first migrations and LINQ support." />
       <doc path="docs/epics.md" title="Medley - Epic Breakdown" section="Epic 1: Foundation & Core Infrastructure" snippet="Establish the foundational infrastructure for the AI-Powered Product Intelligence Platform, including project setup, authentication system, vector database, core data models, background processing, and basic UI framework." />
       <doc path="docs/PRD.md" title="Medley Product Requirements Document" section="Goals and Background Context" snippet="The AI-Powered Product Intelligence Platform addresses a fundamental paradox in software development: developers understand the critical value of documentation for end users and AI-powered help systems, but actively avoid writing it due to time constraints." />
     </docs>
@@ -45,13 +45,13 @@
     </code>
     <dependencies>
       <dotnet>
-        <package name="Microsoft.AspNetCore.App" version="8.0" />
-        <package name="Microsoft.EntityFrameworkCore" version="8.0" />
-        <package name="Microsoft.EntityFrameworkCore.Design" version="8.0" />
-        <package name="Npgsql.EntityFrameworkCore.PostgreSQL" version="8.0" />
-        <package name="Serilog.AspNetCore" version="8.0" />
-        <package name="Microsoft.Extensions.Diagnostics.HealthChecks" version="8.0" />
-        <package name="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" version="8.0" />
+        <package name="Microsoft.AspNetCore.App" version="9.0" />
+        <package name="Microsoft.EntityFrameworkCore" version="9.0" />
+        <package name="Microsoft.EntityFrameworkCore.Design" version="9.0" />
+        <package name="Npgsql.EntityFrameworkCore.PostgreSQL" version="9.0" />
+        <package name="Serilog.AspNetCore" version="9.0" />
+        <package name="Microsoft.Extensions.Diagnostics.HealthChecks" version="9.0" />
+        <package name="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" version="9.0" />
       </dotnet>
     </dependencies>
   </artifacts>
@@ -60,8 +60,8 @@
     - Follow Clean Architecture pattern with clear layer separation and dependency inversion
     - Use interface abstractions for external dependencies (Database: IDbContextFactory&lt;T&gt;, Repository: IRepository&lt;T&gt;)
     - PostgreSQL 16.0+ required for pgvector extension support for future AI vector operations
-    - ASP.NET Core MVC 8.0 with server-side rendering approach
-    - Entity Framework Core 8.0+ with Code-First migrations for database schema management
+    - ASP.NET Core MVC 9.0 with server-side rendering approach
+    - Entity Framework Core 9.0+ with Code-First migrations for database schema management
     - Solution file and tests located under src/ directory for better organization
     - All dependencies point inward to Domain layer
     - Direct entity usage (no DTOs between layers)

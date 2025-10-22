@@ -28,10 +28,10 @@ Establish the foundational infrastructure for the AI-Powered Product Intelligenc
 
 | Component | Technology | Interface | Justification |
 |-----------|------------|-----------|---------------|
-| Framework | ASP.NET Core MVC 8.0 | Built-in DI | Clean Architecture support, SSR |
+| Framework | ASP.NET Core MVC 9.0 | Built-in DI | Clean Architecture support, SSR |
 | Database | PostgreSQL 16.0+ | `IDbContextFactory<T>` | pgvector extension, ACID compliance |
-| ORM | Entity Framework Core 8.0+ | `IRepository<T>` | Code-first migrations, LINQ |
-| Authentication | ASP.NET Core Identity 8.0 | `IUserManager` | Built-in security, role management |
+| ORM | Entity Framework Core 9.0+ | `IRepository<T>` | Code-first migrations, LINQ |
+| Authentication | ASP.NET Core Identity 9.0 | `IUserManager` | Built-in security, role management |
 | Background Jobs | Hangfire | `IBackgroundJobService` | Async job processing |
 | File Storage | AWS S3 | `IFileStorageService` | Scalable object storage |
 | UI Framework | Bootstrap 5.3 | CSS framework agnostic | Responsive, accessibility |
