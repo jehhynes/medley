@@ -1,8 +1,9 @@
 using Medley.Domain.Entities;
+using Medley.Infrastructure.Data.Translators;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
+using Microsoft.EntityFrameworkCore.Query;
 
 namespace Medley.Infrastructure.Data;
 
@@ -34,6 +35,13 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     public DbSet<Finding> Findings { get; set; } = null!;
     public DbSet<FragmentCluster> FragmentClusters { get; set; } = null!;
     public DbSet<ObservationCluster> ObservationClusters { get; set; } = null!;
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        base.OnConfiguring(optionsBuilder);
+        
+        optionsBuilder.ReplaceService<IMethodCallTranslatorProvider, CustomNpgsqlMethodCallTranslatorProvider>();
+    }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
