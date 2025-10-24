@@ -47,14 +47,14 @@
         <form method="get" asp-action="Index">
             <div class="row g-3">
                 <div class="col-md-4">
-                    <div class="form-floating">
+                    <div class="form-group-overlap">
                         <input type="text" class="form-control" id="search" name="search" 
-                               value="@Model.SearchTerm" placeholder="Search by name...">
+                               value="@Model.SearchTerm">
                         <label for="search">Search</label>
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="form-floating">
+                    <div class="form-group-overlap">
                         <select class="form-select" id="type" name="type">
                             <option value="">All Types</option>
                             @foreach (var item in Model.IntegrationTypes)
@@ -68,7 +68,7 @@
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="form-floating">
+                    <div class="form-group-overlap">
                         <select class="form-select" id="status" name="status">
                             <option value="">All Statuses</option>
                             @foreach (var item in Model.ConnectionStatuses)
@@ -82,7 +82,7 @@
                     </div>
                 </div>
                 <div class="col-md-2">
-                    <div class="d-grid h-100">
+                    <div class="d-grid">
                         <button type="submit" class="btn btn-outline-primary">
                             <i class="bi bi-search"></i> Filter
                         </button>

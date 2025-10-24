@@ -77,28 +77,73 @@ window.IntegrationConnections = {
     },
     
     /**
-     * Show an alert message
+     * Show a toast notification
      * @param {string} message - The message to display
-     * @param {string} type - The alert type (success, danger, warning, info)
+     * @param {string} type - The toast type (success, danger, warning, info)
      */
     showAlert: function(message, type) {
-        const alertDiv = document.createElement('div');
-        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-        alertDiv.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        // Create toast element
+        const toastId = 'toast-' + Date.now();
+        const toastElement = document.createElement('div');
+        toastElement.id = toastId;
+        toastElement.className = 'toast';
+        toastElement.setAttribute('role', 'alert');
+        toastElement.setAttribute('aria-live', 'assertive');
+        toastElement.setAttribute('aria-atomic', 'true');
+        
+        // Set toast content based on type
+        let iconClass = '';
+        let title = '';
+        switch(type) {
+            case 'success':
+                iconClass = 'bi bi-check-circle-fill text-success';
+                title = 'Success';
+                break;
+            case 'danger':
+                iconClass = 'bi bi-exclamation-triangle-fill text-danger';
+                title = 'Error';
+                break;
+            case 'warning':
+                iconClass = 'bi bi-exclamation-triangle-fill text-warning';
+                title = 'Warning';
+                break;
+            case 'info':
+                iconClass = 'bi bi-info-circle-fill text-info';
+                title = 'Information';
+                break;
+            default:
+                iconClass = 'bi bi-info-circle-fill text-primary';
+                title = 'Notification';
+        }
+        
+        toastElement.innerHTML = `
+            <div class="toast-header">
+                <i class="${iconClass} me-2"></i>
+                <strong class="me-auto">${title}</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">
+                ${message}
+            </div>
         `;
         
-        // Insert at the top of the container
-        const container = document.querySelector('.container-fluid') || document.querySelector('.container') || document.body;
-        container.insertBefore(alertDiv, container.firstChild);
-        
-        // Auto-dismiss after 5 seconds
-        setTimeout(() => {
-            if (alertDiv.parentNode) {
-                alertDiv.remove();
-            }
-        }, 5000);
+        // Add to toast container
+        const toastContainer = document.querySelector('.toast-container');
+        if (toastContainer) {
+            toastContainer.appendChild(toastElement);
+            
+            // Initialize and show the toast
+            const toast = new bootstrap.Toast(toastElement, {
+                autohide: true,
+                delay: 5000
+            });
+            toast.show();
+            
+            // Remove the toast element after it's hidden
+            toastElement.addEventListener('hidden.bs.toast', function() {
+                toastElement.remove();
+            });
+        }
     },
     
     /**

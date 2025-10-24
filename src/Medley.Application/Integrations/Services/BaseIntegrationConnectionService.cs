@@ -3,7 +3,6 @@ using Medley.Domain.Entities;
 using Medley.Domain.Enums;
 using Medley.Application.Interfaces;
 using Microsoft.Extensions.Logging;
-using System.Text.Json;
 
 namespace Medley.Application.Integrations.Services;
 
@@ -43,15 +42,14 @@ public abstract class BaseIntegrationConnectionService : IIntegrationConnectionS
                 return ConnectionStatus.Error;
             }
 
-            var config = ParseConfiguration(integration.ConfigurationJson);
-            if (config == null || !ValidateConfiguration(config))
+            if (string.IsNullOrWhiteSpace(integration.ApiKey) || string.IsNullOrWhiteSpace(integration.BaseUrl))
             {
-                Logger.LogWarning("Invalid configuration for {IntegrationType} integration {IntegrationId}", 
+                Logger.LogWarning("Missing ApiKey or BaseUrl for {IntegrationType} integration {IntegrationId}", 
                     IntegrationType, integration.Id);
                 return ConnectionStatus.Disconnected;
             }
 
-            var isConnected = await TestConnectionInternalAsync(config);
+            var isConnected = await TestConnectionInternalAsync(integration.ApiKey, integration.BaseUrl);
             return isConnected ? ConnectionStatus.Connected : ConnectionStatus.Disconnected;
         }
         catch (Exception ex)
@@ -62,23 +60,5 @@ public abstract class BaseIntegrationConnectionService : IIntegrationConnectionS
         }
     }
 
-    protected abstract Task<bool> TestConnectionInternalAsync(Dictionary<string, string> config);
-
-    protected Dictionary<string, string>? ParseConfiguration(string? configurationJson)
-    {
-        if (string.IsNullOrWhiteSpace(configurationJson))
-        {
-            return null;
-        }
-
-        try
-        {
-            return JsonSerializer.Deserialize<Dictionary<string, string>>(configurationJson);
-        }
-        catch (JsonException ex)
-        {
-            Logger.LogError(ex, "Failed to parse configuration JSON for {IntegrationType}", IntegrationType);
-            return null;
-        }
-    }
+    protected abstract Task<bool> TestConnectionInternalAsync(string apiKey, string baseUrl);
 }

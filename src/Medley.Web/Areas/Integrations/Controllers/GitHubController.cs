@@ -4,7 +4,6 @@ using Medley.Domain.Enums;
 using Medley.Web.Areas.Integrations.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Text.Json;
 
 namespace Medley.Web.Areas.Integrations.Controllers;
 
@@ -27,43 +26,28 @@ public class GitHubController : Controller
     /// <summary>
     /// Displays the GitHub integration edit form (create or edit)
     /// </summary>
-    public async Task<IActionResult> Edit(Guid? id = null)
+    public async Task<IActionResult> Edit(Guid? id, GitHubViewModel model)
     {
-        try
+        if (Request.Method == "GET")
+            ModelState.ClearValidationState(string.Empty);
+
+        if (id.HasValue)
         {
-            var model = new GitHubViewModel();
+            // Edit mode
+            var integration = await _integrationService.GetByIdAsync(id.Value);
+            if (integration == null)
+                throw new Exception("GitHub integration not found.");
 
-            if (id.HasValue)
-            {
-                // Edit mode
-                var integration = await _integrationService.GetByIdAsync(id.Value);
-                if (integration == null)
-                {
-                    TempData["Error"] = "GitHub integration not found.";
-                    return RedirectToAction("Index", "Manage");
-                }
+            if (integration.Type != IntegrationType.GitHub)
+                throw new Exception("Integration is not a GitHub integration.");
 
-                if (integration.Type != IntegrationType.GitHub)
-                {
-                    TempData["Error"] = "Integration is not a GitHub integration.";
-                    return RedirectToAction("Index", "Manage");
-                }
-
-                var config = ParseConfiguration(integration.ConfigurationJson);
-                model.Id = integration.Id;
-                model.Form.DisplayName = integration.DisplayName ?? "";
-                model.Form.ApiKey = config?.GetValueOrDefault("apiKey", "") ?? "";
-                model.Form.BaseUrl = config?.GetValueOrDefault("baseUrl", "https://api.github.com") ?? "https://api.github.com";
-            }
-
-            return View(model);
+            model.Id = integration.Id;
+            model.DisplayName = integration.DisplayName ?? "";
+            model.ApiKey = integration.ApiKey ?? "";
+            model.BaseUrl = integration.BaseUrl ?? "https://api.github.com";
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error loading GitHub integration {IntegrationId} for form", id);
-            TempData["Error"] = "An error occurred while loading the GitHub integration.";
-            return RedirectToAction("Index", "Manage");
-        }
+
+        return View(model);
     }
 
     /// <summary>
@@ -73,89 +57,48 @@ public class GitHubController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(GitHubViewModel model)
     {
-        try
+        if (!ModelState.IsValid)
         {
-            if (!ModelState.IsValid)
-            {
-                return View(model);
-            }
-
-            Integration integration;
-
-            if (model.IsEdit)
-            {
-                // Edit mode
-                integration = await _integrationService.GetByIdAsync(model.Id!.Value);
-                if (integration == null)
-                {
-                    TempData["Error"] = "GitHub integration not found.";
-                    return RedirectToAction("Index", "Manage", new { area = "" });
-                }
-
-                if (integration.Type != IntegrationType.GitHub)
-                {
-                    TempData["Error"] = "Integration is not a GitHub integration.";
-                    return RedirectToAction("Index", "Manage", new { area = "" });
-                }
-
-                // Update existing integration
-                integration.DisplayName = model.Form.DisplayName;
-                integration.ConfigurationJson = BuildConfigurationJson(model);
-                integration.LastModifiedAt = DateTimeOffset.UtcNow;
-
-                TempData["Success"] = $"GitHub integration '{model.Form.DisplayName}' updated successfully.";
-            }
-            else
-            {
-                // Create mode
-                integration = new Integration
-                {
-                    Id = Guid.NewGuid(),
-                    Type = IntegrationType.GitHub,
-                    DisplayName = model.Form.DisplayName,
-                    ConfigurationJson = BuildConfigurationJson(model),
-                    LastModifiedAt = DateTimeOffset.UtcNow
-                };
-
-                TempData["Success"] = $"GitHub integration '{model.Form.DisplayName}' created successfully.";
-            }
-
-            await _integrationService.SaveAsync(integration);
-            return RedirectToAction("Index", "Manage");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error saving GitHub integration {IntegrationId}", model.Id);
-            ModelState.AddModelError("", $"An error occurred while {(model.IsEdit ? "updating" : "creating")} the GitHub integration.");
             return View(model);
         }
-    }
 
-    private string BuildConfigurationJson(GitHubViewModel model)
-    {
-        var config = new Dictionary<string, string>
+        Integration? integration;
+
+        if (model.Id != null)
         {
-            ["apiKey"] = model.Form.ApiKey ?? "",
-            ["baseUrl"] = model.Form.BaseUrl ?? "https://api.github.com"
-        };
+            // Edit mode
+            integration = await _integrationService.GetByIdAsync(model.Id.Value);
+            if (integration == null)
+                throw new Exception("GitHub integration not found.");
 
-        return JsonSerializer.Serialize(config);
-    }
+            if (integration.Type != IntegrationType.GitHub)
+                throw new Exception("Integration is not a GitHub integration.");
 
-    private Dictionary<string, string>? ParseConfiguration(string? configurationJson)
-    {
-        if (string.IsNullOrWhiteSpace(configurationJson))
+            // Update existing integration
+            integration.DisplayName = model.DisplayName;
+            integration.ApiKey = model.ApiKey;
+            integration.BaseUrl = model.BaseUrl;
+            integration.LastModifiedAt = DateTimeOffset.UtcNow;
+
+            TempData["Success"] = $"GitHub integration '{model.DisplayName}' updated successfully.";
+        }
+        else
         {
-            return null;
+            // Create mode
+            integration = new Integration
+            {
+                Id = Guid.NewGuid(),
+                Type = IntegrationType.GitHub,
+                DisplayName = model.DisplayName,
+                ApiKey = model.ApiKey,
+                BaseUrl = model.BaseUrl,
+                LastModifiedAt = DateTimeOffset.UtcNow
+            };
+
+            TempData["Success"] = $"GitHub integration '{model.DisplayName}' created successfully.";
         }
 
-        try
-        {
-            return JsonSerializer.Deserialize<Dictionary<string, string>>(configurationJson);
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
+        await _integrationService.SaveAsync(integration);
+        return RedirectToAction("Index", "Manage");
     }
 }

@@ -1,10 +1,10 @@
 @model Medley.Web.Areas.Integrations.Models.GitHubViewModel
 @{
-    ViewData["Title"] = Model.PageTitle;
+    ViewData["Title"] = Model.IsEdit ? "Edit GitHub Integration" : "Add GitHub Integration";
 }
 
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">@Model.PageTitle</h1>
+    <h1 class="h2">@(Model.IsEdit ? "Edit GitHub Integration" : "Add GitHub Integration")</h1>
     <div class="btn-toolbar mb-2 mb-md-0">
         <a asp-action="Index" asp-controller="Integrations" asp-area="" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left"></i> Back to Integrations
@@ -36,37 +36,37 @@
                     
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <div class="form-floating">
-                                <input asp-for="Form.DisplayName" class="form-control" placeholder="e.g., My GitHub Integration" />
-                                <label asp-for="Form.DisplayName">Display Name *</label>
+                            <div class="form-group-overlap">
+                                <input asp-for="DisplayName" class="form-control" placeholder="e.g., My GitHub Integration" />
+                                <label asp-for="DisplayName">Display Name *</label>
                             </div>
-                            <span asp-validation-for="Form.DisplayName" class="text-danger"></span>
+                            <span asp-validation-for="DisplayName" class="text-danger"></span>
                         </div>
                         
                         <div class="col-md-6">
-                            <div class="form-floating">
-                                <input asp-for="Form.ApiKey" type="password" class="form-control" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" />
-                                <label asp-for="Form.ApiKey">Personal Access Token *</label>
+                            <div class="form-group-overlap">
+                                <input asp-for="ApiKey" type="password" class="form-control"
+                                    placeholder="@(Model.IsEdit ? "••••••••••••••••••••••••••••••••••••••••" : "GitHub Personal Access Token")" />
+                                <label asp-for="ApiKey">Personal Access Token *</label>
                             </div>
-                            <span asp-validation-for="Form.ApiKey" class="text-danger"></span>
-                            <div class="form-text">Your GitHub personal access token</div>
+                            <span asp-validation-for="ApiKey" class="text-danger"></span>
                         </div>
                     </div>
 
                     <div class="row g-3 mt-2">
                         <div class="col-md-12">
-                            <div class="form-floating">
-                                <input asp-for="Form.BaseUrl" class="form-control" placeholder="https://api.github.com" />
-                                <label asp-for="Form.BaseUrl">Base URL</label>
+                            <div class="form-group-overlap">
+                                <input asp-for="BaseUrl" class="form-control" placeholder="e.g. https://api.github.com" />
+                                <label asp-for="BaseUrl">Base URL</label>
                             </div>
-                            <span asp-validation-for="Form.BaseUrl" class="text-danger"></span>
+                            <span asp-validation-for="BaseUrl" class="text-danger"></span>
                             <div class="form-text">Leave default for GitHub.com, or enter your GitHub Enterprise URL</div>
                         </div>
                     </div>
 
                     <div class="mt-4">
                         <button type="submit" class="btn btn-primary">
-                            <i class="@Model.SubmitButtonIcon"></i> @Model.SubmitButtonText
+                            <i class="@(Model.IsEdit ? "bi bi-check-circle" : "bi bi-plus")"></i> @(Model.IsEdit ? "Update GitHub Integration" : "Create GitHub Integration")
                         </button>
                         <a asp-action="Index" asp-controller="Integrations" asp-area="" class="btn btn-outline-secondary ms-2">Cancel</a>
                     </div>

@@ -1,7 +1,5 @@
 using Medley.Application.Integrations.Interfaces;
-using Medley.Domain.Entities;
 using Medley.Domain.Enums;
-using Medley.Application.Interfaces;
 using Medley.Web.Areas.Integrations.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -32,53 +30,39 @@ public class ManageController : Controller
     /// </summary>
     public async Task<IActionResult> Index(string? search, IntegrationType? type, ConnectionStatus? status)
     {
-        try
+        var query = _integrationService.Query();
+
+        // Apply search filter
+        if (!string.IsNullOrWhiteSpace(search))
         {
-            var query = _integrationService.Query();
-
-            // Apply search filter
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                query = query.Where(i => i.DisplayName!.Contains(search, StringComparison.OrdinalIgnoreCase));
-            }
-
-            // Apply type filter
-            if (type.HasValue && type.Value != IntegrationType.Unknown)
-            {
-                query = query.Where(i => i.Type == type.Value);
-            }
-
-            // Apply status filter
-            if (status.HasValue)
-            {
-                query = query.Where(i => i.Status == status.Value);
-            }
-
-            var integrations = await Task.FromResult(query.ToList());
-
-            var model = new ManageViewModel
-            {
-                Integrations = integrations,
-                SearchTerm = search,
-                SelectedType = type,
-                SelectedStatus = status,
-                IntegrationTypes = GetIntegrationTypeSelectList(),
-                ConnectionStatuses = GetConnectionStatusSelectList()
-            };
-
-            return View(model);
+            query = query.Where(i => i.DisplayName!.Contains(search, StringComparison.OrdinalIgnoreCase));
         }
-        catch (Exception ex)
+
+        // Apply type filter
+        if (type.HasValue && type.Value != IntegrationType.Unknown)
         {
-            _logger.LogError(ex, "Error loading integrations index");
-            TempData["Error"] = "An error occurred while loading integrations.";
-            return View(new ManageViewModel
-            {
-                Integrations = new List<Integration>(),
-                IntegrationTypes = GetIntegrationTypeSelectList(),
-                ConnectionStatuses = GetConnectionStatusSelectList()
-            });
+            query = query.Where(i => i.Type == type.Value);
         }
+
+        // Apply status filter
+        if (status.HasValue)
+        {
+            query = query.Where(i => i.Status == status.Value);
+        }
+
+        var integrations = await Task.FromResult(query.ToList());
+
+        var model = new ManageViewModel
+        {
+            Integrations = integrations,
+            SearchTerm = search,
+            SelectedType = type,
+            SelectedStatus = status,
+            IntegrationTypes = GetIntegrationTypeSelectList(),
+            ConnectionStatuses = GetConnectionStatusSelectList()
+        };
+
+        return View(model);
     }
 
     /// <summary>
@@ -123,32 +107,23 @@ public class ManageController : Controller
     /// </summary>
     public async Task<IActionResult> Edit(Guid id)
     {
-        try
+        var integration = await _integrationService.GetByIdAsync(id);
+        if (integration == null)
         {
-            var integration = await _integrationService.GetByIdAsync(id);
-            if (integration == null)
-            {
-                TempData["Error"] = "Integration not found.";
-                return RedirectToAction(nameof(Index));
-            }
-
-            // Redirect to the appropriate integration type controller
-            return integration.Type switch
-            {
-                IntegrationType.GitHub => RedirectToAction("Edit", "GitHub", new { id, area = "Integrations" }),
-                IntegrationType.Slack => RedirectToAction("Edit", "Slack", new { id, area = "Integrations" }),
-                IntegrationType.Fellow => RedirectToAction("Edit", "Fellow", new { id, area = "Integrations" }),
-                IntegrationType.Jira => RedirectToAction("Edit", "Jira", new { id, area = "Integrations" }),
-                IntegrationType.Zendesk => RedirectToAction("Edit", "Zendesk", new { id, area = "Integrations" }),
-                _ => RedirectToAction(nameof(Index))
-            };
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error loading integration {IntegrationId} for edit", id);
-            TempData["Error"] = "An error occurred while loading the integration.";
+            TempData["Error"] = "Integration not found.";
             return RedirectToAction(nameof(Index));
         }
+
+        // Redirect to the appropriate integration type controller
+        return integration.Type switch
+        {
+            IntegrationType.GitHub => RedirectToAction("Edit", "GitHub", new { id, area = "Integrations" }),
+            IntegrationType.Slack => RedirectToAction("Edit", "Slack", new { id, area = "Integrations" }),
+            IntegrationType.Fellow => RedirectToAction("Edit", "Fellow", new { id, area = "Integrations" }),
+            IntegrationType.Jira => RedirectToAction("Edit", "Jira", new { id, area = "Integrations" }),
+            IntegrationType.Zendesk => RedirectToAction("Edit", "Zendesk", new { id, area = "Integrations" }),
+            _ => RedirectToAction(nameof(Index))
+        };
     }
 
     /// <summary>

@@ -15,33 +15,10 @@ public class GitHubIntegrationService : BaseIntegrationConnectionService
 
     public override IntegrationType IntegrationType => IntegrationType.GitHub;
 
-    public override bool ValidateConfiguration(Dictionary<string, string> config)
-    {
-        if (!base.ValidateConfiguration(config))
-            return false;
-
-        if (!config.ContainsKey("apiKey") || string.IsNullOrWhiteSpace(config["apiKey"]))
-        {
-            Logger.LogWarning("GitHub integration configuration missing API key");
-            return false;
-        }
-
-        if (!config.ContainsKey("baseUrl") || string.IsNullOrWhiteSpace(config["baseUrl"]))
-        {
-            Logger.LogWarning("GitHub integration configuration missing base URL");
-            return false;
-        }
-
-        return true;
-    }
-
-    protected override async Task<bool> TestConnectionInternalAsync(Dictionary<string, string> config)
+    protected override async Task<bool> TestConnectionInternalAsync(string apiKey, string baseUrl)
     {
         try
         {
-            var apiKey = config["apiKey"];
-            var baseUrl = config["baseUrl"];
-
             // TODO: Implement actual GitHub API connection test
             // For now, we'll simulate a connection test
             await Task.Delay(100); // Simulate API call

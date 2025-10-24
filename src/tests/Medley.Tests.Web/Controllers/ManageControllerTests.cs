@@ -153,7 +153,8 @@ public class ManageControllerTests
             Id = id,
             Type = IntegrationType.GitHub,
             DisplayName = "Test Integration",
-            ConfigurationJson = "{\"apiKey\":\"test-key\"}"
+            ApiKey = "test-key",
+            BaseUrl = "https://api.github.com"
         };
 
         _mockIntegrationService.Setup(s => s.GetByIdAsync(id))
@@ -392,7 +393,8 @@ public class ManageControllerTests
             Id = id,
             Type = IntegrationType.GitHub,
             DisplayName = "Test Integration",
-            ConfigurationJson = "{\"apiKey\":\"test-key\"}"
+            ApiKey = "test-key",
+            BaseUrl = "https://api.github.com"
         };
 
         var user = new ClaimsPrincipal(new ClaimsIdentity(new[]

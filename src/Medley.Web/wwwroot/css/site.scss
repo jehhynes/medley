@@ -97,3 +97,27 @@
     margin: 0.5rem 0;
     border: none;
 }
+
+/* Custom Overlapping Label Form Control */
+.form-group-overlap {
+    position: relative;
+
+    > label {
+        position: absolute;
+        top: -0.75rem;
+        left: 0.5rem;
+        background-color: var(--bs-body-bg);
+        padding: 0 0.25rem;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: var(--bs-secondary);
+        z-index: 1;
+    }
+}
+
+/* Dark theme adjustments */
+[data-bs-theme="dark"] {
+    .form-group-overlap .form-label {
+        background-color: var(--bs-body-bg);
+    }
+}

@@ -58,7 +58,8 @@ public class IntegrationServiceTests
             Id = id,
             Type = IntegrationType.GitHub,
             DisplayName = "Test GitHub Integration",
-            ConfigurationJson = "{\"apiKey\":\"test-key\"}"
+            ApiKey = "test-key",
+            BaseUrl = "https://api.github.com"
         };
 
         _mockRepository.Setup(r => r.GetByIdAsync(id))
@@ -141,7 +142,8 @@ public class IntegrationServiceTests
             Id = Guid.NewGuid(),
             Type = IntegrationType.GitHub,
             DisplayName = "Test GitHub Integration",
-            ConfigurationJson = "{\"apiKey\":\"test-key\"}"
+            ApiKey = "test-key",
+            BaseUrl = "https://api.github.com"
         };
 
         _mockGitHubService.Setup(s => s.TestConnectionAsync(integration))
@@ -164,7 +166,8 @@ public class IntegrationServiceTests
             Id = Guid.NewGuid(),
             Type = IntegrationType.GitHub,
             DisplayName = "Test GitHub Integration",
-            ConfigurationJson = "{\"apiKey\":\"invalid-key\"}"
+            ApiKey = "invalid-key",
+            BaseUrl = "https://api.github.com"
         };
 
         _mockGitHubService.Setup(s => s.TestConnectionAsync(integration))

@@ -1,12 +1,13 @@
 using Hangfire;
-using Medley.Application.Interfaces;
 using Medley.Application.Hubs;
+using Medley.Application.Interfaces;
 using Medley.Domain.Entities;
 using Medley.Infrastructure;
 using Medley.Infrastructure.Data;
 using Medley.Web.Filters;
 using Microsoft.AspNetCore.Identity;
 using Serilog;
+using UoN.ExpressiveAnnotations.Net8.DependencyInjection;
 
 namespace Medley.Web;
 
@@ -99,6 +100,10 @@ public class Program
             {
                 options.Filters.Add<UnitOfWorkActionFilter>();
             });
+            
+            // Configure ExpressiveAnnotations
+            builder.Services.AddExpressiveAnnotations();
+            
 #if DEBUG
             mvc.AddRazorRuntimeCompilation();
 #endif

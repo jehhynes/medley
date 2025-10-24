@@ -13,8 +13,17 @@ public class Integration : BusinessEntity
     [MaxLength(200)]
     public string? DisplayName { get; set; }
 
-    // Serialized configuration (encrypted at rest at infra layer)
-    public string? ConfigurationJson { get; set; }
+    /// <summary>
+    /// API key or token for the integration (encrypted at rest at infra layer)
+    /// </summary>
+    [MaxLength(500)]
+    public string? ApiKey { get; set; }
+
+    /// <summary>
+    /// Base URL for the integration API
+    /// </summary>
+    [MaxLength(500)]
+    public string? BaseUrl { get; set; }
 
     public DateTimeOffset? LastModifiedAt { get; set; }
 
