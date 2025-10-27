@@ -66,11 +66,17 @@ public class Program
                 options.Cookie.HttpOnly = true;
                 options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
                 options.Cookie.SameSite = SameSiteMode.Strict;
-                options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
+                options.ExpireTimeSpan = TimeSpan.FromDays(14); // Default expiration for "Remember Me"
                 options.SlidingExpiration = true;
                 options.LoginPath = "/Auth/Login";
                 options.LogoutPath = "/Auth/Logout";
                 options.AccessDeniedPath = "/Auth/AccessDenied";
+            });
+
+            // Configure Identity options for persistent cookies
+            builder.Services.Configure<SecurityStampValidatorOptions>(options =>
+            {
+                options.ValidationInterval = TimeSpan.FromMinutes(30);
             });
 
             // Configure authorization policies

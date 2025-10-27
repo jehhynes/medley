@@ -139,16 +139,19 @@ public class AuthController : Controller
             return View(model);
         }
 
+        // Sign out any existing session first
+        await _signInManager.SignOutAsync();
+
         var result = await _signInManager.PasswordSignInAsync(
             user.UserName!,
-            model.Password,
-            model.RememberMe,
+            model.Password, 
+            isPersistent: model.RememberMe,
             lockoutOnFailure: true);
 
         if (result.Succeeded)
         {
             await _auditLogService.LogLoginAsync(user.Id, user.UserName!, ipAddress);
-            _logger.LogInformation("User {Email} logged in", model.Email);
+            _logger.LogInformation("User {Email} logged in with RememberMe={RememberMe}", model.Email, model.RememberMe);
 
             if (!string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
             {

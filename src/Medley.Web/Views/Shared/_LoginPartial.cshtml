@@ -5,7 +5,7 @@
 
 @if (SignInManager.IsSignedIn(User))
 {
-    <a class="dropdown-item" href="#">
+@*     <a class="dropdown-item" href="#">
         <i class="icon me-2 cil-bell"></i> Updates<span class="badge badge-sm bg-info ms-2">42</span>
     </a>
     <a class="dropdown-item" href="#">
@@ -25,24 +25,24 @@
     </a>
     <a class="dropdown-item" href="#">
         <i class="icon me-2 cil-settings"></i> Settings
-    </a>
+    </a> *@
     @if (User.IsInRole("Admin"))
     {
         <a class="dropdown-item" asp-controller="UserManagement" asp-action="Index">
             <i class="icon me-2 cil-people"></i> User Management<span class="badge badge-sm bg-secondary ms-2">Admin</span>
         </a>
     }
-    <a class="dropdown-item" href="#">
+  @*   <a class="dropdown-item" href="#">
         <i class="icon me-2 cil-credit-card"></i> Payments<span class="badge badge-sm bg-secondary ms-2">42</span>
     </a>
     <a class="dropdown-item" href="#">
         <i class="icon me-2 cil-file"></i> Projects<span class="badge badge-sm bg-primary ms-2">42</span>
-    </a>
+    </a> *@
     <div class="dropdown-divider"></div>
-    <a class="dropdown-item" href="#">
+  @*   <a class="dropdown-item" href="#">
         <i class="icon me-2 cil-lock-locked"></i> Lock Account
-    </a>
-    <form class="form-inline" asp-controller="Auth" asp-action="Logout" method="post">
+    </a> *@
+    <form class="form-inline" asp-controller="Auth" asp-action="Logout" asp-area="" method="post">
         <button type="submit" class="dropdown-item">
             <i class="icon me-2 cil-account-logout"></i> Logout
         </button>

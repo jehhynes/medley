@@ -14,88 +14,119 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body>
-    <div class="sidebar sidebar-dark sidebar-fixed border-end" id="sidebar">
-        <div class="sidebar-header border-bottom p-2">
-            <div class="sidebar-brand">
-                <div class="sidebar-brand-full">
-                    <img src="/images/logo.svg" class="sidebar-logo me-2" />
-                    <div class="sidebar-brand-text">
-                        <span class="sidebar-brand-title">Medley</span>
-                        <div class="sidebar-brand-subtitle">AI Product Intelligence</div>
+    @if (User.Identity.IsAuthenticated)
+    {
+        <div class="sidebar sidebar-dark sidebar-fixed border-end" id="sidebar">
+            <div class="sidebar-header border-bottom p-2">
+                <div class="sidebar-brand">
+                    <div class="sidebar-brand-full">
+                        <img src="/images/logo.svg" class="sidebar-logo me-2" />
+                        <div class="sidebar-brand-text">
+                            <span class="sidebar-brand-title">Medley</span>
+                            <div class="sidebar-brand-subtitle">AI Product Intelligence</div>
+                        </div>
                     </div>
                 </div>
+                <button class="btn-close me-1 d-lg-none" type="button" data-bs-theme="dark" aria-label="Close" onclick="bootstrap.Sidebar.getInstance(document.querySelector('#sidebar')).toggle()"></button>
             </div>
-            <button class="btn-close me-1 d-lg-none" type="button" data-bs-theme="dark" aria-label="Close" onclick="bootstrap.Sidebar.getInstance(document.querySelector('#sidebar')).toggle()"></button>
-        </div>
-        <ul class="sidebar-nav" data-coreui="navigation" data-simplebar>
-            <li class="nav-item">
-                <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">
-                    <i class="nav-icon cil-speedometer"></i> Dashboard
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" asp-controller="Manage" asp-action="Index" asp-area="Integrations">
-                    <i class="nav-icon bi bi-plug"></i> Integrations
-                </a>
-            </li>
-            
-            <!-- Data Processing Section -->
-            <li class="nav-divider"></li>
-            
-            <li class="nav-item">
-                <a class="nav-link" href="#">
-                    <i class="nav-icon cil-puzzle"></i> Fragments
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="#">
-                    <i class="nav-icon bi bi-file-text"></i> Articles
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="#">
-                    <i class="nav-icon cil-chart"></i> Analytics
-                </a>
-            </li>
-            
-            <!-- System Section -->
-            @if (User.IsInRole("Admin"))
-            {
-                <li class="nav-divider"></li>
+            <ul class="sidebar-nav" data-coreui="navigation" data-simplebar>
                 <li class="nav-item">
-                    <a class="nav-link" asp-controller="UserManagement" asp-action="Index">
-                        <i class="nav-icon cil-people"></i> User Management
+                    <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">
+                        <i class="nav-icon cil-speedometer"></i> Dashboard
                     </a>
                 </li>
-            }
-        </ul>
+                <li class="nav-item">
+                    <a class="nav-link" asp-controller="Manage" asp-action="Index" asp-area="Integrations">
+                        <i class="nav-icon bi bi-plug"></i> Integrations
+                    </a>
+                </li>
+
+                <!-- Data Processing Section -->
+                <li class="nav-divider"></li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="nav-icon cil-puzzle"></i> Fragments
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="nav-icon bi bi-file-text"></i> Articles
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">
+                        <i class="nav-icon cil-chart"></i> Analytics
+                    </a>
+                </li>
+
+                <!-- System Section -->
+                @if (User.IsInRole("Admin"))
+                {
+                    <li class="nav-divider"></li>
+                    <li class="nav-item">
+                        <a class="nav-link" asp-controller="UserManagement" asp-action="Index">
+                            <i class="nav-icon cil-people"></i> User Management
+                        </a>
+                    </li>
+                }
+            </ul>
     </div>
-    
+    }
     <div class="wrapper d-flex flex-column min-vh-100">
         <header class="header header-sticky p-0 mb-4">
             <div class="container-fluid border-bottom px-4">
-                <button class="header-toggler" type="button" onclick="bootstrap.Sidebar.getInstance(document.querySelector('#sidebar')).toggle()">
-                    <i class="icon icon-lg cil-menu"></i>
-                </button>
-           @*      <ul class="header-nav d-none d-lg-flex">
+                @if (User.Identity.IsAuthenticated)
+                {
+                    <button class="header-toggler" type="button" onclick="bootstrap.Sidebar.getInstance(document.querySelector('#sidebar')).toggle()">
+                        <i class="icon icon-lg cil-menu"></i>
+                    </button>
+
+                    @*      <ul class="header-nav d-none d-lg-flex">
                     <li class="nav-item"><a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">Dashboard</a></li>
                     <li class="nav-item"><a class="nav-link" asp-controller="Manage" asp-action="Index" asp-area="Integrations">Integrations</a></li>
                     <li class="nav-item"><a class="nav-link" href="#">Fragments</a></li>
                     <li class="nav-item"><a class="nav-link" href="#">Articles</a></li>
                     <li class="nav-item"><a class="nav-link" href="#">Analytics</a></li>
                 </ul> *@
-                <ul class="header-nav ms-auto">
-                     <li class="nav-item"><a class="nav-link" href="#">
-                        <i class="icon icon-lg cil-bell"></i></a></li>
-                    <li class="nav-item"><a class="nav-link" href="#">
-                        <i class="icon icon-lg cil-list-rich"></i></a></li>
-                    <li class="nav-item"><a class="nav-link" href="#">
-                        <i class="icon icon-lg cil-envelope-open"></i></a></li>
-                </ul>
+                    <ul class="header-nav ms-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">
+                                <i class="icon icon-lg cil-bell"></i>
+                            </a>
+                        </li>
+                    @*     <li class="nav-item">
+                            <a class="nav-link" href="#">
+                                <i class="icon icon-lg cil-list-rich"></i>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">
+                                <i class="icon icon-lg cil-envelope-open"></i>
+                            </a>
+                        </li> *@
+                    </ul>
+                }
+                else
+                {
+                    <div class="sidebar-brand">
+                        <div class="sidebar-brand-full">
+                            <img src="/images/logo.svg" class="sidebar-logo me-2" />
+                            <div class="sidebar-brand-text">
+                                <span class="sidebar-brand-title">Medley</span>
+                                <div class="sidebar-brand-subtitle">AI Product Intelligence</div>
+                            </div>
+                        </div>
+                    </div>
+                }
+                
                 <ul class="header-nav">
-                    <li class="nav-item py-1">
-                        <div class="vr h-100 mx-2 text-body text-opacity-75"></div>
-                    </li>
+                    @if (User.Identity.IsAuthenticated)
+                    {
+                        <li class="nav-item py-1">
+                            <div class="vr h-100 mx-2 text-body text-opacity-75"></div>
+                        </li>
+                    }
                     <li class="nav-item dropdown">
                         <button class="btn btn-link nav-link py-2 px-2 d-flex align-items-center" type="button" aria-expanded="false" data-bs-toggle="dropdown">
                             <i class="icon icon-lg theme-icon-active cil-contrast"></i>

@@ -2,10 +2,12 @@ using System.Diagnostics;
 using Medley.Web.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authorization;
 using Medley.Domain.Entities;
 
 namespace Medley.Web.Controllers
 {
+    [Authorize]
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
@@ -61,11 +63,13 @@ namespace Medley.Web.Controllers
             return View(model);
         }
 
+        [AllowAnonymous]
         public IActionResult Privacy()
         {
             return View();
         }
 
+        [AllowAnonymous]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {
