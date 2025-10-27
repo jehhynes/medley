@@ -13,6 +13,8 @@ public partial class MainForm : Form
     private readonly MeetingTranscriptService _transcriptService;
     private readonly ConfigurationService _configurationService;
     private int _totalRecordCount;
+    private string? _lastSortColumn;
+    private ListSortDirection _lastSortDirection = ListSortDirection.Ascending;
 
     public MainForm()
     {
@@ -26,6 +28,76 @@ public partial class MainForm : Form
         {
             BeginInvoke(new Action(UpdateFilterCount));
         };
+
+        // Wire up column header click for sorting through ADGV
+        dataGridViewTranscripts.SortStringChanged += DataGridViewTranscripts_SortStringChanged;
+        dataGridViewTranscripts.ColumnHeaderMouseClick += DataGridViewTranscripts_ColumnHeaderMouseClick;
+    }
+
+    private void DataGridViewTranscripts_SortStringChanged(object? sender, EventArgs e)
+    {
+        // This event fires when ADGV applies a sort
+        // We can use this to track the sort state if needed
+    }
+
+    private void DataGridViewTranscripts_ColumnHeaderMouseClick(object? sender, DataGridViewCellMouseEventArgs e)
+    {
+        if (e.ColumnIndex < 0) return;
+
+        var column = dataGridViewTranscripts.Columns[e.ColumnIndex];
+
+        // Skip the hidden Id column only
+        if (column.Name == "Id") return;
+
+        // Check if the click is on the filter button area (right side of header)
+        // The filter button is typically in the rightmost ~20 pixels of the header
+        var headerCell = dataGridViewTranscripts.GetCellDisplayRectangle(e.ColumnIndex, -1, false);
+        var filterButtonWidth = 20;
+        var clickX = e.X;
+
+        // If click is in the filter button area, don't sort
+        if (clickX > headerCell.Width - filterButtonWidth)
+        {
+            return;
+        }
+
+        // Determine sort direction
+        ListSortDirection direction;
+        if (_lastSortColumn == column.Name)
+        {
+            // Same column - reverse direction
+            direction = _lastSortDirection == ListSortDirection.Ascending
+                ? ListSortDirection.Descending
+                : ListSortDirection.Ascending;
+        }
+        else
+        {
+            // New column - start with ascending
+            direction = ListSortDirection.Ascending;
+        }
+
+        // Clear all sorts from all columns
+        foreach (DataGridViewColumn col in dataGridViewTranscripts.Columns)
+        {
+            col.HeaderCell.SortGlyphDirection = SortOrder.None;
+        }
+
+        // Clear ADGV's internal sort state
+        dataGridViewTranscripts.CleanSort();
+
+        // Apply sort through ADGV
+        if (direction == ListSortDirection.Ascending)
+        {
+            dataGridViewTranscripts.SortASC(column);
+        }
+        else
+        {
+            dataGridViewTranscripts.SortDESC(column);
+        }
+
+        // Remember last sort
+        _lastSortColumn = column.Name;
+        _lastSortDirection = direction;
     }
 
     private async void MainForm_Load(object sender, EventArgs e)
@@ -495,9 +567,12 @@ public partial class MainForm : Form
                             {
                                 var id = Convert.ToInt32(idCell.Value);
 
-                                // Update the DataTable directly
-                                var dataRow = dataTable.Rows[row.Index];
-                                dataRow["IsSelected"] = newValue;
+                                // Find the DataRow by ID (not by index, since grid may be sorted)
+                                var dataRow = dataTable.AsEnumerable().FirstOrDefault(r => r.Field<int>("Id") == id);
+                                if (dataRow != null)
+                                {
+                                    dataRow["IsSelected"] = newValue;
+                                }
 
                                 // Update the database
                                 await _transcriptService.UpdateTranscriptSelectionAsync(id, newValue);
