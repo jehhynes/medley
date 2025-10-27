@@ -14,11 +14,13 @@ namespace Medley.CollectorUtil
     public partial class FellowApiKeys : Form
     {
         private readonly ApiKeyService _apiKeyService;
+        private readonly ConfigurationService _configurationService;
 
         public FellowApiKeys()
         {
             InitializeComponent();
             _apiKeyService = new ApiKeyService();
+            _configurationService = new ConfigurationService();
         }
 
         private async void btnSave_Click(object sender, EventArgs e)
@@ -28,19 +30,29 @@ namespace Medley.CollectorUtil
                 btnSave.Enabled = false;
                 btnCancel.Enabled = false;
                 
+                // Validate workspace
+                var workspace = txtWorkspace.Text?.Trim();
+                if (string.IsNullOrWhiteSpace(workspace))
+                {
+                    MessageBox.Show("Please enter a workspace.", "Validation Error", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                
                 var apiKeys = new List<ApiKey>();
                 
                 foreach (DataGridViewRow row in dgvApiKeys.Rows)
                 {
                     if (row.IsNewRow) continue;
                     
+                    var id = row.Cells[0].Tag is int existingId ? existingId : 0;
                     var name = row.Cells[0].Value?.ToString()?.Trim();
                     var key = row.Cells[1].Value?.ToString()?.Trim();
                     var isEnabled = row.Cells[2].Value is bool enabled ? enabled : true;
                     
                     if (!string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(key))
                     {
-                        apiKeys.Add(new ApiKey { Name = name, Key = key, IsEnabled = isEnabled });
+                        apiKeys.Add(new ApiKey { Id = id, Name = name, Key = key, IsEnabled = isEnabled });
                     }
                 }
 
@@ -51,6 +63,8 @@ namespace Medley.CollectorUtil
                     return;
                 }
 
+                // Save workspace and API keys
+                await _configurationService.SaveWorkspaceAsync(workspace);
                 await _apiKeyService.SaveApiKeysAsync(apiKeys);
                 
                 this.DialogResult = DialogResult.OK;
@@ -72,13 +86,20 @@ namespace Medley.CollectorUtil
         {
             try
             {
+                // Load workspace
+                var workspace = await _configurationService.GetWorkspaceAsync();
+                txtWorkspace.Text = workspace;
+                
+                // Load API keys
                 var keys = await _apiKeyService.GetAllApiKeysAsync();
                 
                 dgvApiKeys.Rows.Clear();
                 
                 foreach (var apiKey in keys)
                 {
-                    dgvApiKeys.Rows.Add(apiKey.Name, apiKey.Key, apiKey.IsEnabled);
+                    var rowIndex = dgvApiKeys.Rows.Add(apiKey.Name, apiKey.Key, apiKey.IsEnabled);
+                    // Store the Id in the first cell's Tag property for later retrieval
+                    dgvApiKeys.Rows[rowIndex].Cells[0].Tag = apiKey.Id;
                 }
             }
             catch (Exception ex)

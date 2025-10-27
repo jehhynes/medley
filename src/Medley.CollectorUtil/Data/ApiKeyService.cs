@@ -11,29 +11,49 @@ public class ApiKeyService
             .OrderBy(k => k.CreatedAt)
             .ToListAsync();
     }
-    
+
     public async Task SaveApiKeysAsync(List<ApiKey> apiKeys)
     {
         using var context = new AppDbContext();
-        
-        // Clear existing keys
-        context.ApiKeys.RemoveRange(context.ApiKeys);
-        
-        // Add new keys
+
+        var existingKeys = await context.ApiKeys.ToListAsync();
+        var incomingIds = apiKeys.Where(k => k.Id > 0).Select(k => k.Id).ToHashSet();
+
+        // Delete keys that are no longer in the list
+        var keysToDelete = existingKeys.Where(k => !incomingIds.Contains(k.Id)).ToList();
+        context.ApiKeys.RemoveRange(keysToDelete);
+
+        // Update or add keys
         foreach (var apiKey in apiKeys.Where(k => !string.IsNullOrWhiteSpace(k.Name) && !string.IsNullOrWhiteSpace(k.Key)))
         {
-            context.ApiKeys.Add(new ApiKey 
-            { 
-                Name = apiKey.Name.Trim(),
-                Key = apiKey.Key.Trim(),
-                IsEnabled = apiKey.IsEnabled,
-                CreatedAt = DateTime.UtcNow
-            });
+            if (apiKey.Id > 0)
+            {
+                // Update existing key
+                var existing = existingKeys.FirstOrDefault(k => k.Id == apiKey.Id);
+                if (existing != null)
+                {
+                    existing.Name = apiKey.Name.Trim();
+                    existing.Key = apiKey.Key.Trim();
+                    existing.IsEnabled = apiKey.IsEnabled;
+                    context.ApiKeys.Update(existing);
+                }
+            }
+            else
+            {
+                // Add new key
+                context.ApiKeys.Add(new ApiKey
+                {
+                    Name = apiKey.Name.Trim(),
+                    Key = apiKey.Key.Trim(),
+                    IsEnabled = apiKey.IsEnabled,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
         }
-        
+
         await context.SaveChangesAsync();
     }
-    
+
     public async Task<List<ApiKey>> GetEnabledApiKeysAsync()
     {
         using var context = new AppDbContext();

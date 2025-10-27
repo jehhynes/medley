@@ -35,6 +35,8 @@
             btnSave = new Button();
             btnCancel = new Button();
             label1 = new Label();
+            lblWorkspace = new Label();
+            txtWorkspace = new TextBox();
             ((System.ComponentModel.ISupportInitialize)dgvApiKeys).BeginInit();
             SuspendLayout();
             // 
@@ -43,11 +45,11 @@
             dgvApiKeys.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             dgvApiKeys.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dgvApiKeys.Columns.AddRange(new DataGridViewColumn[] { colName, colKey, colEnabled });
-            dgvApiKeys.Location = new Point(12, 32);
+            dgvApiKeys.Location = new Point(12, 102);
             dgvApiKeys.Name = "dgvApiKeys";
             dgvApiKeys.RowHeadersWidth = 51;
-            dgvApiKeys.Size = new Size(609, 303);
-            dgvApiKeys.TabIndex = 0;
+            dgvApiKeys.Size = new Size(609, 233);
+            dgvApiKeys.TabIndex = 2;
             // 
             // colName
             // 
@@ -77,7 +79,7 @@
             btnSave.Location = new Point(527, 341);
             btnSave.Name = "btnSave";
             btnSave.Size = new Size(94, 29);
-            btnSave.TabIndex = 1;
+            btnSave.TabIndex = 3;
             btnSave.Text = "Save";
             btnSave.UseVisualStyleBackColor = true;
             btnSave.Click += btnSave_Click;
@@ -88,7 +90,7 @@
             btnCancel.Location = new Point(427, 341);
             btnCancel.Name = "btnCancel";
             btnCancel.Size = new Size(94, 29);
-            btnCancel.TabIndex = 2;
+            btnCancel.TabIndex = 4;
             btnCancel.Text = "Cancel";
             btnCancel.UseVisualStyleBackColor = true;
             btnCancel.Click += btnCancel_Click;
@@ -96,17 +98,36 @@
             // label1
             // 
             label1.AutoSize = true;
-            label1.Location = new Point(15, 9);
+            label1.Location = new Point(15, 79);
             label1.Name = "label1";
             label1.Size = new Size(234, 20);
-            label1.TabIndex = 3;
+            label1.TabIndex = 5;
             label1.Text = "Enter your Fellow.ai API keys:";
+            // 
+            // lblWorkspace
+            // 
+            lblWorkspace.AutoSize = true;
+            lblWorkspace.Location = new Point(15, 15);
+            lblWorkspace.Name = "lblWorkspace";
+            lblWorkspace.Size = new Size(85, 20);
+            lblWorkspace.TabIndex = 6;
+            lblWorkspace.Text = "Workspace:";
+            // 
+            // txtWorkspace
+            // 
+            txtWorkspace.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            txtWorkspace.Location = new Point(15, 38);
+            txtWorkspace.Name = "txtWorkspace";
+            txtWorkspace.Size = new Size(606, 27);
+            txtWorkspace.TabIndex = 0;
             // 
             // FellowApiKeys
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(633, 380);
+            Controls.Add(txtWorkspace);
+            Controls.Add(lblWorkspace);
             Controls.Add(label1);
             Controls.Add(btnCancel);
             Controls.Add(btnSave);
@@ -125,6 +146,8 @@
         private Button btnSave;
         private Button btnCancel;
         private Label label1;
+        private Label lblWorkspace;
+        private TextBox txtWorkspace;
         private DataGridViewTextBoxColumn colName;
         private DataGridViewTextBoxColumn colKey;
         private DataGridViewCheckBoxColumn colEnabled;

@@ -29,15 +29,24 @@ namespace Medley.CollectorUtil
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             menuStrip1 = new MenuStrip();
             aPIKeysToolStripMenuItem = new ToolStripMenuItem();
+            downloadToolStripMenuItem = new ToolStripMenuItem();
+            refreshToolStripMenuItem = new ToolStripMenuItem();
+            deleteAllToolStripMenuItem = new ToolStripMenuItem();
+            dataGridViewTranscripts = new DataGridView();
+            statusStrip1 = new StatusStrip();
+            toolStripLabelCount = new ToolStripStatusLabel();
             menuStrip1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)dataGridViewTranscripts).BeginInit();
+            statusStrip1.SuspendLayout();
             SuspendLayout();
             // 
             // menuStrip1
             // 
             menuStrip1.ImageScalingSize = new Size(20, 20);
-            menuStrip1.Items.AddRange(new ToolStripItem[] { aPIKeysToolStripMenuItem });
+            menuStrip1.Items.AddRange(new ToolStripItem[] { aPIKeysToolStripMenuItem, downloadToolStripMenuItem, refreshToolStripMenuItem, deleteAllToolStripMenuItem });
             menuStrip1.Location = new Point(0, 0);
             menuStrip1.Name = "menuStrip1";
             menuStrip1.RenderMode = ToolStripRenderMode.Professional;
@@ -47,16 +56,74 @@ namespace Medley.CollectorUtil
             // 
             // aPIKeysToolStripMenuItem
             // 
+            aPIKeysToolStripMenuItem.Image = (Image)resources.GetObject("aPIKeysToolStripMenuItem.Image");
             aPIKeysToolStripMenuItem.Name = "aPIKeysToolStripMenuItem";
-            aPIKeysToolStripMenuItem.Size = new Size(79, 24);
+            aPIKeysToolStripMenuItem.Size = new Size(99, 24);
             aPIKeysToolStripMenuItem.Text = "API Keys";
-            aPIKeysToolStripMenuItem.Click += this.apiKeysToolStripMenuItem_Click;
+            aPIKeysToolStripMenuItem.Click += apiKeysToolStripMenuItem_Click;
+            // 
+            // downloadToolStripMenuItem
+            // 
+            downloadToolStripMenuItem.Image = (Image)resources.GetObject("downloadToolStripMenuItem.Image");
+            downloadToolStripMenuItem.Name = "downloadToolStripMenuItem";
+            downloadToolStripMenuItem.Size = new Size(112, 24);
+            downloadToolStripMenuItem.Text = "Download";
+            downloadToolStripMenuItem.Click += downloadToolStripMenuItem_Click;
+            // 
+            // refreshToolStripMenuItem
+            // 
+            refreshToolStripMenuItem.Image = (Image)resources.GetObject("refreshToolStripMenuItem.Image");
+            refreshToolStripMenuItem.Name = "refreshToolStripMenuItem";
+            refreshToolStripMenuItem.Size = new Size(92, 24);
+            refreshToolStripMenuItem.Text = "Refresh";
+            refreshToolStripMenuItem.Click += toolStripButtonRefresh_Click;
+            // 
+            // deleteAllToolStripMenuItem
+            // 
+            deleteAllToolStripMenuItem.Image = (Image)resources.GetObject("deleteAllToolStripMenuItem.Image");
+            deleteAllToolStripMenuItem.Name = "deleteAllToolStripMenuItem";
+            deleteAllToolStripMenuItem.Size = new Size(109, 24);
+            deleteAllToolStripMenuItem.Text = "Delete All";
+            deleteAllToolStripMenuItem.Click += toolStripButtonDeleteAll_Click;
+            // 
+            // dataGridViewTranscripts
+            // 
+            dataGridViewTranscripts.AllowUserToAddRows = false;
+            dataGridViewTranscripts.AllowUserToDeleteRows = false;
+            dataGridViewTranscripts.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dataGridViewTranscripts.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            dataGridViewTranscripts.Dock = DockStyle.Fill;
+            dataGridViewTranscripts.Location = new Point(0, 28);
+            dataGridViewTranscripts.Name = "dataGridViewTranscripts";
+            dataGridViewTranscripts.RowHeadersWidth = 51;
+            dataGridViewTranscripts.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dataGridViewTranscripts.Size = new Size(1137, 616);
+            dataGridViewTranscripts.TabIndex = 1;
+            dataGridViewTranscripts.CellValueChanged += dataGridViewTranscripts_CellValueChanged;
+            // 
+            // statusStrip1
+            // 
+            statusStrip1.ImageScalingSize = new Size(20, 20);
+            statusStrip1.Items.AddRange(new ToolStripItem[] { toolStripLabelCount });
+            statusStrip1.Location = new Point(0, 644);
+            statusStrip1.Name = "statusStrip1";
+            statusStrip1.Size = new Size(1137, 26);
+            statusStrip1.TabIndex = 3;
+            statusStrip1.Text = "statusStrip1";
+            // 
+            // toolStripLabelCount
+            // 
+            toolStripLabelCount.Name = "toolStripLabelCount";
+            toolStripLabelCount.Size = new Size(89, 20);
+            toolStripLabelCount.Text = "0 transcripts";
             // 
             // MainForm
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1137, 670);
+            Controls.Add(dataGridViewTranscripts);
+            Controls.Add(statusStrip1);
             Controls.Add(menuStrip1);
             MainMenuStrip = menuStrip1;
             Name = "MainForm";
@@ -64,6 +131,9 @@ namespace Medley.CollectorUtil
             Load += MainForm_Load;
             menuStrip1.ResumeLayout(false);
             menuStrip1.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)dataGridViewTranscripts).EndInit();
+            statusStrip1.ResumeLayout(false);
+            statusStrip1.PerformLayout();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -72,5 +142,11 @@ namespace Medley.CollectorUtil
 
         private MenuStrip menuStrip1;
         private ToolStripMenuItem aPIKeysToolStripMenuItem;
+        private ToolStripMenuItem downloadToolStripMenuItem;
+        private ToolStripMenuItem refreshToolStripMenuItem;
+        private ToolStripMenuItem deleteAllToolStripMenuItem;
+        private DataGridView dataGridViewTranscripts;
+        private StatusStrip statusStrip1;
+        private ToolStripStatusLabel toolStripLabelCount;
     }
 }

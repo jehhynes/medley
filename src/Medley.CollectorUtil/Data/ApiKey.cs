@@ -16,4 +16,7 @@ public class ApiKey
     public bool IsEnabled { get; set; } = true;
     
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    
+    // Navigation properties
+    public ICollection<MeetingTranscript> MeetingTranscripts { get; set; } = new List<MeetingTranscript>();
 }
