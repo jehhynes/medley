@@ -68,6 +68,10 @@ public static class DependencyInjection
         services.AddScoped<IIntegrationConnectionService, GitHubIntegrationService>();
         services.AddScoped<IIntegrationConnectionService, FellowIntegrationService>();
 
+        // Register concrete integration services for direct injection
+        services.AddScoped<FellowIntegrationService>();
+        services.AddScoped<GitHubIntegrationService>();
+
         // Configure Hangfire
         services.AddHangfire(configuration => configuration
             .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
@@ -111,7 +115,7 @@ public static class DependencyInjection
 
         // Register AWS clients only when credentials are available or not in test environment
         var hasCredentials = !string.IsNullOrEmpty(awsSettings.AccessKeyId) && !string.IsNullOrEmpty(awsSettings.SecretAccessKey);
-        var isTestEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Testing" || 
+        var isTestEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Testing" ||
                                Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") == "Testing";
 
         if (hasCredentials || !isTestEnvironment)

@@ -30,6 +30,11 @@ public class Integration : BusinessEntity
     public ConnectionStatus Status { get; set; } = ConnectionStatus.Unknown;
 
     public DateTimeOffset? LastHealthCheckAt { get; set; }
+
+    /// <summary>
+    /// Indicates whether the initial full sync has been completed for this integration
+    /// </summary>
+    public bool InitialSyncCompleted { get; set; } = false;
 }
 
 

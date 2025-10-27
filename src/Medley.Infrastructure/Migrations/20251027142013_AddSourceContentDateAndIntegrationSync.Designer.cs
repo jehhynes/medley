@@ -3,6 +3,7 @@ using System;
 using Medley.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Medley.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251027142013_AddSourceContentDateAndIntegrationSync")]
+    partial class AddSourceContentDateAndIntegrationSync
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -345,11 +348,8 @@ namespace Medley.Infrastructure.Migrations
                         .HasMaxLength(400)
                         .HasColumnType("character varying(400)");
 
-                    b.Property<Guid>("IntegrationId")
+                    b.Property<Guid?>("IntegrationId")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("MetadataJson")
-                        .HasColumnType("text");
 
                     b.Property<string>("Name")
                         .HasMaxLength(200)
@@ -359,8 +359,6 @@ namespace Medley.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("IntegrationId");
 
                     b.ToTable("Sources");
                 });
@@ -672,17 +670,6 @@ namespace Medley.Infrastructure.Migrations
                         .HasForeignKey("SourceId");
 
                     b.Navigation("Source");
-                });
-
-            modelBuilder.Entity("Medley.Domain.Entities.Source", b =>
-                {
-                    b.HasOne("Medley.Domain.Entities.Integration", "Integration")
-                        .WithMany()
-                        .HasForeignKey("IntegrationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Integration");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>

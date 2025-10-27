@@ -290,11 +290,19 @@ public class CaseInsensitiveQueryTests : DatabaseTestBase
         _dbContext.Sources.RemoveRange(_dbContext.Sources);
         await _dbContext.SaveChangesAsync();
 
-        // Create a test source
+        // Create a test integration and source
+        var integration = new Domain.Entities.Integration
+        {
+            Id = Guid.NewGuid(),
+            Type = IntegrationType.Fellow
+        };
+        _dbContext.Integrations.Add(integration);
+        
         var source = new Source
         {
             Name = "Test Source",
-            Type = SourceType.Meeting
+            Type = SourceType.Meeting,
+            Integration = integration
         };
         _dbContext.Sources.Add(source);
         await _dbContext.SaveChangesAsync();

@@ -13,7 +13,11 @@ public class FragmentTests
         var fragment = new Fragment
         {
             Content = string.Empty,
-            Source = new Source { Type = SourceType.Meeting }
+            Source = new Source 
+            { 
+                Type = SourceType.Meeting,
+                Integration = new Integration { Id = Guid.NewGuid(), Type = IntegrationType.Fellow }
+            }
         };
 
         // Assert
@@ -40,7 +44,8 @@ public class FragmentTests
             Id = Guid.NewGuid(),
             Type = SourceType.Meeting,
             Name = "Daily Standup",
-            ExternalId = "meeting-123"
+            ExternalId = "meeting-123",
+            Integration = new Integration { Id = Guid.NewGuid(), Type = IntegrationType.Fellow }
         };
         var createdAt = DateTimeOffset.UtcNow;
         var lastModifiedAt = DateTimeOffset.UtcNow.AddHours(1);
@@ -78,7 +83,11 @@ public class FragmentTests
             Id = Guid.NewGuid(),
             Content = "Test content without embedding",
             Embedding = null,
-            Source = new Source { Type = SourceType.Meeting }
+            Source = new Source 
+            { 
+                Type = SourceType.Meeting,
+                Integration = new Integration { Id = Guid.NewGuid(), Type = IntegrationType.Fellow }
+            }
         };
 
         // Assert
@@ -100,7 +109,11 @@ public class FragmentTests
             Id = Guid.NewGuid(),
             Content = "Test content",
             Embedding = embedding,
-            Source = new Source { Type = SourceType.Meeting }
+            Source = new Source 
+            { 
+                Type = SourceType.Meeting,
+                Integration = new Integration { Id = Guid.NewGuid(), Type = IntegrationType.Fellow }
+            }
         };
 
         // Assert

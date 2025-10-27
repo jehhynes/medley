@@ -1,11 +1,16 @@
-﻿namespace Medley.Application.Integrations.Models.Fellow;
+﻿using System.Text.Json.Serialization;
+
+namespace Medley.Application.Integrations.Models.Fellow;
 
 /// <summary>
 /// Response model for Fellow.ai /me endpoint
 /// </summary>
 public class FellowMeResponse
 {
+    [JsonPropertyName("user")]
     public FellowUser? User { get; set; }
+    
+    [JsonPropertyName("workspace")]
     public FellowWorkspace? Workspace { get; set; }
 }
 
@@ -14,8 +19,13 @@ public class FellowMeResponse
 /// </summary>
 public class FellowUser
 {
+    [JsonPropertyName("id")]
     public string Id { get; set; }
+    
+    [JsonPropertyName("email")]
     public string? Email { get; set; }
+    
+    [JsonPropertyName("full_name")]
     public string? FullName { get; set; }
 }
 
@@ -24,8 +34,13 @@ public class FellowUser
 /// </summary>
 public class FellowWorkspace
 {
+    [JsonPropertyName("id")]
     public string Id { get; set; }
+    
+    [JsonPropertyName("name")]
     public string? Name { get; set; }
+    
+    [JsonPropertyName("subdomain")]
     public string? Subdomain { get; set; }
 }
 
@@ -34,6 +49,7 @@ public class FellowWorkspace
 /// </summary>
 public class FellowRecordingResponse
 {
+    [JsonPropertyName("recording")]
     public FellowRecording? Recording { get; set; }
 }
 
@@ -42,6 +58,7 @@ public class FellowRecordingResponse
 /// </summary>
 public class FellowRecordingsResponse
 {
+    [JsonPropertyName("recordings")]
     public FellowRecordingsData? Recordings { get; set; }
 }
 
@@ -50,7 +67,10 @@ public class FellowRecordingsResponse
 /// </summary>
 public class FellowRecordingsData
 {
+    [JsonPropertyName("page_info")]
     public FellowPageInfo? PageInfo { get; set; }
+    
+    [JsonPropertyName("data")]
     public List<FellowRecording>? Data { get; set; }
 }
 
@@ -59,7 +79,10 @@ public class FellowRecordingsData
 /// </summary>
 public class FellowPageInfo
 {
+    [JsonPropertyName("cursor")]
     public string? Cursor { get; set; }
+    
+    [JsonPropertyName("page_size")]
     public int PageSize { get; set; }
 }
 
@@ -68,15 +91,34 @@ public class FellowPageInfo
 /// </summary>
 public class FellowRecording
 {
+    [JsonPropertyName("id")]
     public string? Id { get; set; }
+    
+    [JsonPropertyName("title")]
     public string? Title { get; set; }
-    public string? CreatedAt { get; set; }
-    public string? UpdatedAt { get; set; }
-    public DateTime? StartedAt { get; set; }
-    public string? EndedAt { get; set; }
+    
+    [JsonPropertyName("created_at")]
+    public DateTimeOffset? CreatedAt { get; set; }
+    
+    [JsonPropertyName("updated_at")]
+    public DateTimeOffset? UpdatedAt { get; set; }
+    
+    [JsonPropertyName("started_at")]
+    public DateTimeOffset? StartedAt { get; set; }
+    
+    [JsonPropertyName("ended_at")]
+    public DateTimeOffset? EndedAt { get; set; }
+    
+    [JsonPropertyName("event_call_url")]
     public string? EventCallUrl { get; set; }
+    
+    [JsonPropertyName("event_guid")]
     public string? EventGuid { get; set; }
+    
+    [JsonPropertyName("note_id")]
     public string? NoteId { get; set; }
+    
+    [JsonPropertyName("transcript")]
     public FellowTranscript? Transcript { get; set; }
 }
 
@@ -85,7 +127,10 @@ public class FellowRecording
 /// </summary>
 public class FellowTranscript
 {
+    [JsonPropertyName("speech_segments")]
     public List<FellowSpeechSegment>? SpeechSegments { get; set; }
+    
+    [JsonPropertyName("language_code")]
     public string? LanguageCode { get; set; }
 }
 
@@ -94,9 +139,16 @@ public class FellowTranscript
 /// </summary>
 public class FellowSpeechSegment
 {
-    public int Start { get; set; }
-    public int End { get; set; }
+    [JsonPropertyName("start")]
+    public decimal Start { get; set; }
+    
+    [JsonPropertyName("end")]
+    public decimal End { get; set; }
+    
+    [JsonPropertyName("speaker")]
     public string? Speaker { get; set; }
+    
+    [JsonPropertyName("text")]
     public string? Text { get; set; }
 }
 
@@ -133,10 +185,10 @@ public class FellowIncludeOptions
 public class FellowRecordingFilters
 {
     public string? EventGuid { get; set; }
-    public string? CreatedAtStart { get; set; }
-    public string? CreatedAtEnd { get; set; }
-    public string? UpdatedAtStart { get; set; }
-    public string? UpdatedAtEnd { get; set; }
+    public DateTimeOffset? CreatedAtStart { get; set; }
+    public DateTimeOffset? CreatedAtEnd { get; set; }
+    public DateTimeOffset? UpdatedAtStart { get; set; }
+    public DateTimeOffset? UpdatedAtEnd { get; set; }
     public string? ChannelId { get; set; }
     public string? Title { get; set; }
 }

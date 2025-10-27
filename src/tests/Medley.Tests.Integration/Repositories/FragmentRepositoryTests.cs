@@ -26,7 +26,9 @@ public class FragmentRepositoryTests : DatabaseTestBase
     public async Task GetByIdAsync_ShouldReturnFragment_WhenExists()
     {
         // Arrange
-        var source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, Name = "Meeting" };
+        var integration = new Domain.Entities.Integration { Id = Guid.NewGuid(), Type = Domain.Enums.IntegrationType.Fellow };
+        await _dbContext.Integrations.AddAsync(integration);
+        var source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, Name = "Meeting", Integration = integration };
         await _dbContext.Sources.AddAsync(source);
         await _dbContext.SaveChangesAsync();
 
@@ -66,12 +68,14 @@ public class FragmentRepositoryTests : DatabaseTestBase
     public async Task SaveAsync_ShouldAddNewFragment()
     {
         // Arrange
+        var integration = new Domain.Entities.Integration { Id = Guid.NewGuid(), Type = Domain.Enums.IntegrationType.Fellow };
+        await _dbContext.Integrations.AddAsync(integration);
         var fragment = new Fragment
         {
             Id = Guid.NewGuid(),
             Content = "New fragment",
             CreatedAt = DateTimeOffset.UtcNow,
-            Source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, Name = "Meeting" }
+            Source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, Name = "Meeting", Integration = integration }
         };
 
         // Act
@@ -87,7 +91,9 @@ public class FragmentRepositoryTests : DatabaseTestBase
     public async Task Query_ShouldReturnAllFragments()
     {
         // Arrange
-        var source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, Name = "Meeting" };
+        var integration = new Domain.Entities.Integration { Id = Guid.NewGuid(), Type = Domain.Enums.IntegrationType.Fellow };
+        await _dbContext.Integrations.AddAsync(integration);
+        var source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, Name = "Meeting", Integration = integration };
         await _dbContext.Sources.AddAsync(source);
         await _dbContext.SaveChangesAsync();
 
@@ -118,7 +124,9 @@ public class FragmentRepositoryTests : DatabaseTestBase
         var similarEmbedding = CreateTestEmbedding(0.9f, 0.1f);
         var differentEmbedding = CreateTestEmbedding(0.0f, 1.0f);
 
-        var source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, Name = "Meeting" };
+        var integration = new Domain.Entities.Integration { Id = Guid.NewGuid(), Type = Domain.Enums.IntegrationType.Fellow };
+        await _dbContext.Integrations.AddAsync(integration);
+        var source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, Name = "Meeting", Integration = integration };
         await _dbContext.Sources.AddAsync(source);
         await _dbContext.SaveChangesAsync();
 
@@ -172,7 +180,9 @@ public class FragmentRepositoryTests : DatabaseTestBase
         var similarEmbedding = CreateTestEmbedding(0.95f, 0.05f);
         var differentEmbedding = CreateTestEmbedding(0.0f, 1.0f);
 
-        var source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, Name = "Meeting" };
+        var integration = new Domain.Entities.Integration { Id = Guid.NewGuid(), Type = Domain.Enums.IntegrationType.Fellow };
+        await _dbContext.Integrations.AddAsync(integration);
+        var source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, Name = "Meeting", Integration = integration };
         await _dbContext.Sources.AddAsync(source);
         await _dbContext.SaveChangesAsync();
 
@@ -228,7 +238,9 @@ public class FragmentRepositoryTests : DatabaseTestBase
     {
         // Arrange
         var queryEmbedding = CreateTestEmbedding(1.0f, 0.0f);
-        var source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, Name = "Meeting" };
+        var integration = new Domain.Entities.Integration { Id = Guid.NewGuid(), Type = Domain.Enums.IntegrationType.Fellow };
+        await _dbContext.Integrations.AddAsync(integration);
+        var source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, Name = "Meeting", Integration = integration };
         await _dbContext.Sources.AddAsync(source);
 
         var fragments = new[]

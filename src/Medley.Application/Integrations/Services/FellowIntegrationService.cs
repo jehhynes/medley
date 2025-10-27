@@ -190,21 +190,21 @@ public class FellowIntegrationService : BaseIntegrationConnectionService
             {
                 filters["event_guid"] = options.Filters.EventGuid;
             }
-            if (!string.IsNullOrWhiteSpace(options.Filters.CreatedAtStart))
+            if (options.Filters.CreatedAtStart != null)
             {
-                filters["created_at_start"] = options.Filters.CreatedAtStart;
+                filters["created_at_start"] = options.Filters.CreatedAtStart;//.Value.ToString("yyyy-MM-ddTHH:mm:ssZ");
             }
-            if (!string.IsNullOrWhiteSpace(options.Filters.CreatedAtEnd))
+            if (options.Filters.CreatedAtEnd != null)
             {
-                filters["created_at_end"] = options.Filters.CreatedAtEnd;
+                filters["created_at_end"] = options.Filters.CreatedAtEnd;//.Value.ToString("yyyy-MM-ddTHH:mm:ssZ");
             }
-            if (!string.IsNullOrWhiteSpace(options.Filters.UpdatedAtStart))
+            if (options.Filters.UpdatedAtStart != null)
             {
-                filters["updated_at_start"] = options.Filters.UpdatedAtStart;
+                filters["updated_at_start"] = options.Filters.UpdatedAtStart;//.Value.ToString("yyyy-MM-ddTHH:mm:ssZ");
             }
-            if (!string.IsNullOrWhiteSpace(options.Filters.UpdatedAtEnd))
+            if (options.Filters.UpdatedAtEnd != null)
             {
-                filters["updated_at_end"] = options.Filters.UpdatedAtEnd;
+                filters["updated_at_end"] = options.Filters.UpdatedAtEnd;//.Value.ToString("yyyy-MM-ddTHH:mm:ssZ");
             }
             if (!string.IsNullOrWhiteSpace(options.Filters.ChannelId))
             {

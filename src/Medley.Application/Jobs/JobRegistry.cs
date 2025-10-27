@@ -22,7 +22,8 @@ public class JobRegistry : IJobRegistry
         //https://github.com/HangfireIO/Cronos
         var jobs = new List<RecurringJobDescriptor>
         {
-            RecurringJobDescriptor.Create<IntegrationHealthCheckJob>(j => j.CheckAllIntegrationsHealthAsync(), Daily(6, 0))
+            RecurringJobDescriptor.Create<IntegrationHealthCheckJob>(j => j.CheckAllIntegrationsHealthAsync(), Daily(6, 0)),
+            RecurringJobDescriptor.Create<FellowTranscriptSyncJob>(j => j.SyncTranscriptsAsync(), Hourly(0))
         };
 
         return jobs;
