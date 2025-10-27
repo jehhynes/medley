@@ -1,6 +1,9 @@
 using Medley.CollectorUtil.Data;
 using Medley.CollectorUtil.Services;
+using System.ComponentModel;
+using System.Data;
 using System.Text.Json;
+using Zuby.ADGV;
 
 namespace Medley.CollectorUtil;
 
@@ -9,6 +12,7 @@ public partial class MainForm : Form
     private readonly ApiKeyService _apiKeyService;
     private readonly MeetingTranscriptService _transcriptService;
     private readonly ConfigurationService _configurationService;
+    private int _totalRecordCount;
 
     public MainForm()
     {
@@ -16,6 +20,12 @@ public partial class MainForm : Form
         _apiKeyService = new ApiKeyService();
         _transcriptService = new MeetingTranscriptService();
         _configurationService = new ConfigurationService();
+
+        // Wire up filter event - use BeginInvoke to ensure count updates after filter is applied
+        dataGridViewTranscripts.FilterStringChanged += (s, e) =>
+        {
+            BeginInvoke(new Action(UpdateFilterCount));
+        };
     }
 
     private async void MainForm_Load(object sender, EventArgs e)
@@ -26,8 +36,20 @@ public partial class MainForm : Form
 
     private void SetupDataGridView()
     {
+        // Ensure filtering is enabled
+        dataGridViewTranscripts.FilterAndSortEnabled = true;
+
         dataGridViewTranscripts.AutoGenerateColumns = false;
         dataGridViewTranscripts.Columns.Clear();
+
+        // Hidden Id column for tracking
+        dataGridViewTranscripts.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            DataPropertyName = "Id",
+            HeaderText = "Id",
+            Name = "Id",
+            Visible = false
+        });
 
         dataGridViewTranscripts.Columns.Add(new DataGridViewCheckBoxColumn
         {
@@ -35,7 +57,8 @@ public partial class MainForm : Form
             HeaderText = "Selected",
             Name = "IsSelected",
             FillWeight = 10,
-            ReadOnly = false
+            ReadOnly = false,
+            SortMode = DataGridViewColumnSortMode.Automatic
         });
 
         dataGridViewTranscripts.Columns.Add(new DataGridViewTextBoxColumn
@@ -44,7 +67,8 @@ public partial class MainForm : Form
             HeaderText = "Title",
             Name = "Title",
             FillWeight = 30,
-            ReadOnly = true
+            ReadOnly = true,
+            SortMode = DataGridViewColumnSortMode.Automatic
         });
 
         dataGridViewTranscripts.Columns.Add(new DataGridViewTextBoxColumn
@@ -54,7 +78,8 @@ public partial class MainForm : Form
             Name = "Date",
             FillWeight = 15,
             DefaultCellStyle = new DataGridViewCellStyle { Format = "g" },
-            ReadOnly = true
+            ReadOnly = true,
+            SortMode = DataGridViewColumnSortMode.Automatic
         });
 
         dataGridViewTranscripts.Columns.Add(new DataGridViewTextBoxColumn
@@ -63,7 +88,8 @@ public partial class MainForm : Form
             HeaderText = "Participants",
             Name = "Participants",
             FillWeight = 25,
-            ReadOnly = true
+            ReadOnly = true,
+            SortMode = DataGridViewColumnSortMode.Automatic
         });
 
         dataGridViewTranscripts.Columns.Add(new DataGridViewTextBoxColumn
@@ -72,8 +98,19 @@ public partial class MainForm : Form
             HeaderText = "API Keys",
             Name = "ApiKeyNames",
             FillWeight = 20,
-            ReadOnly = true
+            ReadOnly = true,
+            SortMode = DataGridViewColumnSortMode.Automatic
         });
+    }
+
+    private void UpdateFilterCount()
+    {
+        // Get the current filtered row count
+        var currentCount = dataGridViewTranscripts.Rows.Count;
+
+        toolStripLabelCount.Text = currentCount == _totalRecordCount
+            ? $"{_totalRecordCount} transcript{(_totalRecordCount != 1 ? "s" : "")}"
+            : $"{currentCount} of {_totalRecordCount} transcript{(_totalRecordCount != 1 ? "s" : "")}";
     }
 
     private async Task LoadTranscriptsAsync()
@@ -85,8 +122,33 @@ public partial class MainForm : Form
                 .OrderByDescending(t => t.Date)
                 .Select(MeetingTranscriptViewModel.FromMeetingTranscript)
                 .ToList();
-            dataGridViewTranscripts.DataSource = viewModels;
-            toolStripLabelCount.Text = $"{transcripts.Count} transcript{(transcripts.Count != 1 ? "s" : "")}";
+
+            // Convert to DataTable for AutoFilter compatibility
+            var dataTable = new DataTable();
+            dataTable.Columns.Add("Id", typeof(int));
+            dataTable.Columns.Add("IsSelected", typeof(bool));
+            dataTable.Columns.Add("Title", typeof(string));
+            dataTable.Columns.Add("Date", typeof(DateTime));
+            dataTable.Columns.Add("Participants", typeof(string));
+            dataTable.Columns.Add("ApiKeyNames", typeof(string));
+
+            foreach (var vm in viewModels)
+            {
+                dataTable.Rows.Add(
+                    vm.Id,
+                    vm.IsSelected,
+                    vm.Title ?? string.Empty,
+                    vm.Date.HasValue ? (object)vm.Date.Value : DBNull.Value,
+                    vm.Participants ?? string.Empty,
+                    vm.ApiKeyNames ?? string.Empty
+                );
+            }
+
+            dataGridViewTranscripts.DataSource = dataTable;
+
+            // Store total count for filter tracking
+            _totalRecordCount = transcripts.Count;
+            toolStripLabelCount.Text = $"{_totalRecordCount} transcript{(_totalRecordCount != 1 ? "s" : "")}";
         }
         catch (Exception ex)
         {
@@ -306,7 +368,7 @@ public partial class MainForm : Form
         return (processed, created, skipped, errors);
     }
 
-    private async void dataGridViewTranscripts_CellValueChanged(object sender, DataGridViewCellEventArgs e)
+    private async void dataGridViewTranscripts_CellValueChanged(object? sender, DataGridViewCellEventArgs e)
     {
         // Handle checkbox value changes
         if (e.RowIndex >= 0 && e.ColumnIndex >= 0)
@@ -314,14 +376,18 @@ public partial class MainForm : Form
             var column = dataGridViewTranscripts.Columns[e.ColumnIndex];
             if (column.Name == "IsSelected" && column is DataGridViewCheckBoxColumn)
             {
-                var viewModel = dataGridViewTranscripts.Rows[e.RowIndex].DataBoundItem as MeetingTranscriptViewModel;
-                if (viewModel != null)
+                // Get the Id from the hidden column
+                var idCell = dataGridViewTranscripts.Rows[e.RowIndex].Cells["Id"];
+                var isSelectedCell = dataGridViewTranscripts.Rows[e.RowIndex].Cells["IsSelected"];
+
+                if (idCell.Value != null && idCell.Value != DBNull.Value &&
+                    isSelectedCell.Value != null && isSelectedCell.Value != DBNull.Value)
                 {
-                    var newValue = (bool)dataGridViewTranscripts.Rows[e.RowIndex].Cells[e.ColumnIndex].Value;
-                    viewModel.IsSelected = newValue;
+                    var id = Convert.ToInt32(idCell.Value);
+                    var newValue = Convert.ToBoolean(isSelectedCell.Value);
 
                     // Update the database
-                    await _transcriptService.UpdateTranscriptSelectionAsync(viewModel.Id, newValue);
+                    await _transcriptService.UpdateTranscriptSelectionAsync(id, newValue);
                 }
             }
         }
@@ -372,5 +438,10 @@ public partial class MainForm : Form
             deleteAllToolStripMenuItem.Enabled = true;
             Cursor = Cursors.Default;
         }
+    }
+
+    private void dataGridViewTranscripts_CellContentClick(object sender, DataGridViewCellEventArgs e)
+    {
+
     }
 }

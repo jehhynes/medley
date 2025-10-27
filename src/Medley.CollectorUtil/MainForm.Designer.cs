@@ -35,7 +35,7 @@ namespace Medley.CollectorUtil
             downloadToolStripMenuItem = new ToolStripMenuItem();
             refreshToolStripMenuItem = new ToolStripMenuItem();
             deleteAllToolStripMenuItem = new ToolStripMenuItem();
-            dataGridViewTranscripts = new DataGridView();
+            dataGridViewTranscripts = new Zuby.ADGV.AdvancedDataGridView();
             statusStrip1 = new StatusStrip();
             toolStripLabelCount = new ToolStripStatusLabel();
             menuStrip1.SuspendLayout();
@@ -93,12 +93,18 @@ namespace Medley.CollectorUtil
             dataGridViewTranscripts.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dataGridViewTranscripts.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dataGridViewTranscripts.Dock = DockStyle.Fill;
+            dataGridViewTranscripts.FilterAndSortEnabled = true;
+            dataGridViewTranscripts.FilterStringChangedInvokeBeforeDatasourceUpdate = true;
             dataGridViewTranscripts.Location = new Point(0, 28);
+            dataGridViewTranscripts.MaxFilterButtonImageHeight = 23;
             dataGridViewTranscripts.Name = "dataGridViewTranscripts";
+            dataGridViewTranscripts.RightToLeft = RightToLeft.No;
             dataGridViewTranscripts.RowHeadersWidth = 51;
             dataGridViewTranscripts.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dataGridViewTranscripts.Size = new Size(1137, 616);
+            dataGridViewTranscripts.SortStringChangedInvokeBeforeDatasourceUpdate = true;
             dataGridViewTranscripts.TabIndex = 1;
+            dataGridViewTranscripts.CellContentClick += dataGridViewTranscripts_CellContentClick;
             dataGridViewTranscripts.CellValueChanged += dataGridViewTranscripts_CellValueChanged;
             // 
             // statusStrip1
@@ -145,7 +151,7 @@ namespace Medley.CollectorUtil
         private ToolStripMenuItem downloadToolStripMenuItem;
         private ToolStripMenuItem refreshToolStripMenuItem;
         private ToolStripMenuItem deleteAllToolStripMenuItem;
-        private DataGridView dataGridViewTranscripts;
+        private Zuby.ADGV.AdvancedDataGridView dataGridViewTranscripts;
         private StatusStrip statusStrip1;
         private ToolStripStatusLabel toolStripLabelCount;
     }
