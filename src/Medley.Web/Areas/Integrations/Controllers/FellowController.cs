@@ -76,7 +76,8 @@ public class FellowController : Controller
 
             // Update existing integration
             integration.DisplayName = model.DisplayName;
-            integration.ApiKey = model.ApiKey;
+            if (!string.IsNullOrWhiteSpace(model.ApiKey))
+                integration.ApiKey = model.ApiKey;
             integration.BaseUrl = model.BaseUrl;
             integration.LastModifiedAt = DateTimeOffset.UtcNow;
 

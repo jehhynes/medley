@@ -61,6 +61,9 @@ public static class DependencyInjection
         services.AddSingleton<RecurringJobCleanUpManager>();
         services.AddSingleton<IJobRegistry, JobRegistry>();
 
+        // Register HttpClient for integration services
+        services.AddHttpClient();
+
         // Register integration connection services
         services.AddScoped<IIntegrationConnectionService, GitHubIntegrationService>();
         services.AddScoped<IIntegrationConnectionService, FellowIntegrationService>();

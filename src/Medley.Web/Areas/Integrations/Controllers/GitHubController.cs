@@ -43,7 +43,8 @@ public class GitHubController : Controller
 
             model.Id = integration.Id;
             model.DisplayName = integration.DisplayName ?? "";
-            model.ApiKey = integration.ApiKey ?? "";
+            if (!string.IsNullOrWhiteSpace(model.ApiKey))
+                model.ApiKey = integration.ApiKey ?? "";
             model.BaseUrl = integration.BaseUrl ?? "https://api.github.com";
         }
 
