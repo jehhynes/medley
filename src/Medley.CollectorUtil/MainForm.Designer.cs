@@ -133,7 +133,7 @@ namespace Medley.CollectorUtil
             Controls.Add(menuStrip1);
             MainMenuStrip = menuStrip1;
             Name = "MainForm";
-            Text = "Fellow.ai Collector Utility";
+            Text = "Medley Collector";
             Load += MainForm_Load;
             menuStrip1.ResumeLayout(false);
             menuStrip1.PerformLayout();

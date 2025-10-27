@@ -370,13 +370,26 @@ public partial class MainForm : Form
 
     private async void dataGridViewTranscripts_CellValueChanged(object? sender, DataGridViewCellEventArgs e)
     {
-        // Handle checkbox value changes
+        // Handle single checkbox value changes (multi-selection is handled in CellContentClick)
         if (e.RowIndex >= 0 && e.ColumnIndex >= 0)
         {
             var column = dataGridViewTranscripts.Columns[e.ColumnIndex];
             if (column.Name == "IsSelected" && column is DataGridViewCheckBoxColumn)
             {
-                // Get the Id from the hidden column
+                // Only handle single row updates here
+                var selectedRows = dataGridViewTranscripts.SelectedRows.Cast<DataGridViewRow>().ToList();
+                var selectedCells = dataGridViewTranscripts.SelectedCells.Cast<DataGridViewCell>()
+                    .Select(c => c.OwningRow)
+                    .Distinct()
+                    .ToList();
+
+                var rowsSelected = selectedRows.Count > 0 ? selectedRows : selectedCells;
+
+                // Skip if multiple rows are selected (handled by CellContentClick)
+                if (rowsSelected.Count > 1 && rowsSelected.Any(r => r.Index == e.RowIndex))
+                    return;
+
+                // Single row update
                 var idCell = dataGridViewTranscripts.Rows[e.RowIndex].Cells["Id"];
                 var isSelectedCell = dataGridViewTranscripts.Rows[e.RowIndex].Cells["IsSelected"];
 
@@ -386,7 +399,6 @@ public partial class MainForm : Form
                     var id = Convert.ToInt32(idCell.Value);
                     var newValue = Convert.ToBoolean(isSelectedCell.Value);
 
-                    // Update the database
                     await _transcriptService.UpdateTranscriptSelectionAsync(id, newValue);
                 }
             }
@@ -440,8 +452,60 @@ public partial class MainForm : Form
         }
     }
 
-    private void dataGridViewTranscripts_CellContentClick(object sender, DataGridViewCellEventArgs e)
+    private async void dataGridViewTranscripts_CellContentClick(object sender, DataGridViewCellEventArgs e)
     {
+        // Handle checkbox clicks for multi-selection
+        if (e.RowIndex >= 0 && e.ColumnIndex >= 0)
+        {
+            var column = dataGridViewTranscripts.Columns[e.ColumnIndex];
+            if (column.Name == "IsSelected" && column is DataGridViewCheckBoxColumn)
+            {
+                // Get the current value (before it changes)
+                var clickedCell = dataGridViewTranscripts.Rows[e.RowIndex].Cells["IsSelected"];
+                var currentValue = clickedCell.Value != null && clickedCell.Value != DBNull.Value
+                    ? Convert.ToBoolean(clickedCell.Value)
+                    : false;
 
+                // The new value will be the opposite
+                var newValue = !currentValue;
+
+                // Check if multiple rows are selected
+                var selectedRows = dataGridViewTranscripts.SelectedRows.Cast<DataGridViewRow>().ToList();
+                var selectedCells = dataGridViewTranscripts.SelectedCells.Cast<DataGridViewCell>()
+                    .Select(c => c.OwningRow)
+                    .Distinct()
+                    .ToList();
+
+                // Use whichever selection method has more rows
+                var rowsToUpdate = selectedRows.Count > 0 ? selectedRows : selectedCells;
+
+                // If multiple rows are selected and the clicked row is among them, update all
+                if (rowsToUpdate.Count > 1 && rowsToUpdate.Any(r => r.Index == e.RowIndex))
+                {
+                    // Get the DataTable
+                    var dataTable = dataGridViewTranscripts.DataSource as DataTable;
+                    if (dataTable != null)
+                    {
+                        foreach (var row in rowsToUpdate)
+                        {
+                            var idCell = row.Cells["Id"];
+                            var isSelectedCell = row.Cells["IsSelected"];
+
+                            if (idCell.Value != null && idCell.Value != DBNull.Value)
+                            {
+                                var id = Convert.ToInt32(idCell.Value);
+
+                                // Update the DataTable directly
+                                var dataRow = dataTable.Rows[row.Index];
+                                dataRow["IsSelected"] = newValue;
+
+                                // Update the database
+                                await _transcriptService.UpdateTranscriptSelectionAsync(id, newValue);
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
