@@ -2,8 +2,6 @@ using Medley.CollectorUtil.Data;
 using Medley.CollectorUtil.Services;
 using System.ComponentModel;
 using System.Data;
-using System.IO.Compression;
-using System.Text.Json;
 using Zuby.ADGV;
 
 namespace Medley.CollectorUtil;
@@ -13,6 +11,7 @@ public partial class MainForm : Form
     private readonly ApiKeyService _apiKeyService;
     private readonly MeetingTranscriptService _transcriptService;
     private readonly ConfigurationService _configurationService;
+    private readonly TranscriptExportService _exportService;
     private int _totalRecordCount;
     private string? _lastSortColumn;
     private ListSortDirection _lastSortDirection = ListSortDirection.Ascending;
@@ -24,6 +23,7 @@ public partial class MainForm : Form
         _apiKeyService = new ApiKeyService();
         _transcriptService = new MeetingTranscriptService();
         _configurationService = new ConfigurationService();
+        _exportService = new TranscriptExportService();
 
         // Wire up filter event - use BeginInvoke to ensure count updates after filter is applied
         dataGridViewTranscripts.FilterStringChanged += (s, e) =>
@@ -48,8 +48,8 @@ public partial class MainForm : Form
 
         var column = dataGridViewTranscripts.Columns[e.ColumnIndex];
 
-        // Skip the hidden Id column only
-        if (column.Name == "Id") return;
+        // Skip non-sortable columns (Id and ViewButton)
+        if (column.Name == "Id" || column.Name == "ViewButton" || column.SortMode == DataGridViewColumnSortMode.NotSortable) return;
 
         // Check if the click is on the filter button area (right side of header)
         // The filter button is typically in the rightmost ~20 pixels of the header
@@ -105,6 +105,18 @@ public partial class MainForm : Form
     private async void MainForm_Load(object sender, EventArgs e)
     {
         SetupDataGridView();
+        
+        // Check if API keys exist, if not show the API keys form
+        var apiKeys = await _apiKeyService.GetAllApiKeysAsync();
+        if (apiKeys.Count == 0)
+        {
+            using (var apiKeysForm = new FellowApiKeys())
+            {
+                var result = apiKeysForm.ShowDialog(this);
+                // If user cancelled, they can still use the app but won't be able to download
+            }
+        }
+        
         await LoadTranscriptsAsync();
     }
 
@@ -128,7 +140,7 @@ public partial class MainForm : Form
         dataGridViewTranscripts.Columns.Add(new DataGridViewCheckBoxColumn
         {
             DataPropertyName = "IsSelected",
-            HeaderText = "Selected",
+            HeaderText = "Export",
             Name = "IsSelected",
             FillWeight = 10,
             ReadOnly = false,
@@ -189,7 +201,7 @@ public partial class MainForm : Form
         dataGridViewTranscripts.Columns.Add(new DataGridViewTextBoxColumn
         {
             DataPropertyName = "TranscriptLength",
-            HeaderText = "Transcript Length",
+            HeaderText = "Length (chars)",
             Name = "TranscriptLength",
             FillWeight = 12,
             ReadOnly = true,
@@ -254,11 +266,18 @@ public partial class MainForm : Form
 
             foreach (var vm in viewModels)
             {
+                // Convert UTC date to local timezone for display
+                DateTime? localDate = null;
+                if (vm.Date.HasValue)
+                {
+                    localDate = DateTime.SpecifyKind(vm.Date.Value, DateTimeKind.Utc).ToLocalTime();
+                }
+
                 dataTable.Rows.Add(
                     vm.Id,
                     vm.IsSelected,
                     vm.Title ?? string.Empty,
-                    vm.Date.HasValue ? (object)vm.Date.Value : DBNull.Value,
+                    localDate.HasValue ? (object)localDate.Value : DBNull.Value,
                     vm.Participants ?? string.Empty,
                     vm.ApiKeyNames ?? string.Empty,
                     vm.LengthInMinutes.HasValue ? (object)vm.LengthInMinutes.Value : DBNull.Value,
@@ -319,7 +338,7 @@ public partial class MainForm : Form
 
             // Create FellowApiService with workspace
             var fellowApiService = new FellowApiService(workspace);
-            var downloadService = new TranscriptDownloadService(_transcriptService, fellowApiService);
+            var downloadService = new TranscriptDownloadService(_transcriptService, fellowApiService, _apiKeyService);
 
             var progressForm = new ProgressForm();
             progressForm.Show(this);
@@ -328,47 +347,95 @@ public partial class MainForm : Form
             var totalCreated = 0;
             var totalSkipped = 0;
             var totalErrors = 0;
+            var wasCancelled = false;
 
-            foreach (var apiKey in apiKeys)
+            try
             {
-                try
+                foreach (var apiKey in apiKeys)
                 {
-                    progressForm.UpdateStatus($"Processing API Key: {apiKey.Name}");
-
-                    var progress = new Progress<DownloadProgress>(p =>
+                    try
                     {
-                        progressForm.AppendLog($"  {p.Message}");
-                    });
+                        progressForm.UpdateStatus($"Processing API Key: {apiKey.Name}");
 
-                    var summary = await downloadService.DownloadTranscriptsForApiKeyAsync(apiKey, progress);
+                        var progress = new Progress<DownloadProgress>(p =>
+                        {
+                            progressForm.AppendLog($"  {p.Message}");
+                        });
 
-                    totalProcessed += summary.Processed;
-                    totalCreated += summary.Created;
-                    totalSkipped += summary.Skipped;
-                    totalErrors += summary.Errors;
+                        var summary = await downloadService.DownloadTranscriptsForApiKeyAsync(
+                            apiKey, progress, progressForm.CancellationToken);
+
+                        totalProcessed += summary.Processed;
+                        totalCreated += summary.Created;
+                        totalSkipped += summary.Skipped;
+                        totalErrors += summary.Errors;
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        wasCancelled = true;
+                        progressForm.AppendLog($"Download cancelled by user.");
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        progressForm.AppendLog($"Error processing API key '{apiKey.Name}': {ex.Message}");
+                        totalErrors++;
+                    }
                 }
-                catch (Exception ex)
+
+                // Determine final status
+                string statusTitle;
+                string statusMessage;
+                MessageBoxIcon statusIcon;
+
+                if (wasCancelled)
                 {
-                    progressForm.AppendLog($"Error processing API key '{apiKey.Name}': {ex.Message}");
-                    totalErrors++;
+                    statusTitle = "Download Cancelled";
+                    statusMessage = "Download was cancelled by user.";
+                    statusIcon = MessageBoxIcon.Warning;
+                    progressForm.UpdateStatus("Download Cancelled");
                 }
+                else if (totalErrors > 0 && totalCreated == 0)
+                {
+                    statusTitle = "Download Failed";
+                    statusMessage = "Download failed with errors.";
+                    statusIcon = MessageBoxIcon.Error;
+                    progressForm.UpdateStatus("Download Failed");
+                }
+                else if (totalErrors > 0)
+                {
+                    statusTitle = "Download Completed with Errors";
+                    statusMessage = "Download completed but some items failed.";
+                    statusIcon = MessageBoxIcon.Warning;
+                    progressForm.UpdateStatus("Download Completed with Errors");
+                }
+                else
+                {
+                    statusTitle = "Download Complete";
+                    statusMessage = "Download completed successfully!";
+                    statusIcon = MessageBoxIcon.Information;
+                    progressForm.UpdateStatus("Download Complete!");
+                }
+
+                progressForm.AppendLog($"\nSummary:");
+                progressForm.AppendLog($"Total Processed: {totalProcessed}");
+                progressForm.AppendLog($"Total Created/Updated: {totalCreated}");
+                progressForm.AppendLog($"Total Skipped: {totalSkipped}");
+                progressForm.AppendLog($"Total Errors: {totalErrors}");
+
+                MessageBox.Show(
+                    $"{statusMessage}\n\nProcessed: {totalProcessed}\nCreated/Updated: {totalCreated}\nSkipped: {totalSkipped}\nErrors: {totalErrors}",
+                    statusTitle,
+                    MessageBoxButtons.OK,
+                    statusIcon);
+
+                // Refresh the grid
+                await LoadTranscriptsAsync();
             }
-
-            progressForm.UpdateStatus("Download Complete!");
-            progressForm.AppendLog($"\nSummary:");
-            progressForm.AppendLog($"Total Processed: {totalProcessed}");
-            progressForm.AppendLog($"Total Created/Updated: {totalCreated}");
-            progressForm.AppendLog($"Total Skipped: {totalSkipped}");
-            progressForm.AppendLog($"Total Errors: {totalErrors}");
-
-            MessageBox.Show(
-                $"Download completed!\n\nProcessed: {totalProcessed}\nCreated/Updated: {totalCreated}\nSkipped: {totalSkipped}\nErrors: {totalErrors}",
-                "Download Complete",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
-
-            // Refresh the grid
-            await LoadTranscriptsAsync();
+            finally
+            {
+                progressForm.Close();
+            }
         }
         catch (Exception ex)
         {
@@ -565,7 +632,7 @@ public partial class MainForm : Form
                     exportSelectedToolStripMenuItem.Enabled = false;
                     Cursor = Cursors.WaitCursor;
 
-                    await ExportTranscriptsToZipAsync(selectedTranscripts, saveFileDialog.FileName);
+                    await _exportService.ExportTranscriptsToZipAsync(selectedTranscripts, saveFileDialog.FileName);
 
                     MessageBox.Show($"Successfully exported {selectedTranscripts.Count} transcript{(selectedTranscripts.Count != 1 ? "s" : "")} to:\n{saveFileDialog.FileName}",
                         "Export Complete",
@@ -584,48 +651,6 @@ public partial class MainForm : Form
             exportSelectedToolStripMenuItem.Enabled = true;
             Cursor = Cursors.Default;
         }
-    }
-
-    private async Task ExportTranscriptsToZipAsync(List<MeetingTranscript> transcripts, string zipFilePath)
-    {
-        await Task.Run(() =>
-        {
-            using (var zipArchive = ZipFile.Open(zipFilePath, ZipArchiveMode.Create))
-            {
-                foreach (var transcript in transcripts)
-                {
-                    if (string.IsNullOrWhiteSpace(transcript.FullJson))
-                        continue;
-
-                    // Create a safe filename from meeting ID and title
-                    var safeTitle = string.IsNullOrWhiteSpace(transcript.Title)
-                        ? "untitled"
-                        : string.Join("_", transcript.Title.Split(Path.GetInvalidFileNameChars()));
-
-                    var fileName = $"{transcript.MeetingId}_{safeTitle}.json";
-
-                    // Ensure filename isn't too long (max 255 chars for most filesystems)
-                    if (fileName.Length > 200)
-                    {
-                        fileName = fileName.Substring(0, 200) + ".json";
-                    }
-
-                    var entry = zipArchive.CreateEntry(fileName, CompressionLevel.Optimal);
-
-                    using (var entryStream = entry.Open())
-                    using (var writer = new StreamWriter(entryStream))
-                    {
-                        // Pretty print the JSON for readability
-                        var jsonDocument = JsonDocument.Parse(transcript.FullJson);
-                        var prettyJson = JsonSerializer.Serialize(jsonDocument, new JsonSerializerOptions
-                        {
-                            WriteIndented = true
-                        });
-                        writer.Write(prettyJson);
-                    }
-                }
-            }
-        });
     }
 
     private async Task ShowTranscriptViewerAsync(int rowIndex)

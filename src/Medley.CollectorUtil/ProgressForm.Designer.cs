@@ -6,9 +6,10 @@ namespace Medley.CollectorUtil
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing && (components != null))
+            if (disposing)
             {
-                components.Dispose();
+                _cancellationTokenSource?.Dispose();
+                components?.Dispose();
             }
             base.Dispose(disposing);
         }
@@ -26,7 +27,7 @@ namespace Medley.CollectorUtil
             lblStatus.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             lblStatus.Location = new Point(12, 12);
             lblStatus.Name = "lblStatus";
-            lblStatus.Size = new Size(103, 23);
+            lblStatus.Size = new Size(109, 23);
             lblStatus.TabIndex = 0;
             lblStatus.Text = "Processing...";
             // 
@@ -49,7 +50,7 @@ namespace Medley.CollectorUtil
             btnClose.Name = "btnClose";
             btnClose.Size = new Size(100, 35);
             btnClose.TabIndex = 2;
-            btnClose.Text = "Close";
+            btnClose.Text = "Cancel";
             btnClose.UseVisualStyleBackColor = true;
             btnClose.Click += btnClose_Click;
             // 

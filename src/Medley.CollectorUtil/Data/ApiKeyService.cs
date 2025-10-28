@@ -62,4 +62,15 @@ public class ApiKeyService
             .OrderBy(k => k.CreatedAt)
             .ToListAsync();
     }
+
+    public async Task SetApiKeyEnabledAsync(int apiKeyId, bool isEnabled)
+    {
+        using var context = new AppDbContext();
+        var apiKey = await context.ApiKeys.FindAsync(apiKeyId);
+        if (apiKey != null)
+        {
+            apiKey.IsEnabled = isEnabled;
+            await context.SaveChangesAsync();
+        }
+    }
 }

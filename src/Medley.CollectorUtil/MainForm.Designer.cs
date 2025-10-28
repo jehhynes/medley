@@ -51,7 +51,7 @@ namespace Medley.CollectorUtil
             menuStrip1.Location = new Point(0, 0);
             menuStrip1.Name = "menuStrip1";
             menuStrip1.RenderMode = ToolStripRenderMode.Professional;
-            menuStrip1.Size = new Size(1510, 78);
+            menuStrip1.Size = new Size(1698, 78);
             menuStrip1.TabIndex = 0;
             menuStrip1.Text = "menuStrip1";
             // 
@@ -90,8 +90,8 @@ namespace Medley.CollectorUtil
             exportSelectedToolStripMenuItem.Image = (Image)resources.GetObject("exportSelectedToolStripMenuItem.Image");
             exportSelectedToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
             exportSelectedToolStripMenuItem.Name = "exportSelectedToolStripMenuItem";
-            exportSelectedToolStripMenuItem.Size = new Size(127, 74);
-            exportSelectedToolStripMenuItem.Text = "Export Selected";
+            exportSelectedToolStripMenuItem.Size = new Size(66, 74);
+            exportSelectedToolStripMenuItem.Text = "Export";
             exportSelectedToolStripMenuItem.TextImageRelation = TextImageRelation.ImageAboveText;
             exportSelectedToolStripMenuItem.Click += exportSelectedToolStripMenuItem_Click;
             // 
@@ -120,7 +120,7 @@ namespace Medley.CollectorUtil
             dataGridViewTranscripts.RightToLeft = RightToLeft.No;
             dataGridViewTranscripts.RowHeadersWidth = 51;
             dataGridViewTranscripts.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dataGridViewTranscripts.Size = new Size(1510, 893);
+            dataGridViewTranscripts.Size = new Size(1698, 949);
             dataGridViewTranscripts.SortStringChangedInvokeBeforeDatasourceUpdate = true;
             dataGridViewTranscripts.TabIndex = 1;
             dataGridViewTranscripts.CellClick += dataGridViewTranscripts_CellClick;
@@ -131,9 +131,9 @@ namespace Medley.CollectorUtil
             // 
             statusStrip1.ImageScalingSize = new Size(20, 20);
             statusStrip1.Items.AddRange(new ToolStripItem[] { toolStripLabelCount });
-            statusStrip1.Location = new Point(0, 971);
+            statusStrip1.Location = new Point(0, 1027);
             statusStrip1.Name = "statusStrip1";
-            statusStrip1.Size = new Size(1510, 26);
+            statusStrip1.Size = new Size(1698, 26);
             statusStrip1.TabIndex = 3;
             statusStrip1.Text = "statusStrip1";
             // 
@@ -147,7 +147,7 @@ namespace Medley.CollectorUtil
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1510, 997);
+            ClientSize = new Size(1698, 1053);
             Controls.Add(dataGridViewTranscripts);
             Controls.Add(statusStrip1);
             Controls.Add(menuStrip1);

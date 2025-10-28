@@ -35,16 +35,16 @@ public class FellowRecording
     public string? Title { get; set; }
     
     [JsonPropertyName("created_at")]
-    public DateTimeOffset? CreatedAt { get; set; }
+    public DateTime? CreatedAt { get; set; }
     
     [JsonPropertyName("updated_at")]
-    public DateTimeOffset? UpdatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
     
     [JsonPropertyName("started_at")]
-    public DateTimeOffset? StartedAt { get; set; }
+    public DateTime? StartedAt { get; set; }
     
     [JsonPropertyName("ended_at")]
-    public DateTimeOffset? EndedAt { get; set; }
+    public DateTime? EndedAt { get; set; }
     
     [JsonPropertyName("event_call_url")]
     public string? EventCallUrl { get; set; }

@@ -27,10 +27,7 @@ namespace Medley.CollectorUtil
         {
             try
             {
-                btnSave.Enabled = false;
-                btnCancel.Enabled = false;
-                
-                // Validate workspace
+                // Validate workspace first (before disabling buttons)
                 var workspace = txtWorkspace.Text?.Trim();
                 if (string.IsNullOrWhiteSpace(workspace))
                 {
@@ -62,6 +59,10 @@ namespace Medley.CollectorUtil
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
+
+                // Only disable buttons after validation passes
+                btnSave.Enabled = false;
+                btnCancel.Enabled = false;
 
                 // Save workspace and API keys
                 await _configurationService.SaveWorkspaceAsync(workspace);
