@@ -14,14 +14,14 @@ public class TranscriptExportService
             {
                 foreach (var transcript in transcripts)
                 {
-                    if (string.IsNullOrWhiteSpace(transcript.FullJson))
+                    if (string.IsNullOrWhiteSpace(transcript.Content))
                         continue;
 
                     var safeTitle = string.IsNullOrWhiteSpace(transcript.Title)
                         ? "untitled"
                         : string.Join("_", transcript.Title.Split(Path.GetInvalidFileNameChars()));
 
-                    var fileName = $"{transcript.MeetingId}_{safeTitle}.json";
+                    var fileName = $"{transcript.ExternalId}_{safeTitle}.json";
 
                     if (fileName.Length > 200)
                     {
@@ -33,7 +33,7 @@ public class TranscriptExportService
                     using (var entryStream = entry.Open())
                     using (var writer = new StreamWriter(entryStream))
                     {
-                        writer.Write(transcript.FullJson);
+                        writer.Write(transcript.Content);
                     }
                 }
             }

@@ -312,13 +312,14 @@ public class TranscriptDownloadService
 
         return new MeetingTranscript
         {
+            Source = "Fellow.ai",
             Title = recording.Title ?? "Untitled Meeting",
-            MeetingId = recording.Id!,
+            ExternalId = recording.Id!,
             Date = recording.StartedAt,
             Participants = participants,
             LengthInMinutes = lengthInMinutes,
             TranscriptLength = transcriptLength,
-            FullJson = fullJson
+            Content = fullJson
         };
     }
 }

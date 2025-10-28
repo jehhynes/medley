@@ -112,17 +112,6 @@ public partial class MainForm : Form
     {
         SetupDataGridView();
 
-        // Check if API keys exist, if not show the API keys form
-        var apiKeys = await _apiKeyService.GetAllApiKeysAsync();
-        if (apiKeys.Count == 0)
-        {
-            using (var apiKeysForm = new FellowApiKeys())
-            {
-                var result = apiKeysForm.ShowDialog(this);
-                // If user cancelled, they can still use the app but won't be able to download
-            }
-        }
-
         await LoadTranscriptsAsync();
     }
 
@@ -572,6 +561,141 @@ public partial class MainForm : Form
         }
     }
 
+
+    private async void downloadGoogleDriveToolStripMenuItem_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            downloadGoogleDriveToolStripMenuItem.Enabled = false;
+            Cursor = Cursors.WaitCursor;
+
+            // Check if authenticated with Google
+            var googleAuthService = new GoogleAuthService();
+            var isAuthenticated = await googleAuthService.IsAuthenticatedAsync();
+
+            if (!isAuthenticated)
+            {
+                MessageBox.Show("Not authenticated with Google. Please authenticate using OAuth Flow in Google Auth settings.", "Authentication Required",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // Check if browser cookies are available
+            var hasBrowserAuth = await GoogleAuthForm.HasBrowserAuthenticationAsync();
+            if (!hasBrowserAuth)
+            {
+                MessageBox.Show("Browser authentication required. Please authenticate using the Browser Auth button in Google Auth settings.", "Browser Auth Required",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // Create services
+            var driveApiService = new GoogleDriveApiService(googleAuthService, _configurationService);
+            var transcriptDownloader = new GoogleMeetTranscriptDownloader(_configurationService);
+            var downloadService = new GoogleDriveTranscriptDownloadService(
+                driveApiService,
+                transcriptDownloader,
+                _transcriptService);
+
+            var progressForm = new ProgressForm();
+            progressForm.Show(this);
+
+            var totalProcessed = 0;
+            var totalCreated = 0;
+            var totalSkipped = 0;
+            var totalErrors = 0;
+            var wasCancelled = false;
+
+            try
+            {
+                progressForm.UpdateStatus("Downloading from Google Drive...");
+
+                var progress = new Progress<DownloadProgress>(p =>
+                {
+                    progressForm.AppendLog(p.Message);
+                });
+
+                var summary = await downloadService.DownloadTranscriptsAsync(
+                    progress, progressForm.CancellationToken);
+
+                totalProcessed = summary.Processed;
+                totalCreated = summary.Created;
+                totalSkipped = summary.Skipped;
+                totalErrors = summary.Errors;
+            }
+            catch (OperationCanceledException)
+            {
+                wasCancelled = true;
+                progressForm.AppendLog("Download cancelled by user.");
+            }
+            catch (Exception ex)
+            {
+                progressForm.AppendLog($"Error: {ex.Message}");
+                totalErrors++;
+            }
+
+            // Determine final status
+            string statusTitle;
+            string statusMessage;
+            MessageBoxIcon statusIcon;
+
+            if (wasCancelled)
+            {
+                statusTitle = "Download Cancelled";
+                statusMessage = "Download was cancelled by user.";
+                statusIcon = MessageBoxIcon.Warning;
+                progressForm.UpdateStatus("Download Cancelled");
+            }
+            else if (totalErrors > 0 && totalCreated == 0)
+            {
+                statusTitle = "Download Failed";
+                statusMessage = "Download failed with errors.";
+                statusIcon = MessageBoxIcon.Error;
+                progressForm.UpdateStatus("Download Failed");
+            }
+            else if (totalErrors > 0)
+            {
+                statusTitle = "Download Completed with Errors";
+                statusMessage = "Download completed but some items failed.";
+                statusIcon = MessageBoxIcon.Warning;
+                progressForm.UpdateStatus("Download Completed with Errors");
+            }
+            else
+            {
+                statusTitle = "Download Complete";
+                statusMessage = "Download completed successfully!";
+                statusIcon = MessageBoxIcon.Information;
+                progressForm.UpdateStatus("Download Complete!");
+            }
+
+            progressForm.AppendLog($"\nSummary:");
+            progressForm.AppendLog($"Total Processed: {totalProcessed}");
+            progressForm.AppendLog($"Total Created/Updated: {totalCreated}");
+            progressForm.AppendLog($"Total Skipped: {totalSkipped}");
+            progressForm.AppendLog($"Total Errors: {totalErrors}");
+
+            MessageBox.Show(
+                $"{statusMessage}\n\nProcessed: {totalProcessed}\nCreated/Updated: {totalCreated}\nSkipped: {totalSkipped}\nErrors: {totalErrors}",
+                statusTitle,
+                MessageBoxButtons.OK,
+                statusIcon);
+
+            // Refresh the grid
+            await LoadTranscriptsAsync();
+
+            progressForm.Close();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error during download: {ex.Message}", "Error",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            downloadGoogleDriveToolStripMenuItem.Enabled = true;
+            Cursor = Cursors.Default;
+        }
+    }
 
     private async void exportSelectedToolStripMenuItem_Click(object sender, EventArgs e)
     {

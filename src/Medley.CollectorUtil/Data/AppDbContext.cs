@@ -32,7 +32,7 @@ public class AppDbContext : DbContext
             .IsUnique();
         
         modelBuilder.Entity<MeetingTranscript>()
-            .HasIndex(m => m.MeetingId);
+            .HasIndex(m => m.ExternalId);
         
         modelBuilder.Entity<Configuration>()
             .HasIndex(c => c.Key)

@@ -1,3 +1,4 @@
+using Medley.CollectorUtil.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Medley.CollectorUtil.Data;
@@ -88,16 +89,29 @@ public class ConfigurationService
         await context.SaveChangesAsync();
     }
 
-    public async Task<string> GetGoogleBrowserCookiesAsync()
+    public async Task<List<BrowserCookie>> GetGoogleBrowserCookiesAsync()
     {
         using var context = new AppDbContext();
         var config = await context.Configurations
             .FirstOrDefaultAsync(c => c.Key == "GoogleBrowserCookies");
         
-        return config?.Value ?? string.Empty;
+        if (string.IsNullOrEmpty(config?.Value))
+        {
+            return new List<BrowserCookie>();
+        }
+
+        try
+        {
+            return System.Text.Json.JsonSerializer.Deserialize<List<BrowserCookie>>(config.Value) 
+                   ?? new List<BrowserCookie>();
+        }
+        catch
+        {
+            return new List<BrowserCookie>();
+        }
     }
 
-    public async Task SaveGoogleBrowserCookiesAsync(string cookiesJson)
+    public async Task SaveGoogleBrowserCookiesAsync(List<BrowserCookie> cookies)
     {
         using var context = new AppDbContext();
         
@@ -110,7 +124,8 @@ public class ConfigurationService
             context.Configurations.Add(config);
         }
         
-        config.Value = cookiesJson ?? string.Empty;
+        var cookiesJson = System.Text.Json.JsonSerializer.Serialize(cookies);
+        config.Value = cookiesJson;
         config.UpdatedAt = DateTime.UtcNow;
         
         await context.SaveChangesAsync();
@@ -196,5 +211,33 @@ public class ConfigurationService
         using var context = new AppDbContext();
         return await context.Configurations
             .AnyAsync(c => c.Key.StartsWith("GoogleToken_"));
+    }
+
+    public async Task<string> GetGoogleDriveFolderIdAsync()
+    {
+        using var context = new AppDbContext();
+        var config = await context.Configurations
+            .FirstOrDefaultAsync(c => c.Key == "GoogleDriveFolderId");
+        
+        return config?.Value ?? string.Empty;
+    }
+
+    public async Task SaveGoogleDriveFolderIdAsync(string folderId)
+    {
+        using var context = new AppDbContext();
+        
+        var config = await context.Configurations
+            .FirstOrDefaultAsync(c => c.Key == "GoogleDriveFolderId");
+        
+        if (config == null)
+        {
+            config = new Configuration { Key = "GoogleDriveFolderId" };
+            context.Configurations.Add(config);
+        }
+        
+        config.Value = folderId?.Trim() ?? string.Empty;
+        config.UpdatedAt = DateTime.UtcNow;
+        
+        await context.SaveChangesAsync();
     }
 }

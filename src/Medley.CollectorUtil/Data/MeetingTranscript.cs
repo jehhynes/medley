@@ -9,22 +9,25 @@ public class MeetingTranscript
     
     [Required]
     [MaxLength(500)]
-    public string Title { get; set; } = string.Empty;
-    
+    public required string Title { get; set; }
+
     [Required]
     [MaxLength(200)]
-    public string MeetingId { get; set; } = string.Empty;
+    public required string ExternalId { get; set; }
+
+    [Required]
+    [MaxLength(50)]
+    public required string Source { get; set; }
     
     public DateTime? Date { get; set; }
     
     public string? Participants { get; set; }
     
     [Required]
-    public string FullJson { get; set; } = string.Empty;
-    
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public required string Content { get; set; }
+
+    [Required]
+    public DateTime DownloadedAt { get; set; } = DateTime.UtcNow;
     
     public bool? IsSelected { get; set; }
     

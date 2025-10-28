@@ -34,6 +34,7 @@ namespace Medley.CollectorUtil
             aPIKeysToolStripMenuItem = new ToolStripMenuItem();
             googleAuthToolStripMenuItem = new ToolStripMenuItem();
             downloadToolStripMenuItem = new ToolStripMenuItem();
+            downloadGoogleDriveToolStripMenuItem = new ToolStripMenuItem();
             refreshToolStripMenuItem = new ToolStripMenuItem();
             exportSelectedToolStripMenuItem = new ToolStripMenuItem();
             deleteAllToolStripMenuItem = new ToolStripMenuItem();
@@ -49,7 +50,7 @@ namespace Medley.CollectorUtil
             // menuStrip1
             // 
             menuStrip1.ImageScalingSize = new Size(20, 20);
-            menuStrip1.Items.AddRange(new ToolStripItem[] { aPIKeysToolStripMenuItem, googleAuthToolStripMenuItem, downloadToolStripMenuItem, refreshToolStripMenuItem, exportSelectedToolStripMenuItem, deleteAllToolStripMenuItem, helpToolStripMenuItem });
+            menuStrip1.Items.AddRange(new ToolStripItem[] { aPIKeysToolStripMenuItem, googleAuthToolStripMenuItem, downloadToolStripMenuItem, downloadGoogleDriveToolStripMenuItem, refreshToolStripMenuItem, exportSelectedToolStripMenuItem, deleteAllToolStripMenuItem, helpToolStripMenuItem });
             menuStrip1.Location = new Point(0, 0);
             menuStrip1.Name = "menuStrip1";
             menuStrip1.RenderMode = ToolStripRenderMode.Professional;
@@ -86,6 +87,16 @@ namespace Medley.CollectorUtil
             downloadToolStripMenuItem.Text = "Download";
             downloadToolStripMenuItem.TextImageRelation = TextImageRelation.ImageAboveText;
             downloadToolStripMenuItem.Click += downloadToolStripMenuItem_Click;
+            // 
+            // downloadGoogleDriveToolStripMenuItem
+            // 
+            downloadGoogleDriveToolStripMenuItem.Image = (Image)resources.GetObject("downloadToolStripMenuItem.Image");
+            downloadGoogleDriveToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
+            downloadGoogleDriveToolStripMenuItem.Name = "downloadGoogleDriveToolStripMenuItem";
+            downloadGoogleDriveToolStripMenuItem.Size = new Size(120, 74);
+            downloadGoogleDriveToolStripMenuItem.Text = "Google Drive";
+            downloadGoogleDriveToolStripMenuItem.TextImageRelation = TextImageRelation.ImageAboveText;
+            downloadGoogleDriveToolStripMenuItem.Click += downloadGoogleDriveToolStripMenuItem_Click;
             // 
             // refreshToolStripMenuItem
             // 
@@ -191,6 +202,7 @@ namespace Medley.CollectorUtil
         private ToolStripMenuItem aPIKeysToolStripMenuItem;
         private ToolStripMenuItem googleAuthToolStripMenuItem;
         private ToolStripMenuItem downloadToolStripMenuItem;
+        private ToolStripMenuItem downloadGoogleDriveToolStripMenuItem;
         private ToolStripMenuItem refreshToolStripMenuItem;
         private ToolStripMenuItem exportSelectedToolStripMenuItem;
         private ToolStripMenuItem deleteAllToolStripMenuItem;

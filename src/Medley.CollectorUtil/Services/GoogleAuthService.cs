@@ -45,7 +45,9 @@ public class GoogleAuthService
             // Define the scopes - should match what was used during authentication
             string[] scopes = {
                 "https://www.googleapis.com/auth/drive.readonly",
-                "https://www.googleapis.com/auth/documents.readonly"
+                "https://www.googleapis.com/auth/drive.meet.readonly",
+                "https://www.googleapis.com/auth/drive.metadata.readonly",
+                "https://www.googleapis.com/auth/drive.labels.readonly"
             };
 
             // This will load the existing token from the database

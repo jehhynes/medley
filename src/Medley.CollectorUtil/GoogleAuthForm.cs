@@ -3,6 +3,7 @@ using Google.Apis.Util.Store;
 using Medley.CollectorUtil.Data;
 using System.Text.Json;
 using Microsoft.Playwright;
+using Medley.CollectorUtil.Models;
 
 namespace Medley.CollectorUtil;
 
@@ -24,9 +25,11 @@ public partial class GoogleAuthForm : Form
         {
             var clientId = await _configurationService.GetGoogleClientIdAsync();
             var clientSecret = await _configurationService.GetGoogleClientSecretAsync();
+            var folderId = await _configurationService.GetGoogleDriveFolderIdAsync();
 
             textBoxClientId.Text = clientId;
             textBoxClientSecret.Text = clientSecret;
+            textBoxFolderId.Text = folderId;
         }
         catch
         {
@@ -40,8 +43,8 @@ public partial class GoogleAuthForm : Form
     private async void UpdateAuthStatus()
     {
         bool hasOAuthToken = await _configurationService.HasGoogleTokenAsync();
-        var cookiesJson = await _configurationService.GetGoogleBrowserCookiesAsync();
-        bool hasCookies = !string.IsNullOrEmpty(cookiesJson);
+        var cookies = await _configurationService.GetGoogleBrowserCookiesAsync();
+        bool hasCookies = cookies.Any();
 
         if (hasOAuthToken || hasCookies)
         {
@@ -81,13 +84,14 @@ public partial class GoogleAuthForm : Form
         {
             await _configurationService.SaveGoogleClientIdAsync(textBoxClientId.Text.Trim());
             await _configurationService.SaveGoogleClientSecretAsync(textBoxClientSecret.Text.Trim());
+            await _configurationService.SaveGoogleDriveFolderIdAsync(textBoxFolderId.Text.Trim());
 
-            MessageBox.Show("Credentials saved successfully.", "Success",
+            MessageBox.Show("Settings saved successfully.", "Success",
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error saving credentials: {ex.Message}", "Error",
+            MessageBox.Show($"Error saving settings: {ex.Message}", "Error",
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
@@ -111,8 +115,10 @@ public partial class GoogleAuthForm : Form
 
             // Define the scopes you need - adjust based on your requirements
             string[] scopes = {
+                "https://www.googleapis.com/auth/drive.readonly",
                 "https://www.googleapis.com/auth/drive.meet.readonly",
-                "https://www.googleapis.com/auth/drive.metadata.readonly"
+                "https://www.googleapis.com/auth/drive.metadata.readonly",
+                "https://www.googleapis.com/auth/drive.labels.readonly"
             };
 
             var clientSecrets = new ClientSecrets
@@ -277,13 +283,21 @@ public partial class GoogleAuthForm : Form
             throw new Exception("Authentication timed out. Please try again and complete the sign-in process.");
         }
 
-        // Save cookies for future use
+        // Save cookies for future use - convert to BrowserCookie objects
         var allCookies = await context.CookiesAsync();
-        var cookiesJson = JsonSerializer.Serialize(allCookies, new JsonSerializerOptions
+        var browserCookies = allCookies.Select(c => new BrowserCookie
         {
-            WriteIndented = true
-        });
-        await _configurationService.SaveGoogleBrowserCookiesAsync(cookiesJson);
+            Name = c.Name,
+            Value = c.Value,
+            Domain = c.Domain,
+            Path = c.Path,
+            Expires = c.Expires,
+            HttpOnly = c.HttpOnly,
+            Secure = c.Secure,
+            SameSite = c.SameSite.ToString()
+        }).ToList();
+        
+        await _configurationService.SaveGoogleBrowserCookiesAsync(browserCookies);
 
         await browser.CloseAsync();
     }
@@ -408,42 +422,7 @@ public partial class GoogleAuthForm : Form
     public static async Task<bool> HasBrowserAuthenticationAsync()
     {
         var configService = new ConfigurationService();
-        var cookiesJson = await configService.GetGoogleBrowserCookiesAsync();
-        return !string.IsNullOrEmpty(cookiesJson);
-    }
-
-    /// <summary>
-    /// Loads saved browser cookies for use in HTTP requests
-    /// </summary>
-    public static async Task<IEnumerable<BrowserCookie>?> LoadBrowserCookiesAsync()
-    {
-        var configService = new ConfigurationService();
-        var cookiesJson = await configService.GetGoogleBrowserCookiesAsync();
-
-        if (string.IsNullOrEmpty(cookiesJson))
-        {
-            return null;
-        }
-
-        try
-        {
-            return JsonSerializer.Deserialize<List<BrowserCookie>>(cookiesJson);
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    public class BrowserCookie
-    {
-        public string Name { get; set; } = string.Empty;
-        public string Value { get; set; } = string.Empty;
-        public string Domain { get; set; } = string.Empty;
-        public string Path { get; set; } = string.Empty;
-        public double Expires { get; set; }
-        public bool HttpOnly { get; set; }
-        public bool Secure { get; set; }
-        public string SameSite { get; set; } = string.Empty;
+        var cookies = await configService.GetGoogleBrowserCookiesAsync();
+        return cookies.Any();
     }
 }

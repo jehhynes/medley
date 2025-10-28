@@ -30,6 +30,8 @@ namespace Medley.CollectorUtil
             labelInstructions = new Label();
             buttonAuthenticateBrowser = new Button();
             label1 = new Label();
+            labelFolderId = new Label();
+            textBoxFolderId = new TextBox();
             SuspendLayout();
             // 
             // labelTitle
@@ -75,9 +77,26 @@ namespace Medley.CollectorUtil
             textBoxClientSecret.Size = new Size(560, 27);
             textBoxClientSecret.TabIndex = 4;
             // 
+            // labelFolderId
+            // 
+            labelFolderId.AutoSize = true;
+            labelFolderId.Location = new Point(12, 246);
+            labelFolderId.Name = "labelFolderId";
+            labelFolderId.Size = new Size(73, 20);
+            labelFolderId.TabIndex = 13;
+            labelFolderId.Text = "Folder ID:";
+            // 
+            // textBoxFolderId
+            // 
+            textBoxFolderId.Location = new Point(12, 269);
+            textBoxFolderId.Name = "textBoxFolderId";
+            textBoxFolderId.PlaceholderText = "Optional - Leave blank to search all folders";
+            textBoxFolderId.Size = new Size(560, 27);
+            textBoxFolderId.TabIndex = 14;
+            // 
             // buttonSave
             // 
-            buttonSave.Location = new Point(12, 249);
+            buttonSave.Location = new Point(12, 312);
             buttonSave.Name = "buttonSave";
             buttonSave.Size = new Size(120, 35);
             buttonSave.TabIndex = 5;
@@ -87,7 +106,7 @@ namespace Medley.CollectorUtil
             // 
             // buttonAuthenticate
             // 
-            buttonAuthenticate.Location = new Point(12, 330);
+            buttonAuthenticate.Location = new Point(12, 393);
             buttonAuthenticate.Name = "buttonAuthenticate";
             buttonAuthenticate.Size = new Size(150, 35);
             buttonAuthenticate.TabIndex = 6;
@@ -99,7 +118,7 @@ namespace Medley.CollectorUtil
             // 
             labelStatus.AutoSize = true;
             labelStatus.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            labelStatus.Location = new Point(12, 300);
+            labelStatus.Location = new Point(12, 363);
             labelStatus.Name = "labelStatus";
             labelStatus.Size = new Size(239, 20);
             labelStatus.TabIndex = 7;
@@ -107,7 +126,7 @@ namespace Medley.CollectorUtil
             // 
             // buttonRevoke
             // 
-            buttonRevoke.Location = new Point(168, 330);
+            buttonRevoke.Location = new Point(168, 393);
             buttonRevoke.Name = "buttonRevoke";
             buttonRevoke.Size = new Size(150, 35);
             buttonRevoke.TabIndex = 8;
@@ -125,7 +144,7 @@ namespace Medley.CollectorUtil
             // 
             // buttonAuthenticateBrowser
             // 
-            buttonAuthenticateBrowser.Location = new Point(12, 419);
+            buttonAuthenticateBrowser.Location = new Point(12, 482);
             buttonAuthenticateBrowser.Name = "buttonAuthenticateBrowser";
             buttonAuthenticateBrowser.Size = new Size(200, 35);
             buttonAuthenticateBrowser.TabIndex = 10;
@@ -137,7 +156,7 @@ namespace Medley.CollectorUtil
             // 
             label1.AutoSize = true;
             label1.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
-            label1.Location = new Point(12, 378);
+            label1.Location = new Point(12, 441);
             label1.Name = "label1";
             label1.Size = new Size(372, 28);
             label1.TabIndex = 12;
@@ -147,7 +166,9 @@ namespace Medley.CollectorUtil
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(584, 465);
+            ClientSize = new Size(584, 528);
+            Controls.Add(textBoxFolderId);
+            Controls.Add(labelFolderId);
             Controls.Add(label1);
             Controls.Add(buttonAuthenticateBrowser);
             Controls.Add(labelInstructions);
@@ -185,5 +206,7 @@ namespace Medley.CollectorUtil
         private Label labelInstructions;
         private Button buttonAuthenticateBrowser;
         private Label label1;
+        private Label labelFolderId;
+        private TextBox textBoxFolderId;
     }
 }

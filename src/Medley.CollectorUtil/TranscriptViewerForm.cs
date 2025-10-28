@@ -33,7 +33,7 @@ public partial class TranscriptViewerForm : Form
         try
         {
             // Deserialize the FullJson to get the recording
-            var recording = JsonSerializer.Deserialize<FellowRecording>(transcript.FullJson);
+            var recording = JsonSerializer.Deserialize<FellowRecording>(transcript.Content);
             
             if (recording?.Transcript?.SpeechSegments != null && recording.Transcript.SpeechSegments.Count > 0)
             {

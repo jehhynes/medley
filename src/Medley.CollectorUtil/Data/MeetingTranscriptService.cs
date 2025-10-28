@@ -18,7 +18,7 @@ public class MeetingTranscriptService
         using var context = new AppDbContext();
         return await context.MeetingTranscripts
             .Include(t => t.ApiKeys)
-            .AnyAsync(t => t.MeetingId == meetingId && t.ApiKeys.Any(a => a.Id == apiKeyId));
+            .AnyAsync(t => t.ExternalId == meetingId && t.ApiKeys.Any(a => a.Id == apiKeyId));
     }
     
     public async Task SaveTranscriptAsync(MeetingTranscript transcript, ApiKey apiKey)
@@ -28,7 +28,7 @@ public class MeetingTranscriptService
         // Check if meeting already exists (by MeetingId only)
         var existing = await context.MeetingTranscripts
             .Include(t => t.ApiKeys)
-            .FirstOrDefaultAsync(t => t.MeetingId == transcript.MeetingId);
+            .FirstOrDefaultAsync(t => t.ExternalId == transcript.ExternalId);
         
         if (existing != null)
         {
@@ -40,7 +40,6 @@ public class MeetingTranscriptService
                 if (trackedApiKey != null)
                 {
                     existing.ApiKeys.Add(trackedApiKey);
-                    existing.UpdatedAt = DateTime.UtcNow;
                 }
             }
         }
@@ -80,7 +79,6 @@ public class MeetingTranscriptService
         if (transcript != null)
         {
             transcript.IsSelected = isSelected;
-            transcript.UpdatedAt = DateTime.UtcNow;
             await context.SaveChangesAsync();
         }
     }
@@ -107,5 +105,19 @@ public class MeetingTranscriptService
         return await context.MeetingTranscripts
             .Include(t => t.ApiKeys)
             .FirstOrDefaultAsync(t => t.Id == transcriptId);
+    }
+
+    public async Task<MeetingTranscript?> GetTranscriptByExternalIdAsync(string externalId)
+    {
+        using var context = new AppDbContext();
+        return await context.MeetingTranscripts
+            .FirstOrDefaultAsync(t => t.ExternalId == externalId);
+    }
+
+    public async Task CreateTranscriptAsync(MeetingTranscript transcript)
+    {
+        using var context = new AppDbContext();
+        context.MeetingTranscripts.Add(transcript);
+        await context.SaveChangesAsync();
     }
 }
