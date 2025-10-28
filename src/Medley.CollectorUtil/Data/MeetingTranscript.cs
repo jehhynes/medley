@@ -28,6 +28,10 @@ public class MeetingTranscript
     
     public bool IsSelected { get; set; } = true;
     
+    public int? LengthInMinutes { get; set; }
+    
+    public int? TranscriptLength { get; set; }
+    
     // Navigation properties
     public ICollection<ApiKey> ApiKeys { get; set; } = new List<ApiKey>();
 }

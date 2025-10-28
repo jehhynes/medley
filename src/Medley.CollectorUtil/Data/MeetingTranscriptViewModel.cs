@@ -8,6 +8,8 @@ public class MeetingTranscriptViewModel
     public DateTime? Date { get; set; }
     public string? Participants { get; set; }
     public string ApiKeyNames { get; set; } = string.Empty;
+    public int? LengthInMinutes { get; set; }
+    public int? TranscriptLength { get; set; }
     
     public static MeetingTranscriptViewModel FromMeetingTranscript(MeetingTranscript transcript)
     {
@@ -18,7 +20,9 @@ public class MeetingTranscriptViewModel
             Title = transcript.Title,
             Date = transcript.Date,
             Participants = transcript.Participants,
-            ApiKeyNames = string.Join(", ", transcript.ApiKeys.Select(a => a.Name))
+            ApiKeyNames = string.Join(", ", transcript.ApiKeys.Select(a => a.Name)),
+            LengthInMinutes = transcript.LengthInMinutes,
+            TranscriptLength = transcript.TranscriptLength
         };
     }
 }

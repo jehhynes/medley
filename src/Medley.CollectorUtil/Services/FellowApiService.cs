@@ -26,7 +26,7 @@ public class FellowApiService
     public async Task<FellowRecordingsResponse?> ListRecordingsAsync(
         string apiKey,
         string? cursor = null,
-        int pageSize = 20,
+        int pageSize = 50,
         bool includeTranscript = true)
     {
         await EnforceRateLimitAsync();

@@ -176,9 +176,37 @@ public partial class MainForm : Form
             SortMode = DataGridViewColumnSortMode.Automatic
         });
 
-        // Add View button column with icon
-        var resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
-        _viewIcon = (Image?)resources.GetObject("icon-search-20");
+        dataGridViewTranscripts.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            DataPropertyName = "LengthInMinutes",
+            HeaderText = "Length (min)",
+            Name = "LengthInMinutes",
+            FillWeight = 10,
+            ReadOnly = true,
+            SortMode = DataGridViewColumnSortMode.Automatic
+        });
+
+        dataGridViewTranscripts.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            DataPropertyName = "TranscriptLength",
+            HeaderText = "Transcript Length",
+            Name = "TranscriptLength",
+            FillWeight = 12,
+            ReadOnly = true,
+            SortMode = DataGridViewColumnSortMode.Automatic,
+            DefaultCellStyle = new DataGridViewCellStyle { Format = "N0" }
+        });
+
+        // Add View button column with icon from embedded resource
+        var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+        var resourceName = "Medley.CollectorUtil.icons.icon-search-20.png";
+        using (var stream = assembly.GetManifestResourceStream(resourceName))
+        {
+            if (stream != null)
+            {
+                _viewIcon = Image.FromStream(stream);
+            }
+        }
         
         var viewButtonColumn = new DataGridViewImageColumn
         {
@@ -221,6 +249,8 @@ public partial class MainForm : Form
             dataTable.Columns.Add("Date", typeof(DateTime));
             dataTable.Columns.Add("Participants", typeof(string));
             dataTable.Columns.Add("ApiKeyNames", typeof(string));
+            dataTable.Columns.Add("LengthInMinutes", typeof(int));
+            dataTable.Columns.Add("TranscriptLength", typeof(int));
 
             foreach (var vm in viewModels)
             {
@@ -230,7 +260,9 @@ public partial class MainForm : Form
                     vm.Title ?? string.Empty,
                     vm.Date.HasValue ? (object)vm.Date.Value : DBNull.Value,
                     vm.Participants ?? string.Empty,
-                    vm.ApiKeyNames ?? string.Empty
+                    vm.ApiKeyNames ?? string.Empty,
+                    vm.LengthInMinutes.HasValue ? (object)vm.LengthInMinutes.Value : DBNull.Value,
+                    vm.TranscriptLength.HasValue ? (object)vm.TranscriptLength.Value : DBNull.Value
                 );
             }
 
@@ -287,6 +319,7 @@ public partial class MainForm : Form
 
             // Create FellowApiService with workspace
             var fellowApiService = new FellowApiService(workspace);
+            var downloadService = new TranscriptDownloadService(_transcriptService, fellowApiService);
 
             var progressForm = new ProgressForm();
             progressForm.Show(this);
@@ -302,13 +335,17 @@ public partial class MainForm : Form
                 {
                     progressForm.UpdateStatus($"Processing API Key: {apiKey.Name}");
 
-                    var (processed, created, skipped, errors) = await DownloadTranscriptsForApiKeyAsync(
-                        apiKey, fellowApiService, progressForm);
+                    var progress = new Progress<DownloadProgress>(p =>
+                    {
+                        progressForm.AppendLog($"  {p.Message}");
+                    });
 
-                    totalProcessed += processed;
-                    totalCreated += created;
-                    totalSkipped += skipped;
-                    totalErrors += errors;
+                    var summary = await downloadService.DownloadTranscriptsForApiKeyAsync(apiKey, progress);
+
+                    totalProcessed += summary.Processed;
+                    totalCreated += summary.Created;
+                    totalSkipped += summary.Skipped;
+                    totalErrors += summary.Errors;
                 }
                 catch (Exception ex)
                 {
@@ -343,119 +380,6 @@ public partial class MainForm : Form
             downloadToolStripMenuItem.Enabled = true;
             Cursor = Cursors.Default;
         }
-    }
-
-    private async Task<(int processed, int created, int skipped, int errors)> DownloadTranscriptsForApiKeyAsync(
-        ApiKey apiKey, FellowApiService fellowApiService, ProgressForm progressForm)
-    {
-        var processed = 0;
-        var created = 0;
-        var skipped = 0;
-        var errors = 0;
-        string? cursor = null;
-        var pageNumber = 0;
-
-        do
-        {
-            pageNumber++;
-            progressForm.AppendLog($"  Fetching page {pageNumber} for '{apiKey.Name}'...");
-
-            try
-            {
-                var response = await fellowApiService.ListRecordingsAsync(
-                    apiKey.Key, cursor, pageSize: 20, includeTranscript: true);
-
-                if (response?.Recordings?.Data == null || response.Recordings.Data.Count == 0)
-                {
-                    progressForm.AppendLog($"  No more recordings found for '{apiKey.Name}'");
-                    break;
-                }
-
-                foreach (var recording in response.Recordings.Data)
-                {
-                    processed++;
-
-                    try
-                    {
-                        if (string.IsNullOrWhiteSpace(recording.Id))
-                        {
-                            progressForm.AppendLog($"    Skipping recording with no ID");
-                            skipped++;
-                            continue;
-                        }
-
-                        // Skip very recent meetings (within 2 hours)
-                        if (recording.StartedAt != null && recording.StartedAt.Value > DateTimeOffset.Now.AddHours(-2))
-                        {
-                            progressForm.AppendLog($"    Skipping recent meeting: {recording.Title}");
-                            skipped++;
-                            continue;
-                        }
-
-                        // Check if already exists for this API key
-                        var alreadyExists = await _transcriptService.TranscriptExistsForApiKeyAsync(
-                            recording.Id, apiKey.Id);
-
-                        if (alreadyExists)
-                        {
-                            progressForm.AppendLog($"    Already exists for this API key: {recording.Title}");
-                            skipped++;
-                            continue;
-                        }
-
-                        // Extract participants from transcript speakers
-                        // Strip letter suffixes like " - A", " - B", etc.
-                        var participants = recording.Transcript?.SpeechSegments != null
-                            ? string.Join(", ", recording.Transcript.SpeechSegments
-                                .Where(s => !string.IsNullOrWhiteSpace(s.Speaker))
-                                .Select(s => System.Text.RegularExpressions.Regex.Replace(s.Speaker!, @"\s*-\s*[A-Z]$", ""))
-                                .Distinct()
-                                .OrderBy(s => s))
-                            : null;
-
-                        // Serialize full JSON - save the raw response content
-                        var fullJson = JsonSerializer.Serialize(recording, new JsonSerializerOptions
-                        {
-                            WriteIndented = false
-                        });
-
-                        var transcript = new MeetingTranscript
-                        {
-                            Title = recording.Title ?? "Untitled Meeting",
-                            MeetingId = recording.Id,
-                            Date = recording.StartedAt?.DateTime,
-                            Participants = participants,
-                            FullJson = fullJson
-                        };
-
-                        await _transcriptService.SaveTranscriptAsync(transcript, apiKey);
-                        created++;
-
-                        progressForm.AppendLog($"    Saved: {recording.Title}");
-                    }
-                    catch (Exception ex)
-                    {
-                        progressForm.AppendLog($"    Error processing recording: {ex.Message}");
-                        errors++;
-                    }
-                }
-
-                progressForm.AppendLog($"  Page {pageNumber} complete: {response.Recordings.Data.Count} recordings");
-
-                cursor = response.Recordings.PageInfo?.Cursor;
-            }
-            catch (Exception ex)
-            {
-                progressForm.AppendLog($"  Error fetching page {pageNumber}: {ex.Message}");
-                errors++;
-                break;
-            }
-
-        } while (!string.IsNullOrWhiteSpace(cursor));
-
-        progressForm.AppendLog($"Completed '{apiKey.Name}': Processed={processed}, Created={created}, Skipped={skipped}, Errors={errors}");
-
-        return (processed, created, skipped, errors);
     }
 
     private async void dataGridViewTranscripts_CellValueChanged(object? sender, DataGridViewCellEventArgs e)
