@@ -26,7 +26,7 @@ public class MeetingTranscript
     
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     
-    public bool IsSelected { get; set; } = true;
+    public bool? IsSelected { get; set; }
     
     public int? LengthInMinutes { get; set; }
     

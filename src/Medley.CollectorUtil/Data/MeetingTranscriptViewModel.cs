@@ -3,7 +3,7 @@ namespace Medley.CollectorUtil.Data;
 public class MeetingTranscriptViewModel
 {
     public int Id { get; set; }
-    public bool IsSelected { get; set; }
+    public bool? IsSelected { get; set; }
     public string Title { get; set; } = string.Empty;
     public DateTime? Date { get; set; }
     public string? Participants { get; set; }

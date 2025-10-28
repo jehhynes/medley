@@ -124,7 +124,6 @@ namespace Medley.CollectorUtil
             dataGridViewTranscripts.SortStringChangedInvokeBeforeDatasourceUpdate = true;
             dataGridViewTranscripts.TabIndex = 1;
             dataGridViewTranscripts.CellClick += dataGridViewTranscripts_CellClick;
-            dataGridViewTranscripts.CellContentClick += dataGridViewTranscripts_CellContentClick;
             dataGridViewTranscripts.CellValueChanged += dataGridViewTranscripts_CellValueChanged;
             // 
             // statusStrip1

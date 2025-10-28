@@ -73,7 +73,7 @@ public class MeetingTranscriptService
         return count;
     }
     
-    public async Task UpdateTranscriptSelectionAsync(int transcriptId, bool isSelected)
+    public async Task UpdateTranscriptSelectionAsync(int transcriptId, bool? isSelected)
     {
         using var context = new AppDbContext();
         var transcript = await context.MeetingTranscripts.FindAsync(transcriptId);
@@ -89,9 +89,16 @@ public class MeetingTranscriptService
     {
         using var context = new AppDbContext();
         return await context.MeetingTranscripts
-            .Where(t => t.IsSelected)
+            .Where(t => t.IsSelected == true)
             .OrderBy(t => t.Title)
             .ToListAsync();
+    }
+    
+    public async Task<bool> HasUndecidedTranscriptsAsync()
+    {
+        using var context = new AppDbContext();
+        return await context.MeetingTranscripts
+            .AnyAsync(t => t.IsSelected == null);
     }
     
     public async Task<MeetingTranscript?> GetTranscriptByIdAsync(int transcriptId)

@@ -34,6 +34,12 @@ public partial class MainForm : Form
         // Wire up column header click for sorting through ADGV
         dataGridViewTranscripts.SortStringChanged += DataGridViewTranscripts_SortStringChanged;
         dataGridViewTranscripts.ColumnHeaderMouseClick += DataGridViewTranscripts_ColumnHeaderMouseClick;
+
+        // Wire up cell formatting for row colors
+        dataGridViewTranscripts.CellFormatting += DataGridViewTranscripts_CellFormatting;
+
+        // Wire up keyboard shortcuts for batch editing
+        dataGridViewTranscripts.KeyDown += DataGridViewTranscripts_KeyDown;
     }
 
     private void DataGridViewTranscripts_SortStringChanged(object? sender, EventArgs e)
@@ -105,7 +111,7 @@ public partial class MainForm : Form
     private async void MainForm_Load(object sender, EventArgs e)
     {
         SetupDataGridView();
-        
+
         // Check if API keys exist, if not show the API keys form
         var apiKeys = await _apiKeyService.GetAllApiKeysAsync();
         if (apiKeys.Count == 0)
@@ -116,7 +122,7 @@ public partial class MainForm : Form
                 // If user cancelled, they can still use the app but won't be able to download
             }
         }
-        
+
         await LoadTranscriptsAsync();
     }
 
@@ -144,7 +150,8 @@ public partial class MainForm : Form
             Name = "IsSelected",
             FillWeight = 10,
             ReadOnly = false,
-            SortMode = DataGridViewColumnSortMode.Automatic
+            SortMode = DataGridViewColumnSortMode.Automatic,
+            ThreeState = true
         });
 
         dataGridViewTranscripts.Columns.Add(new DataGridViewTextBoxColumn
@@ -219,7 +226,7 @@ public partial class MainForm : Form
                 _viewIcon = Image.FromStream(stream);
             }
         }
-        
+
         var viewButtonColumn = new DataGridViewImageColumn
         {
             HeaderText = "Transcript",
@@ -257,6 +264,7 @@ public partial class MainForm : Form
             var dataTable = new DataTable();
             dataTable.Columns.Add("Id", typeof(int));
             dataTable.Columns.Add("IsSelected", typeof(bool));
+            dataTable.Columns["IsSelected"].AllowDBNull = true;
             dataTable.Columns.Add("Title", typeof(string));
             dataTable.Columns.Add("Date", typeof(DateTime));
             dataTable.Columns.Add("Participants", typeof(string));
@@ -275,7 +283,7 @@ public partial class MainForm : Form
 
                 dataTable.Rows.Add(
                     vm.Id,
-                    vm.IsSelected,
+                    vm.IsSelected.HasValue ? (object)vm.IsSelected.Value : DBNull.Value,
                     vm.Title ?? string.Empty,
                     localDate.HasValue ? (object)localDate.Value : DBNull.Value,
                     vm.Participants ?? string.Empty,
@@ -474,11 +482,12 @@ public partial class MainForm : Form
                 var idCell = dataGridViewTranscripts.Rows[e.RowIndex].Cells["Id"];
                 var isSelectedCell = dataGridViewTranscripts.Rows[e.RowIndex].Cells["IsSelected"];
 
-                if (idCell.Value != null && idCell.Value != DBNull.Value &&
-                    isSelectedCell.Value != null && isSelectedCell.Value != DBNull.Value)
+                if (idCell.Value != null && idCell.Value != DBNull.Value)
                 {
                     var id = Convert.ToInt32(idCell.Value);
-                    var newValue = Convert.ToBoolean(isSelectedCell.Value);
+                    bool? newValue = isSelectedCell.Value == DBNull.Value || isSelectedCell.Value == null
+                        ? null
+                        : Convert.ToBoolean(isSelectedCell.Value);
 
                     await _transcriptService.UpdateTranscriptSelectionAsync(id, newValue);
                 }
@@ -539,7 +548,7 @@ public partial class MainForm : Form
         if (e.RowIndex >= 0 && e.ColumnIndex >= 0)
         {
             var column = dataGridViewTranscripts.Columns[e.ColumnIndex];
-            
+
             if (column.Name == "ViewButton")
             {
                 await ShowTranscriptViewerAsync(e.RowIndex);
@@ -547,71 +556,21 @@ public partial class MainForm : Form
         }
     }
 
-    private async void dataGridViewTranscripts_CellContentClick(object sender, DataGridViewCellEventArgs e)
-    {
-        // Handle checkbox clicks for multi-selection
-        if (e.RowIndex >= 0 && e.ColumnIndex >= 0)
-        {
-            var column = dataGridViewTranscripts.Columns[e.ColumnIndex];
-            
-            if (column.Name == "IsSelected" && column is DataGridViewCheckBoxColumn)
-            {
-                // Get the current value (before it changes)
-                var clickedCell = dataGridViewTranscripts.Rows[e.RowIndex].Cells["IsSelected"];
-                var currentValue = clickedCell.Value != null && clickedCell.Value != DBNull.Value
-                    ? Convert.ToBoolean(clickedCell.Value)
-                    : false;
-
-                // The new value will be the opposite
-                var newValue = !currentValue;
-
-                // Check if multiple rows are selected
-                var selectedRows = dataGridViewTranscripts.SelectedRows.Cast<DataGridViewRow>().ToList();
-                var selectedCells = dataGridViewTranscripts.SelectedCells.Cast<DataGridViewCell>()
-                    .Select(c => c.OwningRow)
-                    .Distinct()
-                    .ToList();
-
-                // Use whichever selection method has more rows
-                var rowsToUpdate = selectedRows.Count > 0 ? selectedRows : selectedCells;
-
-                // If multiple rows are selected and the clicked row is among them, update all
-                if (rowsToUpdate.Count > 1 && rowsToUpdate.Any(r => r.Index == e.RowIndex))
-                {
-                    // Get the DataTable
-                    var dataTable = dataGridViewTranscripts.DataSource as DataTable;
-                    if (dataTable != null)
-                    {
-                        foreach (var row in rowsToUpdate)
-                        {
-                            var idCell = row.Cells["Id"];
-                            var isSelectedCell = row.Cells["IsSelected"];
-
-                            if (idCell.Value != null && idCell.Value != DBNull.Value)
-                            {
-                                var id = Convert.ToInt32(idCell.Value);
-
-                                // Find the DataRow by ID (not by index, since grid may be sorted)
-                                var dataRow = dataTable.AsEnumerable().FirstOrDefault(r => r.Field<int>("Id") == id);
-                                if (dataRow != null)
-                                {
-                                    dataRow["IsSelected"] = newValue;
-                                }
-
-                                // Update the database
-                                await _transcriptService.UpdateTranscriptSelectionAsync(id, newValue);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
 
     private async void exportSelectedToolStripMenuItem_Click(object sender, EventArgs e)
     {
         try
         {
+            // Check for undecided transcripts
+            var hasUndecided = await _transcriptService.HasUndecidedTranscriptsAsync();
+            if (hasUndecided)
+            {
+                MessageBox.Show("Some transcripts have not been marked for export or exclusion (undecided state).\n\nPlease review all transcripts and mark them as either included or excluded before exporting.",
+                    "Undecided Transcripts",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             var selectedTranscripts = await _transcriptService.GetSelectedTranscriptsAsync();
 
             if (selectedTranscripts.Count == 0)
@@ -662,7 +621,7 @@ public partial class MainForm : Form
                 return;
 
             var id = Convert.ToInt32(idCell.Value);
-            
+
             // Load the full transcript from database
             var transcript = await _transcriptService.GetTranscriptByIdAsync(id);
             if (transcript == null)
@@ -682,5 +641,108 @@ public partial class MainForm : Form
             MessageBox.Show($"Error viewing transcript: {ex.Message}", "Error",
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
+    }
+
+    private void DataGridViewTranscripts_CellFormatting(object? sender, DataGridViewCellFormattingEventArgs e)
+    {
+        if (e.RowIndex >= 0 && e.RowIndex < dataGridViewTranscripts.Rows.Count)
+        {
+            var row = dataGridViewTranscripts.Rows[e.RowIndex];
+            var isSelectedCell = row.Cells["IsSelected"];
+
+            if (isSelectedCell.Value != null && isSelectedCell.Value != DBNull.Value)
+            {
+                bool isSelected = Convert.ToBoolean(isSelectedCell.Value);
+
+                // Light green for selected (true), light red for not selected (false)
+                e.CellStyle.BackColor = isSelected ? Color.LightGreen : Color.LightCoral;
+            }
+            else
+            {
+                // White for undecided (null)
+                e.CellStyle.BackColor = Color.White;
+            }
+        }
+    }
+
+    private async void DataGridViewTranscripts_KeyDown(object? sender, KeyEventArgs e)
+    {
+        // Handle keyboard shortcuts for batch editing
+        bool? newValue = null;
+        bool shouldUpdate = false;
+
+        if (e.KeyCode == Keys.Space)
+        {
+            // Space = set to true
+            newValue = true;
+            shouldUpdate = true;
+            e.Handled = true;
+            e.SuppressKeyPress = true;
+        }
+        else if (e.KeyCode == Keys.X)
+        {
+            // X = set to false
+            newValue = false;
+            shouldUpdate = true;
+            e.Handled = true;
+            e.SuppressKeyPress = true;
+        }
+        else if (e.KeyCode == Keys.Escape)
+        {
+            // Escape = set to null (undecided)
+            newValue = null;
+            shouldUpdate = true;
+            e.Handled = true;
+            e.SuppressKeyPress = true;
+        }
+
+        if (shouldUpdate)
+        {
+            await UpdateSelectedRowsAsync(newValue);
+        }
+    }
+
+    private async Task UpdateSelectedRowsAsync(bool? newValue)
+    {
+        // Get selected rows
+        var selectedRows = dataGridViewTranscripts.SelectedRows.Cast<DataGridViewRow>().ToList();
+        var selectedCells = dataGridViewTranscripts.SelectedCells.Cast<DataGridViewCell>()
+            .Select(c => c.OwningRow)
+            .Distinct()
+            .ToList();
+
+        // Use whichever selection method has more rows
+        var rowsToUpdate = selectedRows.Count > 0 ? selectedRows : selectedCells;
+
+        if (rowsToUpdate.Count == 0)
+            return;
+
+        // Get the DataTable
+        var dataTable = dataGridViewTranscripts.DataSource as DataTable;
+        if (dataTable == null)
+            return;
+
+        // Update all selected rows
+        foreach (var row in rowsToUpdate)
+        {
+            var idCell = row.Cells["Id"];
+            if (idCell.Value != null && idCell.Value != DBNull.Value)
+            {
+                var id = Convert.ToInt32(idCell.Value);
+
+                // Find the DataRow by ID (not by index, since grid may be sorted)
+                var dataRow = dataTable.AsEnumerable().FirstOrDefault(r => r.Field<int>("Id") == id);
+                if (dataRow != null)
+                {
+                    dataRow["IsSelected"] = newValue.HasValue ? (object)newValue.Value : DBNull.Value;
+                }
+
+                // Update the database
+                await _transcriptService.UpdateTranscriptSelectionAsync(id, newValue);
+            }
+        }
+
+        // Refresh the grid to show updated colors
+        dataGridViewTranscripts.Refresh();
     }
 }
