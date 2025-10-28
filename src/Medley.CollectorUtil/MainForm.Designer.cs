@@ -36,6 +36,7 @@ namespace Medley.CollectorUtil
             refreshToolStripMenuItem = new ToolStripMenuItem();
             exportSelectedToolStripMenuItem = new ToolStripMenuItem();
             deleteAllToolStripMenuItem = new ToolStripMenuItem();
+            helpToolStripMenuItem = new ToolStripMenuItem();
             dataGridViewTranscripts = new Zuby.ADGV.AdvancedDataGridView();
             statusStrip1 = new StatusStrip();
             toolStripLabelCount = new ToolStripStatusLabel();
@@ -47,7 +48,7 @@ namespace Medley.CollectorUtil
             // menuStrip1
             // 
             menuStrip1.ImageScalingSize = new Size(20, 20);
-            menuStrip1.Items.AddRange(new ToolStripItem[] { aPIKeysToolStripMenuItem, downloadToolStripMenuItem, refreshToolStripMenuItem, exportSelectedToolStripMenuItem, deleteAllToolStripMenuItem });
+            menuStrip1.Items.AddRange(new ToolStripItem[] { aPIKeysToolStripMenuItem, downloadToolStripMenuItem, refreshToolStripMenuItem, exportSelectedToolStripMenuItem, deleteAllToolStripMenuItem, helpToolStripMenuItem });
             menuStrip1.Location = new Point(0, 0);
             menuStrip1.Name = "menuStrip1";
             menuStrip1.RenderMode = ToolStripRenderMode.Professional;
@@ -104,6 +105,16 @@ namespace Medley.CollectorUtil
             deleteAllToolStripMenuItem.Text = "Delete All";
             deleteAllToolStripMenuItem.TextImageRelation = TextImageRelation.ImageAboveText;
             deleteAllToolStripMenuItem.Click += toolStripButtonDeleteAll_Click;
+            // 
+            // helpToolStripMenuItem
+            // 
+            helpToolStripMenuItem.Image = (Image)resources.GetObject("helpToolStripMenuItem.Image");
+            helpToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
+            helpToolStripMenuItem.Name = "helpToolStripMenuItem";
+            helpToolStripMenuItem.Size = new Size(64, 74);
+            helpToolStripMenuItem.Text = "Help";
+            helpToolStripMenuItem.TextImageRelation = TextImageRelation.ImageAboveText;
+            helpToolStripMenuItem.Click += helpToolStripMenuItem_Click;
             // 
             // dataGridViewTranscripts
             // 
@@ -171,6 +182,7 @@ namespace Medley.CollectorUtil
         private ToolStripMenuItem refreshToolStripMenuItem;
         private ToolStripMenuItem exportSelectedToolStripMenuItem;
         private ToolStripMenuItem deleteAllToolStripMenuItem;
+        private ToolStripMenuItem helpToolStripMenuItem;
         private Zuby.ADGV.AdvancedDataGridView dataGridViewTranscripts;
         private StatusStrip statusStrip1;
         private ToolStripStatusLabel toolStripLabelCount;

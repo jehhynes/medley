@@ -319,6 +319,14 @@ public partial class MainForm : Form
         }
     }
 
+    private void helpToolStripMenuItem_Click(object sender, EventArgs e)
+    {
+        using (var helpForm = new HelpForm())
+        {
+            helpForm.ShowDialog(this);
+        }
+    }
+
     private async void downloadToolStripMenuItem_Click(object sender, EventArgs e)
     {
         try
@@ -656,11 +664,12 @@ public partial class MainForm : Form
 
                 // Light green for selected (true), light red for not selected (false)
                 e.CellStyle.BackColor = isSelected ? Color.LightGreen : Color.LightCoral;
-            }
-            else
-            {
-                // White for undecided (null)
-                e.CellStyle.BackColor = Color.White;
+                
+                // Use darker selection colors that still show the background tint
+                e.CellStyle.SelectionBackColor = isSelected 
+                    ? Color.FromArgb(100, 200, 100)  // Darker green
+                    : Color.FromArgb(200, 100, 100); // Darker red
+                e.CellStyle.SelectionForeColor = Color.Black;
             }
         }
     }
@@ -687,9 +696,9 @@ public partial class MainForm : Form
             e.Handled = true;
             e.SuppressKeyPress = true;
         }
-        else if (e.KeyCode == Keys.Escape)
+        else if (e.KeyCode == Keys.R)
         {
-            // Escape = set to null (undecided)
+            // R = set to null (undecided/reset)
             newValue = null;
             shouldUpdate = true;
             e.Handled = true;
