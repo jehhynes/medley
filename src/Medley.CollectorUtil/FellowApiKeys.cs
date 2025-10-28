@@ -65,7 +65,7 @@ namespace Medley.CollectorUtil
                 btnCancel.Enabled = false;
 
                 // Save workspace and API keys
-                await _configurationService.SaveWorkspaceAsync(workspace);
+                await _configurationService.SaveFellowWorkspaceAsync(workspace);
                 await _apiKeyService.SaveApiKeysAsync(apiKeys);
                 
                 this.DialogResult = DialogResult.OK;
@@ -88,7 +88,7 @@ namespace Medley.CollectorUtil
             try
             {
                 // Load workspace
-                var workspace = await _configurationService.GetWorkspaceAsync();
+                var workspace = await _configurationService.GetFellowWorkspaceAsync();
                 txtWorkspace.Text = workspace;
                 
                 // Load API keys

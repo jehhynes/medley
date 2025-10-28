@@ -32,6 +32,7 @@ namespace Medley.CollectorUtil
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             menuStrip1 = new MenuStrip();
             aPIKeysToolStripMenuItem = new ToolStripMenuItem();
+            googleAuthToolStripMenuItem = new ToolStripMenuItem();
             downloadToolStripMenuItem = new ToolStripMenuItem();
             refreshToolStripMenuItem = new ToolStripMenuItem();
             exportSelectedToolStripMenuItem = new ToolStripMenuItem();
@@ -48,7 +49,7 @@ namespace Medley.CollectorUtil
             // menuStrip1
             // 
             menuStrip1.ImageScalingSize = new Size(20, 20);
-            menuStrip1.Items.AddRange(new ToolStripItem[] { aPIKeysToolStripMenuItem, downloadToolStripMenuItem, refreshToolStripMenuItem, exportSelectedToolStripMenuItem, deleteAllToolStripMenuItem, helpToolStripMenuItem });
+            menuStrip1.Items.AddRange(new ToolStripItem[] { aPIKeysToolStripMenuItem, googleAuthToolStripMenuItem, downloadToolStripMenuItem, refreshToolStripMenuItem, exportSelectedToolStripMenuItem, deleteAllToolStripMenuItem, helpToolStripMenuItem });
             menuStrip1.Location = new Point(0, 0);
             menuStrip1.Name = "menuStrip1";
             menuStrip1.RenderMode = ToolStripRenderMode.Professional;
@@ -65,6 +66,16 @@ namespace Medley.CollectorUtil
             aPIKeysToolStripMenuItem.Text = "API Keys";
             aPIKeysToolStripMenuItem.TextImageRelation = TextImageRelation.ImageAboveText;
             aPIKeysToolStripMenuItem.Click += apiKeysToolStripMenuItem_Click;
+            // 
+            // googleAuthToolStripMenuItem
+            // 
+            googleAuthToolStripMenuItem.Image = (Image)resources.GetObject("googleAuthToolStripMenuItem.Image");
+            googleAuthToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
+            googleAuthToolStripMenuItem.Name = "googleAuthToolStripMenuItem";
+            googleAuthToolStripMenuItem.Size = new Size(107, 74);
+            googleAuthToolStripMenuItem.Text = "Google Auth";
+            googleAuthToolStripMenuItem.TextImageRelation = TextImageRelation.ImageAboveText;
+            googleAuthToolStripMenuItem.Click += googleAuthToolStripMenuItem_Click;
             // 
             // downloadToolStripMenuItem
             // 
@@ -178,6 +189,7 @@ namespace Medley.CollectorUtil
 
         private MenuStrip menuStrip1;
         private ToolStripMenuItem aPIKeysToolStripMenuItem;
+        private ToolStripMenuItem googleAuthToolStripMenuItem;
         private ToolStripMenuItem downloadToolStripMenuItem;
         private ToolStripMenuItem refreshToolStripMenuItem;
         private ToolStripMenuItem exportSelectedToolStripMenuItem;

@@ -319,6 +319,14 @@ public partial class MainForm : Form
         }
     }
 
+    private void googleAuthToolStripMenuItem_Click(object sender, EventArgs e)
+    {
+        using (var googleAuthForm = new GoogleAuthForm())
+        {
+            googleAuthForm.ShowDialog(this);
+        }
+    }
+
     private void helpToolStripMenuItem_Click(object sender, EventArgs e)
     {
         using (var helpForm = new HelpForm())
@@ -335,7 +343,7 @@ public partial class MainForm : Form
             Cursor = Cursors.WaitCursor;
 
             // Load workspace configuration
-            var workspace = await _configurationService.GetWorkspaceAsync();
+            var workspace = await _configurationService.GetFellowWorkspaceAsync();
             if (string.IsNullOrWhiteSpace(workspace))
             {
                 MessageBox.Show("Workspace not configured. Please configure your workspace in API Keys settings.", "Configuration Required",
