@@ -84,4 +84,21 @@ public class MeetingTranscriptService
             await context.SaveChangesAsync();
         }
     }
+
+    public async Task<List<MeetingTranscript>> GetSelectedTranscriptsAsync()
+    {
+        using var context = new AppDbContext();
+        return await context.MeetingTranscripts
+            .Where(t => t.IsSelected)
+            .OrderBy(t => t.Title)
+            .ToListAsync();
+    }
+    
+    public async Task<MeetingTranscript?> GetTranscriptByIdAsync(int transcriptId)
+    {
+        using var context = new AppDbContext();
+        return await context.MeetingTranscripts
+            .Include(t => t.ApiKeys)
+            .FirstOrDefaultAsync(t => t.Id == transcriptId);
+    }
 }

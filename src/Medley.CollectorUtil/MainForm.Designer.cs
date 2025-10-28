@@ -34,6 +34,7 @@ namespace Medley.CollectorUtil
             aPIKeysToolStripMenuItem = new ToolStripMenuItem();
             downloadToolStripMenuItem = new ToolStripMenuItem();
             refreshToolStripMenuItem = new ToolStripMenuItem();
+            exportSelectedToolStripMenuItem = new ToolStripMenuItem();
             deleteAllToolStripMenuItem = new ToolStripMenuItem();
             dataGridViewTranscripts = new Zuby.ADGV.AdvancedDataGridView();
             statusStrip1 = new StatusStrip();
@@ -46,44 +47,62 @@ namespace Medley.CollectorUtil
             // menuStrip1
             // 
             menuStrip1.ImageScalingSize = new Size(20, 20);
-            menuStrip1.Items.AddRange(new ToolStripItem[] { aPIKeysToolStripMenuItem, downloadToolStripMenuItem, refreshToolStripMenuItem, deleteAllToolStripMenuItem });
+            menuStrip1.Items.AddRange(new ToolStripItem[] { aPIKeysToolStripMenuItem, downloadToolStripMenuItem, refreshToolStripMenuItem, exportSelectedToolStripMenuItem, deleteAllToolStripMenuItem });
             menuStrip1.Location = new Point(0, 0);
             menuStrip1.Name = "menuStrip1";
             menuStrip1.RenderMode = ToolStripRenderMode.Professional;
-            menuStrip1.Size = new Size(1137, 28);
+            menuStrip1.Size = new Size(1137, 78);
             menuStrip1.TabIndex = 0;
             menuStrip1.Text = "menuStrip1";
             // 
             // aPIKeysToolStripMenuItem
             // 
             aPIKeysToolStripMenuItem.Image = (Image)resources.GetObject("aPIKeysToolStripMenuItem.Image");
+            aPIKeysToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
             aPIKeysToolStripMenuItem.Name = "aPIKeysToolStripMenuItem";
-            aPIKeysToolStripMenuItem.Size = new Size(99, 24);
+            aPIKeysToolStripMenuItem.Size = new Size(79, 74);
             aPIKeysToolStripMenuItem.Text = "API Keys";
+            aPIKeysToolStripMenuItem.TextImageRelation = TextImageRelation.ImageAboveText;
             aPIKeysToolStripMenuItem.Click += apiKeysToolStripMenuItem_Click;
             // 
             // downloadToolStripMenuItem
             // 
             downloadToolStripMenuItem.Image = (Image)resources.GetObject("downloadToolStripMenuItem.Image");
+            downloadToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
             downloadToolStripMenuItem.Name = "downloadToolStripMenuItem";
-            downloadToolStripMenuItem.Size = new Size(112, 24);
+            downloadToolStripMenuItem.Size = new Size(92, 74);
             downloadToolStripMenuItem.Text = "Download";
+            downloadToolStripMenuItem.TextImageRelation = TextImageRelation.ImageAboveText;
             downloadToolStripMenuItem.Click += downloadToolStripMenuItem_Click;
             // 
             // refreshToolStripMenuItem
             // 
             refreshToolStripMenuItem.Image = (Image)resources.GetObject("refreshToolStripMenuItem.Image");
+            refreshToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
             refreshToolStripMenuItem.Name = "refreshToolStripMenuItem";
-            refreshToolStripMenuItem.Size = new Size(92, 24);
+            refreshToolStripMenuItem.Size = new Size(72, 74);
             refreshToolStripMenuItem.Text = "Refresh";
+            refreshToolStripMenuItem.TextImageRelation = TextImageRelation.ImageAboveText;
             refreshToolStripMenuItem.Click += toolStripButtonRefresh_Click;
+            // 
+            // exportSelectedToolStripMenuItem
+            // 
+            exportSelectedToolStripMenuItem.Image = (Image)resources.GetObject("exportSelectedToolStripMenuItem.Image");
+            exportSelectedToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
+            exportSelectedToolStripMenuItem.Name = "exportSelectedToolStripMenuItem";
+            exportSelectedToolStripMenuItem.Size = new Size(127, 74);
+            exportSelectedToolStripMenuItem.Text = "Export Selected";
+            exportSelectedToolStripMenuItem.TextImageRelation = TextImageRelation.ImageAboveText;
+            exportSelectedToolStripMenuItem.Click += exportSelectedToolStripMenuItem_Click;
             // 
             // deleteAllToolStripMenuItem
             // 
             deleteAllToolStripMenuItem.Image = (Image)resources.GetObject("deleteAllToolStripMenuItem.Image");
+            deleteAllToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
             deleteAllToolStripMenuItem.Name = "deleteAllToolStripMenuItem";
-            deleteAllToolStripMenuItem.Size = new Size(109, 24);
+            deleteAllToolStripMenuItem.Size = new Size(89, 74);
             deleteAllToolStripMenuItem.Text = "Delete All";
+            deleteAllToolStripMenuItem.TextImageRelation = TextImageRelation.ImageAboveText;
             deleteAllToolStripMenuItem.Click += toolStripButtonDeleteAll_Click;
             // 
             // dataGridViewTranscripts
@@ -95,15 +114,16 @@ namespace Medley.CollectorUtil
             dataGridViewTranscripts.Dock = DockStyle.Fill;
             dataGridViewTranscripts.FilterAndSortEnabled = true;
             dataGridViewTranscripts.FilterStringChangedInvokeBeforeDatasourceUpdate = true;
-            dataGridViewTranscripts.Location = new Point(0, 28);
+            dataGridViewTranscripts.Location = new Point(0, 78);
             dataGridViewTranscripts.MaxFilterButtonImageHeight = 23;
             dataGridViewTranscripts.Name = "dataGridViewTranscripts";
             dataGridViewTranscripts.RightToLeft = RightToLeft.No;
             dataGridViewTranscripts.RowHeadersWidth = 51;
             dataGridViewTranscripts.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dataGridViewTranscripts.Size = new Size(1137, 616);
+            dataGridViewTranscripts.Size = new Size(1137, 566);
             dataGridViewTranscripts.SortStringChangedInvokeBeforeDatasourceUpdate = true;
             dataGridViewTranscripts.TabIndex = 1;
+            dataGridViewTranscripts.CellClick += dataGridViewTranscripts_CellClick;
             dataGridViewTranscripts.CellContentClick += dataGridViewTranscripts_CellContentClick;
             dataGridViewTranscripts.CellValueChanged += dataGridViewTranscripts_CellValueChanged;
             // 
@@ -150,6 +170,7 @@ namespace Medley.CollectorUtil
         private ToolStripMenuItem aPIKeysToolStripMenuItem;
         private ToolStripMenuItem downloadToolStripMenuItem;
         private ToolStripMenuItem refreshToolStripMenuItem;
+        private ToolStripMenuItem exportSelectedToolStripMenuItem;
         private ToolStripMenuItem deleteAllToolStripMenuItem;
         private Zuby.ADGV.AdvancedDataGridView dataGridViewTranscripts;
         private StatusStrip statusStrip1;

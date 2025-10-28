@@ -16,7 +16,7 @@ public partial class ProgressForm : Form
         }
 
         lblStatus.Text = status;
-        Application.DoEvents();
+        System.Windows.Forms.Application.DoEvents();
     }
 
     public void AppendLog(string message)
@@ -30,7 +30,7 @@ public partial class ProgressForm : Form
         txtLog.AppendText(message + Environment.NewLine);
         txtLog.SelectionStart = txtLog.Text.Length;
         txtLog.ScrollToCaret();
-        Application.DoEvents();
+        System.Windows.Forms.Application.DoEvents();
     }
 
     private void btnClose_Click(object sender, EventArgs e)

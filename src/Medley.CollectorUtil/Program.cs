@@ -18,7 +18,7 @@ internal static class Program
         // Initialize database on startup
         InitializeDatabase();
         
-        Application.Run(new MainForm());
+        System.Windows.Forms.Application.Run(new MainForm());
     }
     
     private static void InitializeDatabase()

@@ -2,6 +2,7 @@ using Medley.CollectorUtil.Data;
 using Medley.CollectorUtil.Services;
 using System.ComponentModel;
 using System.Data;
+using System.IO.Compression;
 using System.Text.Json;
 using Zuby.ADGV;
 
@@ -15,6 +16,7 @@ public partial class MainForm : Form
     private int _totalRecordCount;
     private string? _lastSortColumn;
     private ListSortDirection _lastSortDirection = ListSortDirection.Ascending;
+    private Image? _viewIcon;
 
     public MainForm()
     {
@@ -173,6 +175,22 @@ public partial class MainForm : Form
             ReadOnly = true,
             SortMode = DataGridViewColumnSortMode.Automatic
         });
+
+        // Add View button column with icon
+        var resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
+        _viewIcon = (Image?)resources.GetObject("icon-search-20");
+        
+        var viewButtonColumn = new DataGridViewImageColumn
+        {
+            HeaderText = "Transcript",
+            Name = "ViewButton",
+            Image = _viewIcon,
+            ImageLayout = DataGridViewImageCellLayout.Normal,
+            FillWeight = 10,
+            Width = 40,
+            SortMode = DataGridViewColumnSortMode.NotSortable
+        };
+        dataGridViewTranscripts.Columns.Add(viewButtonColumn);
     }
 
     private void UpdateFilterCount()
@@ -524,12 +542,27 @@ public partial class MainForm : Form
         }
     }
 
+    private async void dataGridViewTranscripts_CellClick(object sender, DataGridViewCellEventArgs e)
+    {
+        // Handle View icon clicks
+        if (e.RowIndex >= 0 && e.ColumnIndex >= 0)
+        {
+            var column = dataGridViewTranscripts.Columns[e.ColumnIndex];
+            
+            if (column.Name == "ViewButton")
+            {
+                await ShowTranscriptViewerAsync(e.RowIndex);
+            }
+        }
+    }
+
     private async void dataGridViewTranscripts_CellContentClick(object sender, DataGridViewCellEventArgs e)
     {
         // Handle checkbox clicks for multi-selection
         if (e.RowIndex >= 0 && e.ColumnIndex >= 0)
         {
             var column = dataGridViewTranscripts.Columns[e.ColumnIndex];
+            
             if (column.Name == "IsSelected" && column is DataGridViewCheckBoxColumn)
             {
                 // Get the current value (before it changes)
@@ -581,6 +614,124 @@ public partial class MainForm : Form
                     }
                 }
             }
+        }
+    }
+
+    private async void exportSelectedToolStripMenuItem_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            var selectedTranscripts = await _transcriptService.GetSelectedTranscriptsAsync();
+
+            if (selectedTranscripts.Count == 0)
+            {
+                MessageBox.Show("No transcripts selected. Please select transcripts to export.", "No Selection",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (var saveFileDialog = new SaveFileDialog())
+            {
+                saveFileDialog.Filter = "Zip files (*.zip)|*.zip";
+                saveFileDialog.Title = "Export Selected Transcripts";
+                saveFileDialog.FileName = $"transcripts_{DateTime.Now:yyyyMMdd_HHmmss}.zip";
+
+                if (saveFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    exportSelectedToolStripMenuItem.Enabled = false;
+                    Cursor = Cursors.WaitCursor;
+
+                    await ExportTranscriptsToZipAsync(selectedTranscripts, saveFileDialog.FileName);
+
+                    MessageBox.Show($"Successfully exported {selectedTranscripts.Count} transcript{(selectedTranscripts.Count != 1 ? "s" : "")} to:\n{saveFileDialog.FileName}",
+                        "Export Complete",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error exporting transcripts: {ex.Message}", "Error",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            exportSelectedToolStripMenuItem.Enabled = true;
+            Cursor = Cursors.Default;
+        }
+    }
+
+    private async Task ExportTranscriptsToZipAsync(List<MeetingTranscript> transcripts, string zipFilePath)
+    {
+        await Task.Run(() =>
+        {
+            using (var zipArchive = ZipFile.Open(zipFilePath, ZipArchiveMode.Create))
+            {
+                foreach (var transcript in transcripts)
+                {
+                    if (string.IsNullOrWhiteSpace(transcript.FullJson))
+                        continue;
+
+                    // Create a safe filename from meeting ID and title
+                    var safeTitle = string.IsNullOrWhiteSpace(transcript.Title)
+                        ? "untitled"
+                        : string.Join("_", transcript.Title.Split(Path.GetInvalidFileNameChars()));
+
+                    var fileName = $"{transcript.MeetingId}_{safeTitle}.json";
+
+                    // Ensure filename isn't too long (max 255 chars for most filesystems)
+                    if (fileName.Length > 200)
+                    {
+                        fileName = fileName.Substring(0, 200) + ".json";
+                    }
+
+                    var entry = zipArchive.CreateEntry(fileName, CompressionLevel.Optimal);
+
+                    using (var entryStream = entry.Open())
+                    using (var writer = new StreamWriter(entryStream))
+                    {
+                        // Pretty print the JSON for readability
+                        var jsonDocument = JsonDocument.Parse(transcript.FullJson);
+                        var prettyJson = JsonSerializer.Serialize(jsonDocument, new JsonSerializerOptions
+                        {
+                            WriteIndented = true
+                        });
+                        writer.Write(prettyJson);
+                    }
+                }
+            }
+        });
+    }
+
+    private async Task ShowTranscriptViewerAsync(int rowIndex)
+    {
+        try
+        {
+            var idCell = dataGridViewTranscripts.Rows[rowIndex].Cells["Id"];
+            if (idCell.Value == null || idCell.Value == DBNull.Value)
+                return;
+
+            var id = Convert.ToInt32(idCell.Value);
+            
+            // Load the full transcript from database
+            var transcript = await _transcriptService.GetTranscriptByIdAsync(id);
+            if (transcript == null)
+            {
+                MessageBox.Show("Transcript not found.", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            using (var viewerForm = new TranscriptViewerForm(transcript))
+            {
+                viewerForm.ShowDialog(this);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error viewing transcript: {ex.Message}", "Error",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 }
