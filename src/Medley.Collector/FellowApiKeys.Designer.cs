@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            DataGridViewCellStyle dataGridViewCellStyle1 = new DataGridViewCellStyle();
             dgvApiKeys = new DataGridView();
             colName = new DataGridViewTextBoxColumn();
             colKey = new DataGridViewTextBoxColumn();
@@ -67,7 +68,9 @@
             // 
             // colEnabled
             // 
-            colEnabled.DefaultCellStyle.NullValue = true;
+            dataGridViewCellStyle1.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            dataGridViewCellStyle1.NullValue = true;
+            colEnabled.DefaultCellStyle = dataGridViewCellStyle1;
             colEnabled.HeaderText = "Enabled";
             colEnabled.MinimumWidth = 6;
             colEnabled.Name = "colEnabled";
@@ -100,7 +103,7 @@
             label1.AutoSize = true;
             label1.Location = new Point(15, 79);
             label1.Name = "label1";
-            label1.Size = new Size(234, 20);
+            label1.Size = new Size(199, 20);
             label1.TabIndex = 5;
             label1.Text = "Enter your Fellow.ai API keys:";
             // 
@@ -109,9 +112,9 @@
             lblWorkspace.AutoSize = true;
             lblWorkspace.Location = new Point(15, 15);
             lblWorkspace.Name = "lblWorkspace";
-            lblWorkspace.Size = new Size(85, 20);
+            lblWorkspace.Size = new Size(131, 20);
             lblWorkspace.TabIndex = 6;
-            lblWorkspace.Text = "Workspace:";
+            lblWorkspace.Text = "Fellow Workspace:";
             // 
             // txtWorkspace
             // 

@@ -22,7 +22,7 @@ public class GoogleDriveApiService
     /// <summary>
     /// Lists Google Meet videos from Google Drive
     /// </summary>
-    public async Task<List<DriveVideo>> ListGoogleMeetVideosAsync(CancellationToken cancellationToken = default)
+    public async Task<List<GoogleDriveVideo>> ListGoogleMeetVideosAsync(CancellationToken cancellationToken = default)
     {
         // Get Google OAuth credential
         var credential = await _googleAuthService.GetCredentialAsync();
@@ -53,7 +53,7 @@ public class GoogleDriveApiService
             descendantFolderIds.Add(folderId); // Include the folder itself
 
             // Filter videos to only those in the specified folder or its descendants
-            allVideos = allVideos.Where(v => descendantFolderIds.Contains(v.ParentFolderId)).ToList();
+            allVideos = allVideos.Where(v => descendantFolderIds.Contains(v.FolderId)).ToList();
         }
 
         return allVideos;
@@ -62,11 +62,11 @@ public class GoogleDriveApiService
     /// <summary>
     /// Builds a hierarchical map of all folders
     /// </summary>
-    private async Task<Dictionary<string, FolderInfo>> BuildFolderHierarchyAsync(
+    private async Task<Dictionary<string, GoogleDriveFolderInfo>> BuildFolderHierarchyAsync(
         DriveService driveService,
         CancellationToken cancellationToken)
     {
-        var folderHierarchy = new Dictionary<string, FolderInfo>();
+        var folderHierarchy = new Dictionary<string, GoogleDriveFolderInfo>();
 
         var request = driveService.Files.List();
         request.Q = "mimeType='application/vnd.google-apps.folder' and trashed=false";
@@ -83,7 +83,7 @@ public class GoogleDriveApiService
             foreach (var folder in result.Files)
             {
                 var parentId = folder.Parents?.FirstOrDefault(); // Assume only one parent
-                folderHierarchy[folder.Id] = new FolderInfo
+                folderHierarchy[folder.Id] = new GoogleDriveFolderInfo
                 {
                     Id = folder.Id,
                     Name = folder.Name,
@@ -101,7 +101,7 @@ public class GoogleDriveApiService
     /// <summary>
     /// Gets all descendant folder IDs recursively
     /// </summary>
-    private HashSet<string> GetDescendantFolderIds(string folderId, Dictionary<string, FolderInfo> folderHierarchy)
+    private HashSet<string> GetDescendantFolderIds(string folderId, Dictionary<string, GoogleDriveFolderInfo> folderHierarchy)
     {
         var descendants = new HashSet<string>();
         var queue = new Queue<string>();
@@ -128,7 +128,7 @@ public class GoogleDriveApiService
     /// <summary>
     /// Gets the full folder path as an array for a folder ID
     /// </summary>
-    private string[] GetFolderPathArray(string folderId, Dictionary<string, FolderInfo> folderHierarchy)
+    private string[] GetFolderPathArray(string folderId, Dictionary<string, GoogleDriveFolderInfo> folderHierarchy)
     {
         var pathParts = new List<string>();
         var currentId = folderId;
@@ -145,13 +145,13 @@ public class GoogleDriveApiService
     /// <summary>
     /// Lists videos matching a query
     /// </summary>
-    private async Task<List<DriveVideo>> ListVideosInQueryAsync(
+    private async Task<List<GoogleDriveVideo>> ListVideosInQueryAsync(
         DriveService driveService,
         string query,
-        Dictionary<string, FolderInfo> folderHierarchy,
+        Dictionary<string, GoogleDriveFolderInfo> folderHierarchy,
         CancellationToken cancellationToken)
     {
-        var videos = new List<DriveVideo>();
+        var videos = new List<GoogleDriveVideo>();
 
         var request = driveService.Files.List();
         request.Q = query;
@@ -177,14 +177,14 @@ public class GoogleDriveApiService
                     folderPathArray = GetFolderPathArray(parentId, folderHierarchy);
                 }
 
-                videos.Add(new DriveVideo
+                videos.Add(new GoogleDriveVideo
                 {
                     Id = file.Id,
                     Name = file.Name,
                     CreatedTime = file.CreatedTime,
-                    ParentFolderId = parentId ?? string.Empty,
+                    FolderId = parentId ?? string.Empty,
                     FolderPath = folderPathArray,
-                    LastModifyingUserName = file.LastModifyingUser?.DisplayName ?? string.Empty,
+                    LastModifyingUserDisplayName = file.LastModifyingUser?.DisplayName ?? string.Empty,
                     LastModifyingUserEmail = file.LastModifyingUser?.EmailAddress ?? string.Empty,
                     DurationMillis = file.VideoMediaMetadata?.DurationMillis
                 });

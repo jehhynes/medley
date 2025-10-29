@@ -313,7 +313,7 @@ public class FellowDownloadService
 
         return new MeetingTranscript
         {
-            Source = "Fellow.ai",
+            Source = TranscriptSource.Fellow,
             Title = recording.Title ?? "Untitled Meeting",
             ExternalId = recording.Id!,
             Date = recording.StartedAt,

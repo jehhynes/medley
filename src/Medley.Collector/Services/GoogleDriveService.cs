@@ -8,12 +8,12 @@ namespace Medley.Collector.Services;
 public class GoogleDriveService
 {
     private readonly GoogleDriveApiService _driveApiService;
-    private readonly GoogleDrivePlaywrightService _transcriptDownloader;
+    private readonly GoogleDriveDownloadService _transcriptDownloader;
     private readonly MeetingTranscriptService _transcriptService;
 
     public GoogleDriveService(
         GoogleDriveApiService driveApiService,
-        GoogleDrivePlaywrightService transcriptDownloader,
+        GoogleDriveDownloadService transcriptDownloader,
         MeetingTranscriptService transcriptService)
     {
         _driveApiService = driveApiService;
@@ -41,7 +41,7 @@ public class GoogleDriveService
             return summary;
         }
 
-        // Step 2: Use Playwright to download transcripts for each video
+        // Step 2: Use an HttpClient to download transcripts for each video using saved browser cookies for authentication
         foreach (var video in videos)
         {
             if (cancellationToken.IsCancellationRequested)
@@ -56,7 +56,7 @@ public class GoogleDriveService
                 progress.Report(new DownloadProgress { Message = $"Processing: {video.Name}" });
 
                 // Check if transcript already exists
-                var existingTranscript = await _transcriptService.GetTranscriptByExternalIdAsync($"gdrive_{video.Id}");
+                var existingTranscript = await _transcriptService.GetTranscriptByExternalIdAsync(video.Id, TranscriptSource.Google);
                 if (existingTranscript != null)
                 {
                     progress.Report(new DownloadProgress { Message = $"  Skipped (already exists): {video.Name}" });
@@ -79,6 +79,12 @@ public class GoogleDriveService
                     progress.Report(new DownloadProgress { Message = $"  No transcript available: {video.Name}" });
                     summary.Skipped++;
                 }
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("Authentication failed") || ex.Message.Contains("Browser authentication required"))
+            {
+                // Authentication errors should stop all processing
+                progress.Report(new DownloadProgress { Message = $"  Authentication Error: {ex.Message}" });
+                throw;
             }
             catch (Exception ex)
             {

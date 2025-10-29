@@ -32,17 +32,35 @@ public partial class TranscriptViewerForm : Form
         
         try
         {
-            // Deserialize the FullJson to get the recording
-            var recording = JsonSerializer.Deserialize<FellowRecording>(transcript.Content);
-            
-            if (recording?.Transcript?.SpeechSegments != null && recording.Transcript.SpeechSegments.Count > 0)
+            if (transcript.Source == TranscriptSource.Google)
             {
-                var consolidatedTranscript = ConsolidateTranscriptBySpeaker(recording.Transcript.SpeechSegments);
-                textBoxTranscript.Text = consolidatedTranscript;
+                // Deserialize the DriveVideo object
+                var driveVideo = JsonSerializer.Deserialize<GoogleDriveVideo>(transcript.Content);
+                
+                if (driveVideo?.Transcript != null && driveVideo.Transcript.Count > 0)
+                {
+                    var consolidatedTranscript = ConsolidateGoogleTranscript(driveVideo.Transcript);
+                    textBoxTranscript.Text = consolidatedTranscript;
+                }
+                else
+                {
+                    textBoxTranscript.Text = "No transcript available.";
+                }
             }
             else
             {
-                textBoxTranscript.Text = "No transcript available.";
+                // Deserialize the FullJson to get the recording (Fellow)
+                var recording = JsonSerializer.Deserialize<FellowRecording>(transcript.Content);
+                
+                if (recording?.Transcript?.SpeechSegments != null && recording.Transcript.SpeechSegments.Count > 0)
+                {
+                    var consolidatedTranscript = ConsolidateTranscriptBySpeaker(recording.Transcript.SpeechSegments);
+                    textBoxTranscript.Text = consolidatedTranscript;
+                }
+                else
+                {
+                    textBoxTranscript.Text = "No transcript available.";
+                }
             }
         }
         catch (Exception ex)
@@ -90,6 +108,28 @@ public partial class TranscriptViewerForm : Form
         if (currentSpeaker != null && currentTexts.Count > 0)
         {
             result.AppendLine($"{currentSpeaker}: {string.Join(" ", currentTexts)}");
+        }
+
+        return result.ToString().TrimEnd();
+    }
+
+    /// <summary>
+    /// Consolidates Google Drive transcript segments into a readable format
+    /// </summary>
+    private static string ConsolidateGoogleTranscript(List<GoogleTranscriptSegment> segments)
+    {
+        if (segments == null || segments.Count == 0)
+            return string.Empty;
+
+        var result = new System.Text.StringBuilder();
+
+        foreach (var segment in segments)
+        {
+            if (!string.IsNullOrWhiteSpace(segment.Text))
+            {
+                // Format: [HH:MM:SS] Text
+                result.AppendLine($"[{segment.StartTime:hh\\:mm\\:ss}] {segment.Text.Trim()}");
+            }
         }
 
         return result.ToString().TrimEnd();

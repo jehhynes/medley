@@ -114,6 +114,16 @@ public partial class MainForm : Form
         SetupDataGridView();
 
         await LoadTranscriptsAsync();
+        
+        ConfigureGoogleFeaturesVisibility();
+    }
+
+    private void ConfigureGoogleFeaturesVisibility()
+    {
+        var googleFeaturesEnabled = _configurationService.GetGoogleFeaturesEnabled();
+        
+        googleAuthToolStripMenuItem.Visible = googleFeaturesEnabled;
+        downloadGoogleDriveToolStripMenuItem.Visible = googleFeaturesEnabled;
     }
 
     private void SetupDataGridView()
@@ -138,7 +148,8 @@ public partial class MainForm : Form
             DataPropertyName = "IsSelected",
             HeaderText = "Export",
             Name = "IsSelected",
-            FillWeight = 10,
+            Width = 80,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
             ReadOnly = false,
             SortMode = DataGridViewColumnSortMode.Automatic,
             ThreeState = true
@@ -149,7 +160,8 @@ public partial class MainForm : Form
             DataPropertyName = "Title",
             HeaderText = "Title",
             Name = "Title",
-            FillWeight = 30,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+            MinimumWidth = 150,
             ReadOnly = true,
             SortMode = DataGridViewColumnSortMode.Automatic
         });
@@ -159,7 +171,8 @@ public partial class MainForm : Form
             DataPropertyName = "Date",
             HeaderText = "Date",
             Name = "Date",
-            FillWeight = 15,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells,
+            MinimumWidth = 100,
             DefaultCellStyle = new DataGridViewCellStyle { Format = "g" },
             ReadOnly = true,
             SortMode = DataGridViewColumnSortMode.Automatic
@@ -170,17 +183,19 @@ public partial class MainForm : Form
             DataPropertyName = "Participants",
             HeaderText = "Participants",
             Name = "Participants",
-            FillWeight = 25,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells,
+            MinimumWidth = 100,
             ReadOnly = true,
             SortMode = DataGridViewColumnSortMode.Automatic
         });
 
         dataGridViewTranscripts.Columns.Add(new DataGridViewTextBoxColumn
         {
-            DataPropertyName = "ApiKeyNames",
-            HeaderText = "API Keys",
-            Name = "ApiKeyNames",
-            FillWeight = 20,
+            DataPropertyName = "Source",
+            HeaderText = "Source",
+            Name = "Source",
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells,
+            MinimumWidth = 100,
             ReadOnly = true,
             SortMode = DataGridViewColumnSortMode.Automatic
         });
@@ -188,9 +203,10 @@ public partial class MainForm : Form
         dataGridViewTranscripts.Columns.Add(new DataGridViewTextBoxColumn
         {
             DataPropertyName = "LengthInMinutes",
-            HeaderText = "Length (min)",
+            HeaderText = "Min",
             Name = "LengthInMinutes",
-            FillWeight = 10,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
+            Width = 60,
             ReadOnly = true,
             SortMode = DataGridViewColumnSortMode.Automatic
         });
@@ -198,9 +214,10 @@ public partial class MainForm : Form
         dataGridViewTranscripts.Columns.Add(new DataGridViewTextBoxColumn
         {
             DataPropertyName = "TranscriptLength",
-            HeaderText = "Length (chars)",
+            HeaderText = "Char",
             Name = "TranscriptLength",
-            FillWeight = 12,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
+            Width = 80,
             ReadOnly = true,
             SortMode = DataGridViewColumnSortMode.Automatic,
             DefaultCellStyle = new DataGridViewCellStyle { Format = "N0" }
@@ -223,9 +240,9 @@ public partial class MainForm : Form
             Name = "ViewButton",
             Image = _viewIcon,
             ImageLayout = DataGridViewImageCellLayout.Normal,
-            FillWeight = 10,
-            Width = 40,
-            SortMode = DataGridViewColumnSortMode.NotSortable
+            Width = 100,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
+            SortMode = DataGridViewColumnSortMode.NotSortable,
         };
         dataGridViewTranscripts.Columns.Add(viewButtonColumn);
     }
@@ -258,7 +275,7 @@ public partial class MainForm : Form
             dataTable.Columns.Add("Title", typeof(string));
             dataTable.Columns.Add("Date", typeof(DateTime));
             dataTable.Columns.Add("Participants", typeof(string));
-            dataTable.Columns.Add("ApiKeyNames", typeof(string));
+            dataTable.Columns.Add("Source", typeof(string));
             dataTable.Columns.Add("LengthInMinutes", typeof(int));
             dataTable.Columns.Add("TranscriptLength", typeof(int));
 
@@ -277,7 +294,7 @@ public partial class MainForm : Form
                     vm.Title ?? string.Empty,
                     localDate.HasValue ? (object)localDate.Value : DBNull.Value,
                     vm.Participants ?? string.Empty,
-                    vm.ApiKeyNames ?? string.Empty,
+                    vm.Source ?? string.Empty,
                     vm.LengthInMinutes.HasValue ? (object)vm.LengthInMinutes.Value : DBNull.Value,
                     vm.TranscriptLength.HasValue ? (object)vm.TranscriptLength.Value : DBNull.Value
                 );
@@ -592,7 +609,7 @@ public partial class MainForm : Form
 
             // Create services
             var driveApiService = new GoogleDriveApiService(googleAuthService, _configurationService);
-            var transcriptDownloader = new GoogleDrivePlaywrightService(_configurationService);
+            var transcriptDownloader = new GoogleDriveDownloadService(_configurationService);
             var downloadService = new GoogleDriveService(
                 driveApiService,
                 transcriptDownloader,
@@ -706,10 +723,13 @@ public partial class MainForm : Form
             var hasUndecided = await _transcriptService.HasUndecidedTranscriptsAsync();
             if (hasUndecided)
             {
-                MessageBox.Show("Some transcripts have not been marked for export or exclusion (undecided state).\n\nPlease review all transcripts and mark them as either included or excluded before exporting.",
+                var result = MessageBox.Show("Some transcripts have not been marked for export or exclusion (undecided state).\n\nUndecided transcripts will not be included in the export.\n\nDo you want to continue with the export?",
                     "Undecided Transcripts",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                if (result == DialogResult.No)
+                {
+                    return;
+                }
             }
 
             var selectedTranscripts = await _transcriptService.GetSelectedTranscriptsAsync();

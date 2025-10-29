@@ -107,11 +107,11 @@ public class MeetingTranscriptService
             .FirstOrDefaultAsync(t => t.Id == transcriptId);
     }
 
-    public async Task<MeetingTranscript?> GetTranscriptByExternalIdAsync(string externalId)
+    public async Task<MeetingTranscript?> GetTranscriptByExternalIdAsync(string externalId, TranscriptSource source)
     {
         using var context = new AppDbContext();
         return await context.MeetingTranscripts
-            .FirstOrDefaultAsync(t => t.ExternalId == externalId);
+            .FirstOrDefaultAsync(t => t.ExternalId == externalId && t.Source == source);
     }
 
     public async Task CreateTranscriptAsync(MeetingTranscript transcript)

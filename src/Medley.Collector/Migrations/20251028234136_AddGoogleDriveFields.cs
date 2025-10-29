@@ -35,13 +35,13 @@ namespace Medley.Collector.Migrations
                 table: "MeetingTranscripts",
                 newName: "IX_MeetingTranscripts_ExternalId");
 
-            migrationBuilder.AddColumn<string>(
+            migrationBuilder.AddColumn<int>(
                 name: "Source",
                 table: "MeetingTranscripts",
-                type: "TEXT",
+                type: "INTEGER",
                 maxLength: 50,
                 nullable: false,
-                defaultValue: "Fellow.ai");
+                defaultValue: 0);
         }
 
         /// <inheritdoc />

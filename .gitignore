@@ -6,4 +6,5 @@ src/**/obj/
 /src/Medley.Web/wwwroot/css/site.min.css
 /src/Medley.Web/wwwroot/css/site.css
 /src/Medley.Web/appsettings.Development.json
+/src/Medley.Collector/appsettings.Development.json
 /src/**/*.user

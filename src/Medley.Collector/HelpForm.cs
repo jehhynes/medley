@@ -44,7 +44,7 @@ WORKFLOW
 3. Select multiple rows (Ctrl+Click or Shift+Click)
 4. Use keyboard shortcuts to quickly mark/unmark transcripts
 5. Export only includes transcripts marked as 'true' (green)
-6. All transcripts must be decided (no white rows) before export
+6. Undecided transcripts (white rows) will be skipped during export
 
 MENU OPTIONS
   • API Keys    - Manage Fellow.app API keys and workspace settings
@@ -62,7 +62,7 @@ IMPORTANT BUSINESS RULES
   • Duplicate transcripts for the same API key are skipped
   • Download includes retry logic (3 attempts) for failed operations
   • Export creates a ZIP file with one JSON file per transcript
-  • Export requires all transcripts to be marked (no undecided/white rows)
+  • Export will warn about undecided transcripts but allows you to proceed
   • Transcript viewer consolidates consecutive segments by the same speaker
 
 TIPS

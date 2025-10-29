@@ -17,7 +17,10 @@ public class MeetingTranscript
 
     [Required]
     [MaxLength(50)]
-    public required string Source { get; set; }
+    public required TranscriptSource Source { get; set; }
+    
+    [MaxLength(1000)]
+    public string? SourceDetail { get; set; }
     
     public DateTime? Date { get; set; }
     
@@ -38,3 +41,10 @@ public class MeetingTranscript
     // Navigation properties
     public ICollection<ApiKey> ApiKeys { get; set; } = new List<ApiKey>();
 }
+
+public enum TranscriptSource
+{
+    Fellow = 0,
+    Google = 1
+}
+
