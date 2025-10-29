@@ -21,7 +21,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medley.Tests.Domain", "test
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medley.Tests.Application", "tests\Medley.Tests.Application\Medley.Tests.Application.csproj", "{CF93F536-69E6-43F8-8DA2-11E9555A8A44}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medley.CollectorUtil", "Medley.CollectorUtil\Medley.CollectorUtil.csproj", "{076FBD96-907C-46AE-A740-B3BC6DA8BC64}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medley.Collector", "Medley.Collector\Medley.Collector.csproj", "{076FBD96-907C-46AE-A740-B3BC6DA8BC64}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
