@@ -422,11 +422,11 @@ public class FellowDownloadService
     private MeetingTranscript CreateTranscriptFromRecording(FellowRecording recording, string? userEmailDomain)
     {
         // Extract participants from transcript speakers
-        // Strip letter suffixes like " - A", " - B", etc.
+        // Strip letter suffixes like " - A", " - B", etc. and numeric suffixes like " (1)", " (2)", etc.
         var participants = recording.Transcript?.SpeechSegments != null
             ? string.Join(", ", recording.Transcript.SpeechSegments
                 .Where(s => !string.IsNullOrWhiteSpace(s.Speaker))
-                .Select(s => Regex.Replace(s.Speaker!, @"\s*-\s*[A-Z]$", ""))
+                .Select(s => Regex.Replace(s.Speaker!, @"\s*(-\s*[A-Z]|\(\d+\))$", ""))
                 .Distinct()
                 .OrderBy(s => s))
             : null;
