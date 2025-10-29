@@ -40,6 +40,10 @@ public class MeetingTranscript
     
     public MeetingScope? Scope { get; set; }
     
+    public bool IsArchived { get; set; } = false;
+    
+    public DateTime? ExportedAt { get; set; }
+    
     // Navigation properties
     public ICollection<ApiKey> ApiKeys { get; set; } = new List<ApiKey>();
 }

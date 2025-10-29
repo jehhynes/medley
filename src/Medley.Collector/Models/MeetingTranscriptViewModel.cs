@@ -13,6 +13,7 @@ public class MeetingTranscriptViewModel
     public string? Scope { get; set; }
     public int? LengthInMinutes { get; set; }
     public int? TranscriptLength { get; set; }
+    public DateTime? ExportedAt { get; set; }
     
     public static MeetingTranscriptViewModel FromMeetingTranscript(MeetingTranscript transcript)
     {
@@ -41,7 +42,8 @@ public class MeetingTranscriptViewModel
             Source = source,
             Scope = transcript.Scope?.ToString(),
             LengthInMinutes = transcript.LengthInMinutes,
-            TranscriptLength = transcript.TranscriptLength
+            TranscriptLength = transcript.TranscriptLength,
+            ExportedAt = transcript.ExportedAt
         };
     }
 }

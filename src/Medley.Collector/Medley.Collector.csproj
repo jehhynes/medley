@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="icons\icon-check-20.png" />
     <None Remove="icons\icon-search-20.png" />
   </ItemGroup>
 
@@ -22,6 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="icons\icon-check-20.png" />
     <EmbeddedResource Include="icons\icon-search-20.png" />
   </ItemGroup>
 

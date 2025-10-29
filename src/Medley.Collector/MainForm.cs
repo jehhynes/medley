@@ -17,6 +17,8 @@ public partial class MainForm : Form
     private string? _lastSortColumn;
     private ListSortDirection _lastSortDirection = ListSortDirection.Ascending;
     private Image? _viewIcon;
+    private Image? _checkIcon;
+    private bool _isViewingArchived = false;
 
     public MainForm()
     {
@@ -236,8 +238,8 @@ public partial class MainForm : Form
 
         // Add View button column with icon from embedded resource
         var assembly = System.Reflection.Assembly.GetExecutingAssembly();
-        var resourceName = "Medley.Collector.icons.icon-search-20.png";
-        using (var stream = assembly.GetManifestResourceStream(resourceName))
+        var viewResourceName = "Medley.Collector.icons.icon-search-20.png";
+        using (var stream = assembly.GetManifestResourceStream(viewResourceName))
         {
             if (stream != null)
             {
@@ -256,6 +258,34 @@ public partial class MainForm : Form
             SortMode = DataGridViewColumnSortMode.NotSortable,
         };
         dataGridViewTranscripts.Columns.Add(viewButtonColumn);
+
+        // Load check icon for Exported column
+        var checkResourceName = "Medley.Collector.icons.icon-check-20.png";
+        using (var stream = assembly.GetManifestResourceStream(checkResourceName))
+        {
+            if (stream != null)
+            {
+                _checkIcon = Image.FromStream(stream);
+            }
+        }
+
+        // Add Exported column with check icon
+        var exportedColumn = new DataGridViewImageColumn
+        {
+            DataPropertyName = "ExportedIcon",
+            HeaderText = "Exported",
+            Name = "Exported",
+            ImageLayout = DataGridViewImageCellLayout.Normal,
+            Width = 80,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
+            SortMode = DataGridViewColumnSortMode.Automatic,
+            DefaultCellStyle = new DataGridViewCellStyle
+            {
+                NullValue = null, // Ensure blank cells for null values
+                Alignment = DataGridViewContentAlignment.MiddleCenter // Center the image
+            }
+        };
+        dataGridViewTranscripts.Columns.Add(exportedColumn);
     }
 
     private void UpdateFilterCount()
@@ -272,7 +302,7 @@ public partial class MainForm : Form
     {
         try
         {
-            var transcripts = await _transcriptService.GetAllTranscriptsAsync();
+            var transcripts = await _transcriptService.GetAllTranscriptsAsync(_isViewingArchived);
             var viewModels = transcripts
                 .OrderByDescending(t => t.Date)
                 .Select(MeetingTranscriptViewModel.FromMeetingTranscript)
@@ -290,6 +320,8 @@ public partial class MainForm : Form
             dataTable.Columns.Add("Scope", typeof(string));
             dataTable.Columns.Add("LengthInMinutes", typeof(int));
             dataTable.Columns.Add("TranscriptLength", typeof(int));
+            dataTable.Columns.Add("ExportedIcon", typeof(Image));
+            dataTable.Columns["ExportedIcon"].AllowDBNull = true;
 
             foreach (var vm in viewModels)
             {
@@ -309,7 +341,8 @@ public partial class MainForm : Form
                     vm.Source ?? string.Empty,
                     vm.Scope ?? string.Empty,
                     vm.LengthInMinutes.HasValue ? (object)vm.LengthInMinutes.Value : DBNull.Value,
-                    vm.TranscriptLength.HasValue ? (object)vm.TranscriptLength.Value : DBNull.Value
+                    vm.TranscriptLength.HasValue ? (object)vm.TranscriptLength.Value : DBNull.Value,
+                    vm.ExportedAt.HasValue ? (object)_checkIcon! : DBNull.Value
                 );
             }
 
@@ -767,10 +800,17 @@ public partial class MainForm : Form
 
                     await _exportService.ExportTranscriptsToZipAsync(selectedTranscripts, saveFileDialog.FileName);
 
+                    // Mark transcripts as exported
+                    var transcriptIds = selectedTranscripts.Select(t => t.Id).ToList();
+                    await _transcriptService.MarkTranscriptsAsExportedAsync(transcriptIds, DateTime.UtcNow);
+
                     MessageBox.Show($"Successfully exported {selectedTranscripts.Count} transcript{(selectedTranscripts.Count != 1 ? "s" : "")} to:\n{saveFileDialog.FileName}",
                         "Export Complete",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Information);
+
+                    // Refresh the grid to show updated exported status
+                    await LoadTranscriptsAsync();
                 }
             }
         }
@@ -842,6 +882,10 @@ public partial class MainForm : Form
 
     private async void DataGridViewTranscripts_KeyDown(object? sender, KeyEventArgs e)
     {
+        // Disable keyboard shortcuts when viewing archived items
+        if (_isViewingArchived)
+            return;
+
         // Handle keyboard shortcuts for batch editing
         bool? newValue = null;
         bool shouldUpdate = false;
@@ -919,5 +963,291 @@ public partial class MainForm : Form
 
         // Refresh the grid to show updated colors
         dataGridViewTranscripts.Refresh();
+    }
+
+    private async void viewActiveItemsToolStripMenuItem_Click(object sender, EventArgs e)
+    {
+        if (!_isViewingArchived) return; // Already viewing active
+        
+        _isViewingArchived = false;
+        viewActiveItemsToolStripMenuItem.Checked = true;
+        viewArchivedItemsToolStripMenuItem.Checked = false;
+        
+        // Enable archive operations, disable restore operations
+        archiveSelectedToolStripMenuItem.Enabled = true;
+        archiveExcludedToolStripMenuItem.Enabled = true;
+        archiveExportedToolStripMenuItem.Enabled = true;
+        restoreSelectedToolStripMenuItem.Enabled = false;
+        restoreAllToolStripMenuItem.Enabled = false;
+        
+        // Enable selection column
+        if (dataGridViewTranscripts.Columns["IsSelected"] is DataGridViewCheckBoxColumn col)
+        {
+            col.ReadOnly = false;
+        }
+        
+        await LoadTranscriptsAsync();
+    }
+
+    private async void viewArchivedItemsToolStripMenuItem_Click(object sender, EventArgs e)
+    {
+        if (_isViewingArchived) return; // Already viewing archived
+        
+        _isViewingArchived = true;
+        viewActiveItemsToolStripMenuItem.Checked = false;
+        viewArchivedItemsToolStripMenuItem.Checked = true;
+        
+        // Disable archive operations, enable restore operations
+        archiveSelectedToolStripMenuItem.Enabled = false;
+        archiveExcludedToolStripMenuItem.Enabled = false;
+        archiveExportedToolStripMenuItem.Enabled = false;
+        restoreSelectedToolStripMenuItem.Enabled = true;
+        restoreAllToolStripMenuItem.Enabled = true;
+        
+        // Disable selection column
+        if (dataGridViewTranscripts.Columns["IsSelected"] is DataGridViewCheckBoxColumn col)
+        {
+            col.ReadOnly = true;
+        }
+        
+        await LoadTranscriptsAsync();
+    }
+
+    private async void archiveSelectedToolStripMenuItem_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            // Get selected rows
+            var selectedRows = dataGridViewTranscripts.SelectedRows.Cast<DataGridViewRow>().ToList();
+            var selectedCells = dataGridViewTranscripts.SelectedCells.Cast<DataGridViewCell>()
+                .Select(c => c.OwningRow)
+                .Distinct()
+                .ToList();
+
+            var rowsToArchive = selectedRows.Count > 0 ? selectedRows : selectedCells;
+
+            if (rowsToArchive.Count == 0)
+            {
+                MessageBox.Show("No transcripts selected. Please select transcripts to archive.", "No Selection",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var result = MessageBox.Show(
+                $"Are you sure you want to archive {rowsToArchive.Count} transcript{(rowsToArchive.Count != 1 ? "s" : "")}?",
+                "Confirm Archive",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (result == DialogResult.Yes)
+            {
+                archiveSelectedToolStripMenuItem.Enabled = false;
+                Cursor = Cursors.WaitCursor;
+
+                var ids = rowsToArchive
+                    .Select(r => r.Cells["Id"].Value)
+                    .Where(v => v != null && v != DBNull.Value)
+                    .Select(v => Convert.ToInt32(v))
+                    .ToList();
+
+                await _transcriptService.ArchiveTranscriptsByIdsAsync(ids);
+
+                MessageBox.Show($"Successfully archived {ids.Count} transcript{(ids.Count != 1 ? "s" : "")}.",
+                    "Archive Complete",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+
+                await LoadTranscriptsAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error archiving transcripts: {ex.Message}", "Error",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            archiveSelectedToolStripMenuItem.Enabled = true;
+            Cursor = Cursors.Default;
+        }
+    }
+
+    private async void archiveExcludedToolStripMenuItem_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            var result = MessageBox.Show(
+                "Are you sure you want to archive all transcripts marked as excluded from export?",
+                "Confirm Archive Excluded",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (result == DialogResult.Yes)
+            {
+                archiveExcludedToolStripMenuItem.Enabled = false;
+                Cursor = Cursors.WaitCursor;
+
+                var count = await _transcriptService.ArchiveExcludedAsync();
+
+                MessageBox.Show($"Successfully archived {count} excluded transcript{(count != 1 ? "s" : "")}.",
+                    "Archive Complete",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+
+                await LoadTranscriptsAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error archiving excluded transcripts: {ex.Message}", "Error",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            archiveExcludedToolStripMenuItem.Enabled = true;
+            Cursor = Cursors.Default;
+        }
+    }
+
+    private async void archiveExportedToolStripMenuItem_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            var result = MessageBox.Show(
+                "Are you sure you want to archive all transcripts that have been exported?",
+                "Confirm Archive Exported",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (result == DialogResult.Yes)
+            {
+                archiveExportedToolStripMenuItem.Enabled = false;
+                Cursor = Cursors.WaitCursor;
+
+                var count = await _transcriptService.ArchiveExportedAsync();
+
+                MessageBox.Show($"Successfully archived {count} exported transcript{(count != 1 ? "s" : "")}.",
+                    "Archive Complete",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+
+                await LoadTranscriptsAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error archiving exported transcripts: {ex.Message}", "Error",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            archiveExportedToolStripMenuItem.Enabled = true;
+            Cursor = Cursors.Default;
+        }
+    }
+
+    private async void restoreSelectedToolStripMenuItem_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            // Get selected rows
+            var selectedRows = dataGridViewTranscripts.SelectedRows.Cast<DataGridViewRow>().ToList();
+            var selectedCells = dataGridViewTranscripts.SelectedCells.Cast<DataGridViewCell>()
+                .Select(c => c.OwningRow)
+                .Distinct()
+                .ToList();
+
+            var rowsToRestore = selectedRows.Count > 0 ? selectedRows : selectedCells;
+
+            if (rowsToRestore.Count == 0)
+            {
+                MessageBox.Show("No transcripts selected. Please select transcripts to restore.", "No Selection",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var result = MessageBox.Show(
+                $"Are you sure you want to restore {rowsToRestore.Count} transcript{(rowsToRestore.Count != 1 ? "s" : "")}?",
+                "Confirm Restore",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (result == DialogResult.Yes)
+            {
+                restoreSelectedToolStripMenuItem.Enabled = false;
+                Cursor = Cursors.WaitCursor;
+
+                var ids = rowsToRestore
+                    .Select(r => r.Cells["Id"].Value)
+                    .Where(v => v != null && v != DBNull.Value)
+                    .Select(v => Convert.ToInt32(v))
+                    .ToList();
+
+                await _transcriptService.RestoreTranscriptsByIdsAsync(ids);
+
+                MessageBox.Show($"Successfully restored {ids.Count} transcript{(ids.Count != 1 ? "s" : "")}.",
+                    "Restore Complete",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+
+                await LoadTranscriptsAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error restoring transcripts: {ex.Message}", "Error",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            restoreSelectedToolStripMenuItem.Enabled = true;
+            Cursor = Cursors.Default;
+        }
+    }
+
+    private async void restoreAllToolStripMenuItem_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            var count = await _transcriptService.GetTranscriptCountAsync(isArchived: true);
+
+            if (count == 0)
+            {
+                MessageBox.Show("No archived transcripts to restore.", "Restore All",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var result = MessageBox.Show(
+                $"Are you sure you want to restore all {count} archived transcript{(count != 1 ? "s" : "")}?",
+                "Confirm Restore All",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (result == DialogResult.Yes)
+            {
+                restoreAllToolStripMenuItem.Enabled = false;
+                Cursor = Cursors.WaitCursor;
+
+                var restoredCount = await _transcriptService.RestoreAllArchivedAsync();
+
+                MessageBox.Show($"Successfully restored {restoredCount} transcript{(restoredCount != 1 ? "s" : "")}.",
+                    "Restore Complete",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+
+                await LoadTranscriptsAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error restoring transcripts: {ex.Message}", "Error",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            restoreAllToolStripMenuItem.Enabled = true;
+            Cursor = Cursors.Default;
+        }
     }
 }

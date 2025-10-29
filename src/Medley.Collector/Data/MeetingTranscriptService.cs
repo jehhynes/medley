@@ -4,11 +4,12 @@ namespace Medley.Collector.Data;
 
 public class MeetingTranscriptService
 {
-    public async Task<List<MeetingTranscript>> GetAllTranscriptsAsync()
+    public async Task<List<MeetingTranscript>> GetAllTranscriptsAsync(bool isArchived = false)
     {
         using var context = new AppDbContext();
         return await context.MeetingTranscripts
             .Include(t => t.ApiKeys)
+            .Where(t => t.IsArchived == isArchived)
             .OrderByDescending(t => t.Date)
             .ToListAsync();
     }
@@ -57,10 +58,12 @@ public class MeetingTranscriptService
         await context.SaveChangesAsync();
     }
     
-    public async Task<int> GetTranscriptCountAsync()
+    public async Task<int> GetTranscriptCountAsync(bool isArchived = false)
     {
         using var context = new AppDbContext();
-        return await context.MeetingTranscripts.CountAsync();
+        return await context.MeetingTranscripts
+            .Where(t => t.IsArchived == isArchived)
+            .CountAsync();
     }
     
     public async Task<int> DeleteAllTranscriptsAsync()
@@ -83,19 +86,20 @@ public class MeetingTranscriptService
         }
     }
 
-    public async Task<List<MeetingTranscript>> GetSelectedTranscriptsAsync()
+    public async Task<List<MeetingTranscript>> GetSelectedTranscriptsAsync(bool isArchived = false)
     {
         using var context = new AppDbContext();
         return await context.MeetingTranscripts
-            .Where(t => t.IsSelected == true)
+            .Where(t => t.IsSelected == true && t.IsArchived == isArchived)
             .OrderBy(t => t.Title)
             .ToListAsync();
     }
     
-    public async Task<bool> HasUndecidedTranscriptsAsync()
+    public async Task<bool> HasUndecidedTranscriptsAsync(bool isArchived = false)
     {
         using var context = new AppDbContext();
         return await context.MeetingTranscripts
+            .Where(t => t.IsArchived == isArchived)
             .AnyAsync(t => t.IsSelected == null);
     }
     
@@ -118,6 +122,99 @@ public class MeetingTranscriptService
     {
         using var context = new AppDbContext();
         context.MeetingTranscripts.Add(transcript);
+        await context.SaveChangesAsync();
+    }
+
+    public async Task ArchiveTranscriptsByIdsAsync(List<int> ids)
+    {
+        using var context = new AppDbContext();
+        var transcripts = await context.MeetingTranscripts
+            .Where(t => ids.Contains(t.Id))
+            .ToListAsync();
+        
+        foreach (var transcript in transcripts)
+        {
+            transcript.IsArchived = true;
+        }
+        
+        await context.SaveChangesAsync();
+    }
+
+    public async Task<int> ArchiveExcludedAsync()
+    {
+        using var context = new AppDbContext();
+        var transcripts = await context.MeetingTranscripts
+            .Where(t => t.IsSelected == false && t.IsArchived == false)
+            .ToListAsync();
+        
+        foreach (var transcript in transcripts)
+        {
+            transcript.IsArchived = true;
+        }
+        
+        await context.SaveChangesAsync();
+        return transcripts.Count;
+    }
+
+    public async Task<int> ArchiveExportedAsync()
+    {
+        using var context = new AppDbContext();
+        var transcripts = await context.MeetingTranscripts
+            .Where(t => t.ExportedAt != null && t.IsArchived == false)
+            .ToListAsync();
+        
+        foreach (var transcript in transcripts)
+        {
+            transcript.IsArchived = true;
+        }
+        
+        await context.SaveChangesAsync();
+        return transcripts.Count;
+    }
+
+    public async Task RestoreTranscriptsByIdsAsync(List<int> ids)
+    {
+        using var context = new AppDbContext();
+        var transcripts = await context.MeetingTranscripts
+            .Where(t => ids.Contains(t.Id))
+            .ToListAsync();
+        
+        foreach (var transcript in transcripts)
+        {
+            transcript.IsArchived = false;
+        }
+        
+        await context.SaveChangesAsync();
+    }
+
+    public async Task<int> RestoreAllArchivedAsync()
+    {
+        using var context = new AppDbContext();
+        var transcripts = await context.MeetingTranscripts
+            .Where(t => t.IsArchived == true)
+            .ToListAsync();
+        
+        foreach (var transcript in transcripts)
+        {
+            transcript.IsArchived = false;
+        }
+        
+        await context.SaveChangesAsync();
+        return transcripts.Count;
+    }
+
+    public async Task MarkTranscriptsAsExportedAsync(List<int> ids, DateTime exportedAt)
+    {
+        using var context = new AppDbContext();
+        var transcripts = await context.MeetingTranscripts
+            .Where(t => ids.Contains(t.Id))
+            .ToListAsync();
+        
+        foreach (var transcript in transcripts)
+        {
+            transcript.ExportedAt = exportedAt;
+        }
+        
         await context.SaveChangesAsync();
     }
 }

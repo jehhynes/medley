@@ -35,7 +35,18 @@ namespace Medley.Collector
             googleAuthToolStripMenuItem = new ToolStripMenuItem();
             downloadToolStripMenuItem = new ToolStripMenuItem();
             downloadGoogleDriveToolStripMenuItem = new ToolStripMenuItem();
+            viewToolStripMenuItem = new ToolStripMenuItem();
             refreshToolStripMenuItem = new ToolStripMenuItem();
+            toolStripSeparator1 = new ToolStripSeparator();
+            viewActiveItemsToolStripMenuItem = new ToolStripMenuItem();
+            viewArchivedItemsToolStripMenuItem = new ToolStripMenuItem();
+            toolStripSeparator2 = new ToolStripSeparator();
+            archiveSelectedToolStripMenuItem = new ToolStripMenuItem();
+            archiveExcludedToolStripMenuItem = new ToolStripMenuItem();
+            archiveExportedToolStripMenuItem = new ToolStripMenuItem();
+            toolStripSeparator3 = new ToolStripSeparator();
+            restoreSelectedToolStripMenuItem = new ToolStripMenuItem();
+            restoreAllToolStripMenuItem = new ToolStripMenuItem();
             exportSelectedToolStripMenuItem = new ToolStripMenuItem();
             deleteAllToolStripMenuItem = new ToolStripMenuItem();
             helpToolStripMenuItem = new ToolStripMenuItem();
@@ -50,11 +61,12 @@ namespace Medley.Collector
             // menuStrip1
             // 
             menuStrip1.ImageScalingSize = new Size(20, 20);
-            menuStrip1.Items.AddRange(new ToolStripItem[] { aPIKeysToolStripMenuItem, googleAuthToolStripMenuItem, downloadToolStripMenuItem, downloadGoogleDriveToolStripMenuItem, refreshToolStripMenuItem, exportSelectedToolStripMenuItem, deleteAllToolStripMenuItem, helpToolStripMenuItem });
+            menuStrip1.Items.AddRange(new ToolStripItem[] { aPIKeysToolStripMenuItem, googleAuthToolStripMenuItem, downloadToolStripMenuItem, downloadGoogleDriveToolStripMenuItem, viewToolStripMenuItem, exportSelectedToolStripMenuItem, deleteAllToolStripMenuItem, helpToolStripMenuItem });
             menuStrip1.Location = new Point(0, 0);
             menuStrip1.Name = "menuStrip1";
+            menuStrip1.Padding = new Padding(5, 2, 0, 2);
             menuStrip1.RenderMode = ToolStripRenderMode.Professional;
-            menuStrip1.Size = new Size(1698, 78);
+            menuStrip1.Size = new Size(1486, 73);
             menuStrip1.TabIndex = 0;
             menuStrip1.Text = "menuStrip1";
             // 
@@ -63,7 +75,7 @@ namespace Medley.Collector
             aPIKeysToolStripMenuItem.Image = (Image)resources.GetObject("aPIKeysToolStripMenuItem.Image");
             aPIKeysToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
             aPIKeysToolStripMenuItem.Name = "aPIKeysToolStripMenuItem";
-            aPIKeysToolStripMenuItem.Size = new Size(79, 74);
+            aPIKeysToolStripMenuItem.Size = new Size(64, 69);
             aPIKeysToolStripMenuItem.Text = "API Keys";
             aPIKeysToolStripMenuItem.TextImageRelation = TextImageRelation.ImageAboveText;
             aPIKeysToolStripMenuItem.Click += apiKeysToolStripMenuItem_Click;
@@ -73,7 +85,7 @@ namespace Medley.Collector
             googleAuthToolStripMenuItem.Image = (Image)resources.GetObject("googleAuthToolStripMenuItem.Image");
             googleAuthToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
             googleAuthToolStripMenuItem.Name = "googleAuthToolStripMenuItem";
-            googleAuthToolStripMenuItem.Size = new Size(107, 74);
+            googleAuthToolStripMenuItem.Size = new Size(86, 69);
             googleAuthToolStripMenuItem.Text = "Google Auth";
             googleAuthToolStripMenuItem.TextImageRelation = TextImageRelation.ImageAboveText;
             googleAuthToolStripMenuItem.Click += googleAuthToolStripMenuItem_Click;
@@ -83,37 +95,112 @@ namespace Medley.Collector
             downloadToolStripMenuItem.Image = (Image)resources.GetObject("downloadToolStripMenuItem.Image");
             downloadToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
             downloadToolStripMenuItem.Name = "downloadToolStripMenuItem";
-            downloadToolStripMenuItem.Size = new Size(92, 74);
+            downloadToolStripMenuItem.Size = new Size(73, 69);
             downloadToolStripMenuItem.Text = "Download";
             downloadToolStripMenuItem.TextImageRelation = TextImageRelation.ImageAboveText;
             downloadToolStripMenuItem.Click += downloadToolStripMenuItem_Click;
             // 
             // downloadGoogleDriveToolStripMenuItem
             // 
-            downloadGoogleDriveToolStripMenuItem.Image = (Image)resources.GetObject("downloadToolStripMenuItem.Image");
+            downloadGoogleDriveToolStripMenuItem.Image = (Image)resources.GetObject("downloadGoogleDriveToolStripMenuItem.Image");
             downloadGoogleDriveToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
             downloadGoogleDriveToolStripMenuItem.Name = "downloadGoogleDriveToolStripMenuItem";
-            downloadGoogleDriveToolStripMenuItem.Size = new Size(120, 74);
+            downloadGoogleDriveToolStripMenuItem.Size = new Size(87, 69);
             downloadGoogleDriveToolStripMenuItem.Text = "Google Drive";
             downloadGoogleDriveToolStripMenuItem.TextImageRelation = TextImageRelation.ImageAboveText;
             downloadGoogleDriveToolStripMenuItem.Click += downloadGoogleDriveToolStripMenuItem_Click;
             // 
+            // viewToolStripMenuItem
+            // 
+            viewToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { refreshToolStripMenuItem, toolStripSeparator1, viewActiveItemsToolStripMenuItem, viewArchivedItemsToolStripMenuItem, toolStripSeparator2, archiveSelectedToolStripMenuItem, archiveExcludedToolStripMenuItem, archiveExportedToolStripMenuItem, toolStripSeparator3, restoreSelectedToolStripMenuItem, restoreAllToolStripMenuItem });
+            viewToolStripMenuItem.Image = (Image)resources.GetObject("viewToolStripMenuItem.Image");
+            viewToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
+            viewToolStripMenuItem.Name = "viewToolStripMenuItem";
+            viewToolStripMenuItem.Size = new Size(62, 69);
+            viewToolStripMenuItem.Text = "View";
+            viewToolStripMenuItem.TextImageRelation = TextImageRelation.ImageAboveText;
+            // 
             // refreshToolStripMenuItem
             // 
-            refreshToolStripMenuItem.Image = (Image)resources.GetObject("refreshToolStripMenuItem.Image");
-            refreshToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
             refreshToolStripMenuItem.Name = "refreshToolStripMenuItem";
-            refreshToolStripMenuItem.Size = new Size(72, 74);
+            refreshToolStripMenuItem.Size = new Size(181, 22);
             refreshToolStripMenuItem.Text = "Refresh";
-            refreshToolStripMenuItem.TextImageRelation = TextImageRelation.ImageAboveText;
             refreshToolStripMenuItem.Click += toolStripButtonRefresh_Click;
+            // 
+            // toolStripSeparator1
+            // 
+            toolStripSeparator1.Name = "toolStripSeparator1";
+            toolStripSeparator1.Size = new Size(178, 6);
+            // 
+            // viewActiveItemsToolStripMenuItem
+            // 
+            viewActiveItemsToolStripMenuItem.Checked = true;
+            viewActiveItemsToolStripMenuItem.CheckState = CheckState.Checked;
+            viewActiveItemsToolStripMenuItem.Name = "viewActiveItemsToolStripMenuItem";
+            viewActiveItemsToolStripMenuItem.Size = new Size(181, 22);
+            viewActiveItemsToolStripMenuItem.Text = "View Active Items";
+            viewActiveItemsToolStripMenuItem.Click += viewActiveItemsToolStripMenuItem_Click;
+            // 
+            // viewArchivedItemsToolStripMenuItem
+            // 
+            viewArchivedItemsToolStripMenuItem.Name = "viewArchivedItemsToolStripMenuItem";
+            viewArchivedItemsToolStripMenuItem.Size = new Size(181, 22);
+            viewArchivedItemsToolStripMenuItem.Text = "View Archived Items";
+            viewArchivedItemsToolStripMenuItem.Click += viewArchivedItemsToolStripMenuItem_Click;
+            // 
+            // toolStripSeparator2
+            // 
+            toolStripSeparator2.Name = "toolStripSeparator2";
+            toolStripSeparator2.Size = new Size(178, 6);
+            // 
+            // archiveSelectedToolStripMenuItem
+            // 
+            archiveSelectedToolStripMenuItem.Name = "archiveSelectedToolStripMenuItem";
+            archiveSelectedToolStripMenuItem.Size = new Size(181, 22);
+            archiveSelectedToolStripMenuItem.Text = "Archive Selected";
+            archiveSelectedToolStripMenuItem.Click += archiveSelectedToolStripMenuItem_Click;
+            // 
+            // archiveExcludedToolStripMenuItem
+            // 
+            archiveExcludedToolStripMenuItem.Name = "archiveExcludedToolStripMenuItem";
+            archiveExcludedToolStripMenuItem.Size = new Size(181, 22);
+            archiveExcludedToolStripMenuItem.Text = "Archive Excluded";
+            archiveExcludedToolStripMenuItem.Click += archiveExcludedToolStripMenuItem_Click;
+            // 
+            // archiveExportedToolStripMenuItem
+            // 
+            archiveExportedToolStripMenuItem.Name = "archiveExportedToolStripMenuItem";
+            archiveExportedToolStripMenuItem.Size = new Size(181, 22);
+            archiveExportedToolStripMenuItem.Text = "Archive Exported";
+            archiveExportedToolStripMenuItem.Click += archiveExportedToolStripMenuItem_Click;
+            // 
+            // toolStripSeparator3
+            // 
+            toolStripSeparator3.Name = "toolStripSeparator3";
+            toolStripSeparator3.Size = new Size(178, 6);
+            // 
+            // restoreSelectedToolStripMenuItem
+            // 
+            restoreSelectedToolStripMenuItem.Enabled = false;
+            restoreSelectedToolStripMenuItem.Name = "restoreSelectedToolStripMenuItem";
+            restoreSelectedToolStripMenuItem.Size = new Size(181, 22);
+            restoreSelectedToolStripMenuItem.Text = "Restore Selected";
+            restoreSelectedToolStripMenuItem.Click += restoreSelectedToolStripMenuItem_Click;
+            // 
+            // restoreAllToolStripMenuItem
+            // 
+            restoreAllToolStripMenuItem.Enabled = false;
+            restoreAllToolStripMenuItem.Name = "restoreAllToolStripMenuItem";
+            restoreAllToolStripMenuItem.Size = new Size(181, 22);
+            restoreAllToolStripMenuItem.Text = "Restore All";
+            restoreAllToolStripMenuItem.Click += restoreAllToolStripMenuItem_Click;
             // 
             // exportSelectedToolStripMenuItem
             // 
             exportSelectedToolStripMenuItem.Image = (Image)resources.GetObject("exportSelectedToolStripMenuItem.Image");
             exportSelectedToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
             exportSelectedToolStripMenuItem.Name = "exportSelectedToolStripMenuItem";
-            exportSelectedToolStripMenuItem.Size = new Size(66, 74);
+            exportSelectedToolStripMenuItem.Size = new Size(62, 69);
             exportSelectedToolStripMenuItem.Text = "Export";
             exportSelectedToolStripMenuItem.TextImageRelation = TextImageRelation.ImageAboveText;
             exportSelectedToolStripMenuItem.Click += exportSelectedToolStripMenuItem_Click;
@@ -123,7 +210,7 @@ namespace Medley.Collector
             deleteAllToolStripMenuItem.Image = (Image)resources.GetObject("deleteAllToolStripMenuItem.Image");
             deleteAllToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
             deleteAllToolStripMenuItem.Name = "deleteAllToolStripMenuItem";
-            deleteAllToolStripMenuItem.Size = new Size(89, 74);
+            deleteAllToolStripMenuItem.Size = new Size(69, 69);
             deleteAllToolStripMenuItem.Text = "Delete All";
             deleteAllToolStripMenuItem.TextImageRelation = TextImageRelation.ImageAboveText;
             deleteAllToolStripMenuItem.Click += toolStripButtonDeleteAll_Click;
@@ -133,7 +220,7 @@ namespace Medley.Collector
             helpToolStripMenuItem.Image = (Image)resources.GetObject("helpToolStripMenuItem.Image");
             helpToolStripMenuItem.ImageScaling = ToolStripItemImageScaling.None;
             helpToolStripMenuItem.Name = "helpToolStripMenuItem";
-            helpToolStripMenuItem.Size = new Size(64, 74);
+            helpToolStripMenuItem.Size = new Size(62, 69);
             helpToolStripMenuItem.Text = "Help";
             helpToolStripMenuItem.TextImageRelation = TextImageRelation.ImageAboveText;
             helpToolStripMenuItem.Click += helpToolStripMenuItem_Click;
@@ -147,13 +234,14 @@ namespace Medley.Collector
             dataGridViewTranscripts.Dock = DockStyle.Fill;
             dataGridViewTranscripts.FilterAndSortEnabled = true;
             dataGridViewTranscripts.FilterStringChangedInvokeBeforeDatasourceUpdate = true;
-            dataGridViewTranscripts.Location = new Point(0, 78);
+            dataGridViewTranscripts.Location = new Point(0, 73);
+            dataGridViewTranscripts.Margin = new Padding(3, 2, 3, 2);
             dataGridViewTranscripts.MaxFilterButtonImageHeight = 23;
             dataGridViewTranscripts.Name = "dataGridViewTranscripts";
             dataGridViewTranscripts.RightToLeft = RightToLeft.No;
             dataGridViewTranscripts.RowHeadersWidth = 51;
             dataGridViewTranscripts.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dataGridViewTranscripts.Size = new Size(1698, 949);
+            dataGridViewTranscripts.Size = new Size(1486, 695);
             dataGridViewTranscripts.SortStringChangedInvokeBeforeDatasourceUpdate = true;
             dataGridViewTranscripts.TabIndex = 1;
             dataGridViewTranscripts.CellClick += dataGridViewTranscripts_CellClick;
@@ -163,27 +251,29 @@ namespace Medley.Collector
             // 
             statusStrip1.ImageScalingSize = new Size(20, 20);
             statusStrip1.Items.AddRange(new ToolStripItem[] { toolStripLabelCount });
-            statusStrip1.Location = new Point(0, 1027);
+            statusStrip1.Location = new Point(0, 768);
             statusStrip1.Name = "statusStrip1";
-            statusStrip1.Size = new Size(1698, 26);
+            statusStrip1.Padding = new Padding(1, 0, 12, 0);
+            statusStrip1.Size = new Size(1486, 22);
             statusStrip1.TabIndex = 3;
             statusStrip1.Text = "statusStrip1";
             // 
             // toolStripLabelCount
             // 
             toolStripLabelCount.Name = "toolStripLabelCount";
-            toolStripLabelCount.Size = new Size(89, 20);
+            toolStripLabelCount.Size = new Size(71, 17);
             toolStripLabelCount.Text = "0 transcripts";
             // 
             // MainForm
             // 
-            AutoScaleDimensions = new SizeF(8F, 20F);
+            AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1698, 1053);
+            ClientSize = new Size(1486, 790);
             Controls.Add(dataGridViewTranscripts);
             Controls.Add(statusStrip1);
             Controls.Add(menuStrip1);
             MainMenuStrip = menuStrip1;
+            Margin = new Padding(3, 2, 3, 2);
             Name = "MainForm";
             Text = "Medley Collector";
             Load += MainForm_Load;
@@ -204,6 +294,17 @@ namespace Medley.Collector
         private ToolStripMenuItem downloadToolStripMenuItem;
         private ToolStripMenuItem downloadGoogleDriveToolStripMenuItem;
         private ToolStripMenuItem refreshToolStripMenuItem;
+        private ToolStripMenuItem viewToolStripMenuItem;
+        private ToolStripMenuItem viewActiveItemsToolStripMenuItem;
+        private ToolStripMenuItem viewArchivedItemsToolStripMenuItem;
+        private ToolStripSeparator toolStripSeparator1;
+        private ToolStripMenuItem archiveSelectedToolStripMenuItem;
+        private ToolStripMenuItem archiveExcludedToolStripMenuItem;
+        private ToolStripMenuItem archiveExportedToolStripMenuItem;
+        private ToolStripSeparator toolStripSeparator2;
+        private ToolStripMenuItem restoreSelectedToolStripMenuItem;
+        private ToolStripMenuItem restoreAllToolStripMenuItem;
+        private ToolStripSeparator toolStripSeparator3;
         private ToolStripMenuItem exportSelectedToolStripMenuItem;
         private ToolStripMenuItem deleteAllToolStripMenuItem;
         private ToolStripMenuItem helpToolStripMenuItem;
