@@ -34,6 +34,60 @@ public class FellowDownloadService
 
         try
         {
+            // Get authenticated user to determine email domain
+            progress?.Report(new DownloadProgress
+            {
+                ApiKeyName = apiKey.Name,
+                Message = $"Fetching user info for '{apiKey.Name}'..."
+            });
+            
+            string? userEmailDomain = null;
+            var meResponse = await _fellowApiService.GetAuthenticatedUserAsync(apiKey.Key);
+            if (meResponse?.User?.Email == null)
+            {
+                var errorMessage = "Failed to fetch user info: No email address returned from API";
+                progress?.Report(new DownloadProgress
+                {
+                    ApiKeyName = apiKey.Name,
+                    Message = errorMessage
+                });
+                throw new InvalidOperationException(errorMessage);
+            }
+            
+            var emailParts = meResponse.User.Email.Split('@');
+            if (emailParts.Length != 2)
+            {
+                var errorMessage = $"Invalid email format returned from API: {meResponse.User.Email}";
+                progress?.Report(new DownloadProgress
+                {
+                    ApiKeyName = apiKey.Name,
+                    Message = errorMessage
+                });
+                throw new InvalidOperationException(errorMessage);
+            }
+            
+            userEmailDomain = emailParts[1].ToLowerInvariant();
+            progress?.Report(new DownloadProgress
+            {
+                ApiKeyName = apiKey.Name,
+                Message = $"User email domain: {userEmailDomain}"
+            });
+            
+            // First, fetch all notes and build a dictionary
+            progress?.Report(new DownloadProgress
+            {
+                ApiKeyName = apiKey.Name,
+                Message = $"Fetching notes for '{apiKey.Name}'..."
+            });
+            
+            var notesDictionary = await FetchAllNotesAsync(apiKey, progress, cancellationToken);
+            
+            progress?.Report(new DownloadProgress
+            {
+                ApiKeyName = apiKey.Name,
+                Message = $"Fetched {notesDictionary.Count} notes for '{apiKey.Name}'"
+            });
+
             do
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -42,7 +96,7 @@ public class FellowDownloadService
                 progress?.Report(new DownloadProgress
                 {
                     ApiKeyName = apiKey.Name,
-                    Message = $"Fetching page {pageNumber} for '{apiKey.Name}'..."
+                    Message = $"Fetching recordings page {pageNumber} for '{apiKey.Name}'..."
                 });
 
                 try
@@ -107,9 +161,15 @@ public class FellowDownloadService
                                 }
                             }
 
+                            // Attach note if available
+                            if (!string.IsNullOrWhiteSpace(recording.NoteId) && notesDictionary.TryGetValue(recording.NoteId, out var note))
+                            {
+                                recording.Note = note;
+                            }
+
                             // Process recording with retry logic
                             var result = await ProcessRecordingWithRetryAsync(
-                                recording, apiKey, progress, cancellationToken);
+                                recording, apiKey, userEmailDomain, progress, cancellationToken);
 
                             switch (result)
                             {
@@ -188,6 +248,88 @@ public class FellowDownloadService
         return summary;
     }
 
+    private async Task<Dictionary<string, FellowNote>> FetchAllNotesAsync(
+        ApiKey apiKey,
+        IProgress<DownloadProgress>? progress,
+        CancellationToken cancellationToken)
+    {
+        var notesDictionary = new Dictionary<string, FellowNote>();
+        string? cursor = null;
+        var pageNumber = 0;
+
+        try
+        {
+            do
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                pageNumber++;
+
+                progress?.Report(new DownloadProgress
+                {
+                    ApiKeyName = apiKey.Name,
+                    Message = $"Fetching notes page {pageNumber} for '{apiKey.Name}'..."
+                });
+
+                FellowNotesResponse? response = null;
+                for (int attempt = 1; attempt <= MaxRetries; attempt++)
+                {
+                    try
+                    {
+                        response = await _fellowApiService.ListNotesAsync(apiKey.Key, cursor);
+                        break;
+                    }
+                    catch (Exception ex) when (attempt < MaxRetries)
+                    {
+                        var delayMs = InitialDelayMs * (int)Math.Pow(2, attempt - 1);
+                        progress?.Report(new DownloadProgress
+                        {
+                            ApiKeyName = apiKey.Name,
+                            Message = $"Error fetching notes page {pageNumber} (attempt {attempt}/{MaxRetries}): {ex.Message}. Retrying in {delayMs}ms..."
+                        });
+                        await Task.Delay(delayMs, cancellationToken);
+                    }
+                }
+
+                if (response?.Notes?.Data == null || response.Notes.Data.Count == 0)
+                {
+                    progress?.Report(new DownloadProgress
+                    {
+                        ApiKeyName = apiKey.Name,
+                        Message = $"No more notes found for '{apiKey.Name}'"
+                    });
+                    break;
+                }
+
+                foreach (var note in response.Notes.Data)
+                {
+                    if (!string.IsNullOrWhiteSpace(note.Id))
+                    {
+                        notesDictionary[note.Id] = note;
+                    }
+                }
+
+                progress?.Report(new DownloadProgress
+                {
+                    ApiKeyName = apiKey.Name,
+                    Message = $"Notes page {pageNumber} complete: {response.Notes.Data.Count} notes"
+                });
+
+                cursor = response.Notes.PageInfo?.Cursor;
+
+            } while (!string.IsNullOrWhiteSpace(cursor));
+        }
+        catch (Exception ex)
+        {
+            progress?.Report(new DownloadProgress
+            {
+                ApiKeyName = apiKey.Name,
+                Message = $"Warning: Error fetching notes: {ex.Message}. Continuing without notes..."
+            });
+        }
+
+        return notesDictionary;
+    }
+
     private async Task<FellowRecordingsResponse?> FetchPageWithRetryAsync(
         ApiKey apiKey,
         string? cursor,
@@ -220,6 +362,7 @@ public class FellowDownloadService
     private async Task<ProcessingResult> ProcessRecordingWithRetryAsync(
         FellowRecording recording,
         ApiKey apiKey,
+        string? userEmailDomain,
         IProgress<DownloadProgress>? progress,
         CancellationToken cancellationToken)
     {
@@ -241,7 +384,7 @@ public class FellowDownloadService
                     return ProcessingResult.Skipped;
                 }
 
-                var transcript = CreateTranscriptFromRecording(recording);
+                var transcript = CreateTranscriptFromRecording(recording, userEmailDomain);
                 await _transcriptService.SaveTranscriptAsync(transcript, apiKey);
 
                 progress?.Report(new DownloadProgress
@@ -276,7 +419,7 @@ public class FellowDownloadService
         return ProcessingResult.Error;
     }
 
-    private MeetingTranscript CreateTranscriptFromRecording(FellowRecording recording)
+    private MeetingTranscript CreateTranscriptFromRecording(FellowRecording recording, string? userEmailDomain)
     {
         // Extract participants from transcript speakers
         // Strip letter suffixes like " - A", " - B", etc.
@@ -305,6 +448,34 @@ public class FellowDownloadService
                 .Sum(s => s.Text!.Length);
         }
 
+        // Determine meeting scope based on attendee email domains
+        MeetingScope? scope = null;
+        if (!string.IsNullOrWhiteSpace(userEmailDomain) && 
+            recording.Note?.EventAttendees != null && 
+            recording.Note.EventAttendees.Count > 0)
+        {
+            var hasExternalAttendee = false;
+            
+            foreach (var attendee in recording.Note.EventAttendees)
+            {
+                if (!string.IsNullOrWhiteSpace(attendee.Email))
+                {
+                    var attendeeEmailParts = attendee.Email.Split('@');
+                    if (attendeeEmailParts.Length == 2)
+                    {
+                        var attendeeDomain = attendeeEmailParts[1].ToLowerInvariant();
+                        if (attendeeDomain != userEmailDomain)
+                        {
+                            hasExternalAttendee = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            scope = hasExternalAttendee ? MeetingScope.External : MeetingScope.Internal;
+        }
+
         // Serialize full JSON - save the raw response content
         var fullJson = JsonSerializer.Serialize(recording, new JsonSerializerOptions
         {
@@ -320,6 +491,7 @@ public class FellowDownloadService
             Participants = participants,
             LengthInMinutes = lengthInMinutes,
             TranscriptLength = transcriptLength,
+            Scope = scope,
             Content = fullJson
         };
     }

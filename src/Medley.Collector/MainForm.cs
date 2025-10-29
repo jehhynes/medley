@@ -191,6 +191,17 @@ public partial class MainForm : Form
 
         dataGridViewTranscripts.Columns.Add(new DataGridViewTextBoxColumn
         {
+            DataPropertyName = "Scope",
+            HeaderText = "Scope",
+            Name = "Scope",
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells,
+            MinimumWidth = 80,
+            ReadOnly = true,
+            SortMode = DataGridViewColumnSortMode.Automatic
+        });
+
+        dataGridViewTranscripts.Columns.Add(new DataGridViewTextBoxColumn
+        {
             DataPropertyName = "Source",
             HeaderText = "Source",
             Name = "Source",
@@ -236,7 +247,7 @@ public partial class MainForm : Form
 
         var viewButtonColumn = new DataGridViewImageColumn
         {
-            HeaderText = "Transcript",
+            HeaderText = "Content",
             Name = "ViewButton",
             Image = _viewIcon,
             ImageLayout = DataGridViewImageCellLayout.Normal,
@@ -276,6 +287,7 @@ public partial class MainForm : Form
             dataTable.Columns.Add("Date", typeof(DateTime));
             dataTable.Columns.Add("Participants", typeof(string));
             dataTable.Columns.Add("Source", typeof(string));
+            dataTable.Columns.Add("Scope", typeof(string));
             dataTable.Columns.Add("LengthInMinutes", typeof(int));
             dataTable.Columns.Add("TranscriptLength", typeof(int));
 
@@ -295,6 +307,7 @@ public partial class MainForm : Form
                     localDate.HasValue ? (object)localDate.Value : DBNull.Value,
                     vm.Participants ?? string.Empty,
                     vm.Source ?? string.Empty,
+                    vm.Scope ?? string.Empty,
                     vm.LengthInMinutes.HasValue ? (object)vm.LengthInMinutes.Value : DBNull.Value,
                     vm.TranscriptLength.HasValue ? (object)vm.TranscriptLength.Value : DBNull.Value
                 );

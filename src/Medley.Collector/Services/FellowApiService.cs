@@ -65,6 +65,66 @@ public class FellowApiService
         return JsonSerializer.Deserialize<FellowRecordingsResponse>(responseContent, _jsonOptions);
     }
     
+    public async Task<FellowNotesResponse?> ListNotesAsync(
+        string apiKey,
+        string? cursor = null,
+        int pageSize = 50,
+        bool includeEventAttendees = true,
+        bool includeContentMarkdown = true)
+    {
+        await EnforceRateLimitAsync();
+        
+        var requestBody = new Dictionary<string, object?>
+        {
+            ["pagination"] = new Dictionary<string, object?>
+            {
+                ["page_size"] = pageSize
+            }
+        };
+        
+        if (!string.IsNullOrWhiteSpace(cursor))
+        {
+            ((Dictionary<string, object?>)requestBody["pagination"]!)["cursor"] = cursor;
+        }
+        
+        // Add include options for event_attendees and content_markdown
+        var include = new Dictionary<string, object?>
+        {
+            ["event_attendees"] = includeEventAttendees,
+            ["content_markdown"] = includeContentMarkdown
+        };
+        requestBody["include"] = include;
+        
+        var jsonContent = JsonSerializer.Serialize(requestBody);
+        var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+        
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/notes")
+        {
+            Content = content
+        };
+        request.Headers.Add("X-API-KEY", apiKey);
+        
+        var response = await _httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+        
+        var responseContent = await response.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<FellowNotesResponse>(responseContent, _jsonOptions);
+    }
+    
+    public async Task<FellowMeResponse?> GetAuthenticatedUserAsync(string apiKey)
+    {
+        await EnforceRateLimitAsync();
+        
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/me");
+        request.Headers.Add("X-API-KEY", apiKey);
+        
+        var response = await _httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+        
+        var responseContent = await response.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<FellowMeResponse>(responseContent, _jsonOptions);
+    }
+    
     private static async Task EnforceRateLimitAsync()
     {
         await _rateLimiter.WaitAsync();

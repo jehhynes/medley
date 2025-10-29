@@ -10,6 +10,7 @@ public class MeetingTranscriptViewModel
     public DateTime? Date { get; set; }
     public string? Participants { get; set; }
     public string Source { get; set; } = string.Empty;
+    public string? Scope { get; set; }
     public int? LengthInMinutes { get; set; }
     public int? TranscriptLength { get; set; }
     
@@ -38,6 +39,7 @@ public class MeetingTranscriptViewModel
             Date = transcript.Date,
             Participants = transcript.Participants,
             Source = source,
+            Scope = transcript.Scope?.ToString(),
             LengthInMinutes = transcript.LengthInMinutes,
             TranscriptLength = transcript.TranscriptLength
         };

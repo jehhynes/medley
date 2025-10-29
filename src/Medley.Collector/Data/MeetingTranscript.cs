@@ -38,6 +38,8 @@ public class MeetingTranscript
     
     public int? TranscriptLength { get; set; }
     
+    public MeetingScope? Scope { get; set; }
+    
     // Navigation properties
     public ICollection<ApiKey> ApiKeys { get; set; } = new List<ApiKey>();
 }
@@ -46,5 +48,11 @@ public enum TranscriptSource
 {
     Fellow = 0,
     Google = 1
+}
+
+public enum MeetingScope
+{
+    Internal = 0,
+    External = 1
 }
 
