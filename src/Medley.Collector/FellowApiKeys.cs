@@ -47,9 +47,23 @@ namespace Medley.Collector
                     var key = row.Cells[1].Value?.ToString()?.Trim();
                     var isEnabled = row.Cells[2].Value is bool enabled ? enabled : true;
                     
+                    // Get date values from cells (if they exist)
+                    var createdAt = row.Cells[3].Tag is DateTime created ? created : DateTime.UtcNow;
+                    var lastUsed = row.Cells[4].Tag as DateTime?;
+                    var downloadedThrough = row.Cells[5].Tag as DateTime?;
+                    
                     if (!string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(key))
                     {
-                        apiKeys.Add(new ApiKey { Id = id, Name = name, Key = key, IsEnabled = isEnabled });
+                        apiKeys.Add(new ApiKey 
+                        { 
+                            Id = id, 
+                            Name = name, 
+                            Key = key, 
+                            IsEnabled = isEnabled,
+                            CreatedAt = createdAt,
+                            LastUsed = lastUsed,
+                            DownloadedThroughDate = downloadedThrough
+                        });
                     }
                 }
 
@@ -98,9 +112,20 @@ namespace Medley.Collector
                 
                 foreach (var apiKey in keys)
                 {
-                    var rowIndex = dgvApiKeys.Rows.Add(apiKey.Name, apiKey.Key, apiKey.IsEnabled);
-                    // Store the Id in the first cell's Tag property for later retrieval
+                    var rowIndex = dgvApiKeys.Rows.Add(
+                        apiKey.Name, 
+                        apiKey.Key, 
+                        apiKey.IsEnabled,
+                        apiKey.CreatedAt.ToLocalTime().ToString("g"),
+                        apiKey.LastUsed?.ToLocalTime().ToString("g") ?? "",
+                        apiKey.DownloadedThroughDate?.ToLocalTime().ToString("g") ?? ""
+                    );
+                    
+                    // Store the Id and date values in cell Tags for later retrieval
                     dgvApiKeys.Rows[rowIndex].Cells[0].Tag = apiKey.Id;
+                    dgvApiKeys.Rows[rowIndex].Cells[3].Tag = apiKey.CreatedAt;
+                    dgvApiKeys.Rows[rowIndex].Cells[4].Tag = apiKey.LastUsed;
+                    dgvApiKeys.Rows[rowIndex].Cells[5].Tag = apiKey.DownloadedThroughDate;
                 }
             }
             catch (Exception ex)

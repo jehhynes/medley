@@ -73,4 +73,28 @@ public class ApiKeyService
             await context.SaveChangesAsync();
         }
     }
+
+    public async Task UpdateDownloadTrackingAsync(int apiKeyId, DateTime lastUsed, DateTime? downloadedThroughDate)
+    {
+        using var context = new AppDbContext();
+        var apiKey = await context.ApiKeys.FindAsync(apiKeyId);
+        if (apiKey != null)
+        {
+            apiKey.LastUsed = lastUsed;
+            apiKey.DownloadedThroughDate = downloadedThroughDate;
+            await context.SaveChangesAsync();
+        }
+    }
+
+    public async Task ResetAllApiKeyDatesAsync()
+    {
+        using var context = new AppDbContext();
+        var apiKeys = await context.ApiKeys.ToListAsync();
+        foreach (var apiKey in apiKeys)
+        {
+            apiKey.LastUsed = null;
+            apiKey.DownloadedThroughDate = null;
+        }
+        await context.SaveChangesAsync();
+    }
 }

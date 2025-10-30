@@ -17,6 +17,10 @@ public class ApiKey
     
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     
+    public DateTime? LastUsed { get; set; }
+    
+    public DateTime? DownloadedThroughDate { get; set; }
+    
     // Navigation properties
     public ICollection<MeetingTranscript> MeetingTranscripts { get; set; } = new List<MeetingTranscript>();
 }

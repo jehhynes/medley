@@ -31,6 +31,7 @@ public class FellowDownloadService
         var summary = new DownloadSummary();
         string? cursor = null;
         var pageNumber = 0;
+        DateTime? maxCreatedAt = null;
 
         try
         {
@@ -81,7 +82,7 @@ public class FellowDownloadService
             });
             
             var notesDictionary = await FetchAllNotesAsync(apiKey, progress, cancellationToken);
-            
+
             progress?.Report(new DownloadProgress
             {
                 ApiKeyName = apiKey.Name,
@@ -102,6 +103,9 @@ public class FellowDownloadService
                 try
                 {
                     var response = await FetchPageWithRetryAsync(apiKey, cursor, pageNumber, progress, cancellationToken);
+                    var pageMaxCreatedAt = response?.Recordings?.Data?.Max(x => x.CreatedAt);
+                    if (pageMaxCreatedAt != null && (maxCreatedAt == null || pageMaxCreatedAt > maxCreatedAt))
+                        maxCreatedAt = pageMaxCreatedAt;
 
                     if (response?.Recordings?.Data == null || response.Recordings.Data.Count == 0)
                     {
@@ -158,6 +162,48 @@ public class FellowDownloadService
                                     });
                                     summary.Skipped++;
                                     continue;
+                                }
+                            }
+
+                            // Check if already exists for this API key (duplicate check)
+                            var alreadyExists = await _transcriptService.TranscriptExistsForApiKeyAsync(
+                                recording.Id!, apiKey.Id);
+
+                            if (alreadyExists)
+                            {
+                                progress?.Report(new DownloadProgress
+                                {
+                                    ApiKeyName = apiKey.Name,
+                                    Message = $"Already exists for this API key: {recording.Title}"
+                                });
+                                summary.Skipped++;
+                                continue;
+                            }
+
+                            // Fetch missing note individually if needed
+                            if (!string.IsNullOrWhiteSpace(recording.NoteId) 
+                                && !notesDictionary.ContainsKey(recording.NoteId))
+                            {
+                                try
+                                {
+                                    var noteResponse = await _fellowApiService.GetNoteAsync(apiKey.Key, recording.NoteId);
+                                    if (noteResponse?.Note != null)
+                                    {
+                                        notesDictionary[recording.NoteId] = noteResponse.Note;
+                                        progress?.Report(new DownloadProgress
+                                        {
+                                            ApiKeyName = apiKey.Name,
+                                            Message = $"Fetched missing note for: {recording.Title}"
+                                        });
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    progress?.Report(new DownloadProgress
+                                    {
+                                        ApiKeyName = apiKey.Name,
+                                        Message = $"Warning: Could not fetch note for '{recording.Title}': {ex.Message}"
+                                    });
                                 }
                             }
 
@@ -222,16 +268,11 @@ public class FellowDownloadService
                 ApiKeyName = apiKey.Name,
                 Message = $"Completed '{apiKey.Name}': Processed={summary.Processed}, Created={summary.Created}, Skipped={summary.Skipped}, Errors={summary.Errors}"
             });
-
-            // Mark API key as inactive if all downloads completed successfully (no errors)
+            
             if (summary.Errors == 0 && summary.Processed > 0)
             {
-                await _apiKeyService.SetApiKeyEnabledAsync(apiKey.Id, false);
-                progress?.Report(new DownloadProgress
-                {
-                    ApiKeyName = apiKey.Name,
-                    Message = $"API key '{apiKey.Name}' marked as inactive after successful download"
-                });
+                // Update download tracking dates
+                await _apiKeyService.UpdateDownloadTrackingAsync(apiKey.Id, DateTime.UtcNow, maxCreatedAt);
             }
         }
         catch (OperationCanceledException)
@@ -275,7 +316,10 @@ public class FellowDownloadService
                 {
                     try
                     {
-                        response = await _fellowApiService.ListNotesAsync(apiKey.Key, cursor);
+                        response = await _fellowApiService.ListNotesAsync(
+                            apiKey.Key, 
+                            cursor, 
+                            updatedAtStart: apiKey.DownloadedThroughDate);
                         break;
                     }
                     catch (Exception ex) when (attempt < MaxRetries)
@@ -341,7 +385,12 @@ public class FellowDownloadService
         {
             try
             {
-                return await _fellowApiService.ListRecordingsAsync(apiKey.Key, cursor);
+                var response = await _fellowApiService.ListRecordingsAsync(
+                    apiKey.Key, 
+                    cursor, 
+                    createdAtStart: apiKey.DownloadedThroughDate);
+                
+                return response;
             }
             catch (Exception ex) when (attempt < MaxRetries)
             {
@@ -370,20 +419,6 @@ public class FellowDownloadService
         {
             try
             {
-                // Check if already exists for this API key
-                var alreadyExists = await _transcriptService.TranscriptExistsForApiKeyAsync(
-                    recording.Id!, apiKey.Id);
-
-                if (alreadyExists)
-                {
-                    progress?.Report(new DownloadProgress
-                    {
-                        ApiKeyName = apiKey.Name,
-                        Message = $"Already exists for this API key: {recording.Title}"
-                    });
-                    return ProcessingResult.Skipped;
-                }
-
                 var transcript = CreateTranscriptFromRecording(recording, userEmailDomain);
                 await _transcriptService.SaveTranscriptAsync(transcript, apiKey);
 

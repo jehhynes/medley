@@ -58,12 +58,17 @@ public class MeetingTranscriptService
         await context.SaveChangesAsync();
     }
     
-    public async Task<int> GetTranscriptCountAsync(bool isArchived = false)
+    public async Task<int> GetTranscriptCountAsync(bool? isArchived = false)
     {
         using var context = new AppDbContext();
-        return await context.MeetingTranscripts
-            .Where(t => t.IsArchived == isArchived)
-            .CountAsync();
+        var query = context.MeetingTranscripts.AsQueryable();
+        
+        if (isArchived.HasValue)
+        {
+            query = query.Where(t => t.IsArchived == isArchived.Value);
+        }
+        
+        return await query.CountAsync();
     }
     
     public async Task<int> DeleteAllTranscriptsAsync()

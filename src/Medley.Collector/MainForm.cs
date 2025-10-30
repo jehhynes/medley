@@ -568,7 +568,7 @@ public partial class MainForm : Form
     {
         try
         {
-            var count = await _transcriptService.GetTranscriptCountAsync();
+            var count = await _transcriptService.GetTranscriptCountAsync(isArchived: null);
 
             if (count == 0)
             {
@@ -590,6 +590,9 @@ public partial class MainForm : Form
                 Cursor = Cursors.WaitCursor;
 
                 var deletedCount = await _transcriptService.DeleteAllTranscriptsAsync();
+                
+                // Reset API key dates since all transcripts are deleted
+                await _apiKeyService.ResetAllApiKeyDatesAsync();
 
                 MessageBox.Show($"Successfully deleted {deletedCount} transcript{(deletedCount != 1 ? "s" : "")}.",
                     "Delete Complete",

@@ -119,6 +119,12 @@ public class FellowSpeechSegment
     public string? Text { get; set; }
 }
 
+public class FellowNoteResponse
+{
+    [JsonPropertyName("note")]
+    public FellowNote? Note { get; set; }
+}
+
 public class FellowNotesResponse
 {
     [JsonPropertyName("notes")]

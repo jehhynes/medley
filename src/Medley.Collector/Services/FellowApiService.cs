@@ -28,7 +28,8 @@ public class FellowApiService
         string apiKey,
         string? cursor = null,
         int pageSize = 50,
-        bool includeTranscript = true)
+        bool includeTranscript = true,
+        DateTime? createdAtStart = null)
     {
         await EnforceRateLimitAsync();
         
@@ -47,6 +48,14 @@ public class FellowApiService
         if (!string.IsNullOrWhiteSpace(cursor))
         {
             ((Dictionary<string, object?>)requestBody["pagination"]!)["cursor"] = cursor;
+        }
+        
+        if (createdAtStart.HasValue)
+        {
+            requestBody["filters"] = new Dictionary<string, object?>
+            {
+                ["created_at_start"] = createdAtStart.Value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+            };
         }
         
         var jsonContent = JsonSerializer.Serialize(requestBody);
@@ -70,7 +79,8 @@ public class FellowApiService
         string? cursor = null,
         int pageSize = 50,
         bool includeEventAttendees = true,
-        bool includeContentMarkdown = true)
+        bool includeContentMarkdown = true,
+        DateTime? updatedAtStart = null)
     {
         await EnforceRateLimitAsync();
         
@@ -95,6 +105,14 @@ public class FellowApiService
         };
         requestBody["include"] = include;
         
+        if (updatedAtStart.HasValue)
+        {
+            requestBody["filters"] = new Dictionary<string, object?>
+            {
+                ["updated_at_start"] = updatedAtStart.Value.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+            };
+        }
+        
         var jsonContent = JsonSerializer.Serialize(requestBody);
         var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
         
@@ -109,6 +127,20 @@ public class FellowApiService
         
         var responseContent = await response.Content.ReadAsStringAsync();
         return JsonSerializer.Deserialize<FellowNotesResponse>(responseContent, _jsonOptions);
+    }
+    
+    public async Task<FellowNoteResponse?> GetNoteAsync(string apiKey, string noteId)
+    {
+        await EnforceRateLimitAsync();
+        
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/note/{noteId}");
+        request.Headers.Add("X-API-KEY", apiKey);
+        
+        var response = await _httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+        
+        var responseContent = await response.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize<FellowNoteResponse>(responseContent, _jsonOptions);
     }
     
     public async Task<FellowMeResponse?> GetAuthenticatedUserAsync(string apiKey)

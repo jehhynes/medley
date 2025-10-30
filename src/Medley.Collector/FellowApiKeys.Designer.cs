@@ -33,6 +33,9 @@
             colName = new DataGridViewTextBoxColumn();
             colKey = new DataGridViewTextBoxColumn();
             colEnabled = new DataGridViewCheckBoxColumn();
+            colCreatedAt = new DataGridViewTextBoxColumn();
+            colLastUsed = new DataGridViewTextBoxColumn();
+            colDownloadedThrough = new DataGridViewTextBoxColumn();
             btnSave = new Button();
             btnCancel = new Button();
             label1 = new Label();
@@ -45,11 +48,12 @@
             // 
             dgvApiKeys.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             dgvApiKeys.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dgvApiKeys.Columns.AddRange(new DataGridViewColumn[] { colName, colKey, colEnabled });
-            dgvApiKeys.Location = new Point(12, 102);
+            dgvApiKeys.Columns.AddRange(new DataGridViewColumn[] { colName, colKey, colEnabled, colCreatedAt, colLastUsed, colDownloadedThrough });
+            dgvApiKeys.Location = new Point(10, 76);
+            dgvApiKeys.Margin = new Padding(3, 2, 3, 2);
             dgvApiKeys.Name = "dgvApiKeys";
             dgvApiKeys.RowHeadersWidth = 51;
-            dgvApiKeys.Size = new Size(609, 233);
+            dgvApiKeys.Size = new Size(863, 175);
             dgvApiKeys.TabIndex = 2;
             // 
             // colName
@@ -76,12 +80,37 @@
             colEnabled.Name = "colEnabled";
             colEnabled.Width = 80;
             // 
+            // colCreatedAt
+            // 
+            colCreatedAt.HeaderText = "Created";
+            colCreatedAt.MinimumWidth = 6;
+            colCreatedAt.Name = "colCreatedAt";
+            colCreatedAt.ReadOnly = true;
+            colCreatedAt.Width = 120;
+            // 
+            // colLastUsed
+            // 
+            colLastUsed.HeaderText = "Last Used";
+            colLastUsed.MinimumWidth = 6;
+            colLastUsed.Name = "colLastUsed";
+            colLastUsed.ReadOnly = true;
+            colLastUsed.Width = 120;
+            // 
+            // colDownloadedThrough
+            // 
+            colDownloadedThrough.HeaderText = "Downloaded Through";
+            colDownloadedThrough.MinimumWidth = 6;
+            colDownloadedThrough.Name = "colDownloadedThrough";
+            colDownloadedThrough.ReadOnly = true;
+            colDownloadedThrough.Width = 140;
+            // 
             // btnSave
             // 
             btnSave.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            btnSave.Location = new Point(527, 341);
+            btnSave.Location = new Point(791, 256);
+            btnSave.Margin = new Padding(3, 2, 3, 2);
             btnSave.Name = "btnSave";
-            btnSave.Size = new Size(94, 29);
+            btnSave.Size = new Size(82, 22);
             btnSave.TabIndex = 3;
             btnSave.Text = "Save";
             btnSave.UseVisualStyleBackColor = true;
@@ -90,9 +119,10 @@
             // btnCancel
             // 
             btnCancel.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            btnCancel.Location = new Point(427, 341);
+            btnCancel.Location = new Point(704, 256);
+            btnCancel.Margin = new Padding(3, 2, 3, 2);
             btnCancel.Name = "btnCancel";
-            btnCancel.Size = new Size(94, 29);
+            btnCancel.Size = new Size(82, 22);
             btnCancel.TabIndex = 4;
             btnCancel.Text = "Cancel";
             btnCancel.UseVisualStyleBackColor = true;
@@ -101,40 +131,42 @@
             // label1
             // 
             label1.AutoSize = true;
-            label1.Location = new Point(15, 79);
+            label1.Location = new Point(13, 59);
             label1.Name = "label1";
-            label1.Size = new Size(199, 20);
+            label1.Size = new Size(160, 15);
             label1.TabIndex = 5;
             label1.Text = "Enter your Fellow.ai API keys:";
             // 
             // lblWorkspace
             // 
             lblWorkspace.AutoSize = true;
-            lblWorkspace.Location = new Point(15, 15);
+            lblWorkspace.Location = new Point(13, 11);
             lblWorkspace.Name = "lblWorkspace";
-            lblWorkspace.Size = new Size(131, 20);
+            lblWorkspace.Size = new Size(105, 15);
             lblWorkspace.TabIndex = 6;
             lblWorkspace.Text = "Fellow Workspace:";
             // 
             // txtWorkspace
             // 
             txtWorkspace.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            txtWorkspace.Location = new Point(15, 38);
+            txtWorkspace.Location = new Point(13, 28);
+            txtWorkspace.Margin = new Padding(3, 2, 3, 2);
             txtWorkspace.Name = "txtWorkspace";
-            txtWorkspace.Size = new Size(606, 27);
+            txtWorkspace.Size = new Size(861, 23);
             txtWorkspace.TabIndex = 0;
             // 
             // FellowApiKeys
             // 
-            AutoScaleDimensions = new SizeF(8F, 20F);
+            AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(633, 380);
+            ClientSize = new Size(884, 285);
             Controls.Add(txtWorkspace);
             Controls.Add(lblWorkspace);
             Controls.Add(label1);
             Controls.Add(btnCancel);
             Controls.Add(btnSave);
             Controls.Add(dgvApiKeys);
+            Margin = new Padding(3, 2, 3, 2);
             Name = "FellowApiKeys";
             Text = "API Keys";
             Load += FellowApiKeys_Load;
@@ -154,5 +186,8 @@
         private DataGridViewTextBoxColumn colName;
         private DataGridViewTextBoxColumn colKey;
         private DataGridViewCheckBoxColumn colEnabled;
+        private DataGridViewTextBoxColumn colCreatedAt;
+        private DataGridViewTextBoxColumn colLastUsed;
+        private DataGridViewTextBoxColumn colDownloadedThrough;
     }
 }
