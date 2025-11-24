@@ -135,7 +135,7 @@ public partial class MainForm : Form
 
         dataGridViewTranscripts.AutoGenerateColumns = false;
         dataGridViewTranscripts.Columns.Clear();
-
+        
         // Hidden Id column for tracking
         dataGridViewTranscripts.Columns.Add(new DataGridViewTextBoxColumn
         {
@@ -185,7 +185,7 @@ public partial class MainForm : Form
             DataPropertyName = "Participants",
             HeaderText = "Participants",
             Name = "Participants",
-            AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
             MinimumWidth = 100,
             ReadOnly = true,
             SortMode = DataGridViewColumnSortMode.Automatic
@@ -207,7 +207,7 @@ public partial class MainForm : Form
             DataPropertyName = "Source",
             HeaderText = "Source",
             Name = "Source",
-            AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells,
+            AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
             MinimumWidth = 100,
             ReadOnly = true,
             SortMode = DataGridViewColumnSortMode.Automatic
