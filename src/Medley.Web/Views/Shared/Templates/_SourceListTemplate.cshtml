@@ -1,0 +1,17 @@
+<script type="text/x-template" id="source-list-template">
+  <ul class="list-view">
+    <li v-for="source in sources" :key="source.id" class="list-item">
+      <a href="#" 
+         class="list-item-content" 
+         :class="{ active: selectedId === source.id }"
+         @@click.prevent="selectSource(source)">
+        <i class="list-item-icon bi" :class="getSourceIcon(source.type)"></i>
+        <div class="list-item-body">
+          <div class="list-item-title">{{ source.name || 'Untitled' }}</div>
+          <div class="list-item-subtitle">{{ formatDate(source.date) }} • {{ source.type }}</div>
+        </div>
+      </a>
+    </li>
+  </ul>
+</script>
+

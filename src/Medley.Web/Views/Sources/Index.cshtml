@@ -1,0 +1,225 @@
+@{
+    ViewData["Title"] = "Sources";
+    ViewData["HasRightSidebar"] = false;
+    Layout = "_VueLayout";
+}
+
+<!-- Left Sidebar (List) -->
+<div class="sidebar left-sidebar">
+    <div class="sidebar-header">
+        <h6 class="sidebar-title">Sources</h6>
+        <div class="input-group input-group-sm">
+            <input type="text" class="form-control" placeholder="Search..." v-model="searchQuery" @@input="onSearchInput">
+        </div>
+    </div>
+    <div class="sidebar-content">
+        <div v-if="loading" class="loading-spinner">
+            <div class="spinner-border spinner-border-sm" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+        <div v-else-if="error" class="alert alert-danger">
+            {{ error }}
+        </div>
+        <source-list 
+            v-else
+            :sources="sources"
+            :selected-id="selectedSourceId"
+            @@select="selectSource"
+        />
+        <div v-if="!loading && sources.length === 0" class="empty-state">
+            <div class="empty-state-icon">
+                <i class="bi bi-folder"></i>
+            </div>
+            <div class="empty-state-title">No Sources Found</div>
+            <div class="empty-state-text">Connect an integration to import sources</div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="main-content">
+    <div v-if="!selectedSource" class="empty-state">
+        <div class="empty-state-icon">
+            <i class="bi bi-folder"></i>
+        </div>
+        <div class="empty-state-title">No Source Selected</div>
+        <div class="empty-state-text">Select a source from the sidebar to view its details</div>
+    </div>
+    <div v-else>
+        <div class="main-content-header">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h1 class="main-content-title">{{ selectedSource.name || 'Untitled Source' }}</h1>
+                    <div class="text-muted">
+                        <span class="badge bg-primary">{{ selectedSource.type }}</span>
+                        <span class="ms-2">
+                            <i class="bi bi-calendar3"></i>
+                            {{ formatDate(selectedSource.date) }}
+                        </span>
+                        <span class="ms-2">
+                            <i class="bi bi-plug"></i>
+                            {{ selectedSource.integrationName }}
+                        </span>
+                    </div>
+                </div>
+                <div>
+                    <button class="btn btn-outline-primary btn-sm" @@click="viewIntegration">
+                        <i class="bi bi-plug"></i> View Integration
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Source Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-4">Type:</dt>
+                            <dd class="col-sm-8">{{ selectedSource.type }}</dd>
+                            <dt class="col-sm-4">Date:</dt>
+                            <dd class="col-sm-8">{{ formatDate(selectedSource.date) }}</dd>
+                            <dt class="col-sm-4">External ID:</dt>
+                            <dd class="col-sm-8">
+                                <code>{{ selectedSource.externalId || 'N/A' }}</code>
+                            </dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-4">Integration:</dt>
+                            <dd class="col-sm-8">{{ selectedSource.integrationName }}</dd>
+                            <dt class="col-sm-4">Fragments:</dt>
+                            <dd class="col-sm-8">{{ selectedSource.fragmentsCount }} fragments</dd>
+                            <dt class="col-sm-4">Created:</dt>
+                            <dd class="col-sm-8">{{ formatDate(selectedSource.createdAt) }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4" v-if="selectedSource.metadataJson">
+            <div class="card-header">
+                <h5 class="mb-0">Metadata</h5>
+            </div>
+            <div class="card-body">
+                <pre class="mb-0"><code>{{ selectedSource.metadataJson }}</code></pre>
+            </div>
+        </div>
+
+        <div class="card" v-if="selectedSource.content">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Content</h5>
+                <button class="btn btn-sm btn-outline-primary" @@click="copyContent">
+                    <i class="bi bi-clipboard"></i> Copy
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="content-preview" style="white-space: pre-wrap; max-height: 600px; overflow-y: auto;">
+                    {{ selectedSource.content }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section VueTemplates {
+    @* Vue Component Templates - outside #app so they don't get destroyed *@
+    @await Html.PartialAsync("Templates/_SourceListTemplate")
+}
+
+@section Scripts {
+    <script src="~/js/app.js"></script>
+    <script src="~/js/utils.js"></script>
+    <script src="~/js/components/source-list.js"></script>
+    <script>
+        (function() {
+            const { createApp } = Vue;
+            const { api } = window.ArticleBrowserApp;
+            const { formatDate, copyToClipboard } = window.MedleyUtils;
+
+            // Single unified Vue app for the entire Sources page
+            const app = createApp({
+                components: {
+                    'source-list': SourceList
+                },
+                data() {
+                    return {
+                        sources: [],
+                        selectedSourceId: null,
+                        selectedSource: null,
+                        loading: false,
+                        error: null,
+                        searchQuery: ''
+                    };
+                },
+                methods: {
+                    async loadSources() {
+                        this.loading = true;
+                        this.error = null;
+                        try {
+                            this.sources = await api.get('/api/sources');
+                        } catch (err) {
+                            this.error = 'Failed to load sources: ' + err.message;
+                            console.error('Error loading sources:', err);
+                        } finally {
+                            this.loading = false;
+                        }
+                    },
+                    
+                    async selectSource(source) {
+                        this.selectedSourceId = source.id;
+                        try {
+                            this.selectedSource = await api.get(`/api/sources/${source.id}`);
+                        } catch (err) {
+                            console.error('Error loading source:', err);
+                            this.selectedSource = null;
+                        }
+                    },
+                    
+                    async onSearchInput() {
+                        const query = this.searchQuery.trim();
+                        if (query.length >= 2) {
+                            try {
+                                this.sources = await api.get(`/api/sources/search?query=${encodeURIComponent(query)}`);
+                            } catch (err) {
+                                console.error('Search error:', err);
+                            }
+                        } else if (query.length === 0) {
+                            await this.loadSources();
+                        }
+                    },
+                    
+                    formatDate,
+                    
+                    viewIntegration() {
+                        window.location.href = '/Integrations/Manage';
+                    },
+                    
+                    async copyContent() {
+                        if (this.selectedSource && this.selectedSource.content) {
+                            const success = await copyToClipboard(this.selectedSource.content);
+                            if (success) {
+                                alert('Content copied to clipboard');
+                            } else {
+                                alert('Failed to copy content');
+                            }
+                        }
+                    }
+                },
+                
+                mounted() {
+                    this.loadSources();
+                }
+            });
+            
+            // Mount the single app to #app which contains everything
+            app.mount('#app');
+        })(); // End of IIFE
+    </script>
+}

@@ -28,8 +28,8 @@
     </a> *@
     @if (User.IsInRole("Admin"))
     {
-        <a class="dropdown-item" asp-controller="UserManagement" asp-action="Index">
-            <i class="icon me-2 cil-people"></i> User Management<span class="badge badge-sm bg-secondary ms-2">Admin</span>
+        <a class="dropdown-item" asp-controller="Users" asp-action="Index">
+            <i class="icon me-2 cil-people"></i> Users<span class="badge badge-sm bg-secondary ms-2">Admin</span>
         </a>
     }
   @*   <a class="dropdown-item" href="#">

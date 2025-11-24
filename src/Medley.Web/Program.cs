@@ -172,8 +172,9 @@ public class Program
             // Map health check endpoint
             app.MapHealthChecks("/health");
 
-            // Map SignalR hub
+            // Map SignalR hubs
             app.MapHub<IntegrationStatusHub>("/integrationStatusHub");
+            app.MapHub<ArticleBrowserHub>("/articleBrowserHub");
 
             app.MapControllerRoute(
                 name: "areas",

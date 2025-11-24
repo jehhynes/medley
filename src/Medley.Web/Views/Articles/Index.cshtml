@@ -1,0 +1,248 @@
+@{
+    ViewData["Title"] = "Articles";
+    ViewData["HasRightSidebar"] = true;
+    Layout = "_VueLayout";
+}
+
+<!-- Left Sidebar (List/Tree) -->
+<div class="sidebar left-sidebar">
+    <div class="sidebar-header">
+        <h6 class="sidebar-title">Articles</h6>
+        <button class="btn btn-sm btn-primary" @@click="createNewArticle">
+            <i class="bi bi-plus"></i>
+        </button>
+    </div>
+    <div class="sidebar-content">
+        <div v-if="loading" class="loading-spinner">
+            <div class="spinner-border spinner-border-sm" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+        <div v-else-if="error" class="alert alert-danger">
+            {{ error }}
+        </div>
+        <article-tree 
+            v-else
+            :articles="articles"
+            :selected-id="selectedArticleId"
+            @@select="selectArticle"
+        />
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="main-content">
+    <div v-if="!selectedArticle" class="empty-state">
+        <div class="empty-state-icon">
+            <i class="bi bi-file-text"></i>
+        </div>
+        <div class="empty-state-title">No Article Selected</div>
+        <div class="empty-state-text">Select an article from the sidebar to view its details</div>
+    </div>
+    <div v-else>
+        <div class="main-content-header">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h1 class="main-content-title">{{ selectedArticle.title }}</h1>
+                    <div class="text-muted">
+                        <span class="badge" :class="getStatusBadgeClass(selectedArticle.status)">
+                            {{ selectedArticle.status }}
+                        </span>
+                        <span class="ms-2">
+                            <i class="bi bi-calendar3"></i>
+                            Created {{ formatDate(selectedArticle.createdAt) }}
+                        </span>
+                        <span class="ms-2" v-if="selectedArticle.parentTitle">
+                            <i class="bi bi-diagram-3"></i>
+                            Parent: {{ selectedArticle.parentTitle }}
+                        </span>
+                    </div>
+                </div>
+                <div>
+                    <button class="btn btn-outline-primary btn-sm me-2" @@click="editArticle">
+                        <i class="bi bi-pencil"></i> Edit
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm" @@click="deleteArticle">
+                        <i class="bi bi-trash"></i> Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Article Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-4">Status:</dt>
+                            <dd class="col-sm-8">
+                                <span class="badge" :class="getStatusBadgeClass(selectedArticle.status)">
+                                    {{ selectedArticle.status }}
+                                </span>
+                            </dd>
+                            <dt class="col-sm-4">Created:</dt>
+                            <dd class="col-sm-8">{{ formatDate(selectedArticle.createdAt) }}</dd>
+                            <dt class="col-sm-4">Published:</dt>
+                            <dd class="col-sm-8">{{ selectedArticle.publishedAt ? formatDate(selectedArticle.publishedAt) : 'Not published' }}</dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-4">Children:</dt>
+                            <dd class="col-sm-8">{{ selectedArticle.childrenCount }} child articles</dd>
+                            <dt class="col-sm-4">Fragments:</dt>
+                            <dd class="col-sm-8">{{ selectedArticle.fragmentsCount }} fragments</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Content</h5>
+                <button class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-plus"></i> Add Fragment
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="empty-state">
+                    <div class="empty-state-icon">
+                        <i class="bi bi-puzzle"></i>
+                    </div>
+                    <div class="empty-state-title">No Fragments</div>
+                    <div class="empty-state-text">Add fragments to build this article's content</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Right Sidebar -->
+<div class="sidebar right-sidebar">
+    <chat-panel :article-id="selectedArticleId" />
+</div>
+
+@section VueTemplates {
+    @* Vue Component Templates - outside #app so they don't get destroyed *@
+    @await Html.PartialAsync("Templates/_ArticleTreeTemplate")
+    @await Html.PartialAsync("Templates/_ChatPanelTemplate")
+    @await Html.PartialAsync("Templates/_SourceListTemplate")
+}
+
+@section Scripts {
+    <script src="~/js/app.js"></script>
+    <script src="~/js/utils.js"></script>
+    <script src="~/js/components/article-tree.js"></script>
+    <script src="~/js/components/chat-panel.js"></script>
+    <script>
+        (function() {
+            const { createApp } = Vue;
+            const { api, createSignalRConnection } = window.ArticleBrowserApp;
+            const { formatDate, getStatusBadgeClass } = window.MedleyUtils;
+
+            // Single unified Vue app for the entire Articles page
+            const app = createApp({
+                components: {
+                    'article-tree': ArticleTree,
+                    'chat-panel': ChatPanel
+                },
+                data() {
+                    return {
+                        articles: [],
+                        selectedArticleId: null,
+                        selectedArticle: null,
+                        loading: false,
+                        error: null
+                    };
+                },
+                methods: {
+                    async loadArticles() {
+                        this.loading = true;
+                        this.error = null;
+                        try {
+                            this.articles = await api.get('/api/articles/tree');
+                        } catch (err) {
+                            this.error = 'Failed to load articles: ' + err.message;
+                            console.error('Error loading articles:', err);
+                        } finally {
+                            this.loading = false;
+                        }
+                    },
+                    
+                    async selectArticle(article) {
+                        this.selectedArticleId = article.id;
+                        try {
+                            this.selectedArticle = await api.get(`/api/articles/${article.id}`);
+                        } catch (err) {
+                            console.error('Error loading article:', err);
+                            this.selectedArticle = null;
+                        }
+                    },
+                    
+                    formatDate,
+                    getStatusBadgeClass,
+                    
+                    editArticle() {
+                        alert('Edit functionality coming soon');
+                    },
+                    
+                    deleteArticle() {
+                        if (confirm('Are you sure you want to delete this article?')) {
+                            alert('Delete functionality coming soon');
+                        }
+                    },
+                    
+                    async createNewArticle() {
+                        const title = prompt('Enter article title:');
+                        if (title) {
+                            try {
+                                await api.post('/api/articles', { title });
+                                console.log('Article created');
+                                await this.loadArticles();
+                            } catch (err) {
+                                alert('Failed to create article: ' + err.message);
+                            }
+                        }
+                    }
+                },
+                
+                mounted() {
+                    this.loadArticles();
+                    
+                    // Set up SignalR for real-time updates
+                    const connection = createSignalRConnection('/articleBrowserHub');
+                    
+                    connection.on('ArticleCreated', (data) => {
+                        console.log('Article created:', data);
+                        this.loadArticles();
+                    });
+                    
+                    connection.on('ArticleUpdated', (data) => {
+                        console.log('Article updated:', data);
+                        this.loadArticles();
+                    });
+                    
+                    connection.on('ArticleDeleted', (data) => {
+                        console.log('Article deleted:', data);
+                        this.loadArticles();
+                        if (this.selectedArticleId === data.articleId) {
+                            this.selectedArticleId = null;
+                            this.selectedArticle = null;
+                        }
+                    });
+                    
+                    connection.start()
+                        .then(() => console.log('Connected to ArticleBrowserHub'))
+                        .catch(err => console.error('SignalR connection error:', err));
+                }
+            });
+            
+            // Mount the single app to #app which contains everything
+            app.mount('#app');
+        })(); // End of IIFE
+    </script>
+}

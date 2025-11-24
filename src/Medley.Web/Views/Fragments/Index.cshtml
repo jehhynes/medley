@@ -1,0 +1,50 @@
+@{
+    ViewData["Title"] = "Fragments";
+}
+
+@section LeftSidebar {
+    <div class="sidebar-header">
+        <h6 class="sidebar-title">Fragments</h6>
+    </div>
+    <div class="sidebar-content">
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <i class="bi bi-puzzle"></i>
+            </div>
+            <div class="empty-state-title">Coming Soon</div>
+            <div class="empty-state-text">Fragment browser will be available soon</div>
+        </div>
+    </div>
+}
+
+<div class="main-content-header">
+    <h1 class="main-content-title">Fragments</h1>
+    <p class="text-muted">Knowledge fragments extracted from your data sources</p>
+</div>
+
+<div class="card">
+    <div class="card-body text-center py-5">
+        <div class="mb-4">
+            <i class="bi bi-puzzle" style="font-size: 4rem; opacity: 0.3;"></i>
+        </div>
+        <h4 class="mb-3">Fragment Browser Coming Soon</h4>
+        <p class="text-muted mb-4">
+            The fragment browser is currently under development. You'll be able to:
+        </p>
+        <ul class="list-unstyled text-start mx-auto" style="max-width: 400px;">
+            <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Browse all knowledge fragments</li>
+            <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Search and filter fragments</li>
+            <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>View fragment embeddings</li>
+            <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Link fragments to articles</li>
+        </ul>
+        <div class="mt-4">
+            <a href="@Url.Action("Index", "ArticleBrowser")" class="btn btn-primary me-2">
+                <i class="bi bi-house-door"></i> Back to Home
+            </a>
+            <a href="@Url.Action("Index", "Sources")" class="btn btn-outline-primary">
+                <i class="bi bi-folder"></i> View Sources
+            </a>
+        </div>
+    </div>
+</div>
+

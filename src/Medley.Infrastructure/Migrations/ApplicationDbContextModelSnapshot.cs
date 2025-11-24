@@ -61,6 +61,9 @@ namespace Medley.Infrastructure.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("ParentArticleId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTimeOffset?>("PublishedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -73,6 +76,8 @@ namespace Medley.Infrastructure.Migrations
                         .HasColumnType("character varying(200)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ParentArticleId");
 
                     b.ToTable("Articles");
                 });
@@ -642,6 +647,15 @@ namespace Medley.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Medley.Domain.Entities.Article", b =>
+                {
+                    b.HasOne("Medley.Domain.Entities.Article", "ParentArticle")
+                        .WithMany("ChildArticles")
+                        .HasForeignKey("ParentArticleId");
+
+                    b.Navigation("ParentArticle");
+                });
+
             modelBuilder.Entity("Medley.Domain.Entities.Fragment", b =>
                 {
                     b.HasOne("Medley.Domain.Entities.Article", null)
@@ -738,6 +752,8 @@ namespace Medley.Infrastructure.Migrations
 
             modelBuilder.Entity("Medley.Domain.Entities.Article", b =>
                 {
+                    b.Navigation("ChildArticles");
+
                     b.Navigation("Fragments");
                 });
 
