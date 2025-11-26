@@ -1,0 +1,43 @@
+@{
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+    var currentArea = ViewContext.RouteData.Values["area"]?.ToString();
+    var isSettings = currentController == "Settings";
+    var isIntegrations = currentArea == "Integrations";
+    var isUsers = currentController == "Users";
+}
+
+<div class="sidebar-header">
+    <h6 class="sidebar-title">Settings</h6>
+</div>
+<div class="sidebar-content">
+    <ul class="list-view">
+        <li class="list-item">
+            <a asp-area="" asp-controller="Settings" asp-action="Index" class="list-item-content @(isSettings ? "active" : "")">
+                <i class="list-item-icon bi bi-gear"></i>
+                <div class="list-item-body">
+                    <div class="list-item-title">General</div>
+                </div>
+            </a>
+        </li>
+        <li class="list-item">
+            <a asp-area="Integrations" asp-controller="Manage" asp-action="Index" class="list-item-content @(isIntegrations ? "active" : "")">
+                <i class="list-item-icon bi bi-plug"></i>
+                <div class="list-item-body">
+                    <div class="list-item-title">Integrations</div>
+                </div>
+            </a>
+        </li>
+        @if (User.IsInRole("Admin"))
+        {
+            <li class="list-item">
+                <a asp-area="" asp-controller="Users" asp-action="Index" class="list-item-content @(isUsers ? "active" : "")">
+                    <i class="list-item-icon bi bi-people"></i>
+                    <div class="list-item-body">
+                        <div class="list-item-title">Users</div>
+                    </div>
+                </a>
+            </li>
+        }
+    </ul>
+</div>
+

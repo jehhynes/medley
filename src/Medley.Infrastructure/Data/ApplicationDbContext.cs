@@ -30,6 +30,7 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     public DbSet<Integration> Integrations { get; set; } = null!;
     public DbSet<Source> Sources { get; set; } = null!;
     public DbSet<Article> Articles { get; set; } = null!;
+    public DbSet<ArticleType> ArticleTypes { get; set; } = null!;
     public DbSet<Insight> Insights { get; set; } = null!;
     public DbSet<Observation> Observations { get; set; } = null!;
     public DbSet<Finding> Findings { get; set; } = null!;

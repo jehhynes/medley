@@ -3,6 +3,7 @@ using System;
 using Medley.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Medley.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251126175747_AddArticleTypeAndEnhancedArticle")]
+    partial class AddArticleTypeAndEnhancedArticle
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -689,7 +692,8 @@ namespace Medley.Infrastructure.Migrations
                 {
                     b.HasOne("Medley.Domain.Entities.ArticleType", "ArticleType")
                         .WithMany("Articles")
-                        .HasForeignKey("ArticleTypeId");
+                        .HasForeignKey("ArticleTypeId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("Medley.Domain.Entities.Article", "ParentArticle")
                         .WithMany("ChildArticles")

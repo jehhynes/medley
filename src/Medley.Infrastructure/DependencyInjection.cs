@@ -57,6 +57,7 @@ public static class DependencyInjection
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IIntegrationService, IntegrationService>();
         services.AddScoped<INotificationService, SignalRNotificationService>();
+        services.AddScoped<IKnowledgeBuilderImportService, KnowledgeBuilderImportService>();
         //services.AddScoped<IntegrationHealthCheckJob>();
         services.AddSingleton<RecurringJobCleanUpManager>();
         services.AddSingleton<IJobRegistry, JobRegistry>();

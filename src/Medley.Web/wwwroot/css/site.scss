@@ -21,13 +21,21 @@
 /* Main grid layout */
 .main-page-container {
     display: grid;
-    grid-template-columns: 5rem 30rem 1fr;
+    grid-template-columns: 5rem 1fr;
     grid-template-rows: 100vh;
     height: 100vh;
     overflow: hidden;
     background-color: var(--bg-main);
 
+    &.has-left-sidebar {
+        grid-template-columns: 5rem 30rem 1fr;
+    }
+
     &.has-right-sidebar {
+        grid-template-columns: 5rem 1fr 20rem;
+    }
+
+    &.has-left-sidebar.has-right-sidebar {
         grid-template-columns: 5rem 30rem 1fr 20rem;
     }
 }
@@ -36,7 +44,9 @@
     .main-page-container {
         grid-template-columns: 1fr;
 
-        &.has-right-sidebar {
+        &.has-left-sidebar,
+        &.has-right-sidebar,
+        &.has-left-sidebar.has-right-sidebar {
             grid-template-columns: 1fr;
         }
     }
@@ -621,3 +631,22 @@ dd {
 }
 
 */
+
+
+
+/* Custom Overlapping Label Form Control */
+.form-group-overlap {
+    position: relative;
+
+    > label {
+        position: absolute;
+        top: -0.75rem;
+        left: 0.5rem;
+        background-color: var(--bs-body-bg);
+        padding: 0 0.25rem;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: var(--bs-secondary);
+        z-index: 1;
+    }
+}

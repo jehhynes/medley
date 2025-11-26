@@ -1,5 +1,6 @@
 @{
     var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+    var hasLeftSidebar = ViewData["HasLeftSidebar"] as bool? ?? false;
     var hasRightSidebar = ViewData["HasRightSidebar"] as bool? ?? false;
 }
 <!DOCTYPE html>
@@ -27,24 +28,27 @@
     
     <link rel="stylesheet" href="~/css/bootstrap/flatly/bootstrap.min.css">
     <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/lib/font-awesome/css/all.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+
+    @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
     <!-- Vue will control everything inside this div -->
-    <div class="main-page-container @(hasRightSidebar ? "has-right-sidebar" : "")" id="app">
+    <div class="main-page-container @(hasLeftSidebar ? "has-left-sidebar" : "") @(hasRightSidebar ? "has-right-sidebar" : "")" id="app">
         <!-- Vertical Menu (Far Left) -->
         <div class="vertical-menu">
             <a asp-area="" asp-controller="Home" asp-action="Index" 
                class="vertical-menu-item @(currentController == "Home" ? "active" : "")" 
-               title="Dashboard">
-                <i class="bi bi-speedometer2"></i>
-                <span class="vertical-menu-item-label">Dashboard</span>
+               title="Home">
+                <i class="bi bi-house"></i>
+                <span class="vertical-menu-item-label">Home</span>
             </a>
-            <a asp-area="Integrations" asp-controller="Manage" asp-action="Index" 
-               class="vertical-menu-item @(ViewContext.RouteData.Values["area"]?.ToString() == "Integrations" ? "active" : "")" 
-               title="Integrations">
-                <i class="bi bi-plug"></i>
-                <span class="vertical-menu-item-label">Integrations</span>
+            <a asp-area="" asp-controller="Articles" asp-action="Index"
+               class="vertical-menu-item @(currentController == "Articles" ? "active" : "")"
+               title="Articles">
+                <i class="bi bi-file-text"></i>
+                <span class="vertical-menu-item-label">Articles</span>
             </a>
             <a asp-area="" asp-controller="Sources" asp-action="Index" 
                class="vertical-menu-item @(currentController == "Sources" ? "active" : "")" 
@@ -58,22 +62,7 @@
                 <i class="bi bi-puzzle"></i>
                 <span class="vertical-menu-item-label">Fragments</span>
             </a>
-            <a asp-area="" asp-controller="Articles" asp-action="Index" 
-               class="vertical-menu-item @(currentController == "Articles" ? "active" : "")" 
-               title="Articles">
-                <i class="bi bi-file-text"></i>
-                <span class="vertical-menu-item-label">Articles</span>
-            </a>
             <div style="flex: 1;"></div>
-            @if (User.IsInRole("Admin"))
-            {
-                <a asp-area="" asp-controller="Users" asp-action="Index" 
-                   class="vertical-menu-item @(currentController == "Users" ? "active" : "")" 
-                   title="Users">
-                    <i class="bi bi-people"></i>
-                    <span class="vertical-menu-item-label">Users</span>
-                </a>
-            }
             <a asp-area="" asp-controller="Settings" asp-action="Index" 
                class="vertical-menu-item @(currentController == "Settings" ? "active" : "")" 
                title="Settings">
@@ -83,7 +72,7 @@
             <div class="dropdown">
                 <button class="vertical-menu-item" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="User">
                     <i class="bi bi-person-circle"></i>
-                    <span class="vertical-menu-item-label">User</span>
+                    @* <span class="vertical-menu-item-label">User</span> *@
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
                     <li><h6 class="dropdown-header">@User.Identity?.Name</h6></li>
