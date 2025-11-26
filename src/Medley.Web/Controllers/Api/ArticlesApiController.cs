@@ -26,6 +26,7 @@ public class ArticlesApiController : ControllerBase
     {
         var articles = await _articleRepository.Query()
             .Include(a => a.ChildArticles)
+            .Include(a => a.ArticleType)
             .OrderBy(a => a.Title)
             .ToListAsync();
 
@@ -54,6 +55,7 @@ public class ArticlesApiController : ControllerBase
         {
             article.Id,
             article.Title,
+            article.Content,
             article.Status,
             article.PublishedAt,
             article.CreatedAt,
@@ -120,6 +122,10 @@ public class ArticlesApiController : ControllerBase
         {
             article.Status = request.Status.Value;
         }
+        if (request.Content != null)
+        {
+            article.Content = request.Content;
+        }
 
         await _articleRepository.SaveAsync(article);
         return Ok(article);
@@ -155,6 +161,7 @@ public class ArticlesApiController : ControllerBase
                 a.Title,
                 a.Status,
                 a.CreatedAt,
+                articleTypeIcon = a.ArticleType?.Icon ?? "bi-file-text",
                 children = BuildTree(allArticles, a.Id)
             })
             .ToList<object>();
@@ -171,5 +178,6 @@ public class UpdateArticleRequest
 {
     public required string Title { get; set; }
     public Domain.Enums.ArticleStatus? Status { get; set; }
+    public string? Content { get; set; }
 }
 

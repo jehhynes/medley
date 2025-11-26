@@ -19,7 +19,7 @@
                 <span class="visually-hidden">Loading...</span>
             </div>
         </div>
-        <div v-else-if="error" class="alert alert-danger">
+        <div v-else-if="error" class="alert alert-danger" v-cloak>
             {{ error }}
         </div>
         <source-list 

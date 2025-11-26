@@ -23,7 +23,7 @@ const SourceList = {
         },
         getSourceIcon(type) {
             const icons = {
-                'Meeting': 'bi-calendar-event',
+                'Meeting': 'bi-camera-video',
                 'Document': 'bi-file-text',
                 'Email': 'bi-envelope',
                 'Chat': 'bi-chat-dots',

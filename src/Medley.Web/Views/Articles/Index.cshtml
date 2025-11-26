@@ -19,7 +19,7 @@
                 <span class="visually-hidden">Loading...</span>
             </div>
         </div>
-        <div v-else-if="error" class="alert alert-danger">
+        <div v-else-if="error" class="alert alert-danger" v-cloak>
             {{ error }}
         </div>
         <article-tree 
@@ -32,7 +32,7 @@
 </div>
 
 <!-- Main Content -->
-<div class="main-content">
+<div class="main-content" :class="{ 'd-flex flex-column': selectedArticle }" :style="selectedArticle ? 'padding: 0;' : ''">
     <div v-if="!selectedArticle" class="empty-state">
         <div class="empty-state-icon">
             <i class="bi bi-file-text"></i>
@@ -40,86 +40,11 @@
         <div class="empty-state-title">No Article Selected</div>
         <div class="empty-state-text">Select an article from the sidebar to view its details</div>
     </div>
-    <div v-else>
-        <div class="main-content-header">
-            <div class="d-flex justify-content-between align-items-start mb-3">
-                <div>
-                    <h1 class="main-content-title">{{ selectedArticle.title }}</h1>
-                    <div class="text-muted">
-                        <span class="badge" :class="getStatusBadgeClass(selectedArticle.status)">
-                            {{ selectedArticle.status }}
-                        </span>
-                        <span class="ms-2">
-                            <i class="bi bi-calendar3"></i>
-                            Created {{ formatDate(selectedArticle.createdAt) }}
-                        </span>
-                        <span class="ms-2" v-if="selectedArticle.parentTitle">
-                            <i class="bi bi-diagram-3"></i>
-                            Parent: {{ selectedArticle.parentTitle }}
-                        </span>
-                    </div>
-                </div>
-                <div>
-                    <button class="btn btn-outline-primary btn-sm me-2" @@click="editArticle">
-                        <i class="bi bi-pencil"></i> Edit
-                    </button>
-                    <button class="btn btn-outline-danger btn-sm" @@click="deleteArticle">
-                        <i class="bi bi-trash"></i> Delete
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0">Article Information</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <dl class="row">
-                            <dt class="col-sm-4">Status:</dt>
-                            <dd class="col-sm-8">
-                                <span class="badge" :class="getStatusBadgeClass(selectedArticle.status)">
-                                    {{ selectedArticle.status }}
-                                </span>
-                            </dd>
-                            <dt class="col-sm-4">Created:</dt>
-                            <dd class="col-sm-8">{{ formatDate(selectedArticle.createdAt) }}</dd>
-                            <dt class="col-sm-4">Published:</dt>
-                            <dd class="col-sm-8">{{ selectedArticle.publishedAt ? formatDate(selectedArticle.publishedAt) : 'Not published' }}</dd>
-                        </dl>
-                    </div>
-                    <div class="col-md-6">
-                        <dl class="row">
-                            <dt class="col-sm-4">Children:</dt>
-                            <dd class="col-sm-8">{{ selectedArticle.childrenCount }} child articles</dd>
-                            <dt class="col-sm-4">Fragments:</dt>
-                            <dd class="col-sm-8">{{ selectedArticle.fragmentsCount }} fragments</dd>
-                        </dl>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Content</h5>
-                <button class="btn btn-sm btn-outline-primary">
-                    <i class="bi bi-plus"></i> Add Fragment
-                </button>
-            </div>
-            <div class="card-body">
-                <div class="empty-state">
-                    <div class="empty-state-icon">
-                        <i class="bi bi-puzzle"></i>
-                    </div>
-                    <div class="empty-state-title">No Fragments</div>
-                    <div class="empty-state-text">Add fragments to build this article's content</div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <tiptap-editor v-else
+                   v-model="editingContent"
+                   :key="selectedArticleId"
+                   class="flex-grow-1"
+                   placeholder="Start writing your article content..." />
 </div>
 
 <!-- Right Sidebar -->
@@ -139,25 +64,37 @@
     <script src="~/js/utils.js"></script>
     <script src="~/js/components/article-tree.js"></script>
     <script src="~/js/components/chat-panel.js"></script>
+    <script type="module" src="~/js/components/tiptap-editor.js"></script>
     <script>
         (function() {
             const { createApp } = Vue;
             const { api, createSignalRConnection } = window.ArticleBrowserApp;
             const { formatDate, getStatusBadgeClass } = window.MedleyUtils;
 
-            // Single unified Vue app for the entire Articles page
-            const app = createApp({
-                components: {
-                    'article-tree': ArticleTree,
-                    'chat-panel': ChatPanel
-                },
+            // Wait for TiptapEditor to load before mounting the app
+            function initializeApp() {
+                if (!window.TiptapEditor) {
+                    setTimeout(initializeApp, 100);
+                    return;
+                }
+
+                // Single unified Vue app for the entire Articles page
+                const app = createApp({
+                    components: {
+                        'article-tree': ArticleTree,
+                        'chat-panel': ChatPanel,
+                        'tiptap-editor': window.TiptapEditor
+                    },
                 data() {
                     return {
                         articles: [],
                         selectedArticleId: null,
                         selectedArticle: null,
                         loading: false,
-                        error: null
+                        error: null,
+                        editingTitle: '',
+                        editingContent: '',
+                        isSaving: false
                     };
                 },
                 methods: {
@@ -175,9 +112,15 @@
                     },
                     
                     async selectArticle(article) {
-                        this.selectedArticleId = article.id;
                         try {
-                            this.selectedArticle = await api.get(`/api/articles/${article.id}`);
+                            // Fetch the article FIRST, before changing the key
+                            const fullArticle = await api.get(`/api/articles/${article.id}`);
+                            
+                            // Now update everything together
+                            this.editingTitle = fullArticle.title;
+                            this.editingContent = fullArticle.content || '';
+                            this.selectedArticle = fullArticle;
+                            this.selectedArticleId = article.id;
                         } catch (err) {
                             console.error('Error loading article:', err);
                             this.selectedArticle = null;
@@ -187,8 +130,28 @@
                     formatDate,
                     getStatusBadgeClass,
                     
-                    editArticle() {
-                        alert('Edit functionality coming soon');
+                    async saveArticle() {
+                        if (!this.selectedArticle) return;
+                        
+                        this.isSaving = true;
+                        try {
+                            await api.put(`/api/articles/${this.selectedArticle.id}`, {
+                                title: this.editingTitle,
+                                content: this.editingContent
+                            });
+                            
+                            // Update the selected article with new data
+                            this.selectedArticle.title = this.editingTitle;
+                            this.selectedArticle.content = this.editingContent;
+                            
+                            // Reload articles to update the tree
+                            await this.loadArticles();
+                        } catch (err) {
+                            alert('Failed to save article: ' + err.message);
+                            console.error('Error saving article:', err);
+                        } finally {
+                            this.isSaving = false;
+                        }
                     },
                     
                     deleteArticle() {
@@ -242,8 +205,12 @@
                 }
             });
             
-            // Mount the single app to #app which contains everything
-            app.mount('#app');
+                // Mount the single app to #app which contains everything
+                app.mount('#app');
+            }
+            
+            // Start initialization
+            initializeApp();
         })(); // End of IIFE
     </script>
 }
