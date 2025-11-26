@@ -1,9 +1,10 @@
 @{
     var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
     var currentArea = ViewContext.RouteData.Values["area"]?.ToString();
-    var isSettings = currentController == "Settings";
+    var isSettings = currentArea == "Admin" && currentController == "Settings";
     var isIntegrations = currentArea == "Integrations";
-    var isUsers = currentController == "Users";
+    var isUsers = currentArea == "Admin" && currentController == "Users";
+    var isKnowledgeBuilderImport = currentArea == "Admin" && currentController == "KnowledgeBuilderImport";
 }
 
 <div class="sidebar-header">
@@ -12,7 +13,7 @@
 <div class="sidebar-content">
     <ul class="list-view">
         <li class="list-item">
-            <a asp-area="" asp-controller="Settings" asp-action="Index" class="list-item-content @(isSettings ? "active" : "")">
+            <a asp-area="Admin" asp-controller="Settings" asp-action="Index" class="list-item-content @(isSettings ? "active" : "")">
                 <i class="list-item-icon bi bi-gear"></i>
                 <div class="list-item-body">
                     <div class="list-item-title">General</div>
@@ -30,7 +31,7 @@
         @if (User.IsInRole("Admin"))
         {
             <li class="list-item">
-                <a asp-area="" asp-controller="Users" asp-action="Index" class="list-item-content @(isUsers ? "active" : "")">
+                <a asp-area="Admin" asp-controller="Users" asp-action="Index" class="list-item-content @(isUsers ? "active" : "")">
                     <i class="list-item-icon bi bi-people"></i>
                     <div class="list-item-body">
                         <div class="list-item-title">Users</div>
@@ -40,4 +41,23 @@
         }
     </ul>
 </div>
+
+@if (User.IsInRole("Admin"))
+{
+    <div class="sidebar-header">
+        <h6 class="sidebar-title">Utilities</h6>
+    </div>
+    <div class="sidebar-content">
+        <ul class="list-view">
+            <li class="list-item">
+                <a asp-area="Admin" asp-controller="KnowledgeBuilderImport" asp-action="Index" class="list-item-content @(isKnowledgeBuilderImport ? "active" : "")">
+                    <i class="list-item-icon bi bi-file-earmark-arrow-up"></i>
+                    <div class="list-item-body">
+                        <div class="list-item-title">KnowledgeBuilder Import</div>
+                    </div>
+                </a>
+            </li>
+        </ul>
+    </div>
+}
 

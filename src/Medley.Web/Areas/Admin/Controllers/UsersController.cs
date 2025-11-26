@@ -7,11 +7,12 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace Medley.Web.Controllers;
+namespace Medley.Web.Areas.Admin.Controllers;
 
 /// <summary>
 /// Controller for user management operations (Admin only)
 /// </summary>
+[Area("Admin")]
 [Authorize(Roles = "Admin")]
 public class UsersController : Controller
 {
@@ -242,3 +243,4 @@ public class UsersController : Controller
         return View(logs);
     }
 }
+

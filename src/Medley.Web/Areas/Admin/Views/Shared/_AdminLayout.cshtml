@@ -1,0 +1,30 @@
+@{
+    Layout = "_Layout";
+}
+
+@section LeftSidebar {
+    @await Html.PartialAsync("~/Areas/Admin/Views/Shared/_AdminSidebar.cshtml")
+}
+
+@RenderBody()
+
+@section Scripts {
+    @if (IsSectionDefined("Scripts"))
+    {
+        @await RenderSectionAsync("Scripts")
+    }
+}
+
+@section Styles {
+    @if (IsSectionDefined("Styles"))
+    {
+        @await RenderSectionAsync("Styles")
+    }
+}
+
+@section VueTemplates {
+    @if (IsSectionDefined("VueTemplates"))
+    {
+        @await RenderSectionAsync("VueTemplates")
+    }
+}

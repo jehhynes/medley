@@ -1,7 +1,9 @@
 @{
     var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+    var currentArea = ViewContext.RouteData.Values["area"]?.ToString();
     var hasLeftSidebar = ViewData["HasLeftSidebar"] as bool? ?? false;
     var hasRightSidebar = ViewData["HasRightSidebar"] as bool? ?? false;
+    var isSettingsArea = currentArea == "Admin" || currentArea == "Integrations";
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -63,11 +65,11 @@
                 <span class="vertical-menu-item-label">Fragments</span>
             </a>
             <div style="flex: 1;"></div>
-            <a asp-area="" asp-controller="Settings" asp-action="Index" 
-               class="vertical-menu-item @(currentController == "Settings" ? "active" : "")" 
-               title="Settings">
+            <a asp-area="Admin" asp-controller="Settings" asp-action="Index" 
+               class="vertical-menu-item @(isSettingsArea ? "active" : "")" 
+               title="Admin">
                 <i class="bi bi-gear"></i>
-                <span class="vertical-menu-item-label">Settings</span>
+                <span class="vertical-menu-item-label">Admin</span>
             </a>
             <div class="dropdown">
                 <button class="vertical-menu-item" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="User">

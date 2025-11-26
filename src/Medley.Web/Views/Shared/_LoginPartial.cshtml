@@ -28,7 +28,7 @@
     </a> *@
     @if (User.IsInRole("Admin"))
     {
-        <a class="dropdown-item" asp-controller="Users" asp-action="Index">
+        <a class="dropdown-item" asp-area="Admin" asp-controller="Users" asp-action="Index">
             <i class="icon me-2 cil-people"></i> Users<span class="badge badge-sm bg-secondary ms-2">Admin</span>
         </a>
     }

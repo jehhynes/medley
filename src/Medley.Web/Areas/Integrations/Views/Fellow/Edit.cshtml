@@ -3,10 +3,10 @@
     ViewData["Title"] = Model.IsEdit ? "Edit Fellow Integration" : "Add Fellow Integration";
 }
 
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">@(Model.IsEdit ? "Edit Fellow Integration" : "Add Fellow Integration")</h1>
-    <div class="btn-toolbar mb-2 mb-md-0">
-        <a asp-action="Index" asp-controller="Integrations" asp-area="" class="btn btn-outline-secondary">
+<div class="main-content-header">
+    <h1 class="main-content-title">@(Model.IsEdit ? "Edit Fellow Integration" : "Add Fellow Integration")</h1>
+    <div class="btn-toolbar">
+        <a asp-action="Index" asp-controller="Manage" asp-area="Integrations" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left"></i> Back to Integrations
         </a>
     </div>

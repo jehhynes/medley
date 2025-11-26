@@ -69,13 +69,13 @@ namespace Medley.Infrastructure.Migrations
                 columns: new[] { "Id", "Name", "Icon", "CreatedAt" },
                 values: new object[,]
                 {
-                    { Guid.NewGuid(), "Index", "fa-folder", now },
-                    { Guid.NewGuid(), "How To", "fa-list-check", now },
-                    { Guid.NewGuid(), "Tutorial", "fa-play-circle", now },
-                    { Guid.NewGuid(), "Reference", "fa-book", now },
-                    { Guid.NewGuid(), "Concept", "fa-lightbulb", now },
+                    { Guid.NewGuid(), "Index", "bi-folder", now },
+                    { Guid.NewGuid(), "HowTo", "bi-card-checklist", now },
+                    { Guid.NewGuid(), "Tutorial", "bi-play-circle", now },
+                    { Guid.NewGuid(), "Reference", "bi-book", now },
+                    { Guid.NewGuid(), "Concept", "bi-lightbulb", now },
                     { Guid.NewGuid(), "FAQ", "fa-comment-question", now },
-                    { Guid.NewGuid(), "Troubleshooting", "fa-wrench", now }
+                    { Guid.NewGuid(), "Troubleshooting", "bi-wrench", now }
                 });
         }
 
