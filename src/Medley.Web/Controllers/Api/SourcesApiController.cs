@@ -87,7 +87,7 @@ public class SourcesApiController : ControllerBase
         }
 
         var sources = await _sourceRepository.Query()
-            .Where(s => s.Name != null && s.Name.Contains(query))
+            .Where(s => s.Name != null && s.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(s => s.Date)
             .Take(take)
             .Select(s => new

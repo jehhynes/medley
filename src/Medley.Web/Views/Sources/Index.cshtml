@@ -5,6 +5,52 @@
     Layout = "_VueLayout";
 }
 
+@section Styles {
+    <style>
+        json-viewer {
+            --background-color: transparent;
+            --color: var(--bs-body-color);
+            --font-family: 'Courier New', monospace;
+            --font-size: 0.875rem;
+            --line-height: 1.5;
+            --indent-size: 1.5em;
+            --indentguide-size: 1px;
+            --indentguide-style: solid;
+            --indentguide-color: var(--bs-border-color);
+            --indentguide-color-active: var(--bs-primary);
+            
+            /* Type colors - compatible with light/dark themes */
+            --string-color: #0d9488;
+            --number-color: #dc2626;
+            --boolean-color: #2563eb;
+            --null-color: #9333ea;
+            --property-color: #ea580c;
+            
+            /* Collapsed preview */
+            --preview-color: var(--bs-secondary);
+            
+            /* Search highlight */
+            --highlight-color: #fbbf24;
+        }
+        
+        /* Dark theme adjustments */
+        [data-bs-theme="dark"] json-viewer {
+            --string-color: #5eead4;
+            --number-color: #fca5a5;
+            --boolean-color: #93c5fd;
+            --null-color: #d8b4fe;
+            --property-color: #fdba74;
+        }
+        
+        json-viewer {
+            display: block;
+            padding: 1rem;
+            /* border: 1px solid var(--bs-border-color);
+            border-radius: 0.375rem; */
+        }
+    </style>
+}
+
 <!-- Left Sidebar (List) -->
 <div class="sidebar left-sidebar">
     <div class="sidebar-header">
@@ -64,69 +110,44 @@
                         </span>
                     </div>
                 </div>
-                <div>
-                    <button class="btn btn-outline-primary btn-sm" @@click="viewIntegration">
-                        <i class="bi bi-plug"></i> View Integration
-                    </button>
-                </div>
             </div>
         </div>
 
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0">Source Information</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <dl class="row">
-                            <dt class="col-sm-4">Type:</dt>
-                            <dd class="col-sm-8">{{ selectedSource.type }}</dd>
-                            <dt class="col-sm-4">Date:</dt>
-                            <dd class="col-sm-8">{{ formatDate(selectedSource.date) }}</dd>
-                            <dt class="col-sm-4">External ID:</dt>
-                            <dd class="col-sm-8">
-                                <code>{{ selectedSource.externalId || 'N/A' }}</code>
-                            </dd>
-                        </dl>
-                    </div>
-                    <div class="col-md-6">
-                        <dl class="row">
-                            <dt class="col-sm-4">Integration:</dt>
-                            <dd class="col-sm-8">{{ selectedSource.integrationName }}</dd>
-                            <dt class="col-sm-4">Fragments:</dt>
-                            <dd class="col-sm-8">{{ selectedSource.fragmentsCount }} fragments</dd>
-                            <dt class="col-sm-4">Created:</dt>
-                            <dd class="col-sm-8">{{ formatDate(selectedSource.createdAt) }}</dd>
-                        </dl>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card mb-4" v-if="selectedSource.metadataJson">
-            <div class="card-header">
-                <h5 class="mb-0">Metadata</h5>
-            </div>
-            <div class="card-body">
-                <pre class="mb-0"><code>{{ selectedSource.metadataJson }}</code></pre>
-            </div>
-        </div>
-
-        <div class="card" v-if="selectedSource.content">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Content</h5>
-                <button class="btn btn-sm btn-outline-primary" @@click="copyContent">
-                    <i class="bi bi-clipboard"></i> Copy
+        <ul class="nav nav-tabs " role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="content-tab" data-bs-toggle="tab" data-bs-target="#content-pane" type="button" role="tab" aria-controls="content-pane" aria-selected="true">
+                    Content
                 </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="metadata-tab" data-bs-toggle="tab" data-bs-target="#metadata-pane" type="button" role="tab" aria-controls="metadata-pane" aria-selected="false">
+                    Metadata
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            <div class="tab-pane show active" id="content-pane" role="tabpanel" aria-labelledby="content-tab">
+                <div v-if="selectedSource.content">
+                    <div class="content-preview" style="white-space: pre-wrap;">
+                        {{ selectedSource.content }}
+                    </div>
+                </div>
+                <div v-else class="text-muted">
+                    No content available
+                </div>
             </div>
-            <div class="card-body">
-                <div class="content-preview" style="white-space: pre-wrap; max-height: 600px; overflow-y: auto;">
-                    {{ selectedSource.content }}
+            <div class="tab-pane" id="metadata-pane" role="tabpanel" aria-labelledby="metadata-tab">
+                <div v-if="parsedMetadata">
+                    <json-viewer ref="jsonViewer"></json-viewer>
+                </div>
+                <div v-else class="text-muted">
+                    No metadata available
                 </div>
             </div>
         </div>
     </div>
+
 </div>
 
 @section VueTemplates {
@@ -158,6 +179,28 @@
                         error: null,
                         searchQuery: ''
                     };
+                },
+                computed: {
+                    parsedMetadata() {
+                        if (!this.selectedSource || !this.selectedSource.metadataJson) {
+                            return null;
+                        }
+                        try {
+                            return JSON.parse(this.selectedSource.metadataJson);
+                        } catch (e) {
+                            console.error('Failed to parse metadata JSON:', e);
+                            return null;
+                        }
+                    }
+                },
+                watch: {
+                    parsedMetadata(newVal) {
+                        this.$nextTick(() => {
+                            if (this.$refs.jsonViewer && newVal) {
+                                this.$refs.jsonViewer.data = newVal;
+                            }
+                        });
+                    }
                 },
                 methods: {
                     async loadSources() {
@@ -196,22 +239,7 @@
                         }
                     },
                     
-                    formatDate,
-                    
-                    viewIntegration() {
-                        window.location.href = '/Integrations/Manage';
-                    },
-                    
-                    async copyContent() {
-                        if (this.selectedSource && this.selectedSource.content) {
-                            const success = await copyToClipboard(this.selectedSource.content);
-                            if (success) {
-                                alert('Content copied to clipboard');
-                            } else {
-                                alert('Failed to copy content');
-                            }
-                        }
-                    }
+                    formatDate
                 },
                 
                 mounted() {
