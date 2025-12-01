@@ -1,7 +1,8 @@
-@model KnowledgeBuilderImportViewModel
+@model SourceImportViewModel
+@using Medley.Domain.Enums
 
 @{
-    ViewData["Title"] = "Import Knowledge Builder Articles";
+    ViewData["Title"] = "Import Sources";
 }
 
 <div class="container-fluid py-4">
@@ -11,7 +12,7 @@
                 <div class="card-header">
                     <h3 class="card-title mb-0">
                         <i class="bi bi-file-earmark-arrow-up me-2"></i>
-                        Import Knowledge Builder Articles
+                        Import Sources from Collector
                     </h3>
                 </div>
                 <div class="card-body">
@@ -34,10 +35,10 @@
                     <div class="row">
                         <div class="col-lg-8 mx-auto">
                             <div class="mb-4">
-                                <h5>Upload Knowledge Builder Export</h5>
+                                <h5>Upload Collector Export</h5>
                                 <p class="text-muted">
-                                    Upload a JSON file or ZIP archive containing Knowledge Builder article exports.
-                                    The import process will automatically create article types and maintain the hierarchical structure.
+                                    Upload a JSON file or ZIP archive containing source exports from the Collector utility.
+                                    Select the format type to specify how the data should be processed.
                                 </p>
                             </div>
 
@@ -47,6 +48,47 @@
                                 <div asp-validation-summary="All" class="text-danger mb-3"></div>
 
                                 <div class="mb-4">
+                                    <label class="form-label fw-bold">Source Format</label>
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <div class="form-check card p-3 h-100 @(Model.SelectedMetadataType == SourceMetadataType.Collector_GoogleDrive ? "border-primary bg-primary-subtle" : "")">
+                                                <input class="form-check-input" type="radio" name="metadataType" 
+                                                       id="formatGoogleDrive" value="@((int)SourceMetadataType.Collector_GoogleDrive)"
+                                                       @(Model.SelectedMetadataType == SourceMetadataType.Collector_GoogleDrive ? "checked" : "")>
+                                                <label class="form-check-label w-100" for="formatGoogleDrive">
+                                                    <div class="d-flex align-items-center">
+                                                        <i class="bi bi-google text-danger fs-3 me-3"></i>
+                                                        <div>
+                                                            <strong>Google Drive</strong>
+                                                            <br>
+                                                            <small class="text-muted">Google Meet recordings from Drive</small>
+                                                        </div>
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-check card p-3 h-100 @(Model.SelectedMetadataType == SourceMetadataType.Collector_Fellow ? "border-primary bg-primary-subtle" : "")">
+                                                <input class="form-check-input" type="radio" name="metadataType" 
+                                                       id="formatFellow" value="@((int)SourceMetadataType.Collector_Fellow)"
+                                                       @(Model.SelectedMetadataType == SourceMetadataType.Collector_Fellow ? "checked" : "")>
+                                                <label class="form-check-label w-100" for="formatFellow">
+                                                    <div class="d-flex align-items-center">
+                                                        <i class="bi bi-people text-primary fs-3 me-3"></i>
+                                                        <div>
+                                                            <strong>Fellow</strong>
+                                                            <br>
+                                                            <small class="text-muted">Fellow.ai meeting recordings</small>
+                                                        </div>
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold">File Upload</label>
                                     <div class="border border-2 border-dashed rounded p-4 text-center bg-body-tertiary drop-zone" id="dropZone">
                                         <i class="bi bi-cloud-upload display-1 text-muted"></i>
                                         <p class="mt-3 mb-2 fw-bold">Drop your file here or click to browse</p>
@@ -67,7 +109,7 @@
                                 <div class="d-grid gap-2">
                                     <button type="submit" class="btn btn-primary btn-lg" id="uploadBtn" disabled>
                                         <i class="bi bi-upload me-2"></i>
-                                        Import Articles
+                                        Import Sources
                                     </button>
                                 </div>
                             </form>
@@ -96,19 +138,19 @@
                         <div class="row mb-4">
                             <div class="col-md-3">
                                 <div class="text-center p-3 bg-body-secondary rounded">
-                                    <h3 class="mb-1 text-primary">@Model.ImportResult.TotalArticlesProcessed</h3>
+                                    <h3 class="mb-1 text-primary">@Model.ImportResult.TotalSourcesProcessed</h3>
                                     <small class="text-muted">Total Processed</small>
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="text-center p-3 bg-body-secondary rounded">
-                                    <h3 class="mb-1 text-success">@Model.ImportResult.ArticlesImported</h3>
+                                    <h3 class="mb-1 text-success">@Model.ImportResult.SourcesImported</h3>
                                     <small class="text-muted">Imported</small>
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="text-center p-3 bg-body-secondary rounded">
-                                    <h3 class="mb-1 text-warning">@Model.ImportResult.ArticlesSkipped</h3>
+                                    <h3 class="mb-1 text-warning">@Model.ImportResult.SourcesSkipped</h3>
                                     <small class="text-muted">Skipped</small>
                                 </div>
                             </div>
@@ -156,7 +198,7 @@
                         {
                             <div class="alert alert-success mb-0">
                                 <i class="bi bi-check-circle me-2"></i>
-                                All articles were imported successfully!
+                                All sources were imported successfully!
                             </div>
                         }
                     </div>
@@ -174,6 +216,18 @@
         .drop-zone {
             cursor: pointer;
         }
+        .form-check.card {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .form-check.card:hover {
+            border-color: var(--bs-primary) !important;
+        }
+        .form-check.card .form-check-input {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+        }
     </style>
     <script>
         const dropZone = document.getElementById('dropZone');
@@ -184,6 +238,31 @@
         const uploadBtn = document.getElementById('uploadBtn');
         const importForm = document.getElementById('importForm');
         const progressContainer = document.getElementById('progressContainer');
+        const formatCards = document.querySelectorAll('.form-check.card');
+        const formatRadios = document.querySelectorAll('input[name="metadataType"]');
+
+        // Format card selection styling
+        formatRadios.forEach(radio => {
+            radio.addEventListener('change', () => {
+                formatCards.forEach(card => {
+                    card.classList.remove('border-primary', 'bg-primary-subtle');
+                });
+                if (radio.checked) {
+                    radio.closest('.form-check.card').classList.add('border-primary', 'bg-primary-subtle');
+                }
+            });
+        });
+
+        // Click on card to select radio
+        formatCards.forEach(card => {
+            card.addEventListener('click', (e) => {
+                if (e.target.tagName !== 'INPUT') {
+                    const radio = card.querySelector('input[type="radio"]');
+                    radio.checked = true;
+                    radio.dispatchEvent(new Event('change'));
+                }
+            });
+        });
 
         // Click to browse
         dropZone.addEventListener('click', () => {

@@ -7,7 +7,8 @@ public enum IntegrationType
     GitHub = 2,
     Slack = 3,
     Jira = 4,
-    Zendesk = 5
+    Zendesk = 5,
+    Manual = 6
 }
 
 

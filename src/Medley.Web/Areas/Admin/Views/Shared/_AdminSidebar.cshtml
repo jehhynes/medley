@@ -5,6 +5,7 @@
     var isIntegrations = currentArea == "Integrations";
     var isUsers = currentArea == "Admin" && currentController == "Users";
     var isKnowledgeBuilderImport = currentArea == "Admin" && currentController == "KnowledgeBuilderImport";
+    var isSourceImport = currentArea == "Admin" && currentController == "SourceImport";
 }
 
 <div class="sidebar-header">
@@ -53,7 +54,15 @@
                 <a asp-area="Admin" asp-controller="KnowledgeBuilderImport" asp-action="Index" class="list-item-content @(isKnowledgeBuilderImport ? "active" : "")">
                     <i class="list-item-icon bi bi-file-earmark-arrow-up"></i>
                     <div class="list-item-body">
-                        <div class="list-item-title">KnowledgeBuilder Import</div>
+                        <div class="list-item-title">Knowledge Builder Import</div>
+                    </div>
+                </a>
+            </li>
+            <li class="list-item">
+                <a asp-area="Admin" asp-controller="SourceImport" asp-action="Index" class="list-item-content @(isSourceImport ? "active" : "")">
+                    <i class="list-item-icon bi bi-file-earmark-arrow-up"></i>
+                    <div class="list-item-body">
+                        <div class="list-item-title">Collector Import</div>
                     </div>
                 </a>
             </li>

@@ -10,6 +10,11 @@ public class Source : BusinessEntity
 {
     public required SourceType Type { get; set; }
 
+    /// <summary>
+    /// Type of metadata stored in MetadataJson (allows consumers to know which model to deserialize into)
+    /// </summary>
+    public SourceMetadataType MetadataType { get; set; } = SourceMetadataType.Unknown;
+
     [MaxLength(200)]
     public string? Name { get; set; }
 
