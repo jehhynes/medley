@@ -40,4 +40,23 @@ public class SignalRNotificationService : INotificationService
             _logger.LogError(ex, "Failed to send integration status update for {IntegrationId}", integrationId);
         }
     }
+
+    /// <summary>
+    /// Send fragment extraction completion notification
+    /// </summary>
+    public async Task SendFragmentExtractionCompleteAsync(Guid sourceId, int fragmentCount, bool success, string? message = null)
+    {
+        try
+        {
+            await _hubContext.Clients.All
+                .SendAsync("FragmentExtractionComplete", sourceId, fragmentCount, success, message ?? string.Empty);
+            
+            _logger.LogDebug("Sent fragment extraction complete notification for source {SourceId}: {FragmentCount} fragments, Success: {Success}", 
+                sourceId, fragmentCount, success);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send fragment extraction complete notification for source {SourceId}", sourceId);
+        }
+    }
 }

@@ -108,7 +108,26 @@
                             <i class="bi bi-plug"></i>
                             {{ selectedSource.integrationName }}
                         </span>
+                        <span class="ms-2" v-if="selectedSource.fragmentsCount !== undefined">
+                            <i class="bi bi-puzzle"></i>
+                            {{ selectedSource.fragmentsCount }} fragments
+                        </span>
                     </div>
+                </div>
+                <div>
+                    <button 
+                        class="btn btn-primary" 
+                        @@click="extractFragments" 
+                        :disabled="extractingFragments"
+                        v-if="selectedSource.content">
+                        <span v-if="extractingFragments">
+                            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                            Extracting...
+                        </span>
+                        <span v-else>
+                            <i class="bi bi-magic"></i> Extract Fragments
+                        </span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -162,7 +181,7 @@
     <script>
         (function() {
             const { createApp } = Vue;
-            const { api } = window.ArticleBrowserApp;
+            const { api, createSignalRConnection } = window.ArticleBrowserApp;
             const { formatDate, copyToClipboard } = window.MedleyUtils;
 
             // Single unified Vue app for the entire Sources page
@@ -177,7 +196,9 @@
                         selectedSource: null,
                         loading: false,
                         error: null,
-                        searchQuery: ''
+                        searchQuery: '',
+                        extractingFragments: false,
+                        signalRConnection: null
                     };
                 },
                 computed: {
@@ -239,11 +260,105 @@
                         }
                     },
                     
+                    async extractFragments() {
+                        if (!this.selectedSource) return;
+                        
+                        this.extractingFragments = true;
+                        try {
+                            const response = await api.post(`/api/sources/${this.selectedSource.id}/extract-fragments`);
+                            
+                            if (response.success) {
+                                // Show success toast
+                                this.showToast('success', response.message || 'Fragment extraction started successfully');
+                                // Keep button disabled until SignalR notification arrives
+                            } else {
+                                this.showToast('error', response.message || 'Failed to start fragment extraction');
+                                this.extractingFragments = false;
+                            }
+                        } catch (err) {
+                            console.error('Fragment extraction error:', err);
+                            this.showToast('error', err.message || 'Failed to extract fragments. Please try again.');
+                            this.extractingFragments = false;
+                        }
+                    },
+                    
+                    showToast(type, message) {
+                        // Simple toast notification using Bootstrap toast
+                        const toastContainer = document.getElementById('toast-container');
+                        if (!toastContainer) {
+                            const container = document.createElement('div');
+                            container.id = 'toast-container';
+                            container.className = 'toast-container position-fixed top-0 end-0 p-3';
+                            container.style.zIndex = '1090';
+                            document.body.appendChild(container);
+                        }
+                        
+                        const toastEl = document.createElement('div');
+                        toastEl.className = `toast align-items-center text-bg-${type === 'error' ? 'danger' : type}`;
+                        toastEl.setAttribute('role', 'alert');
+                        toastEl.innerHTML = `
+                            <div class="d-flex">
+                                <div class="toast-body">${message}</div>
+                                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                            </div>
+                        `;
+                        
+                        document.getElementById('toast-container').appendChild(toastEl);
+                        const toast = new bootstrap.Toast(toastEl, { autohide: true, delay: 5000 });
+                        toast.show();
+                        
+                        toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+                    },
+                    
                     formatDate
                 },
                 
-                mounted() {
+                async mounted() {
                     this.loadSources();
+                    
+                    // Set up SignalR connection for real-time fragment extraction notifications
+                    this.signalRConnection = createSignalRConnection('/integrationStatusHub');
+                    
+                    // Listen for fragment extraction completion
+                    this.signalRConnection.on('FragmentExtractionComplete', async (sourceId, fragmentCount, success, message) => {
+                        console.log('Fragment extraction complete:', { sourceId, fragmentCount, success, message });
+                        
+                        // Check if this notification is for the currently selected source
+                        if (this.selectedSource && this.selectedSource.id === sourceId) {
+                            // Re-enable the button
+                            this.extractingFragments = false;
+                            
+                            // Reload source to get updated fragment count
+                            try {
+                                const updatedSource = await api.get(`/api/sources/${sourceId}`);
+                                this.selectedSource = updatedSource;
+                            } catch (err) {
+                                console.error('Failed to reload source:', err);
+                            }
+                            
+                            // Show notification
+                            if (success) {
+                                this.showToast('success', message || `Successfully extracted ${fragmentCount} fragments`);
+                            } else {
+                                this.showToast('error', message || 'Fragment extraction failed');
+                            }
+                        }
+                    });
+                    
+                    // Start the SignalR connection
+                    try {
+                        await this.signalRConnection.start();
+                        console.log('SignalR connected for fragment notifications');
+                    } catch (err) {
+                        console.error('SignalR connection error:', err);
+                    }
+                },
+                
+                beforeUnmount() {
+                    // Clean up SignalR connection
+                    if (this.signalRConnection) {
+                        this.signalRConnection.stop();
+                    }
                 }
             });
             

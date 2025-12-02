@@ -1,11 +1,9 @@
 using Amazon.BedrockRuntime;
-using Amazon.BedrockRuntime.Model;
 using Medley.Application.Configuration;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using System.Text;
-using System.Text.Json;
 
 namespace Medley.Infrastructure.HealthChecks;
 
@@ -17,41 +15,26 @@ public class BedrockHealthCheck : IHealthCheck
     private readonly AmazonBedrockRuntimeClient _bedrockClient;
     private readonly BedrockSettings _bedrockSettings;
     private readonly ILogger<BedrockHealthCheck> _logger;
+    private readonly IChatClient _chatClient;
 
     public BedrockHealthCheck(AmazonBedrockRuntimeClient bedrockClient, IOptions<BedrockSettings> bedrockSettings, ILogger<BedrockHealthCheck> logger)
     {
         _bedrockClient = bedrockClient;
         _bedrockSettings = bedrockSettings.Value;
         _logger = logger;
+        _chatClient = bedrockClient.AsIChatClient(_bedrockSettings.ModelId);
     }
 
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
     {
         try
         {
-            // Perform a simple test invocation to verify Bedrock connectivity
-            var testRequest = new InvokeModelRequest
+            // Perform a simple test invocation to verify Bedrock connectivity using IChatClient
+            var response = await _chatClient.GetResponseAsync("Hello", new ChatOptions
             {
-                ModelId = _bedrockSettings.ModelId,
-                Body = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
-                {
-                    anthropic_version = "bedrock-2023-05-31",
-                    max_tokens = 10,
-                    temperature = 0.1,
-                    messages = new[]
-                    {
-                        new
-                        {
-                            role = "user",
-                            content = "Hello"
-                        }
-                    }
-                }))),
-                ContentType = "application/json",
-                Accept = "application/json"
-            };
-
-            var response = await _bedrockClient.InvokeModelAsync(testRequest, cancellationToken);
+                MaxOutputTokens = 10,
+                Temperature = 0.1f
+            }, cancellationToken);
             
             _logger.LogDebug("Bedrock health check passed for model: {ModelId}", _bedrockSettings.ModelId);
             
@@ -61,11 +44,6 @@ public class BedrockHealthCheck : IHealthCheck
                 ["max_tokens"] = _bedrockSettings.MaxTokens,
                 ["temperature"] = _bedrockSettings.Temperature
             });
-        }
-        catch (AmazonBedrockRuntimeException ex)
-        {
-            _logger.LogError(ex, "Bedrock health check failed for model: {ModelId}", _bedrockSettings.ModelId);
-            return HealthCheckResult.Unhealthy($"Bedrock model '{_bedrockSettings.ModelId}' is not accessible: {ex.Message}", ex);
         }
         catch (Exception ex)
         {

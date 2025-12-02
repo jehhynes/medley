@@ -71,7 +71,8 @@ public class BedrockAiServiceTests
     {
         // Arrange
         var service = new BedrockAiService(_mockBedrockClient.Object, _mockOptions.Object, _mockLogger.Object);
-        var prompt = "Test prompt";
+        var userPrompt = "Test prompt";
+        var systemPrompt = "You are a helpful assistant";
         var maxTokens = 1000;
         var temperature = 0.5;
         var expectedResponse = "Test response";
@@ -85,7 +86,7 @@ public class BedrockAiServiceTests
             .ReturnsAsync(mockResponse);
 
         // Act
-        var result = await service.ProcessPromptAsync(prompt, maxTokens, temperature);
+        var result = await service.ProcessPromptAsync(userPrompt, systemPrompt, null, maxTokens, temperature);
 
         // Assert
         Assert.Equal(expectedResponse, result);
@@ -94,7 +95,8 @@ public class BedrockAiServiceTests
             It.Is<InvokeModelRequest>(r => 
                 r.ModelId == _settings.ModelId &&
                 GetBodyAsString(r.Body).Contains($"\"max_tokens\":{maxTokens}") &&
-                GetBodyAsString(r.Body).Contains($"\"temperature\":{temperature}")),
+                GetBodyAsString(r.Body).Contains($"\"temperature\":{temperature}") &&
+                GetBodyAsString(r.Body).Contains("You are a helpful assistant")),
             default), Times.Once);
     }
 
@@ -103,7 +105,8 @@ public class BedrockAiServiceTests
     {
         // Arrange
         var service = new BedrockAiService(_mockBedrockClient.Object, _mockOptions.Object, _mockLogger.Object);
-        var prompt = "Extract data";
+        var userPrompt = "Extract data";
+        var jsonSchema = "{\"type\": \"object\", \"properties\": {\"data\": {\"type\": \"string\"}}}";
         var expectedResponse = "{\"data\": \"extracted\"}";
 
         var mockResponse = new InvokeModelResponse
@@ -115,16 +118,22 @@ public class BedrockAiServiceTests
             .ReturnsAsync(mockResponse);
 
         // Act
-        var result = await service.ProcessStructuredPromptAsync(prompt);
+        var result = await service.ProcessStructuredPromptAsync<TestDataResponse>(userPrompt, jsonSchema);
 
         // Assert
-        Assert.Equal(expectedResponse, result);
+        Assert.NotNull(result);
+        Assert.Equal("extracted", result.Data);
 
         _mockBedrockClient.Verify(x => x.InvokeModelAsync(
             It.Is<InvokeModelRequest>(r => 
                 GetBodyAsString(r.Body).Contains("Extract data") &&
-                GetBodyAsString(r.Body).Contains("Please ensure your response is valid JSON")),
+                GetBodyAsString(r.Body).Contains("You must respond with valid JSON")),
             default), Times.Once);
+    }
+
+    private class TestDataResponse
+    {
+        public string Data { get; set; } = string.Empty;
     }
 
     [Fact]

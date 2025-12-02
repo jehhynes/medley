@@ -1,4 +1,5 @@
 using Medley.Application.Interfaces;
+using Medley.Application.Jobs;
 using Medley.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,10 +13,17 @@ namespace Medley.Web.Controllers.Api;
 public class SourcesApiController : ControllerBase
 {
     private readonly IRepository<Source> _sourceRepository;
+    private readonly IBackgroundJobService _backgroundJobService;
+    private readonly ILogger<SourcesApiController> _logger;
 
-    public SourcesApiController(IRepository<Source> sourceRepository)
+    public SourcesApiController(
+        IRepository<Source> sourceRepository,
+        IBackgroundJobService backgroundJobService,
+        ILogger<SourcesApiController> logger)
     {
         _sourceRepository = sourceRepository;
+        _backgroundJobService = backgroundJobService;
+        _logger = logger;
     }
 
     /// <summary>
@@ -31,9 +39,9 @@ public class SourcesApiController : ControllerBase
             .Take(take)
             .Select(s => new
             {
-                id = s.Id.ToString(),
+                s.Id,
                 s.Name,
-                type = s.Type.ToString(),
+                s.Type,
                 s.Date,
                 s.ExternalId,
                 IntegrationName = s.Integration.DisplayName,
@@ -64,7 +72,7 @@ public class SourcesApiController : ControllerBase
         {
             source.Id,
             source.Name,
-            Type = source.Type.ToString(),
+            source.Type,
             source.Date,
             source.Content,
             source.MetadataJson,
@@ -100,6 +108,54 @@ public class SourcesApiController : ControllerBase
             .ToListAsync();
 
         return Ok(sources);
+    }
+
+    /// <summary>
+    /// Extract fragments from a source using AI
+    /// </summary>
+    [HttpPost("{id}/extract-fragments")]
+    public async Task<IActionResult> ExtractFragments(Guid id)
+    {
+        try
+        {
+            _logger.LogInformation("Queueing fragment extraction for source {SourceId}", id);
+
+            // Validate that the source exists
+            var sourceExists = await _sourceRepository.Query()
+                .AnyAsync(s => s.Id == id);
+
+            if (!sourceExists)
+            {
+                _logger.LogWarning("Source {SourceId} not found", id);
+                return NotFound(new
+                {
+                    success = false,
+                    message = $"Source {id} not found"
+                });
+            }
+
+            // Queue the background job
+            var jobId = _backgroundJobService.Enqueue<FragmentExtractionJob>(
+                job => job.ExecuteAsync(id));
+
+            _logger.LogInformation("Fragment extraction job {JobId} queued for source {SourceId}", jobId, id);
+
+            return Ok(new
+            {
+                success = true,
+                jobId,
+                message = "Fragment extraction started. This may take a few minutes."
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error while queueing fragment extraction for source {SourceId}", id);
+            return StatusCode(500, new
+            {
+                success = false,
+                message = "An unexpected error occurred. Please try again."
+            });
+        }
     }
 }
 

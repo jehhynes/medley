@@ -59,6 +59,7 @@ public static class DependencyInjection
         services.AddScoped<INotificationService, SignalRNotificationService>();
         services.AddScoped<IKnowledgeBuilderImportService, KnowledgeBuilderImportService>();
         services.AddScoped<ICollectorImportService, CollectorImportService>();
+        services.AddScoped<FragmentExtractionService>();
         //services.AddScoped<IntegrationHealthCheckJob>();
         services.AddSingleton<RecurringJobCleanUpManager>();
         services.AddSingleton<IJobRegistry, JobRegistry>();
@@ -127,7 +128,7 @@ public static class DependencyInjection
                 var config = new AmazonS3Config
                 {
                     RegionEndpoint = RegionEndpoint.GetBySystemName(awsSettings.Region),
-                    ServiceURL = null // Use default AWS endpoints
+                    //ServiceURL = null // Use default AWS endpoints
                 };
 
                 if (hasCredentials)
@@ -146,7 +147,7 @@ public static class DependencyInjection
                 var config = new AmazonBedrockRuntimeConfig
                 {
                     RegionEndpoint = RegionEndpoint.GetBySystemName(awsSettings.Region),
-                    ServiceURL = null // Use default AWS endpoints
+                    //ServiceURL = null // Use default AWS endpoints
                 };
 
                 if (hasCredentials)

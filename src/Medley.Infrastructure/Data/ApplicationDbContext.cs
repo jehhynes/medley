@@ -36,6 +36,7 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     public DbSet<Finding> Findings { get; set; } = null!;
     public DbSet<FragmentCluster> FragmentClusters { get; set; } = null!;
     public DbSet<ObservationCluster> ObservationClusters { get; set; } = null!;
+    public DbSet<Template> Templates { get; set; } = null!;
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {

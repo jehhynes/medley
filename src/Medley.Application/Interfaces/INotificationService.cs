@@ -14,4 +14,13 @@ public interface INotificationService
     /// <param name="status">The new connection status</param>
     /// <param name="message">Optional status message</param>
     Task SendIntegrationStatusUpdateAsync(Guid integrationId, ConnectionStatus status, string? message = null);
+
+    /// <summary>
+    /// Send fragment extraction completion notification
+    /// </summary>
+    /// <param name="sourceId">The ID of the source</param>
+    /// <param name="fragmentCount">Number of fragments extracted</param>
+    /// <param name="success">Whether the extraction was successful</param>
+    /// <param name="message">Optional message</param>
+    Task SendFragmentExtractionCompleteAsync(Guid sourceId, int fragmentCount, bool success, string? message = null);
 }

@@ -1,10 +1,9 @@
 using Amazon.BedrockRuntime;
-using Amazon.BedrockRuntime.Model;
 using Medley.Application.Configuration;
 using Medley.Application.Interfaces;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using System.Text;
 using System.Text.Json;
 
 namespace Medley.Infrastructure.Services;
@@ -14,54 +13,35 @@ namespace Medley.Infrastructure.Services;
 /// </summary>
 public class BedrockAiService : IAiProcessingService
 {
-    private readonly AmazonBedrockRuntimeClient _bedrockClient;
     private readonly BedrockSettings _bedrockSettings;
     private readonly ILogger<BedrockAiService> _logger;
+    private readonly IChatClient _chatClient;
 
     public BedrockAiService(
         AmazonBedrockRuntimeClient bedrockClient,
         IOptions<BedrockSettings> bedrockSettings,
         ILogger<BedrockAiService> logger)
     {
-        _bedrockClient = bedrockClient;
         _bedrockSettings = bedrockSettings.Value;
         _logger = logger;
+        _chatClient = bedrockClient.AsIChatClient(_bedrockSettings.ModelId);
     }
 
-    public async Task<string> ProcessPromptAsync(string prompt, int? maxTokens = null, double? temperature = null)
+    public async Task<string> ProcessPromptAsync(
+        string userPrompt, 
+        string? systemPrompt = null, 
+        string? assistantPrompt = null,
+        int? maxTokens = null, 
+        double? temperature = null)
     {
         try
         {
-            var request = new InvokeModelRequest
-            {
-                ModelId = _bedrockSettings.ModelId,
-                Body = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
-                {
-                    anthropic_version = "bedrock-2023-05-31",
-                    max_tokens = maxTokens ?? _bedrockSettings.MaxTokens,
-                    temperature = temperature ?? _bedrockSettings.Temperature,
-                    messages = new[]
-                    {
-                        new
-                        {
-                            role = "user",
-                            content = prompt
-                        }
-                    }
-                }))),
-                ContentType = "application/json",
-                Accept = "application/json"
-            };
+            var messages = BuildMessages(userPrompt, systemPrompt, assistantPrompt);
+            var options = BuildChatOptions(maxTokens, temperature);
 
-            var response = await _bedrockClient.InvokeModelAsync(request);
-            
-            using var reader = new StreamReader(response.Body);
-            var responseText = await reader.ReadToEndAsync();
-            
-            var jsonResponse = JsonSerializer.Deserialize<JsonElement>(responseText);
-            var content = jsonResponse.GetProperty("content")[0].GetProperty("text").GetString();
-            
-            return content ?? string.Empty;
+            var response = await _chatClient.GetResponseAsync(messages, options);
+
+            return response.Text;
         }
         catch (Exception ex)
         {
@@ -70,13 +50,88 @@ public class BedrockAiService : IAiProcessingService
         }
     }
 
-    public async Task<string> ProcessStructuredPromptAsync(string prompt, int? maxTokens = null, double? temperature = null)
+    public async Task<T> ProcessStructuredPromptAsync<T>(
+        string userPrompt, 
+        string? systemPrompt = null, 
+        string? assistantPrompt = null,
+        int? maxTokens = null, 
+        double? temperature = null)
     {
-        // For structured prompts, we add JSON formatting instructions
-        var structuredPrompt = $@"{prompt}
+        try
+        {
+            var messages = BuildMessages(userPrompt, systemPrompt, assistantPrompt);
+            var options = BuildChatOptions(maxTokens, temperature, ChatResponseFormat.Json);
 
-Please ensure your response is valid JSON and follows the exact format specified above.";
+            var response = await _chatClient.GetResponseAsync<T>(messages, options, useJsonSchemaResponseFormat: false);
+
+            //Strip the markdown json fences that Claude likes to add before deserializing
+            if (response.Messages.Count == 1 && response.Messages.Single().Contents.Count == 1 && response.Messages.Single().Contents.Single() is TextContent textContent
+                && textContent.Text.StartsWith("```json"))
+            {
+                var startIndex = textContent.Text.IndexOf('{');
+                var endIndex = textContent.Text.LastIndexOf('}') + 1;
+                if (startIndex >= 0 && endIndex > startIndex)
+                {
+                    textContent.Text = textContent.Text.Substring(startIndex, endIndex - startIndex);
+                }
+            }
+            
+            // Try to get the structured result
+            if (response.TryGetResult(out T? result) && result != null)
+            {
+                return result;
+            }
+            
+            throw new InvalidOperationException($"Failed to get structured result of type {typeof(T).Name} from AI response");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to process structured prompt with Bedrock");
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Builds a list of chat messages from the provided prompts
+    /// </summary>
+    private List<ChatMessage> BuildMessages(string userPrompt, string? systemPrompt, string? assistantPrompt)
+    {
+        var messages = new List<ChatMessage>();
         
-        return await ProcessPromptAsync(structuredPrompt, maxTokens, temperature);
+        // Add system message if provided
+        if (!string.IsNullOrWhiteSpace(systemPrompt))
+        {
+            messages.Add(new ChatMessage(ChatRole.System, systemPrompt));
+        }
+        
+        // Add user message
+        messages.Add(new ChatMessage(ChatRole.User, userPrompt));
+        
+        // Add assistant prefill if provided
+        if (!string.IsNullOrWhiteSpace(assistantPrompt))
+        {
+            messages.Add(new ChatMessage(ChatRole.Assistant, assistantPrompt));
+        }
+        
+        return messages;
+    }
+
+    /// <summary>
+    /// Builds chat options with the specified parameters
+    /// </summary>
+    private ChatOptions BuildChatOptions(int? maxTokens, double? temperature, ChatResponseFormat? responseFormat = null)
+    {
+        var options = new ChatOptions
+        {
+            MaxOutputTokens = maxTokens ?? _bedrockSettings.MaxTokens,
+            Temperature = (float)(temperature ?? _bedrockSettings.Temperature)
+        };
+
+        if (responseFormat != null)
+        {
+            options.ResponseFormat = responseFormat;
+        }
+
+        return options;
     }
 }
