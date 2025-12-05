@@ -5,6 +5,7 @@
     var organizationId = ViewBag.OrganizationId as Guid? ?? Guid.Empty;
     var emailDomain = ViewBag.EmailDomain as string ?? "";
     var enableSmartTagging = ViewBag.EnableSmartTagging as bool? ?? false;
+    var companyContext = ViewBag.CompanyContext as string ?? "";
 }
 
 <div class="main-content-header">
@@ -70,6 +71,19 @@
                 <div class="form-text">
                     When enabled, the system will automatically tag sources as internal/external based on attendee email domains 
                     and meeting name patterns. The SmartTagProcessor job runs hourly at :30.
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="companyContext" class="form-label">Company Context</label>
+                <textarea class="form-control" 
+                          id="companyContext" 
+                          name="companyContext" 
+                          rows="5"
+                          maxlength="2000"
+                          placeholder="Enter company context information...">@companyContext</textarea>
+                <div class="form-text">
+                    Additional context information about the company or organization that may be useful for AI processing and analysis.
                 </div>
             </div>
             

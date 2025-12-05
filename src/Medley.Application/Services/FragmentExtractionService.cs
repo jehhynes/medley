@@ -16,6 +16,7 @@ public class FragmentExtractionService
     private readonly IRepository<Source> _sourceRepository;
     private readonly IRepository<Fragment> _fragmentRepository;
     private readonly IRepository<Template> _templateRepository;
+    private readonly IRepository<Organization> _organizationRepository;
     private readonly ILogger<FragmentExtractionService> _logger;
 
     public FragmentExtractionService(
@@ -23,12 +24,14 @@ public class FragmentExtractionService
         IRepository<Source> sourceRepository,
         IRepository<Fragment> fragmentRepository,
         IRepository<Template> templateRepository,
+        IRepository<Organization> organizationRepository,
         ILogger<FragmentExtractionService> logger)
     {
         _aiService = aiService;
         _sourceRepository = sourceRepository;
         _fragmentRepository = fragmentRepository;
         _templateRepository = templateRepository;
+        _organizationRepository = organizationRepository;
         _logger = logger;
     }
 
@@ -71,13 +74,30 @@ public class FragmentExtractionService
             throw new InvalidOperationException("FragmentExtraction template not configured");
         }
 
+        // Get organization's company context (assuming single-tenant for now)
+        var organization = await _organizationRepository.Query()
+            .FirstOrDefaultAsync();
+
+        // Build system prompt with company context if available
+        var systemPrompt = template.Content;
+        if (organization != null && !string.IsNullOrWhiteSpace(organization.CompanyContext))
+        {
+            systemPrompt = $@"{template.Content}
+
+## Company Context
+The following context about the company/organization should be considered when extracting fragments:
+
+{organization.CompanyContext}";
+            _logger.LogInformation("Including company context in fragment extraction prompt");
+        }
+
         // Call AI service to process the prompt with structured JSON response
         FragmentExtractionResponse extractionResponse;
         try
         {
             extractionResponse = await _aiService.ProcessStructuredPromptAsync<FragmentExtractionResponse>(
                 userPrompt: source.Content,
-                systemPrompt: template.Content,
+                systemPrompt: systemPrompt,
                 maxTokens: 8000);
             
             if (extractionResponse == null || extractionResponse.Fragments == null)

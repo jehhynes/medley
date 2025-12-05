@@ -61,7 +61,8 @@ public class SettingsController : Controller
             {
                 Name = "Default Organization",
                 EmailDomain = null,
-                EnableSmartTagging = false
+                EnableSmartTagging = false,
+                CompanyContext = null
             };
             await _organizationRepository.SaveAsync(organization);
             await _unitOfWork.SaveChangesAsync();
@@ -71,6 +72,7 @@ public class SettingsController : Controller
         ViewBag.OrganizationId = organization.Id;
         ViewBag.EmailDomain = organization.EmailDomain ?? "";
         ViewBag.EnableSmartTagging = organization.EnableSmartTagging;
+        ViewBag.CompanyContext = organization.CompanyContext ?? "";
 
         return View();
     }
@@ -141,7 +143,7 @@ public class SettingsController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> SaveOrganizationSettings(Guid organizationId, string? emailDomain, bool enableSmartTagging)
+    public async Task<IActionResult> SaveOrganizationSettings(Guid organizationId, string? emailDomain, bool enableSmartTagging, string? companyContext)
     {
         try
         {
@@ -159,6 +161,7 @@ public class SettingsController : Controller
 
             organization.EmailDomain = normalizedDomain;
             organization.EnableSmartTagging = enableSmartTagging;
+            organization.CompanyContext = string.IsNullOrWhiteSpace(companyContext) ? null : companyContext.Trim();
             
             await _organizationRepository.SaveAsync(organization);
             await _unitOfWork.SaveChangesAsync();
