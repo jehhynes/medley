@@ -23,7 +23,8 @@ public class JobRegistry : IJobRegistry
         var jobs = new List<RecurringJobDescriptor>
         {
             RecurringJobDescriptor.Create<IntegrationHealthCheckJob>(j => j.CheckAllIntegrationsHealthAsync(), Daily(6, 0)),
-            RecurringJobDescriptor.Create<FellowTranscriptSyncJob>(j => j.SyncTranscriptsAsync(), Hourly(0))
+            RecurringJobDescriptor.Create<FellowTranscriptSyncJob>(j => j.SyncTranscriptsAsync(), Hourly(0)),
+            RecurringJobDescriptor.Create<SmartTagProcessorJob>(j => j.ExecuteAsync(), Hourly(30))
         };
 
         return jobs;

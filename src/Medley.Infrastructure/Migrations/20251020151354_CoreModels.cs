@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -140,6 +140,13 @@ namespace Medley.Infrastructure.Migrations
                 {
                     table.PrimaryKey("PK_Organizations", x => x.Id);
                 });
+
+            // Seed default organization
+            migrationBuilder.InsertData(
+                table: "Organizations",
+                columns: new[] { "Id", "Name" },
+                values: new object[] { Guid.NewGuid(), "Default Organization" }
+            );
 
             migrationBuilder.CreateTable(
                 name: "Sources",

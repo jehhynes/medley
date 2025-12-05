@@ -7,6 +7,7 @@ using Medley.Infrastructure.Data;
 using Medley.Web.Filters;
 using Microsoft.AspNetCore.Identity;
 using Serilog;
+using System.Text.Json.Serialization;
 using UoN.ExpressiveAnnotations.Net8.DependencyInjection;
 
 namespace Medley.Web;
@@ -105,6 +106,10 @@ public class Program
             var mvc = builder.Services.AddControllersWithViews(options =>
             {
                 options.Filters.Add<UnitOfWorkActionFilter>();
+            })
+            .AddJsonOptions(options =>
+            {
+                options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
             });
             
             // Configure ExpressiveAnnotations

@@ -2,6 +2,9 @@
     ViewData["Title"] = "Settings";
     var fragmentExtractionPrompt = ViewBag.FragmentExtractionPrompt as string ?? "";
     var templateId = ViewBag.FragmentExtractionTemplateId as Guid? ?? Guid.Empty;
+    var organizationId = ViewBag.OrganizationId as Guid? ?? Guid.Empty;
+    var emailDomain = ViewBag.EmailDomain as string ?? "";
+    var enableSmartTagging = ViewBag.EnableSmartTagging as bool? ?? false;
 }
 
 <div class="main-content-header">
@@ -24,6 +27,60 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 }
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Organization Settings</h5>
+    </div>
+    <div class="card-body">
+        <p class="text-muted mb-3">
+            Configure organization-wide settings for smart tagging and email domain detection.
+        </p>
+        
+        <form asp-action="SaveOrganizationSettings" method="post">
+            <input type="hidden" name="organizationId" value="@organizationId" />
+            
+            <div class="mb-3">
+                <label for="emailDomain" class="form-label">Email Domain</label>
+                <input type="text" 
+                       class="form-control" 
+                       id="emailDomain" 
+                       name="emailDomain" 
+                       value="@emailDomain"
+                       placeholder="company.com"
+                       maxlength="100" />
+                <div class="form-text">
+                    The email domain used to identify internal attendees (e.g., "company.com"). 
+                    Sources where all attendees are from this domain will be automatically tagged as internal.
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" 
+                           type="checkbox" 
+                           id="enableSmartTagging" 
+                           name="enableSmartTagging" 
+                           value="true"
+                           @(enableSmartTagging ? "checked" : "") />
+                    <label class="form-check-label" for="enableSmartTagging">
+                        Enable Smart Tagging
+                    </label>
+                </div>
+                <div class="form-text">
+                    When enabled, the system will automatically tag sources as internal/external based on attendee email domains 
+                    and meeting name patterns. The SmartTagProcessor job runs hourly at :30.
+                </div>
+            </div>
+            
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save"></i> Save Settings
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <div class="card mb-4">
     <div class="card-header">

@@ -37,6 +37,12 @@ public class Source : BusinessEntity
     public DateTimeOffset? Date { get; set; }
 
     /// <summary>
+    /// Indicates whether this source is an internal meeting/document (all attendees from same org)
+    /// null = not yet determined, true = internal, false = external
+    /// </summary>
+    public bool? IsInternal { get; set; }
+
+    /// <summary>
     /// The integration this source was imported from
     /// </summary>
     public virtual required Integration Integration { get; set; }
