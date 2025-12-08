@@ -9,45 +9,10 @@
     <style>
         json-viewer {
             --background-color: transparent;
-            --color: var(--bs-body-color);
-            --font-family: 'Courier New', monospace;
-            --font-size: 0.875rem;
-            --line-height: 1.5;
-            --indent-size: 1.5em;
-            --indentguide-size: 1px;
-            --indentguide-style: solid;
-            --indentguide-color: var(--bs-border-color);
-            --indentguide-color-active: var(--bs-primary);
-            
-            /* Type colors - compatible with light/dark themes */
-            --string-color: #0d9488;
-            --number-color: #dc2626;
-            --boolean-color: #2563eb;
-            --null-color: #9333ea;
-            --property-color: #ea580c;
-            
-            /* Collapsed preview */
-            --preview-color: var(--bs-secondary);
-            
-            /* Search highlight */
-            --highlight-color: #fbbf24;
         }
+  
         
-        /* Dark theme adjustments */
-        [data-bs-theme="dark"] json-viewer {
-            --string-color: #5eead4;
-            --number-color: #fca5a5;
-            --boolean-color: #93c5fd;
-            --null-color: #d8b4fe;
-            --property-color: #fdba74;
-        }
         
-        json-viewer {
-            display: block;
-            /*padding: 1rem;
-             border: 1px solid var(--bs-border-color);
-            border-radius: 0.375rem; */
-        }
         
         /* Make main content use flexbox for independent tab scrolling */
         .main-content {
@@ -105,6 +70,15 @@
             justify-content: center;
             height: 100%;
             padding: 2rem 2.5rem;
+        }
+        
+        /* Fragment list styles */
+        .fragment-list {
+            width: 100%;
+        }
+        
+        .fragment-list .fragment-item:hover {
+            background-color: var(--bs-secondary-bg);
         }
     </style>
 }
@@ -192,6 +166,11 @@
                 </button>
             </li>
             <li class="nav-item" role="presentation">
+                <button class="nav-link" id="fragments-tab" data-bs-toggle="tab" data-bs-target="#fragments-pane" type="button" role="tab" aria-controls="fragments-pane" aria-selected="false">
+                    Fragments
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
                 <button class="nav-link" id="metadata-tab" data-bs-toggle="tab" data-bs-target="#metadata-pane" type="button" role="tab" aria-controls="metadata-pane" aria-selected="false">
                     Metadata
                 </button>
@@ -207,6 +186,65 @@
                 </div>
                 <div v-else class="text-muted">
                     No content available
+                </div>
+            </div>
+            <div class="tab-pane" id="fragments-pane" role="tabpanel" aria-labelledby="fragments-tab">
+                <div v-if="loadingFragments" class="text-center py-4">
+                    <div class="spinner-border spinner-border-sm" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                <div v-else-if="fragmentsError" class="alert alert-danger" v-cloak>
+                    {{ fragmentsError }}
+                </div>
+                <div v-else-if="selectedFragment">
+                    <div class="mb-3">
+                        <button class="btn btn-sm btn-outline-secondary" @@click="selectedFragment = null">
+                            <i class="bi bi-arrow-left"></i> Back to List
+                        </button>
+                    </div>
+                    <div class="fragment-content">
+                        <div v-if="selectedFragment.title" class="mb-3">
+                            <h3>{{ selectedFragment.title }}</h3>
+                        </div>
+                        <div v-if="selectedFragment.category" class="mb-2">
+                            <span class="badge bg-secondary">{{ selectedFragment.category }}</span>
+                        </div>
+                        @* <div v-if="selectedFragment.summary" class="mb-3 text-muted">
+                            {{ selectedFragment.summary }}
+                        </div> *@
+                        <div class="markdown-content" v-html="renderedMarkdown"></div>
+                    </div>
+                </div>
+                <div v-else-if="fragments.length === 0" class="text-muted">
+                    No fragments available. Click "Extract Fragments" to generate fragments from this source.
+                </div>
+                <div v-else class="fragment-list">
+                    <table class="table table-hover">
+                        <tbody>
+                            <tr 
+                                v-for="fragment in fragments" 
+                                :key="fragment.id"
+                                class="fragment-item"
+                                @@click="selectFragment(fragment)"
+                                style="cursor: pointer;"
+                            >
+                                <td class="align-middle" style="width: 50px;">
+                                    <i 
+                                        :class="getIconClass(getFragmentCategoryIcon(fragment.category))" 
+                                        :title="fragment.category || ''"
+                                        style="font-size: 1.25rem;"
+                                    ></i>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold">{{ fragment.title || 'Untitled Fragment' }}</div>
+                                    <div v-if="fragment.summary" class="text-muted small">
+                                        {{ fragment.summary }}
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
             <div class="tab-pane" id="metadata-pane" role="tabpanel" aria-labelledby="metadata-tab">
@@ -227,6 +265,7 @@
 }
 
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
     <script src="~/js/app.js"></script>
     <script src="~/js/utils.js"></script>
     <script src="~/js/components/source-list.js"></script>
@@ -250,7 +289,13 @@
                         error: null,
                         searchQuery: '',
                         extractionStatus: {}, // Maps sourceId -> 'not-started' | 'extracting' | 'completed'
-                        signalRConnection: null
+                        signalRConnection: null,
+                        fragments: [],
+                        selectedFragment: null,
+                        loadingFragments: false,
+                        fragmentsError: null,
+                        markdownRenderer: null,
+                        articleTypes: [] // Array of { id, name, icon }
                     };
                 },
                 computed: {
@@ -264,6 +309,17 @@
                             console.error('Failed to parse metadata JSON:', e);
                             return null;
                         }
+                    },
+                    renderedMarkdown() {
+                        if (!this.selectedFragment || !this.selectedFragment.content || !this.markdownRenderer) {
+                            return '';
+                        }
+                        try {
+                            return this.markdownRenderer.parse(this.selectedFragment.content, { breaks: true, gfm: true });
+                        } catch (e) {
+                            console.error('Failed to render markdown:', e);
+                            return this.selectedFragment.content;
+                        }
                     }
                 },
                 watch: {
@@ -273,6 +329,17 @@
                                 this.$refs.jsonViewer.data = newVal;
                             }
                         });
+                    },
+                    selectedSource(newVal) {
+                        // Reset fragments when source changes
+                        this.fragments = [];
+                        this.selectedFragment = null;
+                        this.fragmentsError = null;
+                        
+                        // Load fragments if source is selected
+                        if (newVal) {
+                            this.loadFragments();
+                        }
                     }
                 },
                 methods: {
@@ -405,10 +472,100 @@
                         toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
                     },
                     
-                    formatDate
+                    formatDate,
+                    
+                    async loadFragments() {
+                        if (!this.selectedSource) return;
+                        
+                        this.loadingFragments = true;
+                        this.fragmentsError = null;
+                        try {
+                            this.fragments = await api.get(`/api/fragments/by-source/${this.selectedSource.id}`);
+                        } catch (err) {
+                            this.fragmentsError = 'Failed to load fragments: ' + err.message;
+                            console.error('Error loading fragments:', err);
+                        } finally {
+                            this.loadingFragments = false;
+                        }
+                    },
+                    
+                    selectFragment(fragment) {
+                        this.selectedFragment = fragment;
+                    },
+                    
+                    async loadArticleTypes() {
+                        try {
+                            this.articleTypes = await api.get('/api/articles/types');
+                        } catch (err) {
+                            console.error('Error loading article types:', err);
+                        }
+                    },
+                    
+                    getFragmentCategoryIcon(category) {
+                        if (!category) {
+                            return 'bi-file-text';
+                        }
+                        
+                        // Normalize: extract only alphabetic characters and convert to lowercase
+                        const normalize = (str) => {
+                            if (!str) return '';
+                            return str.replace(/[^a-zA-Z]/g, '').toLowerCase();
+                        };
+                        
+                        const normalizedCategory = normalize(category);
+                        
+                        // Hardcoded icon mappings
+                        const hardcodedIcons = {
+                            'bestpractices': 'bi-shield-check'
+                        };
+                        
+                        if (hardcodedIcons[normalizedCategory]) {
+                            return hardcodedIcons[normalizedCategory];
+                        }
+                        
+                        // Match fragment category to article type by normalized name
+                        if (this.articleTypes && this.articleTypes.length > 0) {
+                            const matchingType = this.articleTypes.find(
+                                at => at.name && normalize(at.name) === normalizedCategory
+                            );
+                            
+                            if (matchingType && matchingType.icon) {
+                                return matchingType.icon;
+                            }
+                        }
+                        
+                        // Default fallback
+                        return 'bi-file-text';
+                    },
+                    
+                    getIconClass(icon) {
+                        if (!icon) {
+                            return 'bi bi-file-text';
+                        }
+                        // If it's a Bootstrap Icon (starts with bi-), add bi base class
+                        if (icon.startsWith('bi-')) {
+                            return `bi ${icon}`;
+                        }
+                        // If it's a Font Awesome icon (starts with fa-), add fas (solid) base class
+                        if (icon.startsWith('fa-')) {
+                            return `fas ${icon}`;
+                        }
+                        // Default fallback
+                        return 'bi bi-file-text';
+                    }
                 },
                 
                 async mounted() {
+                    // Initialize markdown renderer
+                    if (typeof marked !== 'undefined') {
+                        this.markdownRenderer = marked;
+                    } else {
+                        console.error('Marked.js library not loaded');
+                    }
+                    
+                    // Load article types for icon mapping
+                    await this.loadArticleTypes();
+                    
                     await this.loadSources();
                     
                     // Check URL for selected source ID
@@ -431,13 +588,18 @@
                         // Reload sources list to update fragment counts and extraction status in sidebar
                         await this.loadSources();
                         
-                        // If this is the currently selected source, reload its details
+                        // If this is the currently selected source, reload its details and fragments
                         if (this.selectedSource && this.selectedSource.id === sourceId) {
                             try {
                                 const updatedSource = await api.get(`/api/sources/${sourceId}`);
                                 this.selectedSource = updatedSource;
                                 // Update extraction status from API response
                                 this.extractionStatus[sourceId] = this.mapExtractionStatus(updatedSource.extractionStatus);
+                                
+                                // Reload fragments if extraction was successful
+                                if (success) {
+                                    await this.loadFragments();
+                                }
                             } catch (err) {
                                 console.error('Failed to reload source:', err);
                             }

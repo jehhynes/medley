@@ -12,10 +12,33 @@ namespace Medley.Web.Controllers.Api;
 public class ArticlesApiController : ControllerBase
 {
     private readonly IRepository<Article> _articleRepository;
+    private readonly IRepository<ArticleType> _articleTypeRepository;
 
-    public ArticlesApiController(IRepository<Article> articleRepository)
+    public ArticlesApiController(
+        IRepository<Article> articleRepository,
+        IRepository<ArticleType> articleTypeRepository)
     {
         _articleRepository = articleRepository;
+        _articleTypeRepository = articleTypeRepository;
+    }
+
+    /// <summary>
+    /// Get all article types
+    /// </summary>
+    [HttpGet("types")]
+    public async Task<IActionResult> GetArticleTypes()
+    {
+        var articleTypes = await _articleTypeRepository.Query()
+            .OrderBy(at => at.Name)
+            .Select(at => new
+            {
+                at.Id,
+                at.Name,
+                at.Icon
+            })
+            .ToListAsync();
+
+        return Ok(articleTypes);
     }
 
     /// <summary>

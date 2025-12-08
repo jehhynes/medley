@@ -2,6 +2,7 @@ using Medley.Application.Interfaces;
 using Medley.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Medley.Web.Controllers.Api;
 
@@ -42,6 +43,31 @@ public class FragmentsApiController : ControllerBase
             message = "Fragment detail - Coming Soon",
             id
         });
+    }
+
+    /// <summary>
+    /// Get all fragments for a specific source
+    /// </summary>
+    [HttpGet("by-source/{sourceId}")]
+    public async Task<IActionResult> GetBySourceId(Guid sourceId)
+    {
+        var fragments = await _fragmentRepository.Query()
+            .Include(f => f.Source)
+            .Where(f => f.Source.Id == sourceId)
+            .OrderByDescending(f => f.CreatedAt)
+            .Select(f => new
+            {
+                f.Id,
+                f.Title,
+                f.Summary,
+                f.Category,
+                f.Content,
+                f.CreatedAt,
+                f.LastModifiedAt
+            })
+            .ToListAsync();
+
+        return Ok(fragments);
     }
 }
 
