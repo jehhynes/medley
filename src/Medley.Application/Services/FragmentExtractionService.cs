@@ -17,6 +17,7 @@ public class FragmentExtractionService
     private readonly IRepository<Fragment> _fragmentRepository;
     private readonly IRepository<Template> _templateRepository;
     private readonly IRepository<Organization> _organizationRepository;
+    private readonly TextChunkingService _chunkingService;
     private readonly ILogger<FragmentExtractionService> _logger;
 
     public FragmentExtractionService(
@@ -25,6 +26,7 @@ public class FragmentExtractionService
         IRepository<Fragment> fragmentRepository,
         IRepository<Template> templateRepository,
         IRepository<Organization> organizationRepository,
+        TextChunkingService chunkingService,
         ILogger<FragmentExtractionService> logger)
     {
         _aiService = aiService;
@@ -32,6 +34,7 @@ public class FragmentExtractionService
         _fragmentRepository = fragmentRepository;
         _templateRepository = templateRepository;
         _organizationRepository = organizationRepository;
+        _chunkingService = chunkingService;
         _logger = logger;
     }
 
@@ -91,33 +94,63 @@ The following context about the company/organization should be considered when e
             _logger.LogInformation("Including company context in fragment extraction prompt");
         }
 
-        // Call AI service to process the prompt with structured JSON response
-        FragmentExtractionResponse extractionResponse;
-        try
+        // Chunk the content before processing
+        var contentChunks = await _chunkingService.ChunkTextAsync(source.Content);
+        _logger.LogInformation("Content chunked into {ChunkCount} chunks for processing", contentChunks.Count);
+
+        // Process each chunk and aggregate fragments
+        var allFragments = new List<FragmentDto>();
+        var chunkNumber = 0;
+
+        foreach (var chunk in contentChunks)
         {
-            extractionResponse = await _aiService.ProcessStructuredPromptAsync<FragmentExtractionResponse>(
-                userPrompt: source.Content,
-                systemPrompt: systemPrompt,
-                maxTokens: 8000);
-            
-            if (extractionResponse == null || extractionResponse.Fragments == null)
+            chunkNumber++;
+            _logger.LogInformation("Processing chunk {ChunkNumber} of {TotalChunks} (length: {ChunkLength} characters)",
+                chunkNumber, contentChunks.Count, chunk.Length);
+
+            try
             {
-                _logger.LogError("AI response is null or contains no fragments");
-                throw new InvalidOperationException("Invalid AI response format");
+                // Add context about chunking to the system prompt for multi-chunk processing
+                var chunkSystemPrompt = contentChunks.Count > 1
+                    ? $"{systemPrompt}\n\nNote: This is chunk {chunkNumber} of {contentChunks.Count}. Extract fragments from this portion of the content. Focus on fragments that are complete within this chunk."
+                    : systemPrompt;
+
+                var extractionResponse = await _aiService.ProcessStructuredPromptAsync<FragmentExtractionResponse>(
+                    userPrompt: chunk,
+                    systemPrompt: chunkSystemPrompt,
+                    maxTokens: 8000);
+
+                if (extractionResponse != null && extractionResponse.Fragments != null && extractionResponse.Fragments.Count > 0)
+                {
+                    allFragments.AddRange(extractionResponse.Fragments);
+                    _logger.LogInformation("Extracted {Count} fragments from chunk {ChunkNumber}",
+                        extractionResponse.Fragments.Count, chunkNumber);
+                }
+                else
+                {
+                    _logger.LogWarning("No fragments extracted from chunk {ChunkNumber}", chunkNumber);
+                }
             }
-            
-            _logger.LogInformation("Parsed {Count} fragments from AI response", 
-                extractionResponse.Fragments.Count);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to process chunk {ChunkNumber} of {TotalChunks} for source {SourceId}. Continuing with remaining chunks.",
+                    chunkNumber, contentChunks.Count, sourceId);
+                // Continue processing other chunks even if one fails
+            }
         }
-        catch (Exception ex)
+
+        if (allFragments.Count == 0)
         {
-            _logger.LogError(ex, "AI service failed to process prompt for source {SourceId}", sourceId);
-            throw new InvalidOperationException($"AI processing failed: {ex.Message}", ex);
+            _logger.LogWarning("No fragments were extracted from any chunk for source {SourceId}", sourceId);
+            throw new InvalidOperationException("No fragments could be extracted from the content");
         }
+
+        _logger.LogInformation("Aggregated {TotalCount} fragments from {ChunkCount} chunks",
+            allFragments.Count, contentChunks.Count);
 
         // Create Fragment entities and save them
         var fragmentCount = 0;
-        foreach (var fragmentDto in extractionResponse.Fragments)
+        foreach (var fragmentDto in allFragments)
         {
             try
             {

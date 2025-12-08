@@ -60,6 +60,7 @@ public static class DependencyInjection
         services.AddScoped<IKnowledgeBuilderImportService, KnowledgeBuilderImportService>();
         services.AddScoped<ICollectorImportService, CollectorImportService>();
         services.AddScoped<ISourceMetadataProvider, SourceMetadataProvider>();
+        services.AddScoped<TextChunkingService>();
         services.AddScoped<FragmentExtractionService>();
         //services.AddScoped<IntegrationHealthCheckJob>();
         services.AddSingleton<RecurringJobCleanUpManager>();

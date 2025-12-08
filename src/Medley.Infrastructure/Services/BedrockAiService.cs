@@ -124,7 +124,7 @@ public class BedrockAiService : IAiProcessingService
         var options = new ChatOptions
         {
             MaxOutputTokens = maxTokens ?? _bedrockSettings.MaxTokens,
-            Temperature = (float)(temperature ?? _bedrockSettings.Temperature)
+            Temperature = (float)(temperature ?? _bedrockSettings.Temperature),
         };
 
         if (responseFormat != null)

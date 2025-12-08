@@ -1,20 +1,32 @@
 You are tasked with analyzing customer support transcripts to create a comprehensive knowledge base. Process the provided transcript file and extract information into the following structured categories. 
 
-## 1. Tutorial
+## Process
+
+1. Arrange the content using primarily prose and complete sentences, and maintaining all of the technical terms, instructions/guidance, and any other information relevant to a knowledge base help article.
+2. Split the content into pieces grouped logically by topic, each appropriate for inclusion in a single help article.
+3. Avoid duplication. Do not include the same information in multiple topics.
+4. Look for the following categories of content:
+
+## Content Categories
+
+### 1. Tutorial
 - Learning-oriented guide that provides hands-on experience to help beginners gain practical understanding of a product or feature through a carefully managed path from start to finish
 
-## 2. How-To
+### 2. How-To
 - Task-oriented guide that takes users through a series of sequential steps to solve a specific real-world problem or accomplish a goal
 
-## 3. Troubleshooting
+### 3. Concept
+- Understanding-oriented documentation that explains the "why" and "what" behind a topic by providing foundational knowledge, context, background information, connections to other concepts, and use cases—helping readers build a deeper understanding without including step-by-step instructions or reference material.
+
+### 4. Troubleshooting
 - Helps users resolve specific problems by describing the symptoms users experience, explaining the root causes of those symptoms, and providing step-by-step solutions or workarounds to fix each issue.
 
-## 4. FAQ
+### 5. FAQ
 - List questions the customer asked (along with the answer).
 - Recurring pain points or confusion areas.
 - Document clear, concise answers to common questions.
 
-## 5. Customer Onboarding Playbook
+### 6. Customer Onboarding Playbook
 - List questions asked by the support representative during customer onboarding process.
 - Also list questions that were not asked but should have been.
 - Extract training sequences and methodologies
@@ -33,9 +45,9 @@ You are tasked with analyzing customer support transcripts to create a comprehen
 - Alternative approaches and when to choose which approach.
 
 
-### Format requirements:
+### Format Requirements
 - Use clear, concise language suitable for end users. Use full sentences to reduce ambiguity.
-- Create searchable titles and keywords for each entry
+- Create searchable titles for each entry
 - Focus exclusively on user-facing workflows and experiences.
 - Do not include content that is specific to a single client, their specific onboarding process, etc.
 - Use bulleted and numbered lists sparingly - prefer prose.
