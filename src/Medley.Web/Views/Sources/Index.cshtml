@@ -72,6 +72,7 @@
             v-else
             :sources="sources"
             :selected-id="selectedSourceId"
+            :extraction-status="extractionStatus"
             @@select="selectSource"
         />
         <div v-if="!loading && sources.length === 0" class="empty-state">
@@ -118,15 +119,9 @@
                     <button 
                         class="btn btn-primary" 
                         @@click="extractFragments" 
-                        :disabled="extractingFragments"
+                        :disabled="extractionStatus[selectedSource.id] === 'extracting'"
                         v-if="selectedSource.content">
-                        <span v-if="extractingFragments">
-                            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                            Extracting...
-                        </span>
-                        <span v-else>
-                            <i class="bi bi-magic"></i> Extract Fragments
-                        </span>
+                        <i class="bi bi-magic"></i> Extract Fragments
                     </button>
                 </div>
             </div>
@@ -197,7 +192,7 @@
                         loading: false,
                         error: null,
                         searchQuery: '',
-                        extractingFragments: false,
+                        extractionStatus: {}, // Maps sourceId -> 'not-started' | 'extracting' | 'completed'
                         signalRConnection: null
                     };
                 },
@@ -224,11 +219,34 @@
                     }
                 },
                 methods: {
+                    // Maps ExtractionStatus enum value to component status string
+                    mapExtractionStatus(extractionStatus) {
+                        if (extractionStatus === undefined || extractionStatus === null) {
+                            return 'not-started';
+                        }
+                        // Handle both enum values (0, 1, 2, 3) and string values
+                        const statusMap = {
+                            0: 'not-started', // NotStarted
+                            1: 'extracting',  // InProgress
+                            2: 'completed',  // Completed
+                            3: 'failed',     // Failed
+                            'NotStarted': 'not-started',
+                            'InProgress': 'extracting',
+                            'Completed': 'completed',
+                            'Failed': 'failed'
+                        };
+                        return statusMap[extractionStatus] || 'not-started';
+                    },
+                    
                     async loadSources() {
                         this.loading = true;
                         this.error = null;
                         try {
                             this.sources = await api.get('/api/sources');
+                            // Initialize extraction status for all sources from API response
+                            this.sources.forEach(source => {
+                                this.extractionStatus[source.id] = this.mapExtractionStatus(source.extractionStatus);
+                            });
                         } catch (err) {
                             this.error = 'Failed to load sources: ' + err.message;
                             console.error('Error loading sources:', err);
@@ -241,6 +259,8 @@
                         this.selectedSourceId = source.id;
                         try {
                             this.selectedSource = await api.get(`/api/sources/${source.id}`);
+                            // Update extraction status from API response
+                            this.extractionStatus[source.id] = this.mapExtractionStatus(this.selectedSource.extractionStatus);
                         } catch (err) {
                             console.error('Error loading source:', err);
                             this.selectedSource = null;
@@ -252,6 +272,10 @@
                         if (query.length >= 2) {
                             try {
                                 this.sources = await api.get(`/api/sources/search?query=${encodeURIComponent(query)}`);
+                                // Map extraction status for search results
+                                this.sources.forEach(source => {
+                                    this.extractionStatus[source.id] = this.mapExtractionStatus(source.extractionStatus);
+                                });
                             } catch (err) {
                                 console.error('Search error:', err);
                             }
@@ -263,9 +287,10 @@
                     async extractFragments() {
                         if (!this.selectedSource) return;
                         
-                        this.extractingFragments = true;
+                        const sourceId = this.selectedSource.id;
+                        this.extractionStatus[sourceId] = 'extracting';
                         try {
-                            const response = await api.post(`/api/sources/${this.selectedSource.id}/extract-fragments`);
+                            const response = await api.post(`/api/sources/${sourceId}/extract-fragments`);
                             
                             if (response.success) {
                                 // Show success toast
@@ -273,12 +298,12 @@
                                 // Keep button disabled until SignalR notification arrives
                             } else {
                                 this.showToast('error', response.message || 'Failed to start fragment extraction');
-                                this.extractingFragments = false;
+                                this.extractionStatus[sourceId] = 'not-started';
                             }
                         } catch (err) {
                             console.error('Fragment extraction error:', err);
                             this.showToast('error', err.message || 'Failed to extract fragments. Please try again.');
-                            this.extractingFragments = false;
+                            this.extractionStatus[sourceId] = 'not-started';
                         }
                     },
                     
@@ -323,20 +348,21 @@
                     this.signalRConnection.on('FragmentExtractionComplete', async (sourceId, fragmentCount, success, message) => {
                         console.log('Fragment extraction complete:', { sourceId, fragmentCount, success, message });
                         
-                        // Check if this notification is for the currently selected source
+                        // Reload sources list to update fragment counts and extraction status in sidebar
+                        await this.loadSources();
+                        
+                        // If this is the currently selected source, reload its details
                         if (this.selectedSource && this.selectedSource.id === sourceId) {
-                            // Re-enable the button
-                            this.extractingFragments = false;
-                            
-                            // Reload source to get updated fragment count
                             try {
                                 const updatedSource = await api.get(`/api/sources/${sourceId}`);
                                 this.selectedSource = updatedSource;
+                                // Update extraction status from API response
+                                this.extractionStatus[sourceId] = this.mapExtractionStatus(updatedSource.extractionStatus);
                             } catch (err) {
                                 console.error('Failed to reload source:', err);
                             }
                             
-                            // Show notification
+                            // Show notification for the selected source
                             if (success) {
                                 this.showToast('success', message || `Successfully extracted ${fragmentCount} fragments`);
                             } else {

@@ -41,7 +41,6 @@ public class BedrockHealthCheck : IHealthCheck
             return HealthCheckResult.Healthy($"Bedrock model '{_bedrockSettings.ModelId}' is accessible", new Dictionary<string, object>
             {
                 ["model_id"] = _bedrockSettings.ModelId,
-                ["max_tokens"] = _bedrockSettings.MaxTokens,
                 ["temperature"] = _bedrockSettings.Temperature
             });
         }

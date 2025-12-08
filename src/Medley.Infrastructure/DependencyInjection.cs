@@ -149,8 +149,9 @@ public static class DependencyInjection
                 var config = new AmazonBedrockRuntimeConfig
                 {
                     RegionEndpoint = RegionEndpoint.GetBySystemName(awsSettings.Region),
-                    //ServiceURL = null // Use default AWS endpoints
                 };
+
+                config.Timeout = TimeSpan.FromSeconds(awsSettings.Bedrock.TimeoutSeconds);
 
                 if (hasCredentials)
                 {

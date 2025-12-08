@@ -4,7 +4,7 @@ You are tasked with analyzing customer support transcripts to create a comprehen
 
 1. Arrange the content using primarily prose and complete sentences, and maintaining all of the technical terms, instructions/guidance, and any other information relevant to a knowledge base help article.
 2. Split the content into pieces grouped logically by topic, each appropriate for inclusion in a single help article.
-3. Avoid duplication. Do not include the same information in multiple topics.
+3. Avoid duplication. Do not include the same information in multiple fragments.
 4. Look for the following categories of content:
 
 ## Content Categories
@@ -16,7 +16,7 @@ You are tasked with analyzing customer support transcripts to create a comprehen
 - Task-oriented guide that takes users through a series of sequential steps to solve a specific real-world problem or accomplish a goal
 
 ### 3. Concept
-- Understanding-oriented documentation that explains the "why" and "what" behind a topic by providing foundational knowledge, context, background information, connections to other concepts, and use cases—helping readers build a deeper understanding without including step-by-step instructions or reference material.
+- Also known as "explanation", concept articles are understanding-oriented documentation that explains the "why" and "what" behind a topic by providing foundational knowledge, context, background information, connections to other concepts, and use cases—helping readers build a deeper understanding without including step-by-step instructions or reference material.
 
 ### 4. Troubleshooting
 - Helps users resolve specific problems by describing the symptoms users experience, explaining the root causes of those symptoms, and providing step-by-step solutions or workarounds to fix each issue.
@@ -26,13 +26,6 @@ You are tasked with analyzing customer support transcripts to create a comprehen
 - Recurring pain points or confusion areas.
 - Document clear, concise answers to common questions.
 
-### 6. Customer Onboarding Playbook
-- List questions asked by the support representative during customer onboarding process.
-- Also list questions that were not asked but should have been.
-- Extract training sequences and methodologies
-- This will be used to synthesize a checklist for future onboarding sessions.
-- Include go-live preparation and readiness criteria
-- Document administrator setup and initial configuration steps
 
 ## Authoring Guidelines
 

@@ -43,6 +43,11 @@ public class Source : BusinessEntity
     public bool? IsInternal { get; set; }
 
     /// <summary>
+    /// Status of fragment extraction for this source
+    /// </summary>
+    public ExtractionStatus ExtractionStatus { get; set; } = ExtractionStatus.NotStarted;
+
+    /// <summary>
     /// The integration this source was imported from
     /// </summary>
     public virtual required Integration Integration { get; set; }

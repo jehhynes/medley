@@ -117,8 +117,7 @@ The following context about the company/organization should be considered when e
 
                 var extractionResponse = await _aiService.ProcessStructuredPromptAsync<FragmentExtractionResponse>(
                     userPrompt: chunk,
-                    systemPrompt: chunkSystemPrompt,
-                    maxTokens: 8000);
+                    systemPrompt: chunkSystemPrompt);
 
                 if (extractionResponse != null && extractionResponse.Fragments != null && extractionResponse.Fragments.Count > 0)
                 {
@@ -203,7 +202,7 @@ public class FragmentDto
     public string? Title { get; set; }
     [Description("Short, human-readable condensation of the full content")]
     public string? Summary { get; set; }
-    [Description("Which of the 7 categories above (or suggest a new category if none apply)")]
+    [Description("Which of the supplied categories this content applies to")]
     public string? Category { get; set; }
     [Description("Markdown-formatted content")]
     public string? Content { get; set; }

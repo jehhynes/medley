@@ -34,6 +34,7 @@ public class SourcesApiController : ControllerBase
     {
         var sources = await _sourceRepository.Query()
             .Include(s => s.Integration)
+            .Include(s => s.Fragments)
             .OrderByDescending(s => s.Date)
             .Skip(skip)
             .Take(take)
@@ -45,6 +46,8 @@ public class SourcesApiController : ControllerBase
                 s.Date,
                 s.ExternalId,
                 IntegrationName = s.Integration.DisplayName,
+                FragmentsCount = s.Fragments.Count,
+                ExtractionStatus = s.ExtractionStatus,
                 s.CreatedAt
             })
             .ToListAsync();
@@ -79,6 +82,7 @@ public class SourcesApiController : ControllerBase
             source.ExternalId,
             IntegrationName = source.Integration.DisplayName,
             FragmentsCount = source.Fragments.Count,
+            ExtractionStatus = source.ExtractionStatus,
             source.CreatedAt
         });
     }
@@ -103,7 +107,8 @@ public class SourcesApiController : ControllerBase
                 id = s.Id.ToString(),
                 s.Name,
                 type = s.Type.ToString(),
-                s.Date
+                s.Date,
+                extractionStatus = s.ExtractionStatus
             })
             .ToListAsync();
 

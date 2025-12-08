@@ -24,10 +24,8 @@ public class BedrockAiServiceTests
         _settings = new BedrockSettings
         {
             ModelId = "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
-            MaxTokens = 4096,
             Temperature = 0.1,
-            TimeoutSeconds = 60,
-            MaxRetryAttempts = 3
+            TimeoutSeconds = 60
         };
 
         _mockBedrockClient = new Mock<AmazonBedrockRuntimeClient>(new AmazonBedrockRuntimeConfig { RegionEndpoint = Amazon.RegionEndpoint.USEast1 });
@@ -73,7 +71,6 @@ public class BedrockAiServiceTests
         var service = new BedrockAiService(_mockBedrockClient.Object, _mockOptions.Object, _mockLogger.Object);
         var userPrompt = "Test prompt";
         var systemPrompt = "You are a helpful assistant";
-        var maxTokens = 1000;
         var temperature = 0.5;
         var expectedResponse = "Test response";
 
@@ -86,7 +83,7 @@ public class BedrockAiServiceTests
             .ReturnsAsync(mockResponse);
 
         // Act
-        var result = await service.ProcessPromptAsync(userPrompt, systemPrompt, null, maxTokens, temperature);
+        var result = await service.ProcessPromptAsync(userPrompt, systemPrompt, null, temperature);
 
         // Assert
         Assert.Equal(expectedResponse, result);
@@ -94,7 +91,6 @@ public class BedrockAiServiceTests
         _mockBedrockClient.Verify(x => x.InvokeModelAsync(
             It.Is<InvokeModelRequest>(r => 
                 r.ModelId == _settings.ModelId &&
-                GetBodyAsString(r.Body).Contains($"\"max_tokens\":{maxTokens}") &&
                 GetBodyAsString(r.Body).Contains($"\"temperature\":{temperature}") &&
                 GetBodyAsString(r.Body).Contains("You are a helpful assistant")),
             default), Times.Once);

@@ -13,7 +13,7 @@ public class TextChunkingService
     private readonly ILogger<TextChunkingService> _logger;
 
     // Maximum characters per chunk
-    private const int MaxCharsPerChunk = 30000;
+    private const int MaxCharsPerChunk = 50000;
 
     // Overlap between chunks to preserve context at boundaries
     private const int ChunkOverlapChars = 6000;

@@ -31,13 +31,12 @@ public class BedrockAiService : IAiProcessingService
         string userPrompt, 
         string? systemPrompt = null, 
         string? assistantPrompt = null,
-        int? maxTokens = null, 
         double? temperature = null)
     {
         try
         {
             var messages = BuildMessages(userPrompt, systemPrompt, assistantPrompt);
-            var options = BuildChatOptions(maxTokens, temperature);
+            var options = BuildChatOptions(temperature);
 
             var response = await _chatClient.GetResponseAsync(messages, options);
 
@@ -54,15 +53,16 @@ public class BedrockAiService : IAiProcessingService
         string userPrompt, 
         string? systemPrompt = null, 
         string? assistantPrompt = null,
-        int? maxTokens = null, 
         double? temperature = null)
     {
         try
         {
             var messages = BuildMessages(userPrompt, systemPrompt, assistantPrompt);
-            var options = BuildChatOptions(maxTokens, temperature, ChatResponseFormat.Json);
+            var options = BuildChatOptions(temperature, ChatResponseFormat.Json);
 
             var response = await _chatClient.GetResponseAsync<T>(messages, options, useJsonSchemaResponseFormat: false);
+
+            string originalText = null;
 
             //Strip the markdown json fences that Claude likes to add before deserializing
             if (response.Messages.Count == 1 && response.Messages.Single().Contents.Count == 1 && response.Messages.Single().Contents.Single() is TextContent textContent
@@ -72,6 +72,8 @@ public class BedrockAiService : IAiProcessingService
                 var endIndex = textContent.Text.LastIndexOf('}') + 1;
                 if (startIndex >= 0 && endIndex > startIndex)
                 {
+                    originalText = textContent.Text;
+
                     textContent.Text = textContent.Text.Substring(startIndex, endIndex - startIndex);
                 }
             }
@@ -119,11 +121,10 @@ public class BedrockAiService : IAiProcessingService
     /// <summary>
     /// Builds chat options with the specified parameters
     /// </summary>
-    private ChatOptions BuildChatOptions(int? maxTokens, double? temperature, ChatResponseFormat? responseFormat = null)
+    private ChatOptions BuildChatOptions(double? temperature, ChatResponseFormat? responseFormat = null)
     {
         var options = new ChatOptions
         {
-            MaxOutputTokens = maxTokens ?? _bedrockSettings.MaxTokens,
             Temperature = (float)(temperature ?? _bedrockSettings.Temperature),
         };
 

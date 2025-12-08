@@ -10,6 +10,19 @@
           <div class="list-item-title">{{ source.name || 'Untitled' }}</div>
           <div class="list-item-subtitle">{{ formatDate(source.date) }} • {{ source.type }}</div>
         </div>
+        <span class="list-item-status ms-auto">
+          <span v-if="getExtractionStatus(source.id) === 'extracting'" 
+                class="spinner-border spinner-border-sm text-secondary" 
+                role="status"
+                style="width: 1em; height: 1em;">
+            <span class="visually-hidden">Extracting...</span>
+          </span>
+          <i v-else-if="getExtractionStatus(source.id) === 'completed'" 
+             class="bi bi-check-lg text-success"></i>
+          <i v-else-if="getExtractionStatus(source.id) === 'failed'" 
+             class="bi bi-x-square text-danger"></i>
+     
+        </span>
       </a>
     </li>
   </ul>

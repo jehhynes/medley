@@ -10,6 +10,10 @@ const SourceList = {
         selectedId: {
             type: String,
             default: null
+        },
+        extractionStatus: {
+            type: Object,
+            default: () => ({})
         }
     },
     methods: {
@@ -31,6 +35,9 @@ const SourceList = {
                 'Other': 'bi-file-earmark'
             };
             return icons[type] || 'bi-file-earmark';
+        },
+        getExtractionStatus(sourceId) {
+            return this.extractionStatus[sourceId] || 'not-started';
         }
     }
 };
