@@ -111,7 +111,7 @@
                         }
                     },
                     
-                    async selectArticle(article) {
+                    async selectArticle(article, replaceState = false) {
                         try {
                             // Fetch the article FIRST, before changing the key
                             const fullArticle = await api.get(`/api/articles/${article.id}`);
@@ -121,6 +121,18 @@
                             this.editingContent = fullArticle.content || '';
                             this.selectedArticle = fullArticle;
                             this.selectedArticleId = article.id;
+                            
+                            // Update URL with selected article ID
+                            const url = new URL(window.location);
+                            const currentId = url.searchParams.get('id');
+                            if (currentId !== article.id) {
+                                url.searchParams.set('id', article.id);
+                                if (replaceState) {
+                                    window.history.replaceState({}, '', url);
+                                } else {
+                                    window.history.pushState({}, '', url);
+                                }
+                            }
                         } catch (err) {
                             console.error('Error loading article:', err);
                             this.selectedArticle = null;
@@ -174,8 +186,30 @@
                     }
                 },
                 
-                mounted() {
-                    this.loadArticles();
+                async mounted() {
+                    await this.loadArticles();
+                    
+                    // Check URL for selected article ID
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const articleIdFromUrl = urlParams.get('id');
+                    if (articleIdFromUrl) {
+                        // Helper function to find article in tree structure
+                        const findArticleInTree = (items, id) => {
+                            for (const item of items) {
+                                if (item.id === id) return item;
+                                if (item.children) {
+                                    const found = findArticleInTree(item.children, id);
+                                    if (found) return found;
+                                }
+                            }
+                            return null;
+                        };
+                        
+                        const article = findArticleInTree(this.articles, articleIdFromUrl);
+                        if (article) {
+                            await this.selectArticle(article, true); // Use replaceState on initial load
+                        }
+                    }
                     
                     // Set up SignalR for real-time updates
                     const connection = createSignalRConnection('/articleBrowserHub');

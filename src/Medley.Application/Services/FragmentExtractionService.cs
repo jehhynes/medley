@@ -132,9 +132,10 @@ The following context about the company/organization should be considered when e
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to process chunk {ChunkNumber} of {TotalChunks} for source {SourceId}. Continuing with remaining chunks.",
+                _logger.LogError(ex, "Failed to process chunk {ChunkNumber} of {TotalChunks} for source {SourceId}. Stopping extraction.",
                     chunkNumber, contentChunks.Count, sourceId);
-                // Continue processing other chunks even if one fails
+                
+                throw new InvalidOperationException($"Fragment extraction failed while processing chunk {chunkNumber} of {contentChunks.Count}: {ex.Message}", ex);
             }
         }
 

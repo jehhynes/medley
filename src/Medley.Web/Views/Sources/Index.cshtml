@@ -44,9 +44,67 @@
         
         json-viewer {
             display: block;
-            padding: 1rem;
-            /* border: 1px solid var(--bs-border-color);
+            /*padding: 1rem;
+             border: 1px solid var(--bs-border-color);
             border-radius: 0.375rem; */
+        }
+        
+        /* Make main content use flexbox for independent tab scrolling */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+            padding: 0;
+        }
+        
+        .main-content-header {
+            flex-shrink: 0;
+            padding: 2rem 2.5rem 0 2.5rem;
+            margin-bottom: 0;
+        }
+        
+        /* Tab navigation container */
+        .main-content .nav-tabs {
+            flex-shrink: 0;
+            margin: 0 2.5rem;
+            padding-top: 1rem;
+            border-bottom: 1px solid var(--bs-border-color);
+        }
+        
+        /* Tab content container - takes remaining space and scrolls */
+        .main-content .tab-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-height: 0; /* Important for flex children to respect overflow */
+        }
+        
+        /* Each tab pane should fill available space and scroll independently */
+        .main-content .tab-pane {
+            height: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 1.5rem 2.5rem 2rem 2.5rem;
+            min-height: 0; /* Important for flex children to respect overflow */
+        }
+        
+        /* Content preview - let it flow naturally within scrolling tab pane */
+        .content-preview {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        /* Empty state should be centered */
+        .main-content .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding: 2rem 2.5rem;
         }
     </style>
 }
@@ -94,7 +152,7 @@
         <div class="empty-state-title">No Source Selected</div>
         <div class="empty-state-text">Select a source from the sidebar to view its details</div>
     </div>
-    <div v-else>
+    <div v-else class="d-flex flex-column h-100">
         <div class="main-content-header">
             <div class="d-flex justify-content-between align-items-start mb-3">
                 <div>
@@ -127,7 +185,7 @@
             </div>
         </div>
 
-        <ul class="nav nav-tabs " role="tablist">
+        <ul class="nav nav-tabs" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="content-tab" data-bs-toggle="tab" data-bs-target="#content-pane" type="button" role="tab" aria-controls="content-pane" aria-selected="true">
                     Content
@@ -143,7 +201,7 @@
         <div class="tab-content">
             <div class="tab-pane show active" id="content-pane" role="tabpanel" aria-labelledby="content-tab">
                 <div v-if="selectedSource.content">
-                    <div class="content-preview" style="white-space: pre-wrap;">
+                    <div class="content-preview">
                         {{ selectedSource.content }}
                     </div>
                 </div>
@@ -161,7 +219,6 @@
             </div>
         </div>
     </div>
-
 </div>
 
 @section VueTemplates {
@@ -255,8 +312,21 @@
                         }
                     },
                     
-                    async selectSource(source) {
+                    async selectSource(source, replaceState = false) {
                         this.selectedSourceId = source.id;
+                        
+                        // Update URL with selected source ID
+                        const url = new URL(window.location);
+                        const currentId = url.searchParams.get('id');
+                        if (currentId !== source.id) {
+                            url.searchParams.set('id', source.id);
+                            if (replaceState) {
+                                window.history.replaceState({}, '', url);
+                            } else {
+                                window.history.pushState({}, '', url);
+                            }
+                        }
+                        
                         try {
                             this.selectedSource = await api.get(`/api/sources/${source.id}`);
                             // Update extraction status from API response
@@ -339,7 +409,17 @@
                 },
                 
                 async mounted() {
-                    this.loadSources();
+                    await this.loadSources();
+                    
+                    // Check URL for selected source ID
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const sourceIdFromUrl = urlParams.get('id');
+                    if (sourceIdFromUrl) {
+                        const source = this.sources.find(s => s.id === sourceIdFromUrl);
+                        if (source) {
+                            await this.selectSource(source, true); // Use replaceState on initial load
+                        }
+                    }
                     
                     // Set up SignalR connection for real-time fragment extraction notifications
                     this.signalRConnection = createSignalRConnection('/integrationStatusHub');

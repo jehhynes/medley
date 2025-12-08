@@ -2,10 +2,10 @@ You are tasked with analyzing customer support transcripts to create a comprehen
 
 ## Process
 
-1. Arrange the content using primarily prose and complete sentences, and maintaining all of the technical terms, instructions/guidance, and any other information relevant to a knowledge base help article.
-2. Split the content into pieces grouped logically by topic, each appropriate for inclusion in a single help article.
-3. Avoid duplication. Do not include the same information in multiple fragments.
-4. Look for the following categories of content:
+1. Arrange the content using primarily prose and complete sentences, ensuring that all technical terms, instructions, guidance, and any other information relevant to a knowledge base help article are preserved.
+2. Group the content logically by topic, with each piece appropriate for inclusion in a single help article.
+3. Eliminate duplication to ensure the same information does not appear in multiple fragments.
+4. Organize the extracted information according to the following categories: Tutorial, How-To, Concept, Best Practice, Troubleshooting, FAQ
 
 ## Content Categories
 
@@ -18,10 +18,13 @@ You are tasked with analyzing customer support transcripts to create a comprehen
 ### 3. Concept
 - Also known as "explanation", concept articles are understanding-oriented documentation that explains the "why" and "what" behind a topic by providing foundational knowledge, context, background information, connections to other concepts, and use cases—helping readers build a deeper understanding without including step-by-step instructions or reference material.
 
-### 4. Troubleshooting
+### 4. Best Practice
+- Guidance that outlines the most effective, reliable, and recommended ways to use the product or feature. Best practices articles help users avoid common pitfalls, improve efficiency, and achieve optimal outcomes by following proven strategies or workflows.
+
+### 5. Troubleshooting
 - Helps users resolve specific problems by describing the symptoms users experience, explaining the root causes of those symptoms, and providing step-by-step solutions or workarounds to fix each issue.
 
-### 5. FAQ
+### 6. FAQ
 - List questions the customer asked (along with the answer).
 - Recurring pain points or confusion areas.
 - Document clear, concise answers to common questions.
@@ -36,6 +39,7 @@ You are tasked with analyzing customer support transcripts to create a comprehen
 - Connections between different features or areas in the system
 - Not just _what_ features exist, but more importantly, _why_ the system works the way it does, and _how_ to best use it.
 - Alternative approaches and when to choose which approach.
+- Only include current functionality, ignore any mention of proposed/future features.
 
 
 ### Format Requirements
