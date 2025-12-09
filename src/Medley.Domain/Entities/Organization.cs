@@ -21,12 +21,6 @@ public class Organization : BaseEntity
     /// Indicates whether smart tagging (automatic IsInternal detection) is enabled
     /// </summary>
     public bool EnableSmartTagging { get; set; } = false;
-
-    /// <summary>
-    /// Company context information for the organization
-    /// </summary>
-    [MaxLength(2000)]
-    public string? CompanyContext { get; set; }
 }
 
 

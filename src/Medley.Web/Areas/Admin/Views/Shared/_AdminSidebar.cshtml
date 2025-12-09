@@ -2,6 +2,7 @@
     var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
     var currentArea = ViewContext.RouteData.Values["area"]?.ToString();
     var isSettings = currentArea == "Admin" && currentController == "Settings";
+    var isAiPrompts = currentArea == "Admin" && currentController == "AiPrompts";
     var isIntegrations = currentArea == "Integrations";
     var isUsers = currentArea == "Admin" && currentController == "Users";
     var isKnowledgeBuilderImport = currentArea == "Admin" && currentController == "KnowledgeBuilderImport";
@@ -18,6 +19,14 @@
                 <i class="list-item-icon bi bi-gear"></i>
                 <div class="list-item-body">
                     <div class="list-item-title">General</div>
+                </div>
+            </a>
+        </li>
+        <li class="list-item">
+            <a asp-area="Admin" asp-controller="AiPrompts" asp-action="Index" class="list-item-content @(isAiPrompts ? "active" : "")">
+                <i class="list-item-icon bi bi-robot"></i>
+                <div class="list-item-body">
+                    <div class="list-item-title">AI Prompts</div>
                 </div>
             </a>
         </li>

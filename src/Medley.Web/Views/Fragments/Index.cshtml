@@ -126,19 +126,6 @@
 
         <div class="fragment-content-area">
             <div class="markdown-content" v-html="renderedMarkdown"></div>
-
-            @* <div v-if="selectedFragment.summary" class="mb-4">
-                <h5 class="text-muted mb-2">Summary</h5>
-                <p class="lead">{{ selectedFragment.summary }}</p>
-            </div> *@
-            
-            <div v-if="selectedFragment.content">
-                <h5 class="text-muted mb-2">Content</h5>
-                <div class="markdown-content" v-html="renderedMarkdown"></div>
-            </div>
-            <div v-else class="text-muted">
-                No content available
-            </div>
         </div>
     </div>
 </div>

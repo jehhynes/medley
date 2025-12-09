@@ -1,5 +1,6 @@
 using Medley.Application.Interfaces;
 using Medley.Domain.Entities;
+using Medley.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.ComponentModel;
@@ -16,7 +17,6 @@ public class FragmentExtractionService
     private readonly IRepository<Source> _sourceRepository;
     private readonly IRepository<Fragment> _fragmentRepository;
     private readonly IRepository<Template> _templateRepository;
-    private readonly IRepository<Organization> _organizationRepository;
     private readonly TextChunkingService _chunkingService;
     private readonly ILogger<FragmentExtractionService> _logger;
 
@@ -25,7 +25,6 @@ public class FragmentExtractionService
         IRepository<Source> sourceRepository,
         IRepository<Fragment> fragmentRepository,
         IRepository<Template> templateRepository,
-        IRepository<Organization> organizationRepository,
         TextChunkingService chunkingService,
         ILogger<FragmentExtractionService> logger)
     {
@@ -33,7 +32,6 @@ public class FragmentExtractionService
         _sourceRepository = sourceRepository;
         _fragmentRepository = fragmentRepository;
         _templateRepository = templateRepository;
-        _organizationRepository = organizationRepository;
         _chunkingService = chunkingService;
         _logger = logger;
     }
@@ -69,7 +67,7 @@ public class FragmentExtractionService
 
         // Retrieve the fragment extraction prompt template
         var template = await _templateRepository.Query()
-            .FirstOrDefaultAsync(t => t.Type == "FragmentExtraction");
+            .FirstOrDefaultAsync(t => t.Type == TemplateType.FragmentExtraction);
 
         if (template == null)
         {
@@ -77,21 +75,19 @@ public class FragmentExtractionService
             throw new InvalidOperationException("FragmentExtraction template not configured");
         }
 
-        // Get organization's company context (assuming single-tenant for now)
-        var organization = await _organizationRepository.Query()
-            .FirstOrDefaultAsync();
+        // Load organization context template (if configured)
+        var orgContextTemplate = await _templateRepository.Query()
+            .FirstOrDefaultAsync(t => t.Type == TemplateType.OrganizationContext);
 
-        // Build system prompt with company context if available
+        // Build system prompt with organization context if available
         var systemPrompt = template.Content;
-        if (organization != null && !string.IsNullOrWhiteSpace(organization.CompanyContext))
+        if (orgContextTemplate != null && !string.IsNullOrWhiteSpace(orgContextTemplate.Content))
         {
             systemPrompt = $@"{template.Content}
 
 ## Company Context
-The following context about the company/organization should be considered when extracting fragments:
-
-{organization.CompanyContext}";
-            _logger.LogInformation("Including company context in fragment extraction prompt");
+{orgContextTemplate.Content}";
+            _logger.LogInformation("Including organization context template in fragment extraction prompt");
         }
 
         // Chunk the content before processing

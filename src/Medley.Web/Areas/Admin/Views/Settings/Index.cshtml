@@ -1,16 +1,13 @@
 @{
     ViewData["Title"] = "Settings";
-    var fragmentExtractionPrompt = ViewBag.FragmentExtractionPrompt as string ?? "";
-    var templateId = ViewBag.FragmentExtractionTemplateId as Guid? ?? Guid.Empty;
     var organizationId = ViewBag.OrganizationId as Guid? ?? Guid.Empty;
     var emailDomain = ViewBag.EmailDomain as string ?? "";
     var enableSmartTagging = ViewBag.EnableSmartTagging as bool? ?? false;
-    var companyContext = ViewBag.CompanyContext as string ?? "";
 }
 
 <div class="main-content-header">
     <h1 class="main-content-title">Settings</h1>
-    <p class="text-muted">Configure system settings and AI prompts</p>
+    <p class="text-muted">Configure system settings</p>
 </div>
 
 @if (TempData["SuccessMessage"] != null)
@@ -73,74 +70,11 @@
                     and meeting name patterns. The SmartTagProcessor job runs hourly at :30.
                 </div>
             </div>
-            
-            <div class="mb-3">
-                <label for="companyContext" class="form-label">Company Context</label>
-                <textarea class="form-control" 
-                          id="companyContext" 
-                          name="companyContext" 
-                          rows="5"
-                          maxlength="2000"
-                          placeholder="Enter company context information...">@companyContext</textarea>
-                <div class="form-text">
-                    Additional context information about the company or organization that may be useful for AI processing and analysis.
-                </div>
-            </div>
-            
             <div class="d-flex gap-2">
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-save"></i> Save Settings
                 </button>
             </div>
-        </form>
-    </div>
-</div>
-
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="card-title mb-0">Fragment Extraction AI Prompt</h5>
-    </div>
-    <div class="card-body">
-        <p class="text-muted mb-3">
-            This prompt instructs the AI on how to extract fragments from source content. 
-            Use <code>{{SOURCE_CONTENT}}</code> as a placeholder for the actual source content.
-        </p>
-        
-        <div class="alert alert-info mb-3">
-            <i class="bi bi-info-circle"></i>
-            <strong>Note:</strong> The JSON response structure is system-controlled. You only need to provide instructions 
-            for what types of fragments to extract and how to categorize them. The AI will automatically format 
-            the response with <code>title</code>, <code>summary</code>, <code>category</code>, and <code>content</code> fields.
-        </div>
-        
-        <form asp-action="SaveFragmentExtractionPrompt" method="post">
-            <input type="hidden" name="templateId" value="@templateId" />
-            <div class="mb-3">
-                <label for="promptContent" class="form-label">Prompt Template</label>
-                <textarea class="form-control font-monospace" 
-                          id="promptContent" 
-                          name="promptContent" 
-                          rows="15" 
-                          required>@fragmentExtractionPrompt</textarea>
-                <div class="form-text">
-                    Describe what types of fragments to extract and how to categorize them. 
-                    The system will automatically handle the JSON response format.
-                </div>
-            </div>
-            
-            <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-save"></i> Save Prompt
-                </button>
-                <button type="button" class="btn btn-outline-secondary" 
-                        onclick="if(confirm('Are you sure you want to reset to the default prompt? This will overwrite your current prompt.')) { document.getElementById('resetForm').submit(); }">
-                    <i class="bi bi-arrow-counterclockwise"></i> Reset to Default
-                </button>
-            </div>
-        </form>
-        
-        <form id="resetForm" asp-action="ResetFragmentExtractionPrompt" method="post" class="d-none">
-            <input type="hidden" name="templateId" value="@templateId" />
         </form>
     </div>
 </div>
