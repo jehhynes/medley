@@ -1,14 +1,14 @@
 // Shared utility functions for Medley Vue apps
 
 /**
- * Formats a date string into a readable format
+ * Formats a date string into a readable date (no time)
  * @param {string} dateString - ISO date string
  * @returns {string} Formatted date string
  */
 const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+    return date.toLocaleDateString();
 };
 
 /**

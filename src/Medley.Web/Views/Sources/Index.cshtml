@@ -11,8 +11,7 @@
             --background-color: transparent;
         }
   
-        
-        
+               
         
         /* Make main content use flexbox for independent tab scrolling */
         .main-content {
@@ -26,7 +25,7 @@
         .main-content-header {
             flex-shrink: 0;
             padding: 2rem 2.5rem 0 2.5rem;
-            margin-bottom: 0;
+            margin-bottom: 0!important;
         }
         
         /* Tab navigation container */
@@ -132,7 +131,9 @@
                 <div>
                     <h1 class="main-content-title">{{ selectedSource.name || 'Untitled Source' }}</h1>
                     <div class="text-muted">
-                        <span class="badge bg-primary">{{ selectedSource.type }}</span>
+                        <span class="badge bg-primary">
+                            <i :class="getIconClass(getSourceTypeIcon(selectedSource.type))" class="me-1"></i>{{ selectedSource.type }}
+                        </span>
                         <span class="ms-2">
                             <i class="bi bi-calendar3"></i>
                             {{ formatDate(selectedSource.date) }}
@@ -219,7 +220,9 @@
                             <h3>{{ selectedFragment.title }}</h3>
                         </div>
                         <div v-if="selectedFragment.category" class="mb-2">
-                            <span class="badge bg-secondary">{{ selectedFragment.category }}</span>
+                            <span class="badge bg-secondary">
+                                <i :class="getIconClass(getFragmentCategoryIcon(selectedFragment.category))" class="me-1"></i>{{ selectedFragment.category }}
+                            </span>
                         </div>
                         @* <div v-if="selectedFragment.summary" class="mb-3 text-muted">
                             {{ selectedFragment.summary }}
@@ -562,6 +565,18 @@
                         }
                         // Default fallback
                         return 'bi bi-file-text';
+                    },
+                    
+                    getSourceTypeIcon(type) {
+                        const icons = {
+                            'Meeting': 'bi-camera-video',
+                            'Document': 'bi-file-text',
+                            'Email': 'bi-envelope',
+                            'Chat': 'bi-chat-dots',
+                            'Repository': 'bi-git',
+                            'Other': 'bi-file-earmark'
+                        };
+                        return icons[type] || 'bi-file-earmark';
                     }
                 },
                 

@@ -1,50 +1,381 @@
 @{
     ViewData["Title"] = "Fragments";
+    ViewData["HasRightSidebar"] = false;
+    ViewData["HasLeftSidebar"] = true;
+    Layout = "_VueLayout";
 }
 
-@section LeftSidebar {
+@section Styles {
+    <style>
+        /* Make main content use flexbox for proper layout */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+            padding: 0;
+        }
+        
+        .main-content-header {
+            flex-shrink: 0;
+            padding: 2rem 2.5rem 1.5rem 2.5rem;
+            margin-bottom: 0!important;
+        }
+        
+        /* Fragment content area - scrollable */
+        .fragment-content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 2.5rem 2rem 2.5rem;
+        }
+        
+        /* Content preview - let it flow naturally */
+        .fragment-content {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        /* Empty state should be centered */
+        .main-content .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding: 2rem 2.5rem;
+        }
+    </style>
+}
+
+<!-- Left Sidebar (List) -->
+<div class="sidebar left-sidebar">
     <div class="sidebar-header">
         <h6 class="sidebar-title">Fragments</h6>
+        <div class="input-group input-group-sm">
+            <input type="text" 
+                   class="form-control" 
+                   placeholder="Search fragments..." 
+                   v-model="searchQuery" 
+                   @@input="onSearchInput"
+                   @@keydown.enter="performSearch">
+            <button class="btn btn-outline-secondary" type="button" @@click="performSearch" :disabled="searching">
+                <span v-if="searching" class="spinner-border spinner-border-sm" role="status">
+                    <span class="visually-hidden">Searching...</span>
+                </span>
+                <i v-else class="bi bi-search"></i>
+            </button>
+        </div>
     </div>
     <div class="sidebar-content">
-        <div class="empty-state">
+        <div v-if="loading" class="loading-spinner">
+            <div class="spinner-border spinner-border-sm" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+        <div v-else-if="error" class="alert alert-danger m-2" v-cloak>
+            {{ error }}
+        </div>
+        <fragment-list 
+            v-else
+            :fragments="fragments"
+            :selected-id="selectedFragmentId"
+            :article-types="articleTypes"
+            @@select="selectFragment"
+        />
+        <div v-if="!loading && fragments.length === 0" class="empty-state">
             <div class="empty-state-icon">
                 <i class="bi bi-puzzle"></i>
             </div>
-            <div class="empty-state-title">Coming Soon</div>
-            <div class="empty-state-text">Fragment browser will be available soon</div>
+            <div class="empty-state-title">No Fragments Found</div>
+            <div class="empty-state-text" v-if="searchQuery">No fragments match your search</div>
+            <div class="empty-state-text" v-else>Extract fragments from sources to get started</div>
         </div>
     </div>
+</div>
+
+<!-- Main Content -->
+<div class="main-content">
+    <div v-if="!selectedFragment" class="empty-state">
+        <div class="empty-state-icon">
+            <i class="bi bi-puzzle"></i>
+        </div>
+        <div class="empty-state-title">No Fragment Selected</div>
+        <div class="empty-state-text">Select a fragment from the sidebar to view its details</div>
+    </div>
+    <div v-else class="d-flex flex-column h-100">
+        <div class="main-content-header">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h1 class="main-content-title">{{ selectedFragment.title || 'Untitled Fragment' }}</h1>
+                    <div class="text-muted">
+                        <span class="badge bg-secondary" v-if="selectedFragment.category">
+                            <i :class="getIconClass(getFragmentCategoryIcon(selectedFragment.category))" class="me-1"></i>{{ selectedFragment.category }}
+                        </span>
+                        <span class="ms-2">
+                            <i class="bi bi-calendar3"></i>
+                            {{ formatDate(selectedFragment.sourceDate) }}
+                        </span>
+                        <a :href="'/Sources?id=' + selectedFragment.sourceId" class="ms-2 source-link">
+                            <i class="bi bi-camera-video me-1"></i>{{ selectedFragment.sourceName || 'View Source' }}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="fragment-content-area">
+            <div class="markdown-content" v-html="renderedMarkdown"></div>
+
+            @* <div v-if="selectedFragment.summary" class="mb-4">
+                <h5 class="text-muted mb-2">Summary</h5>
+                <p class="lead">{{ selectedFragment.summary }}</p>
+            </div> *@
+            
+            <div v-if="selectedFragment.content">
+                <h5 class="text-muted mb-2">Content</h5>
+                <div class="markdown-content" v-html="renderedMarkdown"></div>
+            </div>
+            <div v-else class="text-muted">
+                No content available
+            </div>
+        </div>
+    </div>
+</div>
+
+@section VueTemplates {
+    @* Vue Component Templates - outside #app so they don't get destroyed *@
+    @await Html.PartialAsync("Templates/_FragmentListTemplate")
 }
 
-<div class="main-content-header">
-    <h1 class="main-content-title">Fragments</h1>
-    <p class="text-muted">Knowledge fragments extracted from your data sources</p>
-</div>
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
+    <script src="~/js/app.js"></script>
+    <script src="~/js/utils.js"></script>
+    <script src="~/js/components/fragment-list.js"></script>
+    <script>
+        (function() {
+            const { createApp } = Vue;
+            const { api } = window.ArticleBrowserApp;
+            const { formatDate } = window.MedleyUtils;
 
-<div class="card">
-    <div class="card-body text-center py-5">
-        <div class="mb-4">
-            <i class="bi bi-puzzle" style="font-size: 4rem; opacity: 0.3;"></i>
-        </div>
-        <h4 class="mb-3">Fragment Browser Coming Soon</h4>
-        <p class="text-muted mb-4">
-            The fragment browser is currently under development. You'll be able to:
-        </p>
-        <ul class="list-unstyled text-start mx-auto" style="max-width: 400px;">
-            <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Browse all knowledge fragments</li>
-            <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Search and filter fragments</li>
-            <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>View fragment embeddings</li>
-            <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Link fragments to articles</li>
-        </ul>
-        <div class="mt-4">
-            <a href="@Url.Action("Index", "Home")" class="btn btn-primary me-2">
-                <i class="bi bi-house-door"></i> Back to Home
-            </a>
-            <a href="@Url.Action("Index", "Sources")" class="btn btn-outline-primary">
-                <i class="bi bi-folder"></i> View Sources
-            </a>
-        </div>
-    </div>
-</div>
+            // Debounce helper
+            function debounce(func, wait) {
+                let timeout;
+                return function executedFunction(...args) {
+                    const later = () => {
+                        clearTimeout(timeout);
+                        func(...args);
+                    };
+                    clearTimeout(timeout);
+                    timeout = setTimeout(later, wait);
+                };
+            }
 
+            const app = createApp({
+                components: {
+                    'fragment-list': FragmentList
+                },
+                data() {
+                    return {
+                        fragments: [],
+                        selectedFragmentId: null,
+                        selectedFragment: null,
+                        loading: false,
+                        searching: false,
+                        error: null,
+                        searchQuery: '',
+                        articleTypes: [],
+                        markdownRenderer: null,
+                        searchDebounced: null
+                    };
+                },
+                computed: {
+                    renderedMarkdown() {
+                        if (!this.selectedFragment || !this.selectedFragment.content || !this.markdownRenderer) {
+                            return '';
+                        }
+                        try {
+                            return this.markdownRenderer.parse(this.selectedFragment.content, { breaks: true, gfm: true });
+                        } catch (e) {
+                            console.error('Failed to render markdown:', e);
+                            return this.selectedFragment.content;
+                        }
+                    }
+                },
+                methods: {
+                    async loadFragments() {
+                        this.loading = true;
+                        this.error = null;
+                        try {
+                            this.fragments = await api.get('/api/fragments');
+                        } catch (err) {
+                            this.error = 'Failed to load fragments: ' + err.message;
+                            console.error('Error loading fragments:', err);
+                        } finally {
+                            this.loading = false;
+                        }
+                    },
+                    
+                    async selectFragment(fragment, replaceState = false) {
+                        this.selectedFragmentId = fragment.id;
+                        
+                        // Update URL with selected fragment ID
+                        const url = new URL(window.location);
+                        const currentId = url.searchParams.get('id');
+                        if (currentId !== fragment.id) {
+                            url.searchParams.set('id', fragment.id);
+                            if (replaceState) {
+                                window.history.replaceState({}, '', url);
+                            } else {
+                                window.history.pushState({}, '', url);
+                            }
+                        }
+                        
+                        try {
+                            this.selectedFragment = await api.get(`/api/fragments/${fragment.id}`);
+                        } catch (err) {
+                            console.error('Error loading fragment:', err);
+                            this.selectedFragment = null;
+                        }
+                    },
+                    
+                    onSearchInput() {
+                        // Use debounced search for typing
+                        if (this.searchDebounced) {
+                            this.searchDebounced();
+                        }
+                    },
+                    
+                    async performSearch() {
+                        const query = this.searchQuery.trim();
+                        if (query.length >= 2) {
+                            this.searching = true;
+                            try {
+                                this.fragments = await api.get(`/api/fragments/search?query=${encodeURIComponent(query)}`);
+                            } catch (err) {
+                                console.error('Search error:', err);
+                                this.error = 'Search failed: ' + err.message;
+                            } finally {
+                                this.searching = false;
+                            }
+                        } else if (query.length === 0) {
+                            await this.loadFragments();
+                        }
+                    },
+                    
+                    async loadArticleTypes() {
+                        try {
+                            this.articleTypes = await api.get('/api/articles/types');
+                        } catch (err) {
+                            console.error('Error loading article types:', err);
+                        }
+                    },
+                    
+                    getFragmentCategoryIcon(category) {
+                        if (!category) {
+                            return 'bi-file-text';
+                        }
+                        
+                        // Normalize: extract only alphabetic characters and convert to lowercase
+                        const normalize = (str) => {
+                            if (!str) return '';
+                            return str.replace(/[^a-zA-Z]/g, '').toLowerCase();
+                        };
+                        
+                        const normalizedCategory = normalize(category);
+                        
+                        // Hardcoded icon mappings
+                        const hardcodedIcons = {
+                            'bestpractices': 'bi-shield-check'
+                        };
+                        
+                        if (hardcodedIcons[normalizedCategory]) {
+                            return hardcodedIcons[normalizedCategory];
+                        }
+                        
+                        // Match fragment category to article type by normalized name
+                        if (this.articleTypes && this.articleTypes.length > 0) {
+                            const matchingType = this.articleTypes.find(
+                                at => at.name && normalize(at.name) === normalizedCategory
+                            );
+                            
+                            if (matchingType && matchingType.icon) {
+                                return matchingType.icon;
+                            }
+                        }
+                        
+                        // Default fallback
+                        return 'bi-file-text';
+                    },
+                    
+                    getIconClass(icon) {
+                        if (!icon) {
+                            return 'bi bi-file-text';
+                        }
+                        // If it's a Bootstrap Icon (starts with bi-), add bi base class
+                        if (icon.startsWith('bi-')) {
+                            return `bi ${icon}`;
+                        }
+                        // If it's a Font Awesome icon (starts with fa-), add fas (solid) base class
+                        if (icon.startsWith('fa-')) {
+                            return `fas ${icon}`;
+                        }
+                        // Default fallback
+                        return 'bi bi-file-text';
+                    },
+                    
+                    formatDate
+                },
+                
+                async mounted() {
+                    // Initialize markdown renderer
+                    if (typeof marked !== 'undefined') {
+                        this.markdownRenderer = marked;
+                    } else {
+                        console.error('Marked.js library not loaded');
+                    }
+                    
+                    // Create debounced search function
+                    this.searchDebounced = debounce(() => {
+                        this.performSearch();
+                    }, 500);
+                    
+                    // Load article types for icon mapping
+                    await this.loadArticleTypes();
+                    
+                    // Load initial fragments
+                    await this.loadFragments();
+                    
+                    // Check URL for selected fragment ID
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const fragmentIdFromUrl = urlParams.get('id');
+                    if (fragmentIdFromUrl) {
+                        const fragment = this.fragments.find(f => f.id === fragmentIdFromUrl);
+                        if (fragment) {
+                            await this.selectFragment(fragment, true);
+                        }
+                    }
+                    
+                    // Handle browser back/forward
+                    window.addEventListener('popstate', async () => {
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const fragmentId = urlParams.get('id');
+                        if (fragmentId) {
+                            const fragment = this.fragments.find(f => f.id === fragmentId);
+                            if (fragment) {
+                                this.selectedFragmentId = fragment.id;
+                                this.selectedFragment = await api.get(`/api/fragments/${fragment.id}`);
+                            }
+                        } else {
+                            this.selectedFragmentId = null;
+                            this.selectedFragment = null;
+                        }
+                    });
+                }
+            });
+            
+            app.mount('#app');
+        })();
+    </script>
+}

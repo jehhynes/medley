@@ -1,0 +1,17 @@
+<script type="text/x-template" id="fragment-list-template">
+  <ul class="list-view">
+    <li v-for="fragment in fragments" :key="fragment.id" class="list-item">
+      <a href="#" 
+         class="list-item-content" 
+         :class="{ active: selectedId === fragment.id }"
+         @@click.prevent="selectFragment(fragment)">
+        <i class="list-item-icon" :class="getIconClass(getFragmentCategoryIcon(fragment.category))"></i>
+        <div class="list-item-body">
+          <div class="list-item-title">{{ fragment.title || 'Untitled Fragment' }}</div>
+          <div class="list-item-subtitle">{{ formatDate(fragment.sourceDate) }} • {{ fragment.sourceType }}</div>
+        </div>
+      </a>
+    </li>
+  </ul>
+</script>
+
