@@ -1,5 +1,7 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Medley.Domain.Enums;
+using Pgvector;
 
 namespace Medley.Domain.Entities;
 
@@ -11,8 +13,8 @@ public class Observation : BusinessEntity
     [MaxLength(8000)]
     public required string Content { get; set; }
 
-    [DataType("vector(1536)")]
-    public float[]? Embedding { get; set; }
+    [Column(TypeName = "vector(2000)")]
+    public Vector? Embedding { get; set; }
 
     [MaxLength(100)]
     public string? Category { get; set; }

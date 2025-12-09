@@ -30,10 +30,17 @@ public class DatabaseFixture : IAsyncLifetime
         // Create data source once for the fixture lifetime
         _dataSource = ApplicationDbContextFactory.CreateDataSource(ConnectionString);
 
-        // Create and migrate the database once
-        using var context = ApplicationDbContextFactory.CreateDbContext(_dataSource);
+        // Create and migrate the database once (suppress pending model changes warning for tests)
+        var options = ApplicationDbContextFactory.CreateOptions(_dataSource, suppressWarnings: true);
+        using var context = new ApplicationDbContext(options);
         
         await context.Database.MigrateAsync();
+        
+        // Reload types after migrations to pick up the vector extension
+        var connection = (NpgsqlConnection)context.Database.GetDbConnection();
+        await connection.OpenAsync();
+        await connection.ReloadTypesAsync();
+        await connection.CloseAsync();
     }
 
     public async Task DisposeAsync()

@@ -21,10 +21,21 @@ public class BedrockAiService : IAiProcessingService
         AmazonBedrockRuntimeClient bedrockClient,
         IOptions<BedrockSettings> bedrockSettings,
         ILogger<BedrockAiService> logger)
+        : this(bedrockClient.AsIChatClient(bedrockSettings.Value.ModelId), bedrockSettings, logger)
+    {
+    }
+
+    /// <summary>
+    /// Constructor for testing with a mock IChatClient
+    /// </summary>
+    public BedrockAiService(
+        IChatClient chatClient,
+        IOptions<BedrockSettings> bedrockSettings,
+        ILogger<BedrockAiService> logger)
     {
         _bedrockSettings = bedrockSettings.Value;
         _logger = logger;
-        _chatClient = bedrockClient.AsIChatClient(_bedrockSettings.ModelId);
+        _chatClient = chatClient;
     }
 
     public async Task<string> ProcessPromptAsync(

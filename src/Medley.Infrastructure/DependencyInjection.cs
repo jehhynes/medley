@@ -11,8 +11,11 @@ using Medley.Infrastructure.Data.Repositories;
 using Medley.Infrastructure.Services;
 using Medley.Infrastructure.HealthChecks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using OllamaSharp;
 using Npgsql;
 using Hangfire;
 using Hangfire.PostgreSql;
@@ -20,6 +23,7 @@ using Amazon.S3;
 using Amazon.BedrockRuntime;
 using Amazon;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using System.Text.Json;
 
 namespace Medley.Infrastructure;
 
@@ -103,6 +107,9 @@ public static class DependencyInjection
         // Configure AWS services
         ConfigureAwsServices(services, configuration);
 
+        // Configure Ollama embedding service
+        ConfigureOllamaServices(services, configuration);
+
         return services;
     }
 
@@ -185,5 +192,22 @@ public static class DependencyInjection
         }
 
         // Note: AWS health checks are registered in Program.cs conditionally
+    }
+
+    private static void ConfigureOllamaServices(IServiceCollection services, IConfiguration configuration)
+    {
+        // Get Ollama settings from configuration
+        var ollamaBaseUrl = configuration["Ollama:BaseUrl"] ?? "http://localhost:11434";
+        var ollamaModel = configuration["Ollama:EmbeddingModel"] ?? "qwen3-embedding:4b";
+
+        // Register IEmbeddingGenerator<string, Embedding<float>> using OllamaSharp directly
+        // OllamaApiClient implements IEmbeddingGenerator<string, Embedding<float>> for Microsoft.Extensions.AI
+        services.AddScoped<IEmbeddingGenerator<string, Embedding<float>>>(sp =>
+        {
+            var baseUrl = new Uri(ollamaBaseUrl);
+            var ollamaClient = new OllamaApiClient(baseUrl);
+            ollamaClient.SelectedModel = ollamaModel;
+            return ollamaClient;
+        });
     }
 }

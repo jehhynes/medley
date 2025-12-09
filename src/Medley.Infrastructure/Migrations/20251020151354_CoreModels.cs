@@ -193,7 +193,7 @@ namespace Medley.Infrastructure.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Content = table.Column<string>(type: "character varying(8000)", maxLength: 8000, nullable: false),
-                    Embedding = table.Column<float[]>(type: "real[]", nullable: true),
+                    Embedding = table.Column<float[]>(type: "vector(2000)", nullable: true),
                     Category = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     SourceContext = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
                     ConfidenceScore = table.Column<float>(type: "real", nullable: false),

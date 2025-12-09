@@ -12,7 +12,7 @@ public class ApplicationDbContextDesignTimeFactory : IDesignTimeDbContextFactory
 
         // Use a default connection string for migrations
         // In production, this would come from configuration
-        optionsBuilder.UseNpgsql("Host=localhost;Database=medley_design;Username=postgres;Password=postgres");
+        optionsBuilder.UseNpgsql("Host=localhost;Database=medley_design;Username=postgres;Password=postgres", o => o.UseVector());
 
         return new ApplicationDbContext(optionsBuilder.Options);
     }

@@ -20,7 +20,7 @@ namespace Medley.Infrastructure.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Content = table.Column<string>(type: "character varying(10000)", maxLength: 10000, nullable: false),
-                    Embedding = table.Column<float[]>(type: "vector(1536)", nullable: true),
+                    Embedding = table.Column<float[]>(type: "vector(2000)", nullable: true),
                     SourceType = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     SourceId = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),

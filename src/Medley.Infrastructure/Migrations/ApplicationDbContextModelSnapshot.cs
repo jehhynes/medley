@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+using Pgvector;
 
 #nullable disable
 
@@ -165,8 +166,8 @@ namespace Medley.Infrastructure.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.PrimitiveCollection<float[]>("Embedding")
-                        .HasColumnType("real[]");
+                    b.Property<Vector>("Embedding")
+                        .HasColumnType("vector(2000)");
 
                     b.Property<Guid?>("FragmentClusterId")
                         .HasColumnType("uuid");
@@ -314,8 +315,8 @@ namespace Medley.Infrastructure.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.PrimitiveCollection<float[]>("Embedding")
-                        .HasColumnType("real[]");
+                    b.Property<Vector>("Embedding")
+                        .HasColumnType("vector(2000)");
 
                     b.Property<DateTimeOffset?>("LastModifiedAt")
                         .HasColumnType("timestamp with time zone");

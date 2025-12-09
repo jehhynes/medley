@@ -4,6 +4,7 @@ using Medley.Infrastructure.Data;
 using Medley.Infrastructure.Data.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Pgvector;
 using Xunit;
 
 namespace Medley.Tests.Integration.Repositories;
@@ -19,7 +20,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
     public override async Task InitializeAsync()
     {
         await base.InitializeAsync();
-        _repository = new FragmentRepository(_dbContext, _fixture.DataSource);
+        _repository = new FragmentRepository(_dbContext);
     }
 
     [Fact]
@@ -136,7 +137,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
             {
                 Id = Guid.NewGuid(),
                 Content = "Base fragment",
-                Embedding = baseEmbedding,
+                Embedding = new Vector(baseEmbedding),
                 CreatedAt = DateTimeOffset.UtcNow,
                 Source = source
             },
@@ -144,7 +145,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
             {
                 Id = Guid.NewGuid(),
                 Content = "Similar fragment",
-                Embedding = similarEmbedding,
+                Embedding = new Vector(similarEmbedding),
                 CreatedAt = DateTimeOffset.UtcNow,
                 Source = source
             },
@@ -152,7 +153,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
             {
                 Id = Guid.NewGuid(),
                 Content = "Different fragment",
-                Embedding = differentEmbedding,
+                Embedding = new Vector(differentEmbedding),
                 CreatedAt = DateTimeOffset.UtcNow,
                 Source = source
             }
@@ -192,7 +193,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
             {
                 Id = Guid.NewGuid(),
                 Content = "Similar fragment",
-                Embedding = similarEmbedding,
+                Embedding = new Vector(similarEmbedding),
                 CreatedAt = DateTimeOffset.UtcNow,
                 Source = source
             },
@@ -200,7 +201,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
             {
                 Id = Guid.NewGuid(),
                 Content = "Different fragment",
-                Embedding = differentEmbedding,
+                Embedding = new Vector(differentEmbedding),
                 CreatedAt = DateTimeOffset.UtcNow,
                 Source = source
             }
@@ -249,7 +250,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
             {
                 Id = Guid.NewGuid(),
                 Content = "Fragment with embedding",
-                Embedding = queryEmbedding,
+                Embedding = new Vector(queryEmbedding),
                 CreatedAt = DateTimeOffset.UtcNow,
                 Source = source
             },
@@ -280,8 +281,8 @@ public class FragmentRepositoryTests : DatabaseTestBase
     /// </summary>
     private static float[] CreateTestEmbedding(float primaryValue, float secondaryValue)
     {
-        var embedding = new float[1536];
-        for (int i = 0; i < 1536; i++)
+        var embedding = new float[2000];
+        for (int i = 0; i < 2000; i++)
         {
             embedding[i] = i % 2 == 0 ? primaryValue : secondaryValue;
         }

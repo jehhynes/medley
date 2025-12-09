@@ -1,3 +1,4 @@
+using Pgvector;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -33,11 +34,10 @@ public class Fragment : BusinessEntity
     public required string Content { get; set; }
 
     /// <summary>
-    /// Vector embedding for semantic similarity operations (1536 dimensions for Claude 4.5)
-    /// Stored as float[] in domain, mapped to vector(1536) in database
+    /// Vector embedding for semantic similarity operations
     /// </summary>
-    [DataType("vector(1536)")]
-    public float[]? Embedding { get; set; }
+    [Column(TypeName = "vector(2000)")]
+    public Vector? Embedding { get; set; }
 
     /// <summary>
     /// Navigation to the originating Source

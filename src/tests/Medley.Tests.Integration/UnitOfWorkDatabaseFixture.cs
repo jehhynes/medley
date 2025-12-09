@@ -2,7 +2,6 @@ using Medley.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Testcontainers.PostgreSql;
-using Xunit;
 
 namespace Medley.Tests.Integration;
 
@@ -50,13 +49,24 @@ public class UnitOfWorkDatabaseFixture : IAsyncLifetime
         var databaseName = $"medley_test_{Interlocked.Increment(ref _databaseCounter)}_{Guid.NewGuid():N}";
         var connectionString = _baseConnectionString.Replace("Database=postgres", $"Database={databaseName}");
 
+        // First, create the database using the default postgres connection
+        await using (var adminConnection = new NpgsqlConnection(_baseConnectionString))
+        {
+            await adminConnection.OpenAsync();
+            await using var cmd = new NpgsqlCommand($"CREATE DATABASE \"{databaseName}\"", adminConnection);
+            await cmd.ExecuteNonQueryAsync();
+        }
+
         // Create a new data source for this isolated database
         var dataSource = ApplicationDbContextFactory.CreateDataSource(connectionString);
         _dataSources.Add(dataSource);
 
         var context = ApplicationDbContextFactory.CreateDbContext(dataSource);
         
-        // Create the database with schema (this applies migrations automatically)
+        // Enable pgvector extension (required before EnsureCreatedAsync since migrations aren't run)
+        await context.Database.ExecuteSqlRawAsync("CREATE EXTENSION IF NOT EXISTS vector;");
+        
+        // Create the database schema
         await context.Database.EnsureCreatedAsync();
         
         return context;

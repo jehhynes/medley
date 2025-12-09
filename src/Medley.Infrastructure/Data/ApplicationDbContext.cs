@@ -43,11 +43,15 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
         base.OnConfiguring(optionsBuilder);
         
         optionsBuilder.ReplaceService<IMethodCallTranslatorProvider, CustomNpgsqlMethodCallTranslatorProvider>();
+
+        //optionsBuilder.UseNpgsql("connString", o => o.UseVector());
     }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+
+        //builder.HasPostgresExtension("vector");
 
         // Additional entity configurations can be added here if needed
         // Most configuration is handled via data annotations on entities

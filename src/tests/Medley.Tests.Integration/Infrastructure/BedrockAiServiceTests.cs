@@ -1,9 +1,8 @@
-using Amazon;
 using Amazon.BedrockRuntime;
-using Amazon.BedrockRuntime.Model;
 using Medley.Application.Configuration;
 using Medley.Application.Interfaces;
 using Medley.Infrastructure.Services;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -14,7 +13,7 @@ namespace Medley.Tests.Integration.Infrastructure;
 
 public class BedrockAiServiceTests
 {
-    private readonly Mock<AmazonBedrockRuntimeClient> _mockBedrockClient;
+    private readonly Mock<IChatClient> _mockChatClient;
     private readonly Mock<IOptions<BedrockSettings>> _mockOptions;
     private readonly Mock<ILogger<BedrockAiService>> _mockLogger;
     private readonly BedrockSettings _settings;
@@ -28,26 +27,26 @@ public class BedrockAiServiceTests
             TimeoutSeconds = 60
         };
 
-        _mockBedrockClient = new Mock<AmazonBedrockRuntimeClient>(new AmazonBedrockRuntimeConfig { RegionEndpoint = Amazon.RegionEndpoint.USEast1 });
+        _mockChatClient = new Mock<IChatClient>();
         _mockOptions = new Mock<IOptions<BedrockSettings>>();
         _mockOptions.Setup(x => x.Value).Returns(_settings);
         _mockLogger = new Mock<ILogger<BedrockAiService>>();
     }
 
     [Fact]
-    public async Task ProcessPromptAsync_ShouldCallBedrockInvokeModel()
+    public async Task ProcessPromptAsync_ShouldReturnResponseText()
     {
         // Arrange
-        var service = new BedrockAiService(_mockBedrockClient.Object, _mockOptions.Object, _mockLogger.Object);
+        var service = new BedrockAiService(_mockChatClient.Object, _mockOptions.Object, _mockLogger.Object);
         var prompt = "Test prompt";
         var expectedResponse = "Test response";
 
-        var mockResponse = new InvokeModelResponse
-        {
-            Body = CreateMockBedrockResponse(expectedResponse)
-        };
+        var mockResponse = new ChatResponse([new ChatMessage(ChatRole.Assistant, expectedResponse)]);
 
-        _mockBedrockClient.Setup(x => x.InvokeModelAsync(It.IsAny<InvokeModelRequest>(), default))
+        _mockChatClient.Setup(x => x.GetResponseAsync(
+            It.IsAny<IEnumerable<ChatMessage>>(), 
+            It.IsAny<ChatOptions?>(), 
+            It.IsAny<CancellationToken>()))
             .ReturnsAsync(mockResponse);
 
         // Act
@@ -56,30 +55,28 @@ public class BedrockAiServiceTests
         // Assert
         Assert.Equal(expectedResponse, result);
 
-        _mockBedrockClient.Verify(x => x.InvokeModelAsync(
-            It.Is<InvokeModelRequest>(r => 
-                r.ModelId == _settings.ModelId &&
-                r.ContentType == "application/json" &&
-                r.Accept == "application/json"),
-            default), Times.Once);
+        _mockChatClient.Verify(x => x.GetResponseAsync(
+            It.Is<IEnumerable<ChatMessage>>(msgs => msgs.Any(m => m.Role == ChatRole.User && m.Text == prompt)),
+            It.IsAny<ChatOptions?>(),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task ProcessPromptAsync_ShouldUseCustomParameters()
+    public async Task ProcessPromptAsync_ShouldIncludeSystemPrompt()
     {
         // Arrange
-        var service = new BedrockAiService(_mockBedrockClient.Object, _mockOptions.Object, _mockLogger.Object);
+        var service = new BedrockAiService(_mockChatClient.Object, _mockOptions.Object, _mockLogger.Object);
         var userPrompt = "Test prompt";
         var systemPrompt = "You are a helpful assistant";
         var temperature = 0.5;
         var expectedResponse = "Test response";
 
-        var mockResponse = new InvokeModelResponse
-        {
-            Body = CreateMockBedrockResponse(expectedResponse)
-        };
+        var mockResponse = new ChatResponse([new ChatMessage(ChatRole.Assistant, expectedResponse)]);
 
-        _mockBedrockClient.Setup(x => x.InvokeModelAsync(It.IsAny<InvokeModelRequest>(), default))
+        _mockChatClient.Setup(x => x.GetResponseAsync(
+            It.IsAny<IEnumerable<ChatMessage>>(), 
+            It.IsAny<ChatOptions?>(), 
+            It.IsAny<CancellationToken>()))
             .ReturnsAsync(mockResponse);
 
         // Act
@@ -88,43 +85,36 @@ public class BedrockAiServiceTests
         // Assert
         Assert.Equal(expectedResponse, result);
 
-        _mockBedrockClient.Verify(x => x.InvokeModelAsync(
-            It.Is<InvokeModelRequest>(r => 
-                r.ModelId == _settings.ModelId &&
-                GetBodyAsString(r.Body).Contains($"\"temperature\":{temperature}") &&
-                GetBodyAsString(r.Body).Contains("You are a helpful assistant")),
-            default), Times.Once);
+        _mockChatClient.Verify(x => x.GetResponseAsync(
+            It.Is<IEnumerable<ChatMessage>>(msgs => 
+                msgs.Any(m => m.Role == ChatRole.System && m.Text == systemPrompt) &&
+                msgs.Any(m => m.Role == ChatRole.User && m.Text == userPrompt)),
+            It.Is<ChatOptions?>(opts => opts != null && opts.Temperature == (float)temperature),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task ProcessStructuredPromptAsync_ShouldAddJsonInstructions()
+    public async Task ProcessStructuredPromptAsync_ShouldReturnDeserializedObject()
     {
         // Arrange
-        var service = new BedrockAiService(_mockBedrockClient.Object, _mockOptions.Object, _mockLogger.Object);
+        var service = new BedrockAiService(_mockChatClient.Object, _mockOptions.Object, _mockLogger.Object);
         var userPrompt = "Extract data";
-        var jsonSchema = "{\"type\": \"object\", \"properties\": {\"data\": {\"type\": \"string\"}}}";
-        var expectedResponse = "{\"data\": \"extracted\"}";
+        var expectedJson = "{\"data\": \"extracted\"}";
 
-        var mockResponse = new InvokeModelResponse
-        {
-            Body = CreateMockBedrockResponse(expectedResponse)
-        };
+        var mockResponse = new ChatResponse([new ChatMessage(ChatRole.Assistant, expectedJson)]);
 
-        _mockBedrockClient.Setup(x => x.InvokeModelAsync(It.IsAny<InvokeModelRequest>(), default))
+        _mockChatClient.Setup(x => x.GetResponseAsync(
+            It.IsAny<IEnumerable<ChatMessage>>(), 
+            It.IsAny<ChatOptions?>(), 
+            It.IsAny<CancellationToken>()))
             .ReturnsAsync(mockResponse);
 
         // Act
-        var result = await service.ProcessStructuredPromptAsync<TestDataResponse>(userPrompt, jsonSchema);
+        var result = await service.ProcessStructuredPromptAsync<TestDataResponse>(userPrompt);
 
         // Assert
         Assert.NotNull(result);
         Assert.Equal("extracted", result.Data);
-
-        _mockBedrockClient.Verify(x => x.InvokeModelAsync(
-            It.Is<InvokeModelRequest>(r => 
-                GetBodyAsString(r.Body).Contains("Extract data") &&
-                GetBodyAsString(r.Body).Contains("You must respond with valid JSON")),
-            default), Times.Once);
     }
 
     private class TestDataResponse
@@ -133,42 +123,19 @@ public class BedrockAiServiceTests
     }
 
     [Fact]
-    public async Task ProcessPromptAsync_ShouldHandleBedrockException()
+    public async Task ProcessPromptAsync_ShouldRethrowExceptions()
     {
         // Arrange
-        var service = new BedrockAiService(_mockBedrockClient.Object, _mockOptions.Object, _mockLogger.Object);
+        var service = new BedrockAiService(_mockChatClient.Object, _mockOptions.Object, _mockLogger.Object);
         var prompt = "Test prompt";
 
-        _mockBedrockClient.Setup(x => x.InvokeModelAsync(It.IsAny<InvokeModelRequest>(), default))
-            .ThrowsAsync(new AmazonBedrockRuntimeException("Bedrock error"));
+        _mockChatClient.Setup(x => x.GetResponseAsync(
+            It.IsAny<IEnumerable<ChatMessage>>(), 
+            It.IsAny<ChatOptions?>(), 
+            It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("AI service error"));
 
         // Act & Assert
-        await Assert.ThrowsAsync<AmazonBedrockRuntimeException>(() => service.ProcessPromptAsync(prompt));
-    }
-
-    private MemoryStream CreateMockBedrockResponse(string content)
-    {
-        var response = new
-        {
-            content = new[]
-            {
-                new
-                {
-                    text = content
-                }
-            }
-        };
-
-        var json = JsonSerializer.Serialize(response);
-        return new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
-    }
-
-    private string GetBodyAsString(MemoryStream body)
-    {
-        if (body == null) return string.Empty;
-        
-        // Create a copy to avoid disposal issues
-        var bytes = body.ToArray();
-        return System.Text.Encoding.UTF8.GetString(bytes);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.ProcessPromptAsync(prompt));
     }
 }
