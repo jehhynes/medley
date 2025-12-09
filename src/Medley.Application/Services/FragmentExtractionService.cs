@@ -42,8 +42,8 @@ public class FragmentExtractionService
     /// Extracts fragments from a source using AI
     /// </summary>
     /// <param name="sourceId">The source ID to extract fragments from</param>
-    /// <returns>Number of fragments extracted</returns>
-    public async Task<int> ExtractFragmentsAsync(Guid sourceId)
+    /// <returns>Result containing fragment count and extraction message</returns>
+    public async Task<FragmentExtractionResult> ExtractFragmentsAsync(Guid sourceId)
     {
         _logger.LogInformation("Starting fragment extraction for source {SourceId}", sourceId);
 
@@ -100,6 +100,7 @@ The following context about the company/organization should be considered when e
 
         // Process each chunk and aggregate fragments
         var allFragments = new List<FragmentDto>();
+        var allMessages = new List<string>();
         var chunkNumber = 0;
 
         foreach (var chunk in contentChunks)
@@ -110,24 +111,28 @@ The following context about the company/organization should be considered when e
 
             try
             {
-                // Add context about chunking to the system prompt for multi-chunk processing
-                var chunkSystemPrompt = contentChunks.Count > 1
-                    ? $"{systemPrompt}\n\nNote: This is chunk {chunkNumber} of {contentChunks.Count}. Extract fragments from this portion of the content. Focus on fragments that are complete within this chunk."
-                    : systemPrompt;
-
                 var extractionResponse = await _aiService.ProcessStructuredPromptAsync<FragmentExtractionResponse>(
                     userPrompt: chunk,
-                    systemPrompt: chunkSystemPrompt);
+                    systemPrompt: systemPrompt);
 
-                if (extractionResponse != null && extractionResponse.Fragments != null && extractionResponse.Fragments.Count > 0)
+                if (extractionResponse != null)
                 {
-                    allFragments.AddRange(extractionResponse.Fragments);
-                    _logger.LogInformation("Extracted {Count} fragments from chunk {ChunkNumber}",
-                        extractionResponse.Fragments.Count, chunkNumber);
-                }
-                else
-                {
-                    _logger.LogWarning("No fragments extracted from chunk {ChunkNumber}", chunkNumber);
+                    // Collect messages from each chunk
+                    if (!string.IsNullOrWhiteSpace(extractionResponse.Message))
+                    {
+                        allMessages.Add(extractionResponse.Message.Trim());
+                    }
+
+                    if (extractionResponse.Fragments != null && extractionResponse.Fragments.Count > 0)
+                    {
+                        allFragments.AddRange(extractionResponse.Fragments);
+                        _logger.LogInformation("Extracted {Count} fragments from chunk {ChunkNumber}",
+                            extractionResponse.Fragments.Count, chunkNumber);
+                    }
+                    else
+                    {
+                        _logger.LogInformation("No fragments extracted from chunk {ChunkNumber}", chunkNumber);
+                    }
                 }
             }
             catch (Exception ex)
@@ -139,10 +144,19 @@ The following context about the company/organization should be considered when e
             }
         }
 
+        // Combine all messages into a single message
+        var combinedMessage = allMessages.Count > 0 
+            ? string.Join("\n\n", allMessages) 
+            : null;
+
+        // Zero fragments is now a successful outcome, not an error
         if (allFragments.Count == 0)
         {
-            _logger.LogWarning("No fragments were extracted from any chunk for source {SourceId}", sourceId);
-            throw new InvalidOperationException("No fragments could be extracted from the content");
+            _logger.LogInformation("No fragments were extracted from any chunk for source {SourceId}. This is a successful outcome.", sourceId);
+            if (string.IsNullOrWhiteSpace(combinedMessage))
+            {
+                combinedMessage = "No fragments were extracted from the content.";
+            }
         }
 
         _logger.LogInformation("Aggregated {TotalCount} fragments from {ChunkCount} chunks",
@@ -180,7 +194,21 @@ The following context about the company/organization should be considered when e
         _logger.LogInformation("Successfully extracted {Count} fragments from source {SourceId}", 
             fragmentCount, sourceId);
 
-        return fragmentCount;
+        // Save the extraction message to the source
+        if (!string.IsNullOrWhiteSpace(combinedMessage))
+        {
+            source.ExtractionMessage = combinedMessage.Length > 2000 
+                ? combinedMessage.Substring(0, 2000) 
+                : combinedMessage;
+            await _sourceRepository.SaveAsync(source);
+            _logger.LogDebug("Saved extraction message to source {SourceId}", sourceId);
+        }
+
+        return new FragmentExtractionResult
+        {
+            FragmentCount = fragmentCount,
+            Message = combinedMessage
+        };
     }
 }
 
@@ -207,5 +235,14 @@ public class FragmentDto
     public string? Category { get; set; }
     [Description("Markdown-formatted content")]
     public string? Content { get; set; }
+}
+
+/// <summary>
+/// Result of fragment extraction operation
+/// </summary>
+public class FragmentExtractionResult
+{
+    public int FragmentCount { get; set; }
+    public string? Message { get; set; }
 }
 

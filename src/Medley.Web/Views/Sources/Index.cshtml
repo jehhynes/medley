@@ -153,7 +153,8 @@
                         @@click="extractFragments" 
                         :disabled="extractionStatus[selectedSource.id] === 'extracting'"
                         v-if="selectedSource.content">
-                        <i class="bi bi-magic"></i> Extract Fragments
+                        <span v-if="extractionStatus[selectedSource.id] === 'extracting'" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        <i v-else class="bi bi-magic"></i> Extract Fragments
                     </button>
                 </div>
             </div>
@@ -197,7 +198,17 @@
                 <div v-else-if="fragmentsError" class="alert alert-danger" v-cloak>
                     {{ fragmentsError }}
                 </div>
-                <div v-else-if="selectedFragment">
+                <template v-else>
+                    <div v-if="selectedSource && selectedSource.extractionMessage && fragments.length === 0" class="alert alert-info mb-3" v-cloak>
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-info-circle me-2 mt-1"></i>
+                            <div class="flex-grow-1">
+                                <strong>Extraction Message:</strong>
+                                <div class="mt-1">{{ selectedSource.extractionMessage }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-if="selectedFragment">
                     <div class="mb-3">
                         <button class="btn btn-sm btn-outline-secondary" @@click="selectedFragment = null">
                             <i class="bi bi-arrow-left"></i> Back to List
@@ -216,36 +227,37 @@
                         <div class="markdown-content" v-html="renderedMarkdown"></div>
                     </div>
                 </div>
-                <div v-else-if="fragments.length === 0" class="text-muted">
-                    No fragments available. Click "Extract Fragments" to generate fragments from this source.
-                </div>
-                <div v-else class="fragment-list">
-                    <table class="table table-hover">
-                        <tbody>
-                            <tr 
-                                v-for="fragment in fragments" 
-                                :key="fragment.id"
-                                class="fragment-item"
-                                @@click="selectFragment(fragment)"
-                                style="cursor: pointer;"
-                            >
-                                <td class="align-middle" style="width: 50px;">
-                                    <i 
-                                        :class="getIconClass(getFragmentCategoryIcon(fragment.category))" 
-                                        :title="fragment.category || ''"
-                                        style="font-size: 1.25rem;"
-                                    ></i>
-                                </td>
-                                <td>
-                                    <div class="fw-semibold">{{ fragment.title || 'Untitled Fragment' }}</div>
-                                    <div v-if="fragment.summary" class="text-muted small">
-                                        {{ fragment.summary }}
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                    <div v-else-if="fragments.length === 0 && (!selectedSource || !selectedSource.extractionMessage)" class="text-muted">
+                        No fragments available. Click "Extract Fragments" to generate fragments from this source.
+                    </div>
+                    <div v-else class="fragment-list">
+                        <table class="table table-hover">
+                            <tbody>
+                                <tr 
+                                    v-for="fragment in fragments" 
+                                    :key="fragment.id"
+                                    class="fragment-item"
+                                    @@click="selectFragment(fragment)"
+                                    style="cursor: pointer;"
+                                >
+                                    <td class="align-middle" style="width: 50px;">
+                                        <i 
+                                            :class="getIconClass(getFragmentCategoryIcon(fragment.category))" 
+                                            :title="fragment.category || ''"
+                                            style="font-size: 1.25rem;"
+                                        ></i>
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold">{{ fragment.title || 'Untitled Fragment' }}</div>
+                                        <div v-if="fragment.summary" class="text-muted small">
+                                            {{ fragment.summary }}
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </template>
             </div>
             <div class="tab-pane" id="metadata-pane" role="tabpanel" aria-labelledby="metadata-tab">
                 <div v-if="parsedMetadata">
@@ -430,8 +442,6 @@
                             const response = await api.post(`/api/sources/${sourceId}/extract-fragments`);
                             
                             if (response.success) {
-                                // Show success toast
-                                this.showToast('success', response.message || 'Fragment extraction started successfully');
                                 // Keep button disabled until SignalR notification arrives
                             } else {
                                 this.showToast('error', response.message || 'Failed to start fragment extraction');
@@ -602,13 +612,6 @@
                                 }
                             } catch (err) {
                                 console.error('Failed to reload source:', err);
-                            }
-                            
-                            // Show notification for the selected source
-                            if (success) {
-                                this.showToast('success', message || `Successfully extracted ${fragmentCount} fragments`);
-                            } else {
-                                this.showToast('error', message || 'Fragment extraction failed');
                             }
                         }
                     });

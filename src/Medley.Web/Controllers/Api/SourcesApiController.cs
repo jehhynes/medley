@@ -48,6 +48,7 @@ public class SourcesApiController : ControllerBase
                 IntegrationName = s.Integration.DisplayName,
                 FragmentsCount = s.Fragments.Count,
                 ExtractionStatus = s.ExtractionStatus,
+                ExtractionMessage = s.ExtractionMessage,
                 s.CreatedAt
             })
             .ToListAsync();
@@ -83,6 +84,7 @@ public class SourcesApiController : ControllerBase
             IntegrationName = source.Integration.DisplayName,
             FragmentsCount = source.Fragments.Count,
             ExtractionStatus = source.ExtractionStatus,
+            ExtractionMessage = source.ExtractionMessage,
             source.CreatedAt
         });
     }

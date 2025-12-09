@@ -48,6 +48,11 @@ public class Source : BusinessEntity
     public ExtractionStatus ExtractionStatus { get; set; } = ExtractionStatus.NotStarted;
 
     /// <summary>
+    /// Message from the fragment extraction process (e.g., explanation when no fragments found)
+    /// </summary>
+    public string? ExtractionMessage { get; set; }
+
+    /// <summary>
     /// The integration this source was imported from
     /// </summary>
     public virtual required Integration Integration { get; set; }

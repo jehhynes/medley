@@ -48,9 +48,11 @@ public class FragmentExtractionJob : BaseHangfireJob<FragmentExtractionJob>
             {
                 _logger.LogInformation("Fragment extraction job started for source {SourceId}", sourceId);
 
-                fragmentCount = await _fragmentExtractionService.ExtractFragmentsAsync(sourceId);
+                var result = await _fragmentExtractionService.ExtractFragmentsAsync(sourceId);
+                fragmentCount = result.FragmentCount;
 
                 // Set status to Completed within the same transaction as fragment creation
+                // Zero fragments is a successful outcome, not a failure
                 await SetExtractionStatusInTransactionAsync(sourceId, ExtractionStatus.Completed);
 
                 _logger.LogInformation("Fragment extraction job completed for source {SourceId}. Extracted {Count} fragments.", 
