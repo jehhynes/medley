@@ -79,6 +79,20 @@
         .fragment-list .fragment-item:hover {
             background-color: var(--bs-secondary-bg);
         }
+        
+        /* Fragment modal styles */
+        #fragmentModal {
+            z-index: 1055;
+        }
+        
+        .modal-backdrop {
+            z-index: 1050;
+        }
+        
+        #fragmentModal .markdown-content {
+            max-height: 60vh;
+            overflow-y: auto;
+        }
     </style>
 }
 
@@ -229,28 +243,7 @@
                             </div>
                         </div>
                     </div>
-                    <div v-if="selectedFragment">
-                    <div class="mb-3">
-                        <button class="btn btn-sm btn-outline-secondary" @@click="selectedFragment = null">
-                            <i class="bi bi-arrow-left"></i> Back to List
-                        </button>
-                    </div>
-                    <div class="fragment-content">
-                        <div v-if="selectedFragment.title" class="mb-3">
-                            <h3>{{ selectedFragment.title }}</h3>
-                        </div>
-                        <div v-if="selectedFragment.category" class="mb-2">
-                            <span class="badge bg-secondary">
-                                <i :class="getIconClass(getFragmentCategoryIcon(selectedFragment.category))" class="me-1"></i>{{ selectedFragment.category }}
-                            </span>
-                        </div>
-                        @* <div v-if="selectedFragment.summary" class="mb-3 text-muted">
-                            {{ selectedFragment.summary }}
-                        </div> *@
-                        <div class="markdown-content" v-html="renderedMarkdown"></div>
-                    </div>
-                </div>
-                    <div v-else-if="fragments.length === 0 && (!selectedSource || !selectedSource.extractionMessage)" class="text-muted">
+                    <div v-if="fragments.length === 0 && (!selectedSource || !selectedSource.extractionMessage)" class="text-muted">
                         No fragments available. Click "Extract Fragments" to generate fragments from this source.
                     </div>
                     <div v-else class="fragment-list">
@@ -293,6 +286,29 @@
         </div>
     </div>
 </div>
+
+<!-- Fragment Detail Modal -->
+<div v-if="selectedFragment" class="modal fade show" id="fragmentModal" tabindex="-1" aria-labelledby="fragmentModalLabel" style="display: block;" @@click.self="closeFragmentModal">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="fragmentModalLabel">
+                    {{ selectedFragment.title || 'Untitled Fragment' }}
+                </h5>
+                <button type="button" class="btn-close" @@click="closeFragmentModal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div v-if="selectedFragment.category" class="mb-3">
+                    <span class="badge bg-secondary">
+                        <i :class="getIconClass(getFragmentCategoryIcon(selectedFragment.category))" class="me-1"></i>{{ selectedFragment.category }}
+                    </span>
+                </div>
+                <div class="markdown-content" v-html="renderedMarkdown"></div>
+            </div>
+        </div>
+    </div>
+</div>
+<div v-if="selectedFragment" class="modal-backdrop fade show"></div>
 
 @section VueTemplates {
     @* Vue Component Templates - outside #app so they don't get destroyed *@
@@ -553,6 +569,16 @@
                         this.selectedFragment = fragment;
                     },
                     
+                    closeFragmentModal() {
+                        this.selectedFragment = null;
+                    },
+                    
+                    handleKeydown(event) {
+                        if (event.key === 'Escape' && this.selectedFragment) {
+                            this.closeFragmentModal();
+                        }
+                    },
+                    
                     async loadArticleTypes() {
                         try {
                             this.articleTypes = await api.get('/api/articles/types');
@@ -685,9 +711,15 @@
                     } catch (err) {
                         console.error('SignalR connection error:', err);
                     }
+                    
+                    // Add keyboard event listener for Escape key
+                    window.addEventListener('keydown', this.handleKeydown);
                 },
                 
                 beforeUnmount() {
+                    // Remove keyboard event listener
+                    window.removeEventListener('keydown', this.handleKeydown);
+                    
                     // Clean up SignalR connection
                     if (this.signalRConnection) {
                         this.signalRConnection.stop();
