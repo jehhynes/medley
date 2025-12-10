@@ -1,5 +1,6 @@
 using Medley.Web.Models;
-using System;
+using Xunit;
+using System.Collections.Generic;
 
 namespace Medley.Tests.Web.Models
 {
@@ -13,9 +14,8 @@ namespace Medley.Tests.Web.Models
 
             // Assert
             Assert.Equal(string.Empty, model.UserName);
-            Assert.NotNull(model.SystemStatus);
-            Assert.NotNull(model.RecentActivity);
-            Assert.Empty(model.RecentActivity);
+            Assert.NotNull(model.Metrics);
+            Assert.Equal(0, model.Metrics.TotalSources);
         }
 
         [Fact]
@@ -23,156 +23,38 @@ namespace Medley.Tests.Web.Models
         {
             // Arrange
             var model = new DashboardViewModel();
-            var systemStatus = new SystemStatusViewModel();
-            var activities = new List<ActivityItemViewModel>();
+            var metrics = new DashboardMetrics 
+            { 
+                TotalSources = 5,
+                TotalFragments = 10,
+                TotalArticles = 3
+            };
 
             // Act
             model.UserName = "testuser";
-            model.SystemStatus = systemStatus;
-            model.RecentActivity = activities;
+            model.Metrics = metrics;
 
             // Assert
             Assert.Equal("testuser", model.UserName);
-            Assert.Equal(systemStatus, model.SystemStatus);
-            Assert.Equal(activities, model.RecentActivity);
+            Assert.Equal(metrics, model.Metrics);
+            Assert.Equal(5, model.Metrics.TotalSources);
         }
     }
 
-    public class SystemStatusViewModelTests
+    public class DashboardMetricsTests
     {
         [Fact]
-        public void SystemStatusViewModel_InitializesWithDefaultValues()
+        public void DashboardMetrics_InitializesWithDefaultValues()
         {
             // Act
-            var model = new SystemStatusViewModel();
+            var metrics = new DashboardMetrics();
 
             // Assert
-            Assert.False(model.DatabaseConnected);
-            Assert.False(model.AwsServicesActive);
-            Assert.False(model.BackgroundJobsRunning);
-            Assert.False(model.SecurityProtected);
-        }
-
-        [Fact]
-        public void SystemStatusViewModel_CanSetProperties()
-        {
-            // Arrange
-            var model = new SystemStatusViewModel();
-
-            // Act
-            model.DatabaseConnected = true;
-            model.AwsServicesActive = true;
-            model.BackgroundJobsRunning = true;
-            model.SecurityProtected = true;
-
-            // Assert
-            Assert.True(model.DatabaseConnected);
-            Assert.True(model.AwsServicesActive);
-            Assert.True(model.BackgroundJobsRunning);
-            Assert.True(model.SecurityProtected);
-        }
-    }
-
-    public class ActivityItemViewModelTests
-    {
-        [Fact]
-        public void ActivityItemViewModel_InitializesWithDefaultValues()
-        {
-            // Act
-            var model = new ActivityItemViewModel();
-
-            // Assert
-            Assert.Equal(string.Empty, model.Title);
-            Assert.Equal(string.Empty, model.Description);
-            Assert.Equal(DateTime.MinValue, model.Timestamp);
-            Assert.Equal(string.Empty, model.Icon);
-            Assert.Equal(string.Empty, model.Color);
-        }
-
-        [Fact]
-        public void ActivityItemViewModel_CanSetProperties()
-        {
-            // Arrange
-            var model = new ActivityItemViewModel();
-            var timestamp = DateTime.Now;
-
-            // Act
-            model.Title = "Test Activity";
-            model.Description = "Test Description";
-            model.Timestamp = timestamp;
-            model.Icon = "cil-test";
-            model.Color = "primary";
-
-            // Assert
-            Assert.Equal("Test Activity", model.Title);
-            Assert.Equal("Test Description", model.Description);
-            Assert.Equal(timestamp, model.Timestamp);
-            Assert.Equal("cil-test", model.Icon);
-            Assert.Equal("primary", model.Color);
-        }
-
-        [Fact]
-        public void ActivityItemViewModel_TimeAgo_ReturnsJustNow_ForRecentTimestamp()
-        {
-            // Arrange
-            var model = new ActivityItemViewModel
-            {
-                Timestamp = DateTime.Now.AddSeconds(-30)
-            };
-
-            // Act
-            var timeAgo = model.TimeAgo;
-
-            // Assert
-            Assert.Equal("Just now", timeAgo);
-        }
-
-        [Fact]
-        public void ActivityItemViewModel_TimeAgo_ReturnsMinutesAgo_ForMinutesOld()
-        {
-            // Arrange
-            var model = new ActivityItemViewModel
-            {
-                Timestamp = DateTime.Now.AddMinutes(-5)
-            };
-
-            // Act
-            var timeAgo = model.TimeAgo;
-
-            // Assert
-            Assert.Equal("5 minutes ago", timeAgo);
-        }
-
-        [Fact]
-        public void ActivityItemViewModel_TimeAgo_ReturnsHoursAgo_ForHoursOld()
-        {
-            // Arrange
-            var model = new ActivityItemViewModel
-            {
-                Timestamp = DateTime.Now.AddHours(-3)
-            };
-
-            // Act
-            var timeAgo = model.TimeAgo;
-
-            // Assert
-            Assert.Equal("3 hours ago", timeAgo);
-        }
-
-        [Fact]
-        public void ActivityItemViewModel_TimeAgo_ReturnsDaysAgo_ForDaysOld()
-        {
-            // Arrange
-            var model = new ActivityItemViewModel
-            {
-                Timestamp = DateTime.Now.AddDays(-2)
-            };
-
-            // Act
-            var timeAgo = model.TimeAgo;
-
-            // Assert
-            Assert.Equal("2 days ago", timeAgo);
+            Assert.Equal(0, metrics.TotalSources);
+            Assert.NotNull(metrics.SourcesByType);
+            Assert.Empty(metrics.SourcesByType);
+            Assert.NotNull(metrics.SourcesByIntegration);
+            Assert.Empty(metrics.SourcesByIntegration);
         }
     }
 }

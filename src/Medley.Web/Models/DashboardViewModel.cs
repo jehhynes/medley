@@ -5,39 +5,42 @@ namespace Medley.Web.Models
     public class DashboardViewModel
     {
         public string UserName { get; set; } = string.Empty;
-        public SystemStatusViewModel SystemStatus { get; set; } = new();
-        public List<ActivityItemViewModel> RecentActivity { get; set; } = new();
+        public DashboardMetrics Metrics { get; set; } = new();
     }
 
-    public class SystemStatusViewModel
+    public class DashboardMetrics
     {
-        public bool DatabaseConnected { get; set; }
-        public bool AwsServicesActive { get; set; }
-        public bool BackgroundJobsRunning { get; set; }
-        public bool SecurityProtected { get; set; }
+        // Source metrics
+        public int TotalSources { get; set; }
+        public List<MetricItem> SourcesByType { get; set; } = new();
+        public List<MetricItem> SourcesByIntegration { get; set; } = new();
+        public List<MetricItem> SourcesByInternalStatus { get; set; } = new();
+        public List<MetricItem> SourcesByYear { get; set; } = new();
+        public List<MetricItem> SourcesByMonth { get; set; } = new();
+        public List<TagTypeMetrics> SourcesByTagType { get; set; } = new();
+        public int SourcesPendingSmartTagging { get; set; }
+        public int SourcesPendingFragmentGeneration { get; set; }
+
+        // Fragment metrics
+        public int TotalFragments { get; set; }
+        public List<MetricItem> FragmentsByCategory { get; set; } = new();
+        public int FragmentsPendingEmbedding { get; set; }
+
+        // Article metrics
+        public int TotalArticles { get; set; }
+        public List<MetricItem> ArticlesByType { get; set; } = new();
     }
 
-    public class ActivityItemViewModel
+    public class TagTypeMetrics
     {
-        public string Title { get; set; } = string.Empty;
-        public string Description { get; set; } = string.Empty;
-        public DateTime Timestamp { get; set; }
-        public string Icon { get; set; } = string.Empty;
-        public string Color { get; set; } = string.Empty;
-        
-        public string TimeAgo => GetTimeAgo(Timestamp);
-        
-        private string GetTimeAgo(DateTime timestamp)
-        {
-            var timeSpan = DateTime.Now - timestamp;
-            
-            if (timeSpan.TotalMinutes < 1)
-                return "Just now";
-            if (timeSpan.TotalMinutes < 60)
-                return $"{(int)timeSpan.TotalMinutes} minutes ago";
-            if (timeSpan.TotalHours < 24)
-                return $"{(int)timeSpan.TotalHours} hours ago";
-            return $"{(int)timeSpan.TotalDays} days ago";
-        }
+        public string TagTypeName { get; set; } = string.Empty;
+        public List<MetricItem> TagCounts { get; set; } = new();
+    }
+
+    public class MetricItem
+    {
+        public string Label { get; set; } = string.Empty;
+        public int Count { get; set; }
+        public string? Icon { get; set; }
     }
 }

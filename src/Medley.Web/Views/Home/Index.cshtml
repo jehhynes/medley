@@ -3,9 +3,700 @@
     ViewData["Title"] = "Dashboard";
 }
 
-<div class="row mb-4">
-    <div class="col-12">
-        <h1 class="h2 mb-0">Welcome to Medley</h1>
-        <p class="text-muted">AI-Powered Product Intelligence Platform</p>
+@section Styles {
+<style>
+    .dashboard-container {
+        padding: 2rem;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    .dashboard-header {
+        margin-bottom: 2rem;
+    }
+
+    .dashboard-header h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 0.5rem;
+    }
+
+    .dashboard-header p {
+        font-size: 1.1rem;
+        opacity: 0.7;
+    }
+
+    /* Metric Cards */
+    .metric-card {
+        background: var(--bs-body-bg);
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        border: 1px solid var(--bs-border-color);
+        height: 100%;
+        animation: fadeInUp 0.6s ease forwards;
+        opacity: 0;
+    }
+
+    .metric-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    }
+
+    .metric-card.delay-1 { animation-delay: 0.1s; }
+    .metric-card.delay-2 { animation-delay: 0.2s; }
+    .metric-card.delay-3 { animation-delay: 0.3s; }
+    .metric-card.delay-4 { animation-delay: 0.4s; }
+    .metric-card.delay-5 { animation-delay: 0.5s; }
+    .metric-card.delay-6 { animation-delay: 0.6s; }
+
+    @@keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .metric-card-title {
+        font-size: 0.9rem;
+        color: var(--bs-secondary-color);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+    }
+
+    .metric-card-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .metric-card-icon {
+        font-size: 2rem;
+        opacity: 0.3;
+    }
+
+    .chart-card {
+        background: var(--bs-body-bg);
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border: 1px solid var(--bs-border-color);
+        height: 100%;
+        animation: fadeInUp 0.6s ease forwards;
+        opacity: 0;
+    }
+
+    .chart-card-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        color: var(--bs-body-color);
+    }
+
+    .chart-container {
+        position: relative;
+        height: 300px;
+    }
+
+    .chart-container.small {
+        height: 200px;
+    }
+
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        margin-top: 2rem;
+        color: var(--bs-body-color);
+    }
+
+    .processing-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .processing-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background: rgba(255,255,255,0.1);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .processing-card:hover::before {
+        opacity: 1;
+    }
+
+    .processing-card .metric-card-title {
+        color: rgba(255,255,255,0.9);
+    }
+
+    .processing-card .metric-card-value {
+        background: white;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .processing-card.warning {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+</style>
+}
+
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <h1>Medley</h1>
+        <p>AI-Powered Product Intelligence Platform</p>
+    </div>
+
+    <!-- Overview Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="metric-card delay-1">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="metric-card-title">Total Sources</div>
+                        <div class="metric-card-value" id="totalSources">@Model.Metrics.TotalSources</div>
+                    </div>
+                    <i class="bi bi-camera-video metric-card-icon"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="metric-card delay-2">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="metric-card-title">Total Fragments</div>
+                        <div class="metric-card-value" id="totalFragments">@Model.Metrics.TotalFragments</div>
+                    </div>
+                    <i class="bi bi-puzzle metric-card-icon"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="metric-card delay-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="metric-card-title">Total Articles</div>
+                        <div class="metric-card-value" id="totalArticles">@Model.Metrics.TotalArticles</div>
+                    </div>
+                    <i class="bi bi-file-text metric-card-icon"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Source Metrics -->
+    <h2 class="section-title"><i class="bi bi-diagram-3 me-2"></i>Source Analytics</h2>
+    <div class="row g-3 mb-4">
+        @if (Model.Metrics.SourcesByType.Count > 1)
+        {
+            <div class="col-lg-6">
+                <div class="chart-card delay-4">
+                    <h3 class="chart-card-title"><i class="bi bi-camera-video me-2"></i>Sources by Type</h3>
+                    <div class="chart-container">
+                        <canvas id="sourcesByTypeChart"></canvas>
+                    </div>
+                    <div id="sourcesByTypeLegend" class="mt-3 text-center"></div>
+                </div>
+            </div>
+        }
+        @if (Model.Metrics.SourcesByIntegration.Count > 1)
+        {
+            <div class="col-lg-6">
+                <div class="chart-card delay-5">
+                    <h3 class="chart-card-title"><i class="bi bi-camera-video me-2"></i>Sources by Integration</h3>
+                    <div class="chart-container">
+                        <canvas id="sourcesByIntegrationChart"></canvas>
+                    </div>
+                    <div id="sourcesByIntegrationLegend" class="mt-3 text-center"></div>
+                </div>
+            </div>
+        }
+
+        <div class="col-lg-6">
+            <div class="chart-card delay-2">
+                <h3 class="chart-card-title"><i class="bi bi-calendar3 me-2"></i>Sources by Year</h3>
+                <div class="chart-container">
+                     <canvas id="sourcesByYearChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="chart-card delay-3">
+                <h3 class="chart-card-title"><i class="bi bi-graph-up me-2"></i>Sources by Month</h3>
+                <div class="chart-container">
+                     <canvas id="sourcesByMonthChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="chart-card delay-1">
+                <h3 class="chart-card-title"><i class="bi bi-building me-2"></i>Internal vs External Sources</h3>
+                <div class="chart-container small">
+                    <canvas id="sourcesByInternalChart"></canvas>
+                </div>
+                <div id="sourcesByInternalLegend" class="mt-3 text-center"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Processing Status -->
+    <h2 class="section-title"><i class="bi bi-activity me-2"></i>Processing Status</h2>
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="metric-card processing-card delay-2">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="metric-card-title">Fragments Pending Embedding</div>
+                        <div class="metric-card-value">@Model.Metrics.FragmentsPendingEmbedding</div>
+                        <small style="opacity: 0.9;">of @Model.Metrics.TotalFragments total</small>
+                    </div>
+                    <i class="bi bi-hourglass-split metric-card-icon"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="metric-card processing-card warning delay-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="metric-card-title">Sources Pending Smart Tagging</div>
+                        <div class="metric-card-value">@Model.Metrics.SourcesPendingSmartTagging</div>
+                        <small style="opacity: 0.9;">of @Model.Metrics.TotalSources total</small>
+                    </div>
+                    <i class="bi bi-tags metric-card-icon"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="metric-card processing-card delay-4">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="metric-card-title">Sources Pending Fragment Generation</div>
+                        <div class="metric-card-value">@Model.Metrics.SourcesPendingFragmentGeneration</div>
+                        <small style="opacity: 0.9;">of @Model.Metrics.TotalSources total</small>
+                    </div>
+                    <i class="bi bi-camera-video metric-card-icon"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content Analytics (Fragments & Articles) -->
+    <h2 class="section-title"><i class="bi bi-bar-chart me-2"></i>Content Analytics</h2>
+    <div class="row g-3 mb-4">
+        <div class="col-lg-6">
+            <div class="chart-card delay-4">
+                <h3 class="chart-card-title"><i class="bi bi-pie-chart me-2"></i>Fragments by Category</h3>
+                <div class="chart-container small">
+                    <canvas id="fragmentsByCategoryChart"></canvas>
+                </div>
+                <div id="fragmentsByCategoryLegend" class="mt-3 text-center"></div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="chart-card delay-5">
+                <h3 class="chart-card-title"><i class="bi bi-pie-chart me-2"></i>Articles by Type</h3>
+                <div class="chart-container small">
+                    <canvas id="articlesByTypeChart"></canvas>
+                </div>
+                <div id="articlesByTypeLegend" class="mt-3 text-center"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tag Analytics -->
+    <h2 class="section-title"><i class="bi bi-tags me-2"></i>Tag Analytics</h2>
+    <div class="row g-3 mb-4">
+        @foreach (var tagMetric in Model.Metrics.SourcesByTagType)
+        {
+            var safeId = System.Text.RegularExpressions.Regex.Replace(tagMetric.TagTypeName, "[^a-zA-Z0-9]", "");
+            <div class="col-lg-6">
+                <div class="chart-card">
+                    <h3 class="chart-card-title"><i class="bi bi-tag me-2"></i>@tagMetric.TagTypeName</h3>
+                    <div class="chart-container small">
+                         <canvas id="tagChart_@safeId"></canvas>
+                    </div>
+                </div>
+            </div>
+        }
     </div>
 </div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    // Color palette
+    // Color palette - Standard Bootstrap Colors
+    const colors = {
+        primary: [
+            "#3366CC", "#DC3912", "#FF9900", "#109618", "#990099", "#3B3EAC", "#0099C6",
+            "#DD4477", "#66AA00", "#B82E2E", "#316395", "#994499", "#22AA99", "#AAAA11",
+            "#6633CC", "#E67300", "#8B0707", "#329262", "#5574A6", "#651067"
+        ],
+        gradient: function(ctx, color1, color2) {
+            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, color1);
+            gradient.addColorStop(1, color2);
+            return gradient;
+        }
+    };
+
+    // Default chart options
+    const defaultOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false // Disable default canvas legend
+            }
+        }
+    };
+
+    // Icon mapping for legend items (Bootstrap Icons)
+    const iconMap = {
+        'Meeting': 'bi bi-camera-video',
+        'Unknown': 'bi bi-question-circle',
+        'Fellow': 'bi bi-people',
+        'GitHub': 'bi bi-github',
+        'Manual': 'bi bi-person-fill',
+        'Slack': 'bi bi-slack',
+        'Jira': 'bi bi-kanban',
+        'Zendesk': 'bi bi-ticket-perforated',
+        'With Tags': 'bi bi-tags',
+        'Without Tags': 'bi bi-tag',
+        'Internal': 'bi bi-people-fill',
+        'External': 'bi bi-globe'
+    };
+
+    // Custom HTML Legend Generator
+    const generateHtmlLegend = (chart, containerId) => {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        // Clear existing legend
+        container.innerHTML = '';
+        
+        // We need to access the legend items manually since we disabled the legend
+        // We can use the default generator logic by temporarily enabling it or just accessing the dataset
+        const data = chart.data;
+        if (!data.labels.length || !data.datasets.length) return;
+        
+        const dataset = data.datasets[0];
+        
+        data.labels.forEach((label, i) => {
+            const meta = chart.getDatasetMeta(0);
+            const style = meta.controller.getStyle(i);
+            const hidden = !chart.getDataVisibility(i);
+            
+            const badge = document.createElement('span');
+            badge.className = 'badge rounded-pill me-2 mb-2 p-2';
+            badge.style.backgroundColor = dataset.backgroundColor[i];
+            badge.style.color = '#fff'; // Always white text on colored badges
+            badge.style.cursor = 'pointer';
+            badge.style.fontSize = '0.9rem';
+            badge.style.transition = 'all 0.2s';
+            
+            // Handle strike-through for hidden items
+            if (hidden) {
+                badge.style.textDecoration = 'line-through';
+                badge.style.opacity = 0.5;
+            }
+
+            // Click handler to toggle visibility
+            badge.onclick = () => {
+                chart.toggleDataVisibility(i);
+                chart.update();
+                generateHtmlLegend(chart, containerId); // Re-generate to update styles
+            };
+
+            const iconClass = iconMap[label] || 'bi bi-circle-fill';
+            
+            // Use icon if mapped, otherwise just label
+            badge.innerHTML = `<i class="${iconClass} me-1"></i>${label}`;
+            
+            container.appendChild(badge);
+        });
+    };
+
+    // Sources by Type Chart (Doughnut)
+    const sourcesByTypeData = @Html.Raw(Json.Serialize(Model.Metrics.SourcesByType));
+    const sourcesByTypeCtx = document.getElementById('sourcesByTypeChart');
+    if (sourcesByTypeData.length > 0 && sourcesByTypeCtx) {
+        const chart = new Chart(sourcesByTypeCtx, {
+            type: 'doughnut',
+            data: {
+                labels: sourcesByTypeData.map(x => x.label),
+                datasets: [{
+                    data: sourcesByTypeData.map(x => x.count),
+                    backgroundColor: colors.primary,
+                    borderWidth: 0
+                }]
+            },
+            options: defaultOptions
+        });
+        generateHtmlLegend(chart, 'sourcesByTypeLegend');
+    }
+
+    // Sources by Integration Chart (Bar)
+    const sourcesByIntegrationData = @Html.Raw(Json.Serialize(Model.Metrics.SourcesByIntegration));
+    const sourcesByIntegrationCtx = document.getElementById('sourcesByIntegrationChart');
+    if (sourcesByIntegrationData.length > 0 && sourcesByIntegrationCtx) {
+        const chart = new Chart(sourcesByIntegrationCtx, {
+            type: 'bar',
+            data: {
+                labels: sourcesByIntegrationData.map(x => x.label),
+                datasets: [{
+                    label: 'Sources',
+                    data: sourcesByIntegrationData.map(x => x.count),
+                    backgroundColor: colors.primary,
+                    borderRadius: 8,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                ...defaultOptions,
+                plugins: {
+                    ...defaultOptions.plugins,
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        });
+        generateHtmlLegend(chart, 'sourcesByIntegrationLegend');
+    }
+
+    // Dynamic Tag Charts
+    const tagTypeMetrics = @Html.Raw(Json.Serialize(Model.Metrics.SourcesByTagType));
+    
+    tagTypeMetrics.forEach(metric => {
+        const safeId = metric.tagTypeName.replace(/[^a-zA-Z0-9]/g, "");
+        const canvasId = `tagChart_${safeId}`;
+        
+        const canvas = document.getElementById(canvasId);
+        if (canvas && metric.tagCounts.length > 0) {
+            const chart = new Chart(canvas, {
+                type: 'pie', // Using Pie chart for tag distribution
+                data: {
+                    labels: metric.tagCounts.map(x => x.label),
+                    datasets: [{
+                        data: metric.tagCounts.map(x => x.count),
+                        // Use slice to get unique colors for each segment, iterating if needed
+                        backgroundColor: colors.primary.slice(0, metric.tagCounts.length), 
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    ...defaultOptions,
+                    plugins: {
+                        ...defaultOptions.plugins,
+                        legend: {
+                            display: true,
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        }
+    });
+
+    // Temporal Charts
+    // Sources by Year Chart (Bar)
+    const sourcesByYearData = @Html.Raw(Json.Serialize(Model.Metrics.SourcesByYear));
+    const sourcesByYearCtx = document.getElementById('sourcesByYearChart');
+    if (sourcesByYearData.length > 0 && sourcesByYearCtx) {
+       new Chart(sourcesByYearCtx, {
+            type: 'bar',
+            data: {
+                labels: sourcesByYearData.map(x => x.label),
+                datasets: [{
+                    label: 'Sources',
+                    data: sourcesByYearData.map(x => x.count),
+                    backgroundColor: colors.primary[0], 
+                    borderRadius: 4
+                }]
+            },
+            options: { ...defaultOptions, plugins: { legend: { display: false } } }
+       });
+    }
+
+    // Sources by Month Chart (Line)
+    const sourcesByMonthData = @Html.Raw(Json.Serialize(Model.Metrics.SourcesByMonth));
+    const sourcesByMonthCtx = document.getElementById('sourcesByMonthChart');
+    if (sourcesByMonthData.length > 0 && sourcesByMonthCtx) {
+       new Chart(sourcesByMonthCtx, {
+            type: 'line',
+            data: {
+                labels: sourcesByMonthData.map(x => x.label),
+                datasets: [{
+                    label: 'Sources',
+                    data: sourcesByMonthData.map(x => x.count),
+                    borderColor: colors.primary[1],
+                    backgroundColor: colors.primary[1] + '20',
+                    fill: true,
+                    tension: 0.1,
+                    pointRadius: 3
+                }]
+            },
+            options: { ...defaultOptions, plugins: { legend: { display: false } } }
+       });
+    }
+
+    // Sources by Internal Status Chart (Doughnut)
+    const sourcesByInternalData = @Html.Raw(Json.Serialize(Model.Metrics.SourcesByInternalStatus));
+    if (sourcesByInternalData.length > 0) {
+        const chart = new Chart(document.getElementById('sourcesByInternalChart'), {
+            type: 'doughnut',
+            data: {
+                labels: sourcesByInternalData.map(x => x.label),
+                datasets: [{
+                    data: sourcesByInternalData.map(x => x.count),
+                    backgroundColor: [colors.primary[3], colors.primary[1], colors.primary[0]], // Internal(Green), External(Red), Unknown(Blue)
+                    borderWidth: 0
+                }]
+            },
+            options: defaultOptions
+        });
+        generateHtmlLegend(chart, 'sourcesByInternalLegend');
+    }
+
+    // Fragments by Category Chart (Pie)
+    const fragmentsByCategoryData = @Html.Raw(Json.Serialize(Model.Metrics.FragmentsByCategory));
+    
+    // Dynamically update icon map from fragment category data
+    fragmentsByCategoryData.forEach(item => {
+        if (item.icon) {
+            let iconClass;
+            if (item.icon.startsWith('bi-')) {
+                iconClass = `bi ${item.icon}`;
+            } else if (item.icon.startsWith('fa-')) {
+                iconClass = `fa ${item.icon}`;
+            } else {
+                // Default to Bootstrap Icons with bi- prefix
+                iconClass = `bi bi-${item.icon}`;
+            }
+            iconMap[item.label] = iconClass;
+        }
+    });
+
+    if (fragmentsByCategoryData.length > 0) {
+        const chart = new Chart(document.getElementById('fragmentsByCategoryChart'), {
+            type: 'pie',
+            data: {
+                labels: fragmentsByCategoryData.map(x => x.label),
+                datasets: [{
+                    data: fragmentsByCategoryData.map(x => x.count),
+                    backgroundColor: colors.primary.slice(0, fragmentsByCategoryData.length),
+                    borderWidth: 0
+                }]
+            },
+            options: defaultOptions
+        });
+        generateHtmlLegend(chart, 'fragmentsByCategoryLegend');
+    }
+
+    // Articles by Type Chart (Pie)
+    const articlesByTypeData = @Html.Raw(Json.Serialize(Model.Metrics.ArticlesByType));
+    
+    // Dynamically update icon map from article type data
+    articlesByTypeData.forEach(item => {
+        if (item.icon) {
+            let iconClass;
+            if (item.icon.startsWith('bi-')) {
+                iconClass = `bi ${item.icon}`;
+            } else if (item.icon.startsWith('fa-')) {
+                iconClass = `fa ${item.icon}`;
+            } else {
+                // Default to Bootstrap Icons with bi- prefix
+                iconClass = `bi bi-${item.icon}`;
+            }
+            iconMap[item.label] = iconClass;
+        }
+    });
+
+    if (articlesByTypeData.length > 0) {
+        const chart = new Chart(document.getElementById('articlesByTypeChart'), {
+            type: 'pie',
+            data: {
+                labels: articlesByTypeData.map(x => x.label),
+                datasets: [{
+                    data: articlesByTypeData.map(x => x.count),
+                    backgroundColor: colors.primary.slice(0, articlesByTypeData.length),
+                    borderWidth: 0
+                }]
+            },
+            options: defaultOptions
+        });
+        generateHtmlLegend(chart, 'articlesByTypeLegend');
+    }
+
+    // Animated counter for metrics
+    function animateValue(id, start, end, duration) {
+        const obj = document.getElementById(id);
+        if (!obj) return;
+        
+        const range = end - start;
+        const increment = range / (duration / 16);
+        let current = start;
+        
+        const timer = setInterval(function() {
+            current += increment;
+            if (current >= end) {
+                current = end;
+                clearInterval(timer);
+            }
+            obj.textContent = Math.floor(current);
+        }, 16);
+    }
+
+    // Trigger animations on load
+    window.addEventListener('load', function() {
+        animateValue('totalSources', 0, @Model.Metrics.TotalSources, 1000);
+        animateValue('totalFragments', 0, @Model.Metrics.TotalFragments, 1200);
+        animateValue('totalArticles', 0, @Model.Metrics.TotalArticles, 1400);
+    });
+
+    // Handle theme changes
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+        const newColor = event.matches ? '#e9ecef' : '#212529';
+        Chart.instances.forEach(chart => {
+            if (chart.options.plugins.legend) {
+                chart.options.plugins.legend.labels.color = newColor;
+                chart.update();
+            }
+        });
+    });
+</script>
+}
