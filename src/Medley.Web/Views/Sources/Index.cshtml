@@ -161,16 +161,16 @@
                             {{ selectedSource.fragmentsCount }} fragments
                         </span>
                     </div>
-                    <div class="mt-2" v-if="(selectedSource.tags && selectedSource.tags.length) || selectedSource.isInternal">
+                    <div class="mt-2" v-if="sortedTags.length || selectedSource.isInternal">
                         <span
                             v-if="selectedSource.isInternal"
-                            class="badge bg-success me-1 mb-1">
+                            class="badge rounded-pill bg-success me-1 mb-1">
                             Internal
                         </span>
                         <span 
-                            v-for="tag in selectedSource.tags" 
+                            v-for="tag in sortedTags" 
                             :key="tag.tagTypeId"
-                            class="badge bg-secondary me-1 mb-1">
+                            class="badge rounded-pill bg-info me-1 mb-1">
                             {{ tag.value }}
                         </span>
                     </div>
@@ -372,6 +372,17 @@
                             console.error('Failed to render markdown:', e);
                             return this.selectedFragment.content;
                         }
+                    },
+                    sortedTags() {
+                        if (!this.selectedSource || !this.selectedSource.tags) {
+                            return [];
+                        }
+                        // Sort tags by TagType name (case-insensitive)
+                        return [...this.selectedSource.tags].sort((a, b) => {
+                            const tagTypeA = (a.tagType || '').toLowerCase();
+                            const tagTypeB = (b.tagType || '').toLowerCase();
+                            return tagTypeA.localeCompare(tagTypeB);
+                        });
                     }
                 },
                 watch: {
@@ -602,7 +613,7 @@
                         
                         // Hardcoded icon mappings
                         const hardcodedIcons = {
-                            'bestpractices': 'bi-shield-check'
+                            'bestpractice': 'bi-shield-check'
                         };
                         
                         if (hardcodedIcons[normalizedCategory]) {

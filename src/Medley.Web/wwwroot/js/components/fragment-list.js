@@ -51,7 +51,7 @@ const FragmentList = {
             
             // Hardcoded icon mappings
             const hardcodedIcons = {
-                'bestpractices': 'bi-shield-check'
+                'bestpractice': 'bi-shield-check'
             };
             
             if (hardcodedIcons[normalizedCategory]) {

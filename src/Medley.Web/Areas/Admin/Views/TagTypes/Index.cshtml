@@ -24,7 +24,6 @@
         <thead>
             <tr>
                 <th>Name</th>
-                <th>Prompt</th>
                 <th>Mode</th>
                 <th>Allowed Values</th>
                 <th class="text-end">Actions</th>
@@ -34,7 +33,7 @@
         @if (!Model.Any())
         {
             <tr>
-                <td colspan="5" class="text-muted text-center py-4">No tag types configured.</td>
+                <td colspan="4" class="text-muted text-center py-4">No tag types configured.</td>
             </tr>
         }
         else
@@ -43,7 +42,6 @@
             {
                 <tr>
                     <td class="fw-semibold">@tagType.Name</td>
-                    <td class="text-muted" style="max-width: 320px;">@tagType.Prompt</td>
                     <td>
                         @if (tagType.IsConstrained)
                         {
@@ -69,7 +67,7 @@
                             <span class="text-muted">None</span>
                         }
                     </td>
-                    <td class="text-end">
+                    <td class="text-end text-nowrap">
                         <a asp-action="Edit" asp-route-id="@tagType.Id" class="btn btn-sm btn-outline-secondary me-2">
                             <i class="bi bi-pencil"></i> Edit
                         </a>
