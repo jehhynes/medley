@@ -31,13 +31,13 @@ public class FragmentRepository : Repository<Fragment>, IFragmentRepository
 
         if (threshold.HasValue)
         {
-            query = query.Where(f => f.Embedding!.L2Distance(vector) <= threshold.Value);
+            query = query.Where(f => f.Embedding!.CosineDistance(vector) <= threshold.Value);
         }
 
         var results = await query
-            .OrderBy(f => f.Embedding!.L2Distance(vector))
+            .OrderBy(f => f.Embedding!.CosineDistance(vector))
             .Take(limit)
-            .Select(f => new { Fragment = f, Distance = f.Embedding!.L2Distance(vector) })
+            .Select(f => new { Fragment = f, Distance = f.Embedding!.CosineDistance(vector) })
             .ToListAsync();
 
         return results.Select(r => new FragmentSimilarityResult

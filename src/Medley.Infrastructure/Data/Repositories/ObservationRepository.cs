@@ -25,13 +25,13 @@ public class ObservationRepository : Repository<Observation>, IObservationReposi
 
         if (threshold.HasValue)
         {
-            query = query.Where(o => o.Embedding!.L2Distance(vector) <= threshold.Value);
+            query = query.Where(o => o.Embedding!.CosineDistance(vector) <= threshold.Value);
         }
 
         var results = await query
-            .OrderBy(o => o.Embedding!.L2Distance(vector))
+            .OrderBy(o => o.Embedding!.CosineDistance(vector))
             .Take(limit)
-            .Select(o => new { Observation = o, Distance = o.Embedding!.L2Distance(vector) })
+            .Select(o => new { Observation = o, Distance = o.Embedding!.CosineDistance(vector) })
             .ToListAsync();
 
         return results.Select(r => new ObservationSimilarityResult

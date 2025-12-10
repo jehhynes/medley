@@ -76,17 +76,21 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
                 
                 var embeddings = await _embeddingGenerator.GenerateAsync(textsToEmbed, options, cancellationToken: cancellationToken);
 
-                // Update fragments with their embeddings
+                // Update fragments with their embeddings (normalized for cosine similarity)
                 var embeddingList = embeddings.ToList();
                 for (int j = 0; j < fragmentsWithoutEmbeddings.Count && j < embeddingList.Count; j++)
                 {
                     var fragment = fragmentsWithoutEmbeddings[j];
                     var embedding = embeddingList[j];
-                    fragment.Embedding = new Vector(embedding.Vector);
+                    
+                    // Normalize the embedding vector (L2 normalization) for optimized cosine similarity searches
+                    var normalizedVector = NormalizeVector(embedding.Vector.ToArray());
+                    fragment.Embedding = new Vector(normalizedVector);
+                    
                     await _fragmentRepository.SaveAsync(fragment);
                     processedCount++;
                     
-                    _logger.LogDebug("Generated embedding for fragment {FragmentId} (Title: {Title}) with {Dimensions} dimensions",
+                    _logger.LogDebug("Generated and normalized embedding for fragment {FragmentId} (Title: {Title}) with {Dimensions} dimensions",
                         fragment.Id, fragment.Title ?? "Untitled", embedding.Vector.Length);
                 }
 
@@ -138,6 +142,16 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
         }
 
         return string.Join("\n\n", parts);
+    }
+
+    /// <summary>
+    /// Normalizes a vector to unit length (L2 normalization)
+    /// This optimization allows cosine similarity to be computed as a simple dot product
+    /// </summary>
+    private static float[] NormalizeVector(float[] vector)
+    {
+        var magnitude = Math.Sqrt(vector.Sum(x => x * x));
+        return magnitude == 0 ? vector : vector.Select(x => (float)(x / magnitude)).ToArray();
     }
 }
 
