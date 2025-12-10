@@ -13,15 +13,24 @@ namespace Medley.Web.Controllers.Api;
 public class SourcesApiController : ControllerBase
 {
     private readonly IRepository<Source> _sourceRepository;
+    private readonly IRepository<TagType> _tagTypeRepository;
+    private readonly ITaggingService _taggingService;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly IBackgroundJobService _backgroundJobService;
     private readonly ILogger<SourcesApiController> _logger;
 
     public SourcesApiController(
         IRepository<Source> sourceRepository,
+        IRepository<TagType> tagTypeRepository,
+        ITaggingService taggingService,
+        IUnitOfWork unitOfWork,
         IBackgroundJobService backgroundJobService,
         ILogger<SourcesApiController> logger)
     {
         _sourceRepository = sourceRepository;
+        _tagTypeRepository = tagTypeRepository;
+        _taggingService = taggingService;
+        _unitOfWork = unitOfWork;
         _backgroundJobService = backgroundJobService;
         _logger = logger;
     }
@@ -35,6 +44,8 @@ public class SourcesApiController : ControllerBase
         var sources = await _sourceRepository.Query()
             .Include(s => s.Integration)
             .Include(s => s.Fragments)
+            .Include(s => s.Tags)
+                .ThenInclude(t => t.TagType)
             .OrderByDescending(s => s.Date)
             .Skip(skip)
             .Take(take)
@@ -46,10 +57,12 @@ public class SourcesApiController : ControllerBase
                 s.Date,
                 s.ExternalId,
                 IntegrationName = s.Integration.DisplayName,
+                s.IsInternal,
                 FragmentsCount = s.Fragments.Count,
                 ExtractionStatus = s.ExtractionStatus,
                 ExtractionMessage = s.ExtractionMessage,
-                s.CreatedAt
+                s.CreatedAt,
+                Tags = s.Tags.Select(t => new { t.TagTypeId, TagType = t.TagType.Name, t.Value })
             })
             .ToListAsync();
 
@@ -65,6 +78,10 @@ public class SourcesApiController : ControllerBase
         var source = await _sourceRepository.Query()
             .Include(s => s.Integration)
             .Include(s => s.Fragments)
+            .Include(s => s.Tags)
+                .ThenInclude(t => t.TagType)
+            .Include(s => s.Tags)
+                .ThenInclude(t => t.TagOption)
             .FirstOrDefaultAsync(s => s.Id == id);
 
         if (source == null)
@@ -82,10 +99,18 @@ public class SourcesApiController : ControllerBase
             source.MetadataJson,
             source.ExternalId,
             IntegrationName = source.Integration.DisplayName,
+            source.IsInternal,
             FragmentsCount = source.Fragments.Count,
             ExtractionStatus = source.ExtractionStatus,
             ExtractionMessage = source.ExtractionMessage,
-            source.CreatedAt
+            source.CreatedAt,
+            Tags = source.Tags.Select(t => new
+            {
+                t.TagTypeId,
+                TagType = t.TagType.Name,
+                t.Value,
+                AllowedValue = t.TagOption?.Value
+            })
         });
     }
 
@@ -163,6 +188,24 @@ public class SourcesApiController : ControllerBase
                 message = "An unexpected error occurred. Please try again."
             });
         }
+    }
+
+    /// <summary>
+    /// Trigger smart tagging for a single source.
+    /// </summary>
+    [HttpPost("{id}/tag")]
+    public async Task<IActionResult> TagSource(Guid id, [FromQuery] bool force = false)
+    {
+        var result = await _taggingService.GenerateTagsAsync(id, force);
+
+        return Ok(new
+        {
+            success = result.Processed,
+            skipped = !result.Processed,
+            message = result.SkipReason ?? result.Message,
+            isInternal = result.IsInternal,
+            tagCount = result.TagCount
+        });
     }
 }
 

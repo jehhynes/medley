@@ -85,44 +85,6 @@ public class BaseHangfireJobTests
         _mockUnitOfWork.Verify(u => u.RollbackTransactionAsync(), Times.Never);
     }
 
-    [Fact]
-    public async Task ExecuteWithoutTransactionAsync_SuccessfulExecution_NoTransactionManagement()
-    {
-        // Arrange
-        var jobActionExecuted = false;
-        var jobAction = new Func<Task>(() =>
-        {
-            jobActionExecuted = true;
-            return Task.CompletedTask;
-        });
-
-        // Act
-        await _testJob.ExecuteWithoutTransactionAsync(jobAction);
-
-        // Assert
-        Assert.True(jobActionExecuted);
-        _mockUnitOfWork.Verify(u => u.BeginTransactionAsync(It.IsAny<IsolationLevel>()), Times.Never);
-        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Never);
-        _mockUnitOfWork.Verify(u => u.CommitTransactionAsync(), Times.Never);
-        _mockUnitOfWork.Verify(u => u.RollbackTransactionAsync(), Times.Never);
-    }
-
-    [Fact]
-    public async Task ExecuteWithoutTransactionAsync_JobActionThrowsException_NoTransactionManagement()
-    {
-        // Arrange
-        var jobAction = new Func<Task>(() => throw new InvalidOperationException("Test exception"));
-
-        // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _testJob.ExecuteWithoutTransactionAsync(jobAction));
-
-        _mockUnitOfWork.Verify(u => u.BeginTransactionAsync(It.IsAny<IsolationLevel>()), Times.Never);
-        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(), Times.Never);
-        _mockUnitOfWork.Verify(u => u.CommitTransactionAsync(), Times.Never);
-        _mockUnitOfWork.Verify(u => u.RollbackTransactionAsync(), Times.Never);
-    }
-
     /// <summary>
     /// Test implementation of BaseHangfireJob for testing purposes
     /// </summary>
@@ -140,16 +102,6 @@ public class BaseHangfireJobTests
         public new Task<TResult> ExecuteWithTransactionAsync<TResult>(Func<Task<TResult>> jobAction, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted)
         {
             return base.ExecuteWithTransactionAsync(jobAction, isolationLevel);
-        }
-
-        public new Task ExecuteWithoutTransactionAsync(Func<Task> jobAction)
-        {
-            return base.ExecuteWithoutTransactionAsync(jobAction);
-        }
-
-        public new Task<TResult> ExecuteWithoutTransactionAsync<TResult>(Func<Task<TResult>> jobAction)
-        {
-            return base.ExecuteWithoutTransactionAsync(jobAction);
         }
     }
 }

@@ -43,6 +43,11 @@ public class Source : BusinessEntity
     public bool? IsInternal { get; set; }
 
     /// <summary>
+    /// Timestamp when smart tags were generated for this source.
+    /// </summary>
+    public DateTimeOffset? TagsGenerated { get; set; }
+
+    /// <summary>
     /// Status of fragment extraction for this source
     /// </summary>
     public ExtractionStatus ExtractionStatus { get; set; } = ExtractionStatus.NotStarted;
@@ -59,6 +64,7 @@ public class Source : BusinessEntity
 
     public virtual ICollection<Fragment> Fragments { get; set; } = new List<Fragment>();
     public virtual ICollection<Observation> Observations { get; set; } = new List<Observation>();
+    public virtual ICollection<Tag> Tags { get; set; } = new List<Tag>();
 }
 
 

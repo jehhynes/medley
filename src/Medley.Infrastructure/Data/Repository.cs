@@ -38,4 +38,10 @@ public class Repository<T> : IRepository<T> where T : class
         return Task.CompletedTask;
         //await _context.SaveChangesAsync(); //We don't want to flush every time an entity is added.
     }
+
+    public virtual Task DeleteAsync(T entity)
+    {
+        _dbSet.Remove(entity);
+        return Task.CompletedTask;
+    }
 }

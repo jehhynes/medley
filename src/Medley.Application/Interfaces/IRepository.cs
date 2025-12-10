@@ -25,4 +25,10 @@ public interface IRepository<T> where T : class
     /// <param name="entity">The entity to save</param>
     /// <returns>A task representing the asynchronous operation</returns>
     Task SaveAsync(T entity);
+
+    /// <summary>
+    /// Deletes an entity
+    /// </summary>
+    /// <param name="entity">The entity to delete</param>
+    Task DeleteAsync(T entity);
 }

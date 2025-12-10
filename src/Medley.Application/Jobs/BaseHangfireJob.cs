@@ -117,47 +117,4 @@ public abstract class BaseHangfireJob<TJob> where TJob : class
             throw;
         }
     }
-
-    /// <summary>
-    /// Executes a job action without transaction management (for jobs that don't need database operations)
-    /// </summary>
-    /// <param name="jobAction">The job action to execute</param>
-    protected async Task ExecuteWithoutTransactionAsync(Func<Task> jobAction)
-    {
-        _logger.LogInformation("Starting Hangfire job (no transaction): {JobName}", _jobName);
-
-        try
-        {
-            await jobAction();
-            _logger.LogInformation("Hangfire job completed successfully: {JobName}", _jobName);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Hangfire job failed: {JobName}", _jobName);
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Executes a job action without transaction management and returns a result
-    /// </summary>
-    /// <typeparam name="TResult">The result type</typeparam>
-    /// <param name="jobAction">The job action to execute</param>
-    /// <returns>The result of the job execution</returns>
-    protected async Task<TResult> ExecuteWithoutTransactionAsync<TResult>(Func<Task<TResult>> jobAction)
-    {
-        _logger.LogInformation("Starting Hangfire job (no transaction): {JobName}", _jobName);
-
-        try
-        {
-            var result = await jobAction();
-            _logger.LogInformation("Hangfire job completed successfully: {JobName}", _jobName);
-            return result;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Hangfire job failed: {JobName}", _jobName);
-            throw;
-        }
-    }
 }

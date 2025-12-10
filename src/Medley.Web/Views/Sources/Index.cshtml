@@ -147,6 +147,19 @@
                             {{ selectedSource.fragmentsCount }} fragments
                         </span>
                     </div>
+                    <div class="mt-2" v-if="(selectedSource.tags && selectedSource.tags.length) || selectedSource.isInternal">
+                        <span
+                            v-if="selectedSource.isInternal"
+                            class="badge bg-success me-1 mb-1">
+                            Internal
+                        </span>
+                        <span 
+                            v-for="tag in selectedSource.tags" 
+                            :key="tag.tagTypeId"
+                            class="badge bg-secondary me-1 mb-1">
+                            {{ tag.value }}
+                        </span>
+                    </div>
                 </div>
                 <div>
                     <button 
@@ -156,6 +169,13 @@
                         v-if="selectedSource.content">
                         <span v-if="extractionStatus[selectedSource.id] === 'extracting'" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                         <i v-else class="bi bi-magic"></i> Extract Fragments
+                    </button>
+                    <button 
+                        class="btn btn-outline-secondary ms-2" 
+                        @@click="generateTags" 
+                        :disabled="tagging || !selectedSource">
+                        <span v-if="tagging" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        <i v-else class="bi bi-tags"></i> Generate Tags
                     </button>
                 </div>
             </div>
@@ -310,7 +330,8 @@
                         loadingFragments: false,
                         fragmentsError: null,
                         markdownRenderer: null,
-                        articleTypes: [] // Array of { id, name, icon }
+                        articleTypes: [], // Array of { id, name, icon }
+                        tagging: false
                     };
                 },
                 computed: {
@@ -454,6 +475,32 @@
                             console.error('Fragment extraction error:', err);
                             this.showToast('error', err.message || 'Failed to extract fragments. Please try again.');
                             this.extractionStatus[sourceId] = 'not-started';
+                        }
+                    },
+
+                    async generateTags() {
+                        if (!this.selectedSource) return;
+                        const sourceId = this.selectedSource.id;
+                        this.tagging = true;
+                        try {
+                            const result = await api.post(`/api/sources/${sourceId}/tag?force=true`);
+                            if (!result.success && result.message) {
+                                this.showToast('error', result.message);
+                            } else {
+                                this.showToast('success', result.message || 'Tags generated');
+                            }
+                            // Refresh selected source to pull latest tags/internal flag
+                            try {
+                                const updated = await api.get(`/api/sources/${sourceId}`);
+                                this.selectedSource = updated;
+                            } catch (err) {
+                                console.error('Failed to reload source after tagging:', err);
+                            }
+                        } catch (err) {
+                            console.error('Tag generation error:', err);
+                            this.showToast('error', err.message || 'Failed to generate tags. Please try again.');
+                        } finally {
+                            this.tagging = false;
                         }
                     },
                     

@@ -37,6 +37,9 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     public DbSet<FragmentCluster> FragmentClusters { get; set; } = null!;
     public DbSet<ObservationCluster> ObservationClusters { get; set; } = null!;
     public DbSet<Template> Templates { get; set; } = null!;
+    public DbSet<TagType> TagTypes { get; set; } = null!;
+    public DbSet<TagOption> TagOptions { get; set; } = null!;
+    public DbSet<Tag> Tags { get; set; } = null!;
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -55,5 +58,40 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
 
         // Additional entity configurations can be added here if needed
         // Most configuration is handled via data annotations on entities
+
+        builder.Entity<TagType>(entity =>
+        {
+            entity.HasIndex(t => t.Name).IsUnique();
+        });
+
+        builder.Entity<TagOption>(entity =>
+        {
+            entity.HasIndex(o => new { o.TagTypeId, o.Value }).IsUnique();
+
+            entity.HasOne(o => o.TagType)
+                .WithMany(t => t.AllowedValues)
+                .HasForeignKey(o => o.TagTypeId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<Tag>(entity =>
+        {
+            entity.HasIndex(t => new { t.SourceId, t.TagTypeId }).IsUnique();
+
+            entity.HasOne(t => t.Source)
+                .WithMany(s => s.Tags)
+                .HasForeignKey(t => t.SourceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(t => t.TagType)
+                .WithMany(tt => tt.Tags)
+                .HasForeignKey(t => t.TagTypeId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(t => t.TagOption)
+                .WithMany()
+                .HasForeignKey(t => t.TagOptionId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
     }
 }

@@ -73,8 +73,6 @@ public class BedrockAiService : IAiProcessingService
 
             var response = await _chatClient.GetResponseAsync<T>(messages, options, useJsonSchemaResponseFormat: false);
 
-            string originalText = null;
-
             //Strip the markdown json fences that Claude likes to add before deserializing
             if (response.Messages.Count == 1 && response.Messages.Single().Contents.Count == 1 && response.Messages.Single().Contents.Single() is TextContent textContent
                 && textContent.Text.StartsWith("```json"))
@@ -83,8 +81,6 @@ public class BedrockAiService : IAiProcessingService
                 var endIndex = textContent.Text.LastIndexOf('}') + 1;
                 if (startIndex >= 0 && endIndex > startIndex)
                 {
-                    originalText = textContent.Text;
-
                     textContent.Text = textContent.Text.Substring(startIndex, endIndex - startIndex);
                 }
             }
