@@ -179,7 +179,7 @@
                     <button 
                         class="btn btn-primary" 
                         @@click="extractFragments" 
-                        :disabled="extractionStatus[selectedSource.id] === 'extracting'"
+                        :disabled="extractionStatus[selectedSource.id] === 'extracting' || extractionStatus[selectedSource.id] === 'completed'"
                         v-if="selectedSource.content">
                         <span v-if="extractionStatus[selectedSource.id] === 'extracting'" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                         <i v-else class="bi bi-magic"></i> Extract Fragments

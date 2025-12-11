@@ -68,6 +68,7 @@ public static class DependencyInjection
         services.AddScoped<TextChunkingService>();
         services.AddScoped<FragmentExtractionService>();
         //services.AddScoped<IntegrationHealthCheckJob>();
+        services.AddTransient<FragmentClusteringJob>();
         services.AddSingleton<RecurringJobCleanUpManager>();
         services.AddSingleton<IJobRegistry, JobRegistry>();
 

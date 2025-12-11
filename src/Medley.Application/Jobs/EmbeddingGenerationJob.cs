@@ -1,4 +1,6 @@
 using Hangfire;
+using Hangfire.Server;
+using Hangfire.Storage;
 using Medley.Application.Interfaces;
 using Medley.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -35,87 +37,93 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
     /// <summary>
     /// Processes fragments that don't have embeddings and generates embeddings for them
     /// </summary>
-    [DisableMultipleQueuedItemsFilter]
-    //[DisableConcurrentExecution(timeoutInSeconds: 1)]
-    public async Task GenerateFragmentEmbeddings(CancellationToken cancellationToken)
+    public async Task GenerateFragmentEmbeddings(PerformContext context, CancellationToken cancellationToken)
     {
-        int fragmentsProcessed = 0;
-        
-        await ExecuteWithTransactionAsync(async () =>
+        try
         {
-            _logger.LogInformation("Starting embedding generation job for fragments without embeddings");
+            using var dlock = context.Connection.AcquireDistributedLock(nameof(EmbeddingGenerationJob), TimeSpan.FromSeconds(1));
 
-            // Query fragments that don't have embeddings
-            var fragmentsWithoutEmbeddings = await _fragmentRepository.Query()
-                .Where(f => f.Embedding == null)
-                .OrderBy(f => f.CreatedAt) // Process oldest first
-                .Take(BatchSize) // Limit to BatchSize fragments per run to avoid long-running jobs
-                .ToListAsync();
+            bool shouldRequeue = false;
 
-            if (fragmentsWithoutEmbeddings.Count == 0)
+            await ExecuteWithTransactionAsync(async () =>
             {
-                _logger.LogInformation("No fragments found without embeddings");
-                fragmentsProcessed = 0;
-                return;
-            }
+                _logger.LogInformation("Starting embedding generation job for fragments without embeddings");
 
-            _logger.LogInformation("Found {Count} fragments without embeddings. Processing all in a single batch",
-                fragmentsWithoutEmbeddings.Count);
+                // Query fragments that don't have embeddings
+                var fragmentsWithoutEmbeddings = await _fragmentRepository.Query()
+                    .Where(f => f.Embedding == null)
+                    .OrderBy(f => f.CreatedAt) // Process oldest first
+                    .Take(BatchSize) // Limit to BatchSize fragments per run to avoid long-running jobs
+                    .ToListAsync();
 
-            int processedCount = 0;
-            int errorCount = 0;
+                shouldRequeue = fragmentsWithoutEmbeddings.Count == BatchSize;
 
-            try
-            {
-                // Generate embeddings for all fragments at once
-                var textsToEmbed = fragmentsWithoutEmbeddings.Select(f => BuildTextForEmbedding(f)).ToList();
-                var options = new EmbeddingGenerationOptions()
+                if (fragmentsWithoutEmbeddings.Count == 0)
                 {
-                    Dimensions = 2000
-                };
-                
-                var embeddings = await _embeddingGenerator.GenerateAsync(textsToEmbed, options, cancellationToken: cancellationToken);
-
-                // Update fragments with their embeddings (normalized for cosine similarity)
-                var embeddingList = embeddings.ToList();
-                for (int j = 0; j < fragmentsWithoutEmbeddings.Count && j < embeddingList.Count; j++)
-                {
-                    var fragment = fragmentsWithoutEmbeddings[j];
-                    var embedding = embeddingList[j];
-                    
-                    // Normalize the embedding vector (L2 normalization) for optimized cosine similarity searches
-                    var normalizedVector = NormalizeVector(embedding.Vector.ToArray());
-                    fragment.Embedding = new Vector(normalizedVector);
-                    
-                    await _fragmentRepository.SaveAsync(fragment);
-                    processedCount++;
-                    
-                    _logger.LogDebug("Generated and normalized embedding for fragment {FragmentId} (Title: {Title}) with {Dimensions} dimensions",
-                        fragment.Id, fragment.Title ?? "Untitled", embedding.Vector.Length);
+                    _logger.LogInformation("No fragments found without embeddings");
+                    return;
                 }
 
-                // Save all changes
-                //await _unitOfWork.SaveChangesAsync();
-                
-                fragmentsProcessed = fragmentsWithoutEmbeddings.Count;
-            }
-            catch (Exception ex)
+                _logger.LogInformation("Found {Count} fragments without embeddings. Processing all in a single batch",
+                    fragmentsWithoutEmbeddings.Count);
+
+                int processedCount = 0;
+                int errorCount = 0;
+
+                try
+                {
+                    // Generate embeddings for all fragments at once
+                    var textsToEmbed = fragmentsWithoutEmbeddings.Select(f => BuildTextForEmbedding(f)).ToList();
+                    var options = new EmbeddingGenerationOptions()
+                    {
+                        Dimensions = 2000
+                    };
+
+                    var embeddings = await _embeddingGenerator.GenerateAsync(textsToEmbed, options, cancellationToken: cancellationToken);
+
+                    // Update fragments with their embeddings (normalized for cosine similarity)
+                    var embeddingList = embeddings.ToList();
+                    for (int j = 0; j < fragmentsWithoutEmbeddings.Count && j < embeddingList.Count; j++)
+                    {
+                        if (cancellationToken.IsCancellationRequested)
+                            break;
+
+                        var fragment = fragmentsWithoutEmbeddings[j];
+                        var embedding = embeddingList[j];
+
+                        // Normalize the embedding vector (L2 normalization) for optimized cosine similarity searches
+                        var normalizedVector = NormalizeVector(embedding.Vector.ToArray());
+                        fragment.Embedding = new Vector(normalizedVector);
+
+                        await _fragmentRepository.SaveAsync(fragment);
+                        processedCount++;
+
+                        _logger.LogDebug("Generated and normalized embedding for fragment {FragmentId} (Title: {Title}) with {Dimensions} dimensions",
+                            fragment.Id, fragment.Title ?? "Untitled", embedding.Vector.Length);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    errorCount = fragmentsWithoutEmbeddings.Count;
+                    _logger.LogError(ex, "Failed to generate embeddings for fragments");
+                    throw;
+                }
+
+                _logger.LogInformation("Embedding generation job completed. Processed: {ProcessedCount}, Errors: {ErrorCount}",
+                    processedCount, errorCount);
+            });
+
+            // If we processed exactly BatchSize fragments, there might be more - requeue the job
+            // This happens outside the transaction to ensure it only runs after successful commit
+            if (shouldRequeue)
             {
-                errorCount = fragmentsWithoutEmbeddings.Count;
-                _logger.LogError(ex, "Failed to generate embeddings for fragments");
-                throw;
+                _logger.LogInformation("Processed exactly {BatchSize} fragments. Requeuing job to process remaining fragments", BatchSize);
+                _backgroundJobService.Schedule<EmbeddingGenerationJob>(j => j.GenerateFragmentEmbeddings(default!, default), TimeSpan.FromSeconds(1));
             }
-
-            _logger.LogInformation("Embedding generation job completed. Processed: {ProcessedCount}, Errors: {ErrorCount}",
-                processedCount, errorCount);
-        });
-
-        // If we processed exactly BatchSize fragments, there might be more - requeue the job
-        // This happens outside the transaction to ensure it only runs after successful commit
-        if (fragmentsProcessed == BatchSize)
+        }
+        catch (DistributedLockTimeoutException)
         {
-            _logger.LogInformation("Processed exactly {BatchSize} fragments. Requeuing job to process remaining fragments", BatchSize);
-            _backgroundJobService.Schedule<EmbeddingGenerationJob>(j => j.GenerateFragmentEmbeddings(default), TimeSpan.FromSeconds(5));
+            // Another job of same type is already running. Just return success.
         }
     }
 

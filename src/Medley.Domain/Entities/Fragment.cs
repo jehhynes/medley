@@ -42,10 +42,31 @@ public class Fragment : BusinessEntity
     /// <summary>
     /// Navigation to the originating Source
     /// </summary>
-    public required virtual Source Source { get; set; }
+    public virtual Source? Source { get; set; }
 
     /// <summary>
     /// Date when the fragment was last modified
     /// </summary>
     public DateTimeOffset? LastModifiedAt { get; set; }
+
+    /// <summary>
+    /// Indicates if this fragment is a cluster of other fragments
+    /// </summary>
+    public bool IsCluster { get; set; }
+
+    /// <summary>
+    /// The ID of the cluster fragment this fragment belongs to
+    /// </summary>
+    public Guid? ClusteredIntoId { get; set; }
+
+    /// <summary>
+    /// Navigation to the cluster fragment
+    /// </summary>
+    [ForeignKey(nameof(ClusteredIntoId))]
+    public virtual Fragment? ClusteredInto { get; set; }
+
+    /// <summary>
+    /// Date when the fragment was processed for clustering
+    /// </summary>
+    public DateTimeOffset? ClusteringProcessed { get; set; }
 }

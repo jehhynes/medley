@@ -211,8 +211,9 @@ public class FragmentRepositoryTests : DatabaseTestBase
         await _dbContext.SaveChangesAsync();
 
         // Act - Find similar with threshold that filters out very different embeddings
-        // The cosine distance between similar embeddings is ~2.0, and very different is ~39
-        var results = await _repository.FindSimilarAsync(queryEmbedding, 10, 10.0);
+        // Cosine distance ranges from 0 (identical) to 2 (opposite)
+        // The similar embedding should have distance < 0.5, different should be ~1.4
+        var results = await _repository.FindSimilarAsync(queryEmbedding, 10, 0.5);
         var resultList = results.ToList();
 
         // Assert - Should only return the similar fragment, not the different one

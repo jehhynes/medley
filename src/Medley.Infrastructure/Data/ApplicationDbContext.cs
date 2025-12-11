@@ -34,7 +34,6 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     public DbSet<Insight> Insights { get; set; } = null!;
     public DbSet<Observation> Observations { get; set; } = null!;
     public DbSet<Finding> Findings { get; set; } = null!;
-    public DbSet<FragmentCluster> FragmentClusters { get; set; } = null!;
     public DbSet<ObservationCluster> ObservationClusters { get; set; } = null!;
     public DbSet<Template> Templates { get; set; } = null!;
     public DbSet<TagType> TagTypes { get; set; } = null!;
