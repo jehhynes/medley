@@ -15,7 +15,7 @@ namespace Medley.Web.Models
         public List<MetricItem> SourcesByType { get; set; } = new();
         public List<MetricItem> SourcesByIntegration { get; set; } = new();
         public List<MetricItem> SourcesByInternalStatus { get; set; } = new();
-        public List<MetricItem> SourcesByYear { get; set; } = new();
+        public List<StackedMetricItem> SourcesByYear { get; set; } = new();
         public List<MetricItem> SourcesByMonth { get; set; } = new();
         public List<TagTypeMetrics> SourcesByTagType { get; set; } = new();
         public int SourcesPendingSmartTagging { get; set; }
@@ -42,5 +42,11 @@ namespace Medley.Web.Models
         public string Label { get; set; } = string.Empty;
         public int Count { get; set; }
         public string? Icon { get; set; }
+    }
+
+    public class StackedMetricItem
+    {
+        public string Label { get; set; } = string.Empty;
+        public Dictionary<string, int> Values { get; set; } = new();
     }
 }

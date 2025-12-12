@@ -533,7 +533,7 @@
     });
 
     // Temporal Charts
-    // Sources by Year Chart (Bar)
+    // Sources by Year Chart (Stacked Bar)
     const sourcesByYearData = @Html.Raw(Json.Serialize(Model.Metrics.SourcesByYear));
     const sourcesByYearCtx = document.getElementById('sourcesByYearChart');
     if (sourcesByYearData.length > 0 && sourcesByYearCtx) {
@@ -541,14 +541,48 @@
             type: 'bar',
             data: {
                 labels: sourcesByYearData.map(x => x.label),
-                datasets: [{
-                    label: 'Sources',
-                    data: sourcesByYearData.map(x => x.count),
-                    backgroundColor: colors.primary[0], 
-                    borderRadius: 4
-                }]
+                datasets: [
+                    {
+                        label: 'Internal',
+                        data: sourcesByYearData.map(x => x.values['Internal'] || 0),
+                        backgroundColor: colors.primary[3], // Green
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'External',
+                        data: sourcesByYearData.map(x => x.values['External'] || 0),
+                        backgroundColor: colors.primary[1], // Red
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'Unknown',
+                        data: sourcesByYearData.map(x => x.values['Unknown'] || 0),
+                        backgroundColor: colors.primary[0], // Blue
+                        borderRadius: 4
+                    }
+                ]
             },
-            options: { ...defaultOptions, plugins: { legend: { display: false } } }
+            options: { 
+                ...defaultOptions, 
+                plugins: { 
+                    legend: { 
+                        display: true,
+                        position: 'top'
+                    } 
+                },
+                scales: {
+                    x: {
+                        stacked: true
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
        });
     }
 
