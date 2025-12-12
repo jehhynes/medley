@@ -11,15 +11,15 @@
           <div class="list-item-subtitle">{{ formatDate(source.date) }} • {{ source.type }}</div>
         </div>
         <span class="list-item-status ms-auto">
-          <span v-if="getExtractionStatus(source.id) === 'extracting'" 
+          <span v-if="source.extractionStatus === 'InProgress'" 
                 class="spinner-border spinner-border-sm text-secondary" 
                 role="status"
                 style="width: 1em; height: 1em;">
             <span class="visually-hidden">Extracting...</span>
           </span>
-          <i v-else-if="getExtractionStatus(source.id) === 'completed'" 
+          <i v-else-if="source.extractionStatus === 'Completed'" 
              class="bi bi-check-lg text-success"></i>
-          <i v-else-if="getExtractionStatus(source.id) === 'failed'" 
+          <i v-else-if="source.extractionStatus === 'Failed'" 
              class="bi bi-x-square text-danger"></i>
      
         </span>

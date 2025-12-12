@@ -117,7 +117,6 @@
             v-else
             :sources="sources"
             :selected-id="selectedSourceId"
-            :extraction-status="extractionStatus"
             @@select="selectSource"
         />
         <div v-if="!loading && sources.length === 0" class="empty-state">
@@ -179,9 +178,9 @@
                     <button 
                         class="btn btn-primary" 
                         @@click="extractFragments" 
-                        :disabled="extractionStatus[selectedSource.id] === 'extracting' || extractionStatus[selectedSource.id] === 'completed'"
+                        :disabled="selectedSource.extractionStatus === 'InProgress' || selectedSource.extractionStatus === 'Completed'"
                         v-if="selectedSource.content">
-                        <span v-if="extractionStatus[selectedSource.id] === 'extracting'" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        <span v-if="selectedSource.extractionStatus === 'InProgress'" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                         <i v-else class="bi bi-magic"></i> Extract Fragments
                     </button>
                     <button 
@@ -339,7 +338,6 @@
                         loading: false,
                         error: null,
                         searchQuery: '',
-                        extractionStatus: {}, // Maps sourceId -> 'not-started' | 'extracting' | 'completed'
                         signalRConnection: null,
                         fragments: [],
                         selectedFragment: null,
@@ -406,34 +404,11 @@
                     }
                 },
                 methods: {
-                    // Maps ExtractionStatus enum value to component status string
-                    mapExtractionStatus(extractionStatus) {
-                        if (extractionStatus === undefined || extractionStatus === null) {
-                            return 'not-started';
-                        }
-                        // Handle both enum values (0, 1, 2, 3) and string values
-                        const statusMap = {
-                            0: 'not-started', // NotStarted
-                            1: 'extracting',  // InProgress
-                            2: 'completed',  // Completed
-                            3: 'failed',     // Failed
-                            'NotStarted': 'not-started',
-                            'InProgress': 'extracting',
-                            'Completed': 'completed',
-                            'Failed': 'failed'
-                        };
-                        return statusMap[extractionStatus] || 'not-started';
-                    },
-                    
                     async loadSources() {
                         this.loading = true;
                         this.error = null;
                         try {
                             this.sources = await api.get('/api/sources');
-                            // Initialize extraction status for all sources from API response
-                            this.sources.forEach(source => {
-                                this.extractionStatus[source.id] = this.mapExtractionStatus(source.extractionStatus);
-                            });
                         } catch (err) {
                             this.error = 'Failed to load sources: ' + err.message;
                             console.error('Error loading sources:', err);
@@ -459,8 +434,6 @@
                         
                         try {
                             this.selectedSource = await api.get(`/api/sources/${source.id}`);
-                            // Update extraction status from API response
-                            this.extractionStatus[source.id] = this.mapExtractionStatus(this.selectedSource.extractionStatus);
                         } catch (err) {
                             console.error('Error loading source:', err);
                             this.selectedSource = null;
@@ -472,10 +445,6 @@
                         if (query.length >= 2) {
                             try {
                                 this.sources = await api.get(`/api/sources/search?query=${encodeURIComponent(query)}`);
-                                // Map extraction status for search results
-                                this.sources.forEach(source => {
-                                    this.extractionStatus[source.id] = this.mapExtractionStatus(source.extractionStatus);
-                                });
                             } catch (err) {
                                 console.error('Search error:', err);
                             }
@@ -488,20 +457,32 @@
                         if (!this.selectedSource) return;
                         
                         const sourceId = this.selectedSource.id;
-                        this.extractionStatus[sourceId] = 'extracting';
+                        // Optimistically update UI
+                        this.selectedSource.extractionStatus = 'InProgress';
+                        const sourceIndex = this.sources.findIndex(s => s.id === sourceId);
+                        if (sourceIndex !== -1) {
+                            this.sources[sourceIndex].extractionStatus = 'InProgress';
+                        }
+                        
                         try {
                             const response = await api.post(`/api/sources/${sourceId}/extract-fragments`);
                             
-                            if (response.success) {
-                                // Keep button disabled until SignalR notification arrives
-                            } else {
+                            if (!response.success) {
                                 this.showToast('error', response.message || 'Failed to start fragment extraction');
-                                this.extractionStatus[sourceId] = 'not-started';
+                                // Revert on failure
+                                this.selectedSource.extractionStatus = 'NotStarted';
+                                if (sourceIndex !== -1) {
+                                    this.sources[sourceIndex].extractionStatus = 'NotStarted';
+                                }
                             }
                         } catch (err) {
                             console.error('Fragment extraction error:', err);
                             this.showToast('error', err.message || 'Failed to extract fragments. Please try again.');
-                            this.extractionStatus[sourceId] = 'not-started';
+                            // Revert on error
+                            this.selectedSource.extractionStatus = 'NotStarted';
+                            if (sourceIndex !== -1) {
+                                this.sources[sourceIndex].extractionStatus = 'NotStarted';
+                            }
                         }
                     },
 
@@ -694,16 +675,23 @@
                     this.signalRConnection.on('FragmentExtractionComplete', async (sourceId, fragmentCount, success, message) => {
                         console.log('Fragment extraction complete:', { sourceId, fragmentCount, success, message });
                         
-                        // Reload sources list to update fragment counts and extraction status in sidebar
-                        await this.loadSources();
+                        // Find and update the source in the existing array (preserves search and scroll)
+                        const sourceIndex = this.sources.findIndex(s => s.id === sourceId);
+                        if (sourceIndex !== -1) {
+                            try {
+                                const updatedSource = await api.get(`/api/sources/${sourceId}`);
+                                // Update the source object in place - Vue will detect the change
+                                this.sources.splice(sourceIndex, 1, updatedSource);
+                            } catch (err) {
+                                console.error('Failed to reload source in list:', err);
+                            }
+                        }
                         
                         // If this is the currently selected source, reload its details and fragments
                         if (this.selectedSource && this.selectedSource.id === sourceId) {
                             try {
                                 const updatedSource = await api.get(`/api/sources/${sourceId}`);
                                 this.selectedSource = updatedSource;
-                                // Update extraction status from API response
-                                this.extractionStatus[sourceId] = this.mapExtractionStatus(updatedSource.extractionStatus);
                                 
                                 // Reload fragments if extraction was successful
                                 if (success) {
