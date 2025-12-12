@@ -65,7 +65,6 @@ public static class DependencyInjection
         services.AddScoped<ICollectorImportService, CollectorImportService>();
         services.AddScoped<ISourceMetadataProvider, SourceMetadataProvider>();
         services.AddScoped<ITaggingService, TaggingService>();
-        services.AddScoped<TextChunkingService>();
         services.AddScoped<FragmentExtractionService>();
         //services.AddScoped<IntegrationHealthCheckJob>();
         services.AddTransient<FragmentClusteringJob>();

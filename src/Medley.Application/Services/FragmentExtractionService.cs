@@ -3,6 +3,7 @@ using Medley.Domain.Entities;
 using Medley.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.SemanticKernel.Text;
 using System.ComponentModel;
 using System.Text.Json;
 
@@ -17,22 +18,23 @@ public class FragmentExtractionService
     private readonly IRepository<Source> _sourceRepository;
     private readonly IRepository<Fragment> _fragmentRepository;
     private readonly IRepository<Template> _templateRepository;
-    private readonly TextChunkingService _chunkingService;
     private readonly ILogger<FragmentExtractionService> _logger;
+
+    // Text chunking configuration
+    private const int MaxTokensPerChunk = 25000;
+    private const int ChunkingThreshold = 90000; // Only chunk if content exceeds 90K characters
 
     public FragmentExtractionService(
         IAiProcessingService aiService,
         IRepository<Source> sourceRepository,
         IRepository<Fragment> fragmentRepository,
         IRepository<Template> templateRepository,
-        TextChunkingService chunkingService,
         ILogger<FragmentExtractionService> logger)
     {
         _aiService = aiService;
         _sourceRepository = sourceRepository;
         _fragmentRepository = fragmentRepository;
         _templateRepository = templateRepository;
-        _chunkingService = chunkingService;
         _logger = logger;
     }
 
@@ -90,20 +92,82 @@ public class FragmentExtractionService
             _logger.LogInformation("Including organization context template in fragment extraction prompt");
         }
 
-        // Chunk the content before processing
-        var contentChunks = await _chunkingService.ChunkTextAsync(source.Content);
-        _logger.LogInformation("Content chunked into {ChunkCount} chunks for processing", contentChunks.Count);
-
-        // Process each chunk and aggregate fragments
-        var allFragments = new List<FragmentDto>();
-        var allMessages = new List<string>();
-        var chunkNumber = 0;
-
-        foreach (var chunk in contentChunks)
+        // Try processing without chunking first (unless content is very large)
+        var shouldChunk = source.Content.Length > ChunkingThreshold;
+        
+        if (!shouldChunk)
         {
-            chunkNumber++;
+            _logger.LogInformation("Content length ({Length}) is below chunking threshold. Processing as single request.", 
+                source.Content.Length);
+            
+            try
+            {
+                var result = await ProcessSingleContentAsync(source.Content, systemPrompt);
+                return await SaveFragmentsAndReturnResultAsync(source, result.Fragments, result.Messages);
+            }
+            catch (TimeoutException ex)
+            {
+                _logger.LogWarning(ex, "Timeout occurred processing content as single request. Retrying with chunking.");
+                shouldChunk = true;
+            }
+        }
+
+        // Process with chunking (either because content is large or timeout occurred)
+        if (shouldChunk)
+        {
+            _logger.LogInformation("Processing content with chunking (length: {Length} characters)", source.Content.Length);
+            var result = await ProcessChunkedContentAsync(source.Content, systemPrompt);
+            return await SaveFragmentsAndReturnResultAsync(source, result.Fragments, result.Messages);
+        }
+
+        throw new InvalidOperationException("Fragment extraction failed unexpectedly");
+    }
+
+    private async Task<(List<FragmentDto> Fragments, List<string> Messages)> ProcessSingleContentAsync(
+        string content, 
+        string systemPrompt)
+    {
+        var extractionResponse = await _aiService.ProcessStructuredPromptAsync<FragmentExtractionResponse>(
+            userPrompt: content,
+            systemPrompt: systemPrompt);
+
+        var fragments = new List<FragmentDto>();
+        var messages = new List<string>();
+
+        if (extractionResponse != null)
+        {
+            if (!string.IsNullOrWhiteSpace(extractionResponse.Message))
+            {
+                messages.Add(extractionResponse.Message.Trim());
+            }
+
+            if (extractionResponse.Fragments != null && extractionResponse.Fragments.Count > 0)
+            {
+                fragments.AddRange(extractionResponse.Fragments);
+                _logger.LogInformation("Extracted {Count} fragments from content", extractionResponse.Fragments.Count);
+            }
+        }
+
+        return (fragments, messages);
+    }
+
+    private async Task<(List<FragmentDto> Fragments, List<string> Messages)> ProcessChunkedContentAsync(
+        string content, 
+        string systemPrompt)
+    {
+        // Chunk the content using Semantic Kernel's TextChunker
+#pragma warning disable SKEXP0050 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+        var contentChunks = TextChunker.SplitPlainTextLines(content, MaxTokensPerChunk);
+#pragma warning restore SKEXP0050 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+        var chunkList = contentChunks.ToList();
+        _logger.LogInformation("Content chunked into {ChunkCount} chunks for processing", chunkList.Count);
+
+        // Process all chunks in parallel
+        var chunkTasks = chunkList.Select(async (chunk, index) =>
+        {
+            var chunkNumber = index + 1;
             _logger.LogInformation("Processing chunk {ChunkNumber} of {TotalChunks} (length: {ChunkLength} characters)",
-                chunkNumber, contentChunks.Count, chunk.Length);
+                chunkNumber, chunkList.Count, chunk.Length);
 
             try
             {
@@ -113,54 +177,65 @@ public class FragmentExtractionService
 
                 if (extractionResponse != null)
                 {
-                    // Collect messages from each chunk
-                    if (!string.IsNullOrWhiteSpace(extractionResponse.Message))
-                    {
-                        allMessages.Add(extractionResponse.Message.Trim());
-                    }
+                    var message = !string.IsNullOrWhiteSpace(extractionResponse.Message) 
+                        ? extractionResponse.Message.Trim() 
+                        : null;
 
-                    if (extractionResponse.Fragments != null && extractionResponse.Fragments.Count > 0)
-                    {
-                        allFragments.AddRange(extractionResponse.Fragments);
-                        _logger.LogInformation("Extracted {Count} fragments from chunk {ChunkNumber}",
-                            extractionResponse.Fragments.Count, chunkNumber);
-                    }
-                    else
-                    {
-                        _logger.LogInformation("No fragments extracted from chunk {ChunkNumber}", chunkNumber);
-                    }
+                    var fragments = extractionResponse.Fragments ?? new List<FragmentDto>();
+                    
+                    _logger.LogInformation("Extracted {Count} fragments from chunk {ChunkNumber}",
+                        fragments.Count, chunkNumber);
+
+                    return (Fragments: fragments, Message: message, ChunkNumber: chunkNumber);
                 }
+
+                return (Fragments: new List<FragmentDto>(), Message: (string?)null, ChunkNumber: chunkNumber);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to process chunk {ChunkNumber} of {TotalChunks} for source {SourceId}. Stopping extraction.",
-                    chunkNumber, contentChunks.Count, sourceId);
-                
-                throw new InvalidOperationException($"Fragment extraction failed while processing chunk {chunkNumber} of {contentChunks.Count}: {ex.Message}", ex);
+                _logger.LogError(ex, "Failed to process chunk {ChunkNumber} of {TotalChunks}",
+                    chunkNumber, chunkList.Count);
+                throw new InvalidOperationException(
+                    $"Fragment extraction failed while processing chunk {chunkNumber} of {chunkList.Count}: {ex.Message}", ex);
             }
-        }
+        }).ToList();
+
+        var chunkResults = await Task.WhenAll(chunkTasks);
+
+        // Aggregate results from all chunks
+        var allFragments = chunkResults.SelectMany(r => r.Fragments).ToList();
+        var allMessages = chunkResults.Where(r => r.Message != null).Select(r => r.Message!).ToList();
+
+        _logger.LogInformation("Aggregated {TotalCount} fragments from {ChunkCount} chunks",
+            allFragments.Count, chunkList.Count);
+
+        return (allFragments, allMessages);
+    }
+
+    private async Task<FragmentExtractionResult> SaveFragmentsAndReturnResultAsync(
+        Source source,
+        List<FragmentDto> fragmentDtos,
+        List<string> messages)
+    {
 
         // Combine all messages into a single message
-        var combinedMessage = allMessages.Count > 0 
-            ? string.Join("\n\n", allMessages) 
+        var combinedMessage = messages.Count > 0 
+            ? string.Join("\n\n", messages) 
             : null;
 
         // Zero fragments is now a successful outcome, not an error
-        if (allFragments.Count == 0)
+        if (fragmentDtos.Count == 0)
         {
-            _logger.LogInformation("No fragments were extracted from any chunk for source {SourceId}. This is a successful outcome.", sourceId);
+            _logger.LogInformation("No fragments were extracted for source {SourceId}. This is a successful outcome.", source.Id);
             if (string.IsNullOrWhiteSpace(combinedMessage))
             {
                 combinedMessage = "No fragments were extracted from the content.";
             }
         }
 
-        _logger.LogInformation("Aggregated {TotalCount} fragments from {ChunkCount} chunks",
-            allFragments.Count, contentChunks.Count);
-
         // Create Fragment entities and save them
         var fragmentCount = 0;
-        foreach (var fragmentDto in allFragments)
+        foreach (var fragmentDto in fragmentDtos)
         {
             try
             {
@@ -188,7 +263,7 @@ public class FragmentExtractionService
         }
 
         _logger.LogInformation("Successfully extracted {Count} fragments from source {SourceId}", 
-            fragmentCount, sourceId);
+            fragmentCount, source.Id);
 
         // Save the extraction message to the source
         if (!string.IsNullOrWhiteSpace(combinedMessage))
@@ -197,7 +272,7 @@ public class FragmentExtractionService
                 ? combinedMessage.Substring(0, 2000) 
                 : combinedMessage;
             await _sourceRepository.SaveAsync(source);
-            _logger.LogDebug("Saved extraction message to source {SourceId}", sourceId);
+            _logger.LogDebug("Saved extraction message to source {SourceId}", source.Id);
         }
 
         return new FragmentExtractionResult

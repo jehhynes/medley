@@ -1,3 +1,5 @@
+using Hangfire.Server;
+using Hangfire.Storage;
 using Medley.Application.Interfaces;
 using Medley.Application.Services;
 using Medley.Domain.Entities;
@@ -33,51 +35,60 @@ public class FragmentExtractionJob : BaseHangfireJob<FragmentExtractionJob>
     /// Executes fragment extraction for a specific source
     /// </summary>
     /// <param name="sourceId">The source ID to extract fragments from</param>
-    public async Task ExecuteAsync(Guid sourceId)
+    public async Task ExecuteAsync(PerformContext context, CancellationToken cancellationToken, Guid sourceId)
     {
-        int fragmentCount = 0;
-        bool success = false;
-        string? errorMessage = null;
-
-        // Set status to InProgress before starting extraction (separate transaction for immediate visibility)
-        await SetExtractionStatusAsync(sourceId, ExtractionStatus.InProgress);
-
         try
         {
-            await ExecuteWithTransactionAsync(async () =>
+            using var dlock = context.Connection.AcquireDistributedLock(nameof(FragmentExtractionJob) + "_" + sourceId, TimeSpan.FromSeconds(1));
+
+            int fragmentCount = 0;
+            bool success = false;
+            string? errorMessage = null;
+
+            // Set status to InProgress before starting extraction (separate transaction for immediate visibility)
+            await SetExtractionStatusAsync(sourceId, ExtractionStatus.InProgress);
+
+            try
             {
-                _logger.LogInformation("Fragment extraction job started for source {SourceId}", sourceId);
+                await ExecuteWithTransactionAsync(async () =>
+                {
+                    _logger.LogInformation("Fragment extraction job started for source {SourceId}", sourceId);
 
-                var result = await _fragmentExtractionService.ExtractFragmentsAsync(sourceId);
-                fragmentCount = result.FragmentCount;
+                    var result = await _fragmentExtractionService.ExtractFragmentsAsync(sourceId);
+                    fragmentCount = result.FragmentCount;
 
-                // Set status to Completed within the same transaction as fragment creation
-                // Zero fragments is a successful outcome, not a failure
-                await SetExtractionStatusInTransactionAsync(sourceId, ExtractionStatus.Completed);
+                    // Set status to Completed within the same transaction as fragment creation
+                    // Zero fragments is a successful outcome, not a failure
+                    await SetExtractionStatusInTransactionAsync(sourceId, ExtractionStatus.Completed);
 
-                _logger.LogInformation("Fragment extraction job completed for source {SourceId}. Extracted {Count} fragments.", 
-                    sourceId, fragmentCount);
+                    _logger.LogInformation("Fragment extraction job completed for source {SourceId}. Extracted {Count} fragments.", 
+                        sourceId, fragmentCount);
                 
-                success = true;
-            });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Fragment extraction job failed for source {SourceId}", sourceId);
-            errorMessage = ex.Message;
-            success = false;
+                    success = true;
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Fragment extraction job failed for source {SourceId}", sourceId);
+                errorMessage = ex.Message;
+                success = false;
 
-            // Set status to Failed (separate transaction since main transaction was rolled back)
-            await SetExtractionStatusAsync(sourceId, ExtractionStatus.Failed);
-        }
-        finally
-        {
-            // Send SignalR notification regardless of success/failure
-            var message = success 
-                ? $"Successfully extracted {fragmentCount} fragment{(fragmentCount != 1 ? "s" : "")}" 
-                : $"Fragment extraction failed: {errorMessage}";
+                // Set status to Failed (separate transaction since main transaction was rolled back)
+                await SetExtractionStatusAsync(sourceId, ExtractionStatus.Failed);
+            }
+            finally
+            {
+                // Send SignalR notification regardless of success/failure
+                var message = success 
+                    ? $"Successfully extracted {fragmentCount} fragment{(fragmentCount != 1 ? "s" : "")}" 
+                    : $"Fragment extraction failed: {errorMessage}";
             
-            await _notificationService.SendFragmentExtractionCompleteAsync(sourceId, fragmentCount, success, message);
+                await _notificationService.SendFragmentExtractionCompleteAsync(sourceId, fragmentCount, success, message);
+            }
+        }
+        catch (DistributedLockTimeoutException)
+        {
+            // Another job of same type is already running. Just return success.
         }
     }
 
