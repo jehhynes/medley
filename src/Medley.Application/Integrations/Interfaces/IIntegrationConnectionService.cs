@@ -11,5 +11,5 @@ public interface IIntegrationConnectionService
 {
     IntegrationType IntegrationType { get; }
     bool ValidateConfiguration(Dictionary<string, string> config);
-    Task<ConnectionStatus> TestConnectionAsync(Integration integration);
+    Task<ConnectionStatus> TestConnectionAsync(Integration integration, CancellationToken cancellationToken = default);
 }

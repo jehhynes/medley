@@ -1,3 +1,4 @@
+using Hangfire.Server;
 using Medley.Application.Interfaces;
 using Medley.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -37,14 +38,14 @@ public class SmartTagProcessorJob : BaseHangfireJob<SmartTagProcessorJob>
     /// Processes up to 100 sources and reschedules itself if more remain.
     /// </summary>
     [DisableMultipleQueuedItemsFilter]
-    public async Task ExecuteAsync()
+    public async Task ExecuteAsync(PerformContext context, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Starting SmartTagProcessor job");
 
         try
         {
             // Check organization settings (no transaction needed for read-only check)
-            var organization = await _organizationRepository.Query().FirstOrDefaultAsync();
+            var organization = await _organizationRepository.Query().FirstOrDefaultAsync(cancellationToken);
             if (organization == null)
             {
                 throw new InvalidOperationException("No organization found; smart tagging cannot proceed.");
@@ -62,7 +63,7 @@ public class SmartTagProcessorJob : BaseHangfireJob<SmartTagProcessorJob>
                 .Where(s => s.TagsGenerated == null)
                 .Select(s => s.Id)
                 .Take(BatchSize)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
 
             if (sourceIds.Count == 0)
             {
@@ -79,11 +80,17 @@ public class SmartTagProcessorJob : BaseHangfireJob<SmartTagProcessorJob>
             // Process each source in its own transaction
             foreach (var sourceId in sourceIds)
             {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    _logger.LogInformation("Cancellation requested. Stopping batch processing.");
+                    break;
+                }
+
                 try
                 {
                     await ExecuteWithTransactionAsync(async () =>
                     {
-                        var result = await _taggingService.GenerateTagsAsync(sourceId, force: false);
+                        var result = await _taggingService.GenerateTagsAsync(sourceId, force: false, cancellationToken);
                         
                         if (result.Processed)
                         {
@@ -113,7 +120,7 @@ public class SmartTagProcessorJob : BaseHangfireJob<SmartTagProcessorJob>
                 
                 // Schedule the next batch to run in 1 second
                 _backgroundJobService.Schedule<SmartTagProcessorJob>(
-                    job => job.ExecuteAsync(),
+                    job => job.ExecuteAsync(default!, default),
                     TimeSpan.FromSeconds(1));
             }
             else

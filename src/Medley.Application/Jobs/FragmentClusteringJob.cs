@@ -46,7 +46,7 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
                     var candidate = await _fragmentRepository.Query()
                         .Where(f => !f.IsCluster && !f.ClusteringProcessed.HasValue && f.Embedding != null)
                         .OrderBy(f => f.CreatedAt) // FIFO
-                        .FirstOrDefaultAsync();
+                        .FirstOrDefaultAsync(cancellationToken);
 
                     if (candidate == null)
                     {
@@ -63,7 +63,8 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
                     var similarResults = await _fragmentRepository.FindSimilarAsync(
                         candidate.Embedding!.ToArray(),
                         limit: 100,
-                        threshold: maxDistance);
+                        threshold: maxDistance,
+                        cancellationToken);
 
                     var similarFragments = similarResults
                         .Select(r => r.Fragment)
@@ -83,7 +84,7 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
                     _logger.LogInformation("Found {Count} similar fragments to cluster.", similarFragments.Count);
 
                     // 5) Pass contents to LLM
-                    var clusterResponse = await GenerateClusterAsync(clusterParticipants);
+                    var clusterResponse = await GenerateClusterAsync(clusterParticipants, cancellationToken);
                     if (clusterResponse == null)
                     {
                         _logger.LogWarning("Failed to generate cluster content for {FragmentId}. Marking as processed to avoid loops.", candidate.Id);
@@ -131,7 +132,7 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
         }
     }
 
-    private async Task<FragmentClusteringResponse?> GenerateClusterAsync(List<Fragment> fragments)
+    private async Task<FragmentClusteringResponse?> GenerateClusterAsync(List<Fragment> fragments, CancellationToken cancellationToken = default)
     {
         var serializedFragments = JsonSerializer.Serialize(fragments.Select(f => new 
         {
@@ -149,7 +150,8 @@ If conflicts exist then prefer the details from the more recent fragments.";
 
         return await _aiProcessingService.ProcessStructuredPromptAsync<FragmentClusteringResponse>(
             userPrompt: serializedFragments,
-            systemPrompt: systemPrompt);
+            systemPrompt: systemPrompt,
+            cancellationToken: cancellationToken);
     }
 }
 

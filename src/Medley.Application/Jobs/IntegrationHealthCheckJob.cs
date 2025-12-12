@@ -1,3 +1,4 @@
+using Hangfire.Server;
 using Medley.Application.Integrations.Interfaces;
 using Medley.Application.Interfaces;
 using Medley.Domain.Entities;
@@ -23,7 +24,7 @@ public class IntegrationHealthCheckJob : BaseHangfireJob<IntegrationHealthCheckJ
     /// <summary>
     /// Performs health checks on all integrations
     /// </summary>
-    public async Task CheckAllIntegrationsHealthAsync()
+    public async Task CheckAllIntegrationsHealthAsync(PerformContext context, CancellationToken cancellationToken)
     {
         await ExecuteWithTransactionAsync(async () =>
         {
@@ -33,9 +34,15 @@ public class IntegrationHealthCheckJob : BaseHangfireJob<IntegrationHealthCheckJ
 
             foreach (var integration in integrations)
             {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    _logger.LogInformation("Cancellation requested. Stopping health checks.");
+                    break;
+                }
+
                 try
                 {
-                    await _integrationService.TestConnectionAsync(integration);
+                    await _integrationService.TestConnectionAsync(integration, cancellationToken);
                     checkedCount++;
                     _logger.LogDebug("Health check completed for integration {IntegrationId} ({IntegrationName})", 
                         integration.Id, integration.DisplayName);
@@ -57,25 +64,25 @@ public class IntegrationHealthCheckJob : BaseHangfireJob<IntegrationHealthCheckJ
     /// Performs health check on a specific integration
     /// </summary>
     /// <param name="integrationId">The ID of the integration to check</param>
-    public async Task CheckIntegrationHealthAsync(Guid integrationId)
+    public async Task CheckIntegrationHealthAsync(PerformContext context, CancellationToken cancellationToken, Guid integrationId)
     {
         // If integrationId is Guid.Empty, check all integrations
         if (integrationId == Guid.Empty)
         {
-            await CheckAllIntegrationsHealthAsync();
+            await CheckAllIntegrationsHealthAsync(context, cancellationToken);
             return;
         }
 
         await ExecuteWithTransactionAsync(async () =>
         {
-            var integration = await _integrationService.GetByIdAsync(integrationId);
+            var integration = await _integrationService.GetByIdAsync(integrationId, cancellationToken);
             if (integration == null)
             {
                 _logger.LogWarning("Integration {IntegrationId} not found for health check", integrationId);
                 return;
             }
 
-            await _integrationService.TestConnectionAsync(integration);
+            await _integrationService.TestConnectionAsync(integration, cancellationToken);
             
             _logger.LogInformation("Health check completed for integration {IntegrationId} ({IntegrationName})", 
                 integration.Id, integration.DisplayName);

@@ -1,3 +1,4 @@
+using Hangfire.Server;
 using Medley.Application.Integrations.Interfaces;
 using Medley.Application.Integrations.Models.Fellow;
 using Medley.Application.Integrations.Services;
@@ -34,7 +35,7 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
     /// <summary>
     /// Syncs Fellow.ai transcripts for all connected integrations
     /// </summary>
-    public async Task SyncTranscriptsAsync()
+    public async Task SyncTranscriptsAsync(PerformContext context, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Starting Fellow transcript sync");
 
@@ -52,9 +53,15 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
 
         foreach (var integration in fellowIntegrations)
         {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogInformation("Cancellation requested. Stopping transcript sync.");
+                break;
+            }
+
             try
             {
-                await SyncIntegrationTranscriptsAsync(integration);
+                await SyncIntegrationTranscriptsAsync(integration, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -70,7 +77,7 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
     /// <summary>
     /// Syncs transcripts for a specific integration
     /// </summary>
-    private async Task SyncIntegrationTranscriptsAsync(Integration integration)
+    private async Task SyncIntegrationTranscriptsAsync(Integration integration, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(integration.ApiKey) || string.IsNullOrWhiteSpace(integration.BaseUrl))
         {
@@ -102,7 +109,7 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
                 .Where(s => s.Integration.Id == integration.Id && s.Date.HasValue)
                 .OrderByDescending(s => s.Date)
                 .Select(s => s.Date)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken);
 
             if (lastSourceDate.HasValue)
             {
@@ -128,6 +135,12 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
 
         do
         {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogInformation("Cancellation requested. Stopping page processing.");
+                break;
+            }
+
             pageNumber++;
             if (!string.IsNullOrWhiteSpace(cursor))
             {
@@ -137,7 +150,8 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
             var response = await _fellowService.ListRecordingsAsync(
                 integration.ApiKey,
                 integration.BaseUrl,
-                options);
+                options,
+                cancellationToken);
 
             if (response?.Recordings?.Data == null || response.Recordings.Data.Count == 0)
             {
@@ -146,7 +160,7 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
             }
 
             // Process this page in a transaction
-            (int processedCount, int createdCount, int skippedCount) = await ProcessPage(integration, response);
+            (int processedCount, int createdCount, int skippedCount) = await ProcessPage(integration, response, cancellationToken);
 
             totalProcessedCount += processedCount;
             totalCreatedCount += createdCount;
@@ -177,7 +191,7 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
             integration.Id, integration.DisplayName, totalProcessedCount, totalCreatedCount, totalSkippedCount);
     }
 
-    private async Task<(int processedCount, int createdCount, int skippedCount)> ProcessPage(Integration integration, FellowRecordingsResponse response)
+    private async Task<(int processedCount, int createdCount, int skippedCount)> ProcessPage(Integration integration, FellowRecordingsResponse response, CancellationToken cancellationToken = default)
     {
         return await ExecuteWithTransactionAsync(async () =>
         {
@@ -205,7 +219,7 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
 
                 // Check if source already exists
                 var existingSource = await _sourceRepository.Query()
-                    .FirstOrDefaultAsync(s => s.ExternalId == recording.Id);
+                    .FirstOrDefaultAsync(s => s.ExternalId == recording.Id, cancellationToken);
 
                 if (existingSource != null)
                 {

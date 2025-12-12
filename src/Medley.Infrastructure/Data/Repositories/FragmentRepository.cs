@@ -22,7 +22,7 @@ public class FragmentRepository : Repository<Fragment>, IFragmentRepository
     /// <summary>
     /// Finds fragments similar to the given embedding vector using L2 distance
     /// </summary>
-    public async Task<IEnumerable<FragmentSimilarityResult>> FindSimilarAsync(float[] embedding, int limit, double? threshold = null)
+    public async Task<IEnumerable<FragmentSimilarityResult>> FindSimilarAsync(float[] embedding, int limit, double? threshold = null, CancellationToken cancellationToken = default)
     {
         var vector = new Vector(embedding);
 
@@ -38,7 +38,7 @@ public class FragmentRepository : Repository<Fragment>, IFragmentRepository
             .OrderBy(f => f.Embedding!.CosineDistance(vector))
             .Take(limit)
             .Select(f => new { Fragment = f, Distance = f.Embedding!.CosineDistance(vector) })
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         return results.Select(r => new FragmentSimilarityResult
         {

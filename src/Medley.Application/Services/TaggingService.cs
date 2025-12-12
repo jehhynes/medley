@@ -37,16 +37,16 @@ public class TaggingService : ITaggingService
         _logger = logger;
     }
 
-    public async Task<TaggingResult> GenerateTagsAsync(Guid sourceId, bool force = false)
+    public async Task<TaggingResult> GenerateTagsAsync(Guid sourceId, bool force = false, CancellationToken cancellationToken = default)
     {
-        var (emailDomain, tagTypes) = await GetOrganizationContextAsync();
+        var (emailDomain, tagTypes) = await GetOrganizationContextAsync(cancellationToken);
 
         var source = await _sourceRepository.Query()
             .Include(s => s.Tags)
                 .ThenInclude(t => t.TagType)
             .Include(s => s.Tags)
                 .ThenInclude(t => t.TagOption)
-            .FirstOrDefaultAsync(s => s.Id == sourceId);
+            .FirstOrDefaultAsync(s => s.Id == sourceId, cancellationToken);
 
         if (source == null)
         {
@@ -68,12 +68,12 @@ public class TaggingService : ITaggingService
             };
         }
 
-        var result = await ProcessSourceAsync(source, emailDomain, tagTypes);
+        var result = await ProcessSourceAsync(source, emailDomain, tagTypes, cancellationToken);
         
         return result;
     }
 
-    private async Task<TaggingResult> ProcessSourceAsync(Source source, string? emailDomain, List<TagType> tagTypes)
+    private async Task<TaggingResult> ProcessSourceAsync(Source source, string? emailDomain, List<TagType> tagTypes, CancellationToken cancellationToken = default)
     {
         SmartTagResponse? response = null;
 
@@ -81,7 +81,7 @@ public class TaggingService : ITaggingService
 
         try
         {
-            response = await GenerateSmartTagsAsync(source, emailDomain, tagTypes);
+            response = await GenerateSmartTagsAsync(source, emailDomain, tagTypes, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -90,7 +90,7 @@ public class TaggingService : ITaggingService
 
         if (response?.Tags != null && response.Tags.Count > 0 && tagTypes.Count > 0)
         {
-            await UpsertTagsAsync(source, response.Tags, tagTypes);
+            await UpsertTagsAsync(source, response.Tags, tagTypes, cancellationToken);
         }
 
         source.TagsGenerated = DateTimeOffset.UtcNow;
@@ -106,10 +106,10 @@ public class TaggingService : ITaggingService
         };
     }
 
-    private async Task<(string? EmailDomain, List<TagType> TagTypes)> GetOrganizationContextAsync()
+    private async Task<(string? EmailDomain, List<TagType> TagTypes)> GetOrganizationContextAsync(CancellationToken cancellationToken = default)
     {
         var organization = await _organizationRepository.Query()
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(cancellationToken);
 
         if (organization == null)
         {
@@ -120,7 +120,7 @@ public class TaggingService : ITaggingService
 
         var tagTypes = await _tagTypeRepository.Query()
             .Include(t => t.AllowedValues)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         if (tagTypes.Count == 0)
         {
@@ -130,14 +130,15 @@ public class TaggingService : ITaggingService
         return (emailDomain, tagTypes);
     }
 
-    private async Task<SmartTagResponse?> GenerateSmartTagsAsync(Source source, string? emailDomain, List<TagType> tagTypes)
+    private async Task<SmartTagResponse?> GenerateSmartTagsAsync(Source source, string? emailDomain, List<TagType> tagTypes, CancellationToken cancellationToken = default)
     {
         var systemPrompt = BuildSystemPrompt(tagTypes);
         var userPrompt = BuildUserPrompt(source);
 
         return await _aiProcessingService.ProcessStructuredPromptAsync<SmartTagResponse>(
             userPrompt: userPrompt,
-            systemPrompt: systemPrompt);
+            systemPrompt: systemPrompt,
+            cancellationToken: cancellationToken);
     }
 
     private string BuildSystemPrompt(List<TagType> tagTypes)
@@ -238,7 +239,7 @@ public class TaggingService : ITaggingService
         return null;
     }
 
-    private async Task UpsertTagsAsync(Source source, List<SmartTag> tags, List<TagType> tagTypes)
+    private async Task UpsertTagsAsync(Source source, List<SmartTag> tags, List<TagType> tagTypes, CancellationToken cancellationToken = default)
     {
         foreach (var tag in tags)
         {

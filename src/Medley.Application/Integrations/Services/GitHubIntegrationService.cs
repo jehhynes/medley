@@ -15,13 +15,13 @@ public class GitHubIntegrationService : BaseIntegrationConnectionService
 
     public override IntegrationType IntegrationType => IntegrationType.GitHub;
 
-    protected override async Task<bool> TestConnectionInternalAsync(string apiKey, string baseUrl)
+    protected override async Task<bool> TestConnectionInternalAsync(string apiKey, string baseUrl, CancellationToken cancellationToken = default)
     {
         try
         {
             // TODO: Implement actual GitHub API connection test
             // For now, we'll simulate a connection test
-            await Task.Delay(100); // Simulate API call
+            await Task.Delay(100, cancellationToken); // Simulate API call
 
             // Basic validation - in real implementation, make actual API call to GitHub
             if (string.IsNullOrWhiteSpace(apiKey) || string.IsNullOrWhiteSpace(baseUrl))

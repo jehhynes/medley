@@ -12,12 +12,14 @@ public interface IAiProcessingService
     /// <param name="systemPrompt">Optional system prompt to set context and behavior</param>
     /// <param name="assistantPrompt">Optional assistant prompt for prefilling the response</param>
     /// <param name="temperature">Temperature setting (0.0 to 1.0)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>AI response text</returns>
     Task<string> ProcessPromptAsync(
         string userPrompt, 
         string? systemPrompt = null, 
         string? assistantPrompt = null,
-        double? temperature = null);
+        double? temperature = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Process a structured prompt with JSON response
@@ -28,10 +30,12 @@ public interface IAiProcessingService
     /// <param name="systemPrompt">Optional system prompt to set context and behavior</param>
     /// <param name="assistantPrompt">Optional assistant prompt for prefilling the response</param>
     /// <param name="temperature">Temperature setting (0.0 to 1.0)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Deserialized object of type T</returns>
     Task<T> ProcessStructuredPromptAsync<T>(
         string userPrompt, 
         string? systemPrompt = null, 
         string? assistantPrompt = null,
-        double? temperature = null);
+        double? temperature = null,
+        CancellationToken cancellationToken = default);
 }

@@ -42,14 +42,15 @@ public class BedrockAiService : IAiProcessingService
         string userPrompt, 
         string? systemPrompt = null, 
         string? assistantPrompt = null,
-        double? temperature = null)
+        double? temperature = null,
+        CancellationToken cancellationToken = default)
     {
         try
         {
             var messages = BuildMessages(userPrompt, systemPrompt, assistantPrompt);
             var options = BuildChatOptions(temperature);
 
-            var response = await _chatClient.GetResponseAsync(messages, options);
+            var response = await _chatClient.GetResponseAsync(messages, options, cancellationToken);
 
             return response.Text;
         }
@@ -64,14 +65,15 @@ public class BedrockAiService : IAiProcessingService
         string userPrompt, 
         string? systemPrompt = null, 
         string? assistantPrompt = null,
-        double? temperature = null)
+        double? temperature = null,
+        CancellationToken cancellationToken = default)
     {
         try
         {
             var messages = BuildMessages(userPrompt, systemPrompt, assistantPrompt);
             var options = BuildChatOptions(temperature, ChatResponseFormat.Json);
 
-            var response = await _chatClient.GetResponseAsync<T>(messages, options, useJsonSchemaResponseFormat: false);
+            var response = await _chatClient.GetResponseAsync<T>(messages, options, useJsonSchemaResponseFormat: false, cancellationToken);
 
             //Strip the markdown json fences that Claude likes to add before deserializing
             if (response.Messages.Count == 1 && response.Messages.Single().Contents.Count == 1 && response.Messages.Single().Contents.Single() is TextContent textContent

@@ -54,7 +54,7 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
                     .Where(f => f.Embedding == null)
                     .OrderBy(f => f.CreatedAt) // Process oldest first
                     .Take(BatchSize) // Limit to BatchSize fragments per run to avoid long-running jobs
-                    .ToListAsync();
+                    .ToListAsync(cancellationToken);
 
                 shouldRequeue = fragmentsWithoutEmbeddings.Count == BatchSize;
 

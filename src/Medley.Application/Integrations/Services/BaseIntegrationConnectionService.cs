@@ -31,7 +31,7 @@ public abstract class BaseIntegrationConnectionService : IIntegrationConnectionS
         return true;
     }
 
-    public virtual async Task<ConnectionStatus> TestConnectionAsync(Integration integration)
+    public virtual async Task<ConnectionStatus> TestConnectionAsync(Integration integration, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -49,7 +49,7 @@ public abstract class BaseIntegrationConnectionService : IIntegrationConnectionS
                 return ConnectionStatus.Disconnected;
             }
 
-            var isConnected = await TestConnectionInternalAsync(integration.ApiKey, integration.BaseUrl);
+            var isConnected = await TestConnectionInternalAsync(integration.ApiKey, integration.BaseUrl, cancellationToken);
             return isConnected ? ConnectionStatus.Connected : ConnectionStatus.Disconnected;
         }
         catch (Exception ex)
@@ -60,5 +60,5 @@ public abstract class BaseIntegrationConnectionService : IIntegrationConnectionS
         }
     }
 
-    protected abstract Task<bool> TestConnectionInternalAsync(string apiKey, string baseUrl);
+    protected abstract Task<bool> TestConnectionInternalAsync(string apiKey, string baseUrl, CancellationToken cancellationToken = default);
 }

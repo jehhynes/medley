@@ -168,7 +168,7 @@ public class SourcesApiController : ControllerBase
 
             // Queue the background job
             var jobId = _backgroundJobService.Enqueue<FragmentExtractionJob>(
-                job => job.ExecuteAsync(id));
+                job => job.ExecuteAsync(default!, default, id));
 
             _logger.LogInformation("Fragment extraction job {JobId} queued for source {SourceId}", jobId, id);
 

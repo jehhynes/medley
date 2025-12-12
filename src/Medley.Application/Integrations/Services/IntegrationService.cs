@@ -29,9 +29,9 @@ public class IntegrationService : IIntegrationService
         //_notificationService = notificationService;
     }
 
-    public async Task<Integration?> GetByIdAsync(Guid id)
+    public async Task<Integration?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await _integrationRepository.GetByIdAsync(id);
+        return await _integrationRepository.GetByIdAsync(id, cancellationToken);
     }
 
     public IQueryable<Integration> Query()
@@ -39,19 +39,19 @@ public class IntegrationService : IIntegrationService
         return _integrationRepository.Query();
     }
 
-    public async Task SaveAsync(Integration integration)
+    public async Task SaveAsync(Integration integration, CancellationToken cancellationToken = default)
     {
         await _integrationRepository.SaveAsync(integration);
     }
 
-    public async Task DeleteAsync(Integration integration)
+    public async Task DeleteAsync(Integration integration, CancellationToken cancellationToken = default)
     {
         // TODO: Implement delete functionality when IRepository supports it
         // For now, we'll throw a not implemented exception
         throw new NotImplementedException("Delete functionality not yet implemented in IRepository");
     }
 
-    public async Task<ConnectionStatus> TestConnectionAsync(Integration integration)
+    public async Task<ConnectionStatus> TestConnectionAsync(Integration integration, CancellationToken cancellationToken = default)
     {
         if (!_connectionServices.TryGetValue(integration.Type, out var connectionService))
         {
@@ -70,7 +70,7 @@ public class IntegrationService : IIntegrationService
         }
 
         var previousStatus = integration.Status;
-        var status = await connectionService.TestConnectionAsync(integration);
+        var status = await connectionService.TestConnectionAsync(integration, cancellationToken);
         integration.Status = status;
         integration.LastHealthCheckAt = DateTimeOffset.UtcNow;
         

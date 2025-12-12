@@ -42,15 +42,16 @@ public class FragmentExtractionService
     /// Extracts fragments from a source using AI
     /// </summary>
     /// <param name="sourceId">The source ID to extract fragments from</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Result containing fragment count and extraction message</returns>
-    public async Task<FragmentExtractionResult> ExtractFragmentsAsync(Guid sourceId)
+    public async Task<FragmentExtractionResult> ExtractFragmentsAsync(Guid sourceId, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Starting fragment extraction for source {SourceId}", sourceId);
 
         // Load source with content
         var source = await _sourceRepository.Query()
             .Include(s => s.Integration)
-            .FirstOrDefaultAsync(s => s.Id == sourceId);
+            .FirstOrDefaultAsync(s => s.Id == sourceId, cancellationToken);
 
         if (source == null)
         {
@@ -69,7 +70,7 @@ public class FragmentExtractionService
 
         // Retrieve the fragment extraction prompt template
         var template = await _templateRepository.Query()
-            .FirstOrDefaultAsync(t => t.Type == TemplateType.FragmentExtraction);
+            .FirstOrDefaultAsync(t => t.Type == TemplateType.FragmentExtraction, cancellationToken);
 
         if (template == null)
         {
@@ -79,7 +80,7 @@ public class FragmentExtractionService
 
         // Load organization context template (if configured)
         var orgContextTemplate = await _templateRepository.Query()
-            .FirstOrDefaultAsync(t => t.Type == TemplateType.OrganizationContext);
+            .FirstOrDefaultAsync(t => t.Type == TemplateType.OrganizationContext, cancellationToken);
 
         // Build system prompt with organization context if available
         var systemPrompt = template.Content;
@@ -102,8 +103,8 @@ public class FragmentExtractionService
             
             try
             {
-                var result = await ProcessSingleContentAsync(source.Content, systemPrompt);
-                return await SaveFragmentsAndReturnResultAsync(source, result.Fragments, result.Messages);
+                var result = await ProcessSingleContentAsync(source.Content, systemPrompt, cancellationToken);
+                return await SaveFragmentsAndReturnResultAsync(source, result.Fragments, result.Messages, cancellationToken);
             }
             catch (TimeoutException ex)
             {
@@ -116,8 +117,8 @@ public class FragmentExtractionService
         if (shouldChunk)
         {
             _logger.LogInformation("Processing content with chunking (length: {Length} characters)", source.Content.Length);
-            var result = await ProcessChunkedContentAsync(source.Content, systemPrompt);
-            return await SaveFragmentsAndReturnResultAsync(source, result.Fragments, result.Messages);
+            var result = await ProcessChunkedContentAsync(source.Content, systemPrompt, cancellationToken);
+            return await SaveFragmentsAndReturnResultAsync(source, result.Fragments, result.Messages, cancellationToken);
         }
 
         throw new InvalidOperationException("Fragment extraction failed unexpectedly");
@@ -125,11 +126,13 @@ public class FragmentExtractionService
 
     private async Task<(List<FragmentDto> Fragments, List<string> Messages)> ProcessSingleContentAsync(
         string content, 
-        string systemPrompt)
+        string systemPrompt,
+        CancellationToken cancellationToken = default)
     {
         var extractionResponse = await _aiService.ProcessStructuredPromptAsync<FragmentExtractionResponse>(
             userPrompt: content,
-            systemPrompt: systemPrompt);
+            systemPrompt: systemPrompt,
+            cancellationToken: cancellationToken);
 
         var fragments = new List<FragmentDto>();
         var messages = new List<string>();
@@ -153,7 +156,8 @@ public class FragmentExtractionService
 
     private async Task<(List<FragmentDto> Fragments, List<string> Messages)> ProcessChunkedContentAsync(
         string content, 
-        string systemPrompt)
+        string systemPrompt,
+        CancellationToken cancellationToken = default)
     {
         // Chunk the content using Semantic Kernel's TextChunker
 #pragma warning disable SKEXP0050 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
@@ -173,7 +177,8 @@ public class FragmentExtractionService
             {
                 var extractionResponse = await _aiService.ProcessStructuredPromptAsync<FragmentExtractionResponse>(
                     userPrompt: chunk,
-                    systemPrompt: systemPrompt);
+                    systemPrompt: systemPrompt,
+                    cancellationToken: cancellationToken);
 
                 if (extractionResponse != null)
                 {
@@ -215,7 +220,8 @@ public class FragmentExtractionService
     private async Task<FragmentExtractionResult> SaveFragmentsAndReturnResultAsync(
         Source source,
         List<FragmentDto> fragmentDtos,
-        List<string> messages)
+        List<string> messages,
+        CancellationToken cancellationToken = default)
     {
 
         // Combine all messages into a single message

@@ -38,7 +38,7 @@ public class FellowIntegrationService : BaseIntegrationConnectionService
         return httpClient;
     }
 
-    protected override async Task<bool> TestConnectionInternalAsync(string apiKey, string baseUrl)
+    protected override async Task<bool> TestConnectionInternalAsync(string apiKey, string baseUrl, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -49,7 +49,7 @@ public class FellowIntegrationService : BaseIntegrationConnectionService
             }
 
             // Test connection using the /me endpoint
-            var meResponse = await GetMeAsync(apiKey, baseUrl);
+            var meResponse = await GetMeAsync(apiKey, baseUrl, cancellationToken);
 
             if (meResponse?.User == null || meResponse.Workspace == null)
             {
@@ -78,20 +78,21 @@ public class FellowIntegrationService : BaseIntegrationConnectionService
     /// </summary>
     /// <param name="apiKey">Fellow.ai API key</param>
     /// <param name="baseUrl">Base URL for Fellow.ai API</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>User and workspace information</returns>
-    public async Task<FellowMeResponse?> GetMeAsync(string apiKey, string baseUrl)
+    public async Task<FellowMeResponse?> GetMeAsync(string apiKey, string baseUrl, CancellationToken cancellationToken = default)
     {
-        await EnforceRateLimitAsync();
+        await EnforceRateLimitAsync(cancellationToken);
 
         using var httpClient = CreateAuthenticatedClient(apiKey, baseUrl);
         var requestUri = "/api/v1/me";
 
         Logger.LogDebug("Fetching Fellow user info: {RequestUri}", requestUri);
 
-        var response = await httpClient.GetAsync(requestUri);
+        var response = await httpClient.GetAsync(requestUri, cancellationToken);
         response.EnsureSuccessStatusCode();
 
-        var content = await response.Content.ReadAsStringAsync();
+        var content = await response.Content.ReadAsStringAsync(cancellationToken);
         var meResponse = JsonSerializer.Deserialize<FellowMeResponse>(content, _jsonOptions);
 
         Logger.LogInformation("Successfully fetched user info from Fellow.ai");
@@ -105,23 +106,25 @@ public class FellowIntegrationService : BaseIntegrationConnectionService
     /// <param name="apiKey">Fellow.ai API key</param>
     /// <param name="baseUrl">Base URL for Fellow.ai API</param>
     /// <param name="recordingId">The recording ID to retrieve</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Recording details</returns>
     public async Task<FellowRecordingResponse?> GetRecordingAsync(
         string apiKey,
         string baseUrl,
-        string recordingId)
+        string recordingId,
+        CancellationToken cancellationToken = default)
     {
-        await EnforceRateLimitAsync();
+        await EnforceRateLimitAsync(cancellationToken);
 
         using var httpClient = CreateAuthenticatedClient(apiKey, baseUrl);
         var requestUri = $"/api/v1/recording/{recordingId}";
 
         Logger.LogDebug("Fetching Fellow recording: {RequestUri}", requestUri);
 
-        var response = await httpClient.GetAsync(requestUri);
+        var response = await httpClient.GetAsync(requestUri, cancellationToken);
         response.EnsureSuccessStatusCode();
 
-        var content = await response.Content.ReadAsStringAsync();
+        var content = await response.Content.ReadAsStringAsync(cancellationToken);
         var recordingResponse = JsonSerializer.Deserialize<FellowRecordingResponse>(content, _jsonOptions);
 
         Logger.LogInformation("Successfully fetched recording {RecordingId} from Fellow.ai", recordingId);
@@ -135,13 +138,15 @@ public class FellowIntegrationService : BaseIntegrationConnectionService
     /// <param name="apiKey">Fellow.ai API key</param>
     /// <param name="baseUrl">Base URL for Fellow.ai API</param>
     /// <param name="options">Optional request options for pagination, includes, and filters</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Paginated list of recordings</returns>
     public async Task<FellowRecordingsResponse?> ListRecordingsAsync(
         string apiKey,
         string baseUrl,
-        FellowRecordingsRequestOptions? options = null)
+        FellowRecordingsRequestOptions? options = null,
+        CancellationToken cancellationToken = default)
     {
-        await EnforceRateLimitAsync();
+        await EnforceRateLimitAsync(cancellationToken);
 
         using var httpClient = CreateAuthenticatedClient(apiKey, baseUrl);
         var requestUri = "/api/v1/recordings";
@@ -223,10 +228,10 @@ public class FellowIntegrationService : BaseIntegrationConnectionService
         var jsonContent = JsonSerializer.Serialize(requestBody);
         var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
 
-        var response = await httpClient.PostAsync(requestUri, content);
+        var response = await httpClient.PostAsync(requestUri, content, cancellationToken);
         response.EnsureSuccessStatusCode();
 
-        var responseContent = await response.Content.ReadAsStringAsync();
+        var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
         var recordingsResponse = JsonSerializer.Deserialize<FellowRecordingsResponse>(responseContent, _jsonOptions);
 
         Logger.LogInformation("Successfully fetched {Count} recordings from Fellow.ai",
@@ -238,9 +243,9 @@ public class FellowIntegrationService : BaseIntegrationConnectionService
     /// <summary>
     /// Enforces 500ms minimum delay between API calls
     /// </summary>
-    private static async Task EnforceRateLimitAsync()
+    private static async Task EnforceRateLimitAsync(CancellationToken cancellationToken = default)
     {
-        await _rateLimiter.WaitAsync();
+        await _rateLimiter.WaitAsync(cancellationToken);
         try
         {
             var timeSinceLastCall = DateTime.UtcNow - _lastApiCall;
@@ -248,7 +253,7 @@ public class FellowIntegrationService : BaseIntegrationConnectionService
 
             if (remainingDelay > 0)
             {
-                await Task.Delay(remainingDelay);
+                await Task.Delay(remainingDelay, cancellationToken);
             }
 
             _lastApiCall = DateTime.UtcNow;

@@ -46,7 +46,7 @@ public class FragmentExtractionJob : BaseHangfireJob<FragmentExtractionJob>
             string? errorMessage = null;
 
             // Set status to InProgress before starting extraction (separate transaction for immediate visibility)
-            await SetExtractionStatusAsync(sourceId, ExtractionStatus.InProgress);
+            await SetExtractionStatusAsync(sourceId, ExtractionStatus.InProgress, cancellationToken);
 
             try
             {
@@ -54,12 +54,12 @@ public class FragmentExtractionJob : BaseHangfireJob<FragmentExtractionJob>
                 {
                     _logger.LogInformation("Fragment extraction job started for source {SourceId}", sourceId);
 
-                    var result = await _fragmentExtractionService.ExtractFragmentsAsync(sourceId);
+                    var result = await _fragmentExtractionService.ExtractFragmentsAsync(sourceId, cancellationToken);
                     fragmentCount = result.FragmentCount;
 
                     // Set status to Completed within the same transaction as fragment creation
                     // Zero fragments is a successful outcome, not a failure
-                    await SetExtractionStatusInTransactionAsync(sourceId, ExtractionStatus.Completed);
+                    await SetExtractionStatusInTransactionAsync(sourceId, ExtractionStatus.Completed, cancellationToken);
 
                     _logger.LogInformation("Fragment extraction job completed for source {SourceId}. Extracted {Count} fragments.", 
                         sourceId, fragmentCount);
@@ -74,7 +74,7 @@ public class FragmentExtractionJob : BaseHangfireJob<FragmentExtractionJob>
                 success = false;
 
                 // Set status to Failed (separate transaction since main transaction was rolled back)
-                await SetExtractionStatusAsync(sourceId, ExtractionStatus.Failed);
+                await SetExtractionStatusAsync(sourceId, ExtractionStatus.Failed, cancellationToken);
             }
             finally
             {
@@ -95,13 +95,13 @@ public class FragmentExtractionJob : BaseHangfireJob<FragmentExtractionJob>
     /// <summary>
     /// Updates the extraction status for a source (uses separate transaction)
     /// </summary>
-    private async Task SetExtractionStatusAsync(Guid sourceId, ExtractionStatus status)
+    private async Task SetExtractionStatusAsync(Guid sourceId, ExtractionStatus status, CancellationToken cancellationToken = default)
     {
         try
         {
             await ExecuteWithTransactionAsync(async () =>
             {
-                await SetExtractionStatusInTransactionAsync(sourceId, status);
+                await SetExtractionStatusInTransactionAsync(sourceId, status, cancellationToken);
             });
         }
         catch (Exception ex)
@@ -114,10 +114,10 @@ public class FragmentExtractionJob : BaseHangfireJob<FragmentExtractionJob>
     /// <summary>
     /// Updates the extraction status for a source within the current transaction
     /// </summary>
-    private async Task SetExtractionStatusInTransactionAsync(Guid sourceId, ExtractionStatus status)
+    private async Task SetExtractionStatusInTransactionAsync(Guid sourceId, ExtractionStatus status, CancellationToken cancellationToken = default)
     {
         var source = await _sourceRepository.Query()
-            .FirstOrDefaultAsync(s => s.Id == sourceId);
+            .FirstOrDefaultAsync(s => s.Id == sourceId, cancellationToken);
 
         if (source != null)
         {

@@ -10,8 +10,9 @@ public interface IRepository<T> where T : class
     /// Gets an entity by its identifier
     /// </summary>
     /// <param name="id">The entity identifier</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>The entity if found, null otherwise</returns>
-    Task<T?> GetByIdAsync(Guid id);
+    Task<T?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets a queryable collection of entities

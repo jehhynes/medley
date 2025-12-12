@@ -7,7 +7,7 @@ public interface ITaggingService
     /// <summary>
     /// Tag a single source. When force is false, skips sources already tagged.
     /// </summary>
-    Task<TaggingResult> GenerateTagsAsync(Guid sourceId, bool force = false);
+    Task<TaggingResult> GenerateTagsAsync(Guid sourceId, bool force = false, CancellationToken cancellationToken = default);
 }
 
 public class TaggingResult
