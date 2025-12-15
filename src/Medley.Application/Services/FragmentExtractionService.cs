@@ -3,7 +3,6 @@ using Medley.Domain.Entities;
 using Medley.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.SemanticKernel.Text;
 using System.ComponentModel;
 using System.Text.Json;
 
@@ -15,23 +14,25 @@ namespace Medley.Application.Services;
 public class FragmentExtractionService
 {
     private readonly IAiProcessingService _aiService;
+    private readonly IContentChunkingService _chunkingService;
     private readonly IRepository<Source> _sourceRepository;
     private readonly IRepository<Fragment> _fragmentRepository;
     private readonly IRepository<Template> _templateRepository;
     private readonly ILogger<FragmentExtractionService> _logger;
 
     // Text chunking configuration
-    private const int MaxTokensPerChunk = 25000;
     private const int ChunkingThreshold = 90000; // Only chunk if content exceeds 90K characters
 
     public FragmentExtractionService(
         IAiProcessingService aiService,
+        IContentChunkingService chunkingService,
         IRepository<Source> sourceRepository,
         IRepository<Fragment> fragmentRepository,
         IRepository<Template> templateRepository,
         ILogger<FragmentExtractionService> logger)
     {
         _aiService = aiService;
+        _chunkingService = chunkingService;
         _sourceRepository = sourceRepository;
         _fragmentRepository = fragmentRepository;
         _templateRepository = templateRepository;
@@ -117,7 +118,7 @@ public class FragmentExtractionService
         if (shouldChunk)
         {
             _logger.LogInformation("Processing content with chunking (length: {Length} characters)", source.Content.Length);
-            var result = await ProcessChunkedContentAsync(source.Content, systemPrompt, cancellationToken);
+            var result = await ProcessChunkedContentAsync(source, systemPrompt, cancellationToken);
             return await SaveFragmentsAndReturnResultAsync(source, result.Fragments, result.Messages, cancellationToken);
         }
 
@@ -155,28 +156,30 @@ public class FragmentExtractionService
     }
 
     private async Task<(List<FragmentDto> Fragments, List<string> Messages)> ProcessChunkedContentAsync(
-        string content, 
+        Source source, 
         string systemPrompt,
         CancellationToken cancellationToken = default)
     {
-        // Chunk the content using Semantic Kernel's TextChunker
-#pragma warning disable SKEXP0050 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-        var contentChunks = TextChunker.SplitPlainTextLines(content, MaxTokensPerChunk);
-#pragma warning restore SKEXP0050 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-        var chunkList = contentChunks.ToList();
-        _logger.LogInformation("Content chunked into {ChunkCount} chunks for processing", chunkList.Count);
+        // Use the chunking service to intelligently chunk the content
+        var contentChunks = await _chunkingService.ChunkContentAsync(source, cancellationToken);
+
+        if (contentChunks.Count == 0)
+        {
+            _logger.LogWarning("Chunking service returned no chunks for source {SourceId}", source.Id);
+            return (new List<FragmentDto>(), new List<string>());
+        }
 
         // Process all chunks in parallel
-        var chunkTasks = chunkList.Select(async (chunk, index) =>
+        var chunkTasks = contentChunks.Select(async chunk =>
         {
-            var chunkNumber = index + 1;
-            _logger.LogInformation("Processing chunk {ChunkNumber} of {TotalChunks} (length: {ChunkLength} characters)",
-                chunkNumber, chunkList.Count, chunk.Length);
+            var chunkNumber = chunk.Index + 1;
+            _logger.LogInformation("Processing chunk {ChunkNumber} of {TotalChunks} (length: {ChunkLength} characters, topic: {Topic})",
+                chunkNumber, contentChunks.Count, chunk.Content.Length, chunk.Summary ?? "N/A");
 
             try
             {
                 var extractionResponse = await _aiService.ProcessStructuredPromptAsync<FragmentExtractionResponse>(
-                    userPrompt: chunk,
+                    userPrompt: chunk.Content,
                     systemPrompt: systemPrompt,
                     cancellationToken: cancellationToken);
 
@@ -199,9 +202,9 @@ public class FragmentExtractionService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to process chunk {ChunkNumber} of {TotalChunks}",
-                    chunkNumber, chunkList.Count);
+                    chunkNumber, contentChunks.Count);
                 throw new InvalidOperationException(
-                    $"Fragment extraction failed while processing chunk {chunkNumber} of {chunkList.Count}: {ex.Message}", ex);
+                    $"Fragment extraction failed while processing chunk {chunkNumber} of {contentChunks.Count}: {ex.Message}", ex);
             }
         }).ToList();
 
@@ -212,7 +215,7 @@ public class FragmentExtractionService
         var allMessages = chunkResults.Where(r => r.Message != null).Select(r => r.Message!).ToList();
 
         _logger.LogInformation("Aggregated {TotalCount} fragments from {ChunkCount} chunks",
-            allFragments.Count, chunkList.Count);
+            allFragments.Count, contentChunks.Count);
 
         return (allFragments, allMessages);
     }
