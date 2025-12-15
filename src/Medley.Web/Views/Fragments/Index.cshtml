@@ -112,6 +112,30 @@
                         <span class="badge bg-secondary" v-if="selectedFragment.category">
                             <i :class="getIconClass(getFragmentCategoryIcon(selectedFragment.category))" class="me-1"></i>{{ selectedFragment.category }}
                         </span>
+                        <span 
+                            v-if="selectedFragment.confidence !== null && selectedFragment.confidence !== undefined && selectedFragment.confidenceComment" 
+                            class="badge bg-light text-dark ms-2"
+                            @@click="toggleConfidenceComment"
+                            style="cursor: pointer;"
+                            :title="showConfidenceComment ? 'Hide confidence note' : 'Show confidence note'">
+                            <i 
+                                :class="'fa-duotone ' + getConfidenceIcon(selectedFragment.confidence)" 
+                                :style="{ color: getConfidenceColor(selectedFragment.confidence) }"
+                                class="me-1"
+                            ></i>
+                            {{ getConfidenceLabel(selectedFragment.confidence) }}
+                            <i :class="showConfidenceComment ? 'bi bi-chevron-up ms-1' : 'bi bi-chevron-down ms-1'"></i>
+                        </span>
+                        <span 
+                            v-else-if="selectedFragment.confidence !== null && selectedFragment.confidence !== undefined" 
+                            class="badge bg-light text-dark ms-2">
+                            <i 
+                                :class="'fa-duotone ' + getConfidenceIcon(selectedFragment.confidence)" 
+                                :style="{ color: getConfidenceColor(selectedFragment.confidence) }"
+                                class="me-1"
+                            ></i>
+                            {{ getConfidenceLabel(selectedFragment.confidence) }}
+                        </span>
                         <span class="ms-2">
                             <i class="bi bi-calendar3"></i>
                             {{ formatDate(selectedFragment.sourceDate) }}
@@ -125,6 +149,15 @@
         </div>
 
         <div class="fragment-content-area">
+            <div v-if="selectedFragment.confidenceComment && showConfidenceComment" class="alert alert-info mb-3">
+                <div class="d-flex align-items-start">
+                    <i class="bi bi-info-circle me-2 mt-1"></i>
+                    <div>
+                        <strong>Confidence Note:</strong>
+                        <div class="mt-1">{{ selectedFragment.confidenceComment }}</div>
+                    </div>
+                </div>
+            </div>
             <div class="markdown-content" v-html="renderedMarkdown"></div>
         </div>
     </div>
@@ -174,7 +207,8 @@
                         searchQuery: '',
                         articleTypes: [],
                         markdownRenderer: null,
-                        searchDebounced: null
+                        searchDebounced: null,
+                        showConfidenceComment: false
                     };
                 },
                 computed: {
@@ -206,6 +240,7 @@
                     
                     async selectFragment(fragment, replaceState = false) {
                         this.selectedFragmentId = fragment.id;
+                        this.showConfidenceComment = false;
                         
                         // Update URL with selected fragment ID
                         const url = new URL(window.location);
@@ -225,6 +260,10 @@
                             console.error('Error loading fragment:', err);
                             this.selectedFragment = null;
                         }
+                    },
+                    
+                    toggleConfidenceComment() {
+                        this.showConfidenceComment = !this.showConfidenceComment;
                     },
                     
                     onSearchInput() {
@@ -310,6 +349,35 @@
                         }
                         // Default fallback
                         return 'bi bi-file-text';
+                    },
+                    
+                    getConfidenceIcon(confidence) {
+                        if (!confidence) return 'fa-signal-bars-weak';
+                        const level = confidence.toString().toLowerCase();
+                        switch(level) {
+                            case 'high': return 'fa-signal-bars';
+                            case 'medium': return 'fa-signal-bars-good';
+                            case 'low': return 'fa-signal-bars-fair';
+                            case 'unclear': return 'fa-signal-bars-weak';
+                            default: return 'fa-signal-bars-weak';
+                        }
+                    },
+                    
+                    getConfidenceColor(confidence) {
+                        if (!confidence) return 'var(--bs-secondary)';
+                        const level = confidence.toString().toLowerCase();
+                        switch(level) {
+                            case 'high': return 'var(--bs-success)';
+                            case 'medium': return 'var(--bs-warning)';
+                            case 'low': return 'var(--bs-danger)';
+                            case 'unclear': return 'var(--bs-danger)';
+                            default: return 'var(--bs-secondary)';
+                        }
+                    },
+                    
+                    getConfidenceLabel(confidence) {
+                        if (!confidence) return '';
+                        return confidence.toString();
                     },
                     
                     formatDate

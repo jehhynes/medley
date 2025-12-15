@@ -86,6 +86,32 @@ const FragmentList = {
             }
             // Default fallback
             return 'bi bi-file-text';
+        },
+        getConfidenceIcon(confidence) {
+            if (!confidence) return 'fa-signal-bars-weak';
+            const level = confidence.toString().toLowerCase();
+            switch(level) {
+                case 'high': return 'fa-signal-bars';
+                case 'medium': return 'fa-signal-bars-good';
+                case 'low': return 'fa-signal-bars-fair';
+                case 'unclear': return 'fa-signal-bars-weak';
+                default: return 'fa-signal-bars-weak';
+            }
+        },
+        getConfidenceColor(confidence) {
+            if (!confidence) return 'var(--bs-secondary)';
+            const level = confidence.toString().toLowerCase();
+            switch(level) {
+                case 'high': return 'var(--bs-success)';
+                case 'medium': return 'var(--bs-warning)';
+                case 'low': return 'var(--bs-danger)';
+                case 'unclear': return 'var(--bs-danger)';
+                default: return 'var(--bs-secondary)';
+            }
+        },
+        getConfidenceLabel(confidence) {
+            if (!confidence) return '';
+            return confidence.toString();
         }
     }
 };

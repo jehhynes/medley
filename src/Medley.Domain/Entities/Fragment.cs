@@ -1,3 +1,4 @@
+using Medley.Domain.Enums;
 using Pgvector;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -69,4 +70,15 @@ public class Fragment : BusinessEntity
     /// Date when the fragment was processed for clustering
     /// </summary>
     public DateTimeOffset? ClusteringProcessed { get; set; }
+
+    /// <summary>
+    /// Confidence level from the AI extraction
+    /// </summary>
+    public ConfidenceLevel? Confidence { get; set; }
+
+    /// <summary>
+    /// Explanation of factors affecting the confidence score
+    /// </summary>
+    [MaxLength(1000)]
+    public string? ConfidenceComment { get; set; }
 }

@@ -48,7 +48,9 @@ public class FragmentsApiController : ControllerBase
                 SourceName = f.Source.Name,
                 SourceType = f.Source.Type,
                 SourceDate = f.Source.Date,
-                f.CreatedAt
+                f.CreatedAt,
+                f.Confidence,
+                f.ConfidenceComment
             })
             .ToListAsync();
 
@@ -82,7 +84,9 @@ public class FragmentsApiController : ControllerBase
             SourceType = fragment.Source.Type,
             SourceDate = fragment.Source.Date,
             fragment.CreatedAt,
-            fragment.LastModifiedAt
+            fragment.LastModifiedAt,
+            fragment.Confidence,
+            fragment.ConfidenceComment
         });
     }
 
@@ -104,7 +108,9 @@ public class FragmentsApiController : ControllerBase
                 f.Category,
                 f.Content,
                 f.CreatedAt,
-                f.LastModifiedAt
+                f.LastModifiedAt,
+                f.Confidence,
+                f.ConfidenceComment
             })
             .ToListAsync();
 
@@ -165,6 +171,8 @@ public class FragmentsApiController : ControllerBase
                         SourceType = fragment.Source.Type,
                         SourceDate = fragment.Source.Date,
                         fragment.CreatedAt,
+                        fragment.Confidence,
+                        fragment.ConfidenceComment,
                         Similarity = 1 - (result.Distance / 2) // Convert L2 distance to similarity score (0-1)
                     };
                 })

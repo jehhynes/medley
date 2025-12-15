@@ -69,6 +69,34 @@ public class FragmentExtractionService
         _logger.LogInformation("Source loaded: {SourceName} (Content length: {ContentLength} characters)", 
             source.Name, source.Content.Length);
 
+        // Check for existing fragments
+        var existingFragments = await _fragmentRepository.Query()
+            .Where(f => f.Source!.Id == sourceId)
+            .ToListAsync(cancellationToken);
+
+        if (existingFragments.Any())
+        {
+            // Check if any fragments have been clustered
+            var clusteredFragments = existingFragments.Where(f => f.ClusteredIntoId != null).ToList();
+            
+            if (clusteredFragments.Any())
+            {
+                _logger.LogWarning("Cannot re-extract fragments for source {SourceId}: {Count} fragments have been clustered", 
+                    sourceId, clusteredFragments.Count);
+                throw new InvalidOperationException(
+                    $"Cannot re-extract fragments because {clusteredFragments.Count} fragment(s) have been clustered.");
+            }
+
+            // Remove existing fragments
+            _logger.LogInformation("Removing {Count} existing fragments for source {SourceId}", 
+                existingFragments.Count, sourceId);
+            
+            foreach (var fragment in existingFragments)
+            {
+                await _fragmentRepository.DeleteAsync(fragment);
+            }
+        }
+
         // Retrieve the fragment extraction prompt template
         var template = await _templateRepository.Query()
             .FirstOrDefaultAsync(t => t.Type == TemplateType.FragmentExtraction, cancellationToken);
@@ -256,7 +284,9 @@ public class FragmentExtractionService
                     Content = fragmentDto.Content?.Trim().Substring(0, Math.Min(10000, fragmentDto.Content.Trim().Length)) 
                         ?? string.Empty,
                     Source = source,
-                    LastModifiedAt = DateTimeOffset.UtcNow
+                    LastModifiedAt = DateTimeOffset.UtcNow,
+                    Confidence = fragmentDto.Confidence,
+                    ConfidenceComment = fragmentDto.ConfidenceComment?.Trim().Substring(0, Math.Min(1000, fragmentDto.ConfidenceComment.Trim().Length))
                 };
 
                 await _fragmentRepository.SaveAsync(fragment);
@@ -315,6 +345,10 @@ public class FragmentDto
     public string? Category { get; set; }
     [Description("Markdown-formatted content")]
     public string? Content { get; set; }
+    [Description("Confidence level indicating how clearly, explicitly, and consistently the information is stated or implied in the source content. Options: High, Medium, Low, Unclear")]
+    public ConfidenceLevel? Confidence { get; set; }
+    [Description("Brief explanation of any issues, ambiguities, or concerns that impacted your confidence in this content")]
+    public string? ConfidenceComment { get; set; }
 }
 
 /// <summary>

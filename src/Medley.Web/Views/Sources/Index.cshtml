@@ -178,15 +178,17 @@
                     <button 
                         class="btn btn-primary" 
                         @@click="extractFragments" 
-                        :disabled="selectedSource.extractionStatus === 'InProgress' || selectedSource.extractionStatus === 'Completed'"
+                        :disabled="selectedSource.extractionStatus === 'InProgress'"
                         v-if="selectedSource.content">
                         <span v-if="selectedSource.extractionStatus === 'InProgress'" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                        <i v-else class="bi bi-magic"></i> Extract Fragments
+                        <i v-else class="bi bi-magic"></i> 
+                        {{ selectedSource.extractionStatus === 'Completed' ? 'Re-extract Fragments' : 'Extract Fragments' }}
                     </button>
                     <button 
                         class="btn btn-outline-secondary ms-2" 
                         @@click="generateTags" 
-                        :disabled="tagging || !selectedSource">
+                        :disabled="tagging || !selectedSource"
+                        v-if="!selectedSource.tagsGenerated">
                         <span v-if="tagging" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                         <i v-else class="bi bi-tags"></i> Generate Tags
                     </button>
@@ -268,6 +270,15 @@
                                             {{ fragment.summary }}
                                         </div>
                                     </td>
+                                    <td class="align-middle text-end" style="width: 100px;" v-if="fragment.confidence !== null && fragment.confidence !== undefined">
+                                        <i 
+                                            :class="'fa-duotone ' + getConfidenceIcon(fragment.confidence)" 
+                                            :style="{ color: getConfidenceColor(fragment.confidence) }"
+                                            :title="'Confidence: ' + getConfidenceLabel(fragment.confidence)"
+                                            style="font-size: 1.25rem;"
+                                        ></i>
+                                        @* <small class="text-muted ms-1">{{ getConfidenceLabel(fragment.confidence) }}</small> *@
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -297,10 +308,43 @@
                 <button type="button" class="btn-close" @@click="closeFragmentModal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div v-if="selectedFragment.category" class="mb-3">
-                    <span class="badge bg-secondary">
+                <div class="mb-3">
+                    <span v-if="selectedFragment.category" class="badge bg-secondary me-2">
                         <i :class="getIconClass(getFragmentCategoryIcon(selectedFragment.category))" class="me-1"></i>{{ selectedFragment.category }}
                     </span>
+                    <span 
+                        v-if="selectedFragment.confidence !== null && selectedFragment.confidence !== undefined && selectedFragment.confidenceComment" 
+                        class="badge bg-light text-dark"
+                        @@click="toggleConfidenceComment"
+                        style="cursor: pointer;"
+                        :title="showConfidenceComment ? 'Hide confidence note' : 'Show confidence note'">
+                        <i 
+                            :class="'fa-duotone ' + getConfidenceIcon(selectedFragment.confidence)" 
+                            :style="{ color: getConfidenceColor(selectedFragment.confidence) }"
+                            class="me-1"
+                        ></i>
+                        Confidence: {{ getConfidenceLabel(selectedFragment.confidence) }}
+                        <i :class="showConfidenceComment ? 'bi bi-chevron-up ms-1' : 'bi bi-chevron-down ms-1'"></i>
+                    </span>
+                    <span 
+                        v-else-if="selectedFragment.confidence !== null && selectedFragment.confidence !== undefined" 
+                        class="badge bg-light text-dark">
+                        <i 
+                            :class="'fa-duotone ' + getConfidenceIcon(selectedFragment.confidence)" 
+                            :style="{ color: getConfidenceColor(selectedFragment.confidence) }"
+                            class="me-1"
+                        ></i>
+                        Confidence: {{ getConfidenceLabel(selectedFragment.confidence) }}
+                    </span>
+                </div>
+                <div v-if="selectedFragment.confidenceComment && showConfidenceComment" class="alert alert-info mb-3">
+                    <div class="d-flex align-items-start">
+                        <i class="bi bi-info-circle me-2 mt-1"></i>
+                        <div>
+                            <strong>Confidence Note:</strong>
+                            <div class="mt-1">{{ selectedFragment.confidenceComment }}</div>
+                        </div>
+                    </div>
                 </div>
                 <div class="markdown-content" v-html="renderedMarkdown"></div>
             </div>
@@ -316,6 +360,7 @@
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootbox@6.0.0/dist/bootbox.all.min.js"></script>
     <script src="~/js/app.js"></script>
     <script src="~/js/utils.js"></script>
     <script src="~/js/components/source-list.js"></script>
@@ -345,7 +390,8 @@
                         fragmentsError: null,
                         markdownRenderer: null,
                         articleTypes: [], // Array of { id, name, icon }
-                        tagging: false
+                        tagging: false,
+                        showConfidenceComment: false
                     };
                 },
                 computed: {
@@ -457,6 +503,36 @@
                         if (!this.selectedSource) return;
                         
                         const sourceId = this.selectedSource.id;
+                        
+                        // Check if re-extracting with existing fragments
+                        if (this.fragments.length > 0) {
+                            const confirmMessage = `This source already has ${this.fragments.length} fragment(s). ` +
+                                'Re-extracting will delete existing fragments. Continue?';
+                            
+                            bootbox.confirm({
+                                message: confirmMessage,
+                                buttons: {
+                                    confirm: {
+                                        label: 'Continue',
+                                        className: 'btn-primary'
+                                    },
+                                    cancel: {
+                                        label: 'Cancel',
+                                        className: 'btn-secondary'
+                                    }
+                                },
+                                callback: async (result) => {
+                                    if (result) {
+                                        await this.performExtraction(sourceId);
+                                    }
+                                }
+                            });
+                        } else {
+                            await this.performExtraction(sourceId);
+                        }
+                    },
+                    
+                    async performExtraction(sourceId) {
                         // Optimistically update UI
                         this.selectedSource.extractionStatus = 'InProgress';
                         const sourceIndex = this.sources.findIndex(s => s.id === sourceId);
@@ -477,7 +553,17 @@
                             }
                         } catch (err) {
                             console.error('Fragment extraction error:', err);
-                            this.showToast('error', err.message || 'Failed to extract fragments. Please try again.');
+                            
+                            // Check if error is due to clustered fragments
+                            const errorMessage = err.message || 'Failed to extract fragments. Please try again.';
+                            const isClustered = errorMessage.toLowerCase().includes('clustered');
+                            
+                            if (isClustered) {
+                                this.showToast('error', 'Cannot re-extract: Some fragments have been clustered. Please uncluster them first.');
+                            } else {
+                                this.showToast('error', errorMessage);
+                            }
+                            
                             // Revert on error
                             this.selectedSource.extractionStatus = 'NotStarted';
                             if (sourceIndex !== -1) {
@@ -559,10 +645,16 @@
                     
                     selectFragment(fragment) {
                         this.selectedFragment = fragment;
+                        this.showConfidenceComment = false;
                     },
                     
                     closeFragmentModal() {
                         this.selectedFragment = null;
+                        this.showConfidenceComment = false;
+                    },
+                    
+                    toggleConfidenceComment() {
+                        this.showConfidenceComment = !this.showConfidenceComment;
                     },
                     
                     handleKeydown(event) {
@@ -642,6 +734,35 @@
                             'Other': 'bi-file-earmark'
                         };
                         return icons[type] || 'bi-file-earmark';
+                    },
+                    
+                    getConfidenceIcon(confidence) {
+                        if (!confidence) return 'fa-signal-bars-weak';
+                        const level = confidence.toString().toLowerCase();
+                        switch(level) {
+                            case 'high': return 'fa-signal-bars';
+                            case 'medium': return 'fa-signal-bars-good';
+                            case 'low': return 'fa-signal-bars-fair';
+                            case 'unclear': return 'fa-signal-bars-weak';
+                            default: return 'fa-signal-bars-weak';
+                        }
+                    },
+                    
+                    getConfidenceColor(confidence) {
+                        if (!confidence) return 'var(--bs-secondary)';
+                        const level = confidence.toString().toLowerCase();
+                        switch(level) {
+                            case 'high': return 'var(--bs-success)';
+                            case 'medium': return 'var(--bs-warning)';
+                            case 'low': return 'var(--bs-danger)';
+                            case 'unclear': return 'var(--bs-danger)';
+                            default: return 'var(--bs-secondary)';
+                        }
+                    },
+                    
+                    getConfidenceLabel(confidence) {
+                        if (!confidence) return '';
+                        return confidence.toString();
                     }
                 },
                 
