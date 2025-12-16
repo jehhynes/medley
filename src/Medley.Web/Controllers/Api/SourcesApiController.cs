@@ -62,6 +62,7 @@ public class SourcesApiController : ControllerBase
                 ExtractionStatus = s.ExtractionStatus,
                 ExtractionMessage = s.ExtractionMessage,
                 s.CreatedAt,
+                s.TagsGenerated,
                 Tags = s.Tags.Select(t => new { t.TagTypeId, TagType = t.TagType.Name, t.Value })
             })
             .ToListAsync();
@@ -104,6 +105,7 @@ public class SourcesApiController : ControllerBase
             ExtractionStatus = source.ExtractionStatus,
             ExtractionMessage = source.ExtractionMessage,
             source.CreatedAt,
+            source.TagsGenerated,
             Tags = source.Tags.Select(t => new
             {
                 t.TagTypeId,

@@ -87,7 +87,8 @@ public class FragmentConfidenceScoringJob : BaseHangfireJob<FragmentConfidenceSc
 
                 _logger.LogInformation("Scoring {Count} fragments for source {SourceId}", fragmentsToScore.Count, sourceId);
 
-                var userPrompt = BuildUserPrompt(source.Content, fragmentsToScore);
+                var fragmentsList = fragmentsToScore.ToList();
+                var userPrompt = BuildUserPrompt(source.Content, fragmentsList);
 
                 var response = await _aiProcessingService.ProcessStructuredPromptAsync<ConfidenceScoringResponse>(
                     userPrompt: userPrompt,
@@ -99,30 +100,39 @@ public class FragmentConfidenceScoringJob : BaseHangfireJob<FragmentConfidenceSc
                     _logger.LogWarning("Confidence scoring returned no scores for source {SourceId}", sourceId);
                     return;
                 }
-
-                var scoresById = response.Scores.ToDictionary(s => s.FragmentId, s => s);
-                int scoredCount = 0;
-
-                foreach (var fragment in fragmentsToScore)
+                try
                 {
-                    if (!scoresById.TryGetValue(fragment.Id, out var score) || !score.Confidence.HasValue)
+                    var scoresById = response.Scores.ToDictionary(s => s.FragmentId, s => s);
+                    int scoredCount = 0;
+
+                    for (int i = 0; i < fragmentsList.Count; i++)
                     {
-                        _logger.LogWarning("No confidence score returned for fragment {FragmentId}", fragment.Id);
-                        continue;
+                        var fragment = fragmentsList[i];
+                        var fragmentIndex = i + 1; // 1-based index to match prompt
+
+                        if (!scoresById.TryGetValue(fragmentIndex, out var score) || !score.Confidence.HasValue)
+                        {
+                            _logger.LogWarning("No confidence score returned for fragment {FragmentId} (index {Index})", fragment.Id, fragmentIndex);
+                            continue;
+                        }
+
+                        fragment.Confidence = score.Confidence.Value;
+                        fragment.ConfidenceComment = TrimConfidenceComment(score.ConfidenceComment);
+                        fragment.LastModifiedAt = DateTimeOffset.UtcNow;
+                        await _fragmentRepository.SaveAsync(fragment);
+                        scoredCount++;
+
+                        _logger.LogDebug("Updated confidence for fragment {FragmentId} (index {Index}): {Confidence}",
+                            fragment.Id, fragmentIndex, score.Confidence.Value);
                     }
 
-                    fragment.Confidence = score.Confidence.Value;
-                    fragment.ConfidenceComment = TrimConfidenceComment(score.ConfidenceComment);
-                    fragment.LastModifiedAt = DateTimeOffset.UtcNow;
-                    await _fragmentRepository.SaveAsync(fragment);
-                    scoredCount++;
-
-                    _logger.LogDebug("Updated confidence for fragment {FragmentId}: {Confidence}", 
-                        fragment.Id, score.Confidence.Value);
+                    _logger.LogInformation("Successfully scored {ScoredCount} of {TotalCount} fragments for source {SourceId}",
+                        scoredCount, fragmentsToScore.Count, sourceId);
                 }
-
-                _logger.LogInformation("Successfully scored {ScoredCount} of {TotalCount} fragments for source {SourceId}", 
-                    scoredCount, fragmentsToScore.Count, sourceId);
+                catch (Exception ex)
+                {
+                    throw;
+                }
             });
         }
         catch (DistributedLockTimeoutException)
@@ -167,11 +177,12 @@ public class FragmentConfidenceScoringJob : BaseHangfireJob<FragmentConfidenceSc
         sb.AppendLine("# Fragments to Score");
         sb.AppendLine();
 
+        var fragmentsList = fragments.ToList();
         int index = 1;
-        foreach (var fragment in fragments)
+        foreach (var fragment in fragmentsList)
         {
             sb.AppendLine($"## Fragment {index}");
-            sb.AppendLine($"- **ID**: {fragment.Id}");
+            sb.AppendLine($"- **ID**: {index}");
             sb.AppendLine($"- **Category**: {fragment.Category}");
             sb.AppendLine("- **Content**:");
             sb.AppendLine();
@@ -180,6 +191,12 @@ public class FragmentConfidenceScoringJob : BaseHangfireJob<FragmentConfidenceSc
             sb.AppendLine("---");
             sb.AppendLine();
             index++;
+        }
+
+        if (fragmentsList.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"**Important**: Please return a confidence score for every fragment Id from 1 to {fragmentsList.Count}. Each fragment must have a score.");
         }
 
         return sb.ToString();
@@ -212,7 +229,8 @@ public class ConfidenceScoringResponse
 /// </summary>
 public class FragmentConfidenceScore
 {
-    public Guid FragmentId { get; set; }
+    [Description("The fragment Id")]
+    public int FragmentId { get; set; }
     public ConfidenceLevel? Confidence { get; set; }
     [MaxLength(1000)]
     [Description("Brief explanation of factors affecting the assigned confidence")]
