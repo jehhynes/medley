@@ -785,9 +785,27 @@
                     const urlParams = new URLSearchParams(window.location.search);
                     const sourceIdFromUrl = urlParams.get('id');
                     if (sourceIdFromUrl) {
+                        // First check if source exists in the loaded list
                         const source = this.sources.find(s => s.id === sourceIdFromUrl);
                         if (source) {
-                            await this.selectSource(source, true); // Use replaceState on initial load
+                            // Source exists in list, use normal selection
+                            await this.selectSource(source, true);
+                        } else {
+                            // Source not in list, load it directly and add to list
+                            try {
+                                const loadedSource = await api.get(`/api/sources/${sourceIdFromUrl}`);
+                                // Add to sources list so it appears in sidebar
+                                this.sources.unshift(loadedSource);
+                                // Select it
+                                this.selectedSource = loadedSource;
+                                this.selectedSourceId = sourceIdFromUrl;
+                            } catch (err) {
+                                console.error('Error loading source from URL:', err);
+                                // If the source doesn't exist, clear the URL parameter
+                                const url = new URL(window.location);
+                                url.searchParams.delete('id');
+                                window.history.replaceState({}, '', url);
+                            }
                         }
                     }
                     

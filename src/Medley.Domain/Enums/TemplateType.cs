@@ -10,8 +10,14 @@ public enum TemplateType
     /// </summary>
     FragmentExtraction = 1,
 
+    /// <summary>
     /// Template for organization/tenant context used in prompts
     /// </summary>
-    OrganizationContext = 2
+    OrganizationContext = 2,
+
+    /// <summary>
+    /// Template for confidence scoring of extracted fragments
+    /// </summary>
+    ConfidenceScoring = 3
 }
 

@@ -1,29 +1,26 @@
-using Medley.Application.Integrations.Interfaces;
-using Medley.Application.Integrations.Services;
+using Amazon;
+using Amazon.BedrockRuntime;
+using Amazon.S3;
+using Hangfire;
+using Hangfire.MissionControl;
+using Hangfire.PostgreSql;
+using Hangfire.RecurringJobCleanUpManager;
 using Medley.Application.Configuration;
 using Medley.Application.Enums;
+using Medley.Application.Integrations.Interfaces;
+using Medley.Application.Integrations.Services;
 using Medley.Application.Interfaces;
-using Medley.Application.Services;
 using Medley.Application.Jobs;
-using Hangfire.RecurringJobCleanUpManager;
+using Medley.Application.Services;
 using Medley.Infrastructure.Data;
 using Medley.Infrastructure.Data.Repositories;
 using Medley.Infrastructure.Services;
-using Medley.Infrastructure.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using OllamaSharp;
 using Npgsql;
-using Hangfire;
-using Hangfire.PostgreSql;
-using Amazon.S3;
-using Amazon.BedrockRuntime;
-using Amazon;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
-using System.Text.Json;
+using OllamaSharp;
 
 namespace Medley.Infrastructure;
 
@@ -91,7 +88,9 @@ public static class DependencyInjection
             .UsePostgreSqlStorage(options =>
             {
                 options.UseNpgsqlConnection(connectionString);
-            }));
+            })
+            .UseMissionControl(typeof(BaseHangfireJob<>).Assembly)
+        );
 
         // Register Hangfire server
         services.AddHangfireServer(options =>

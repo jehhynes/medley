@@ -408,9 +408,27 @@
                     const urlParams = new URLSearchParams(window.location.search);
                     const fragmentIdFromUrl = urlParams.get('id');
                     if (fragmentIdFromUrl) {
+                        // First check if fragment exists in the loaded list
                         const fragment = this.fragments.find(f => f.id === fragmentIdFromUrl);
                         if (fragment) {
+                            // Fragment exists in list, use normal selection
                             await this.selectFragment(fragment, true);
+                        } else {
+                            // Fragment not in list, load it directly and add to list
+                            try {
+                                const loadedFragment = await api.get(`/api/fragments/${fragmentIdFromUrl}`);
+                                // Add to fragments list so it appears in sidebar
+                                this.fragments.unshift(loadedFragment);
+                                // Select it
+                                this.selectedFragment = loadedFragment;
+                                this.selectedFragmentId = fragmentIdFromUrl;
+                            } catch (err) {
+                                console.error('Error loading fragment from URL:', err);
+                                // If the fragment doesn't exist, clear the URL parameter
+                                const url = new URL(window.location);
+                                url.searchParams.delete('id');
+                                window.history.replaceState({}, '', url);
+                            }
                         }
                     }
                     

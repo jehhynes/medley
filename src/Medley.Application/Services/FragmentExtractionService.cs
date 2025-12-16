@@ -4,7 +4,6 @@ using Medley.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.ComponentModel;
-using System.Text.Json;
 
 namespace Medley.Application.Services;
 
@@ -285,8 +284,6 @@ public class FragmentExtractionService
                         ?? string.Empty,
                     Source = source,
                     LastModifiedAt = DateTimeOffset.UtcNow,
-                    Confidence = fragmentDto.Confidence,
-                    ConfidenceComment = fragmentDto.ConfidenceComment?.Trim().Substring(0, Math.Min(1000, fragmentDto.ConfidenceComment.Trim().Length))
                 };
 
                 await _fragmentRepository.SaveAsync(fragment);
@@ -345,10 +342,6 @@ public class FragmentDto
     public string? Category { get; set; }
     [Description("Markdown-formatted content")]
     public string? Content { get; set; }
-    [Description("Confidence level indicating how clearly, explicitly, and consistently the information is stated or implied in the source content. Options: Certain, High, Medium, Low, Unclear")]
-    public ConfidenceLevel? Confidence { get; set; }
-    [Description("Brief explanation of any issues, ambiguities, or concerns that impacted your confidence in this content")]
-    public string? ConfidenceComment { get; set; }
 }
 
 /// <summary>

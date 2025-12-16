@@ -18,17 +18,20 @@ public class FragmentExtractionJob : BaseHangfireJob<FragmentExtractionJob>
     private readonly FragmentExtractionService _fragmentExtractionService;
     private readonly INotificationService _notificationService;
     private readonly IRepository<Source> _sourceRepository;
+    private readonly IBackgroundJobService _backgroundJobService;
 
     public FragmentExtractionJob(
         FragmentExtractionService fragmentExtractionService,
         INotificationService notificationService,
         IRepository<Source> sourceRepository,
+        IBackgroundJobService backgroundJobService,
         IUnitOfWork unitOfWork,
         ILogger<FragmentExtractionJob> logger) : base(unitOfWork, logger)
     {
         _fragmentExtractionService = fragmentExtractionService;
         _notificationService = notificationService;
         _sourceRepository = sourceRepository;
+        _backgroundJobService = backgroundJobService;
     }
 
     /// <summary>
@@ -66,6 +69,14 @@ public class FragmentExtractionJob : BaseHangfireJob<FragmentExtractionJob>
                 
                     success = true;
                 });
+
+                // Enqueue confidence scoring job after successful extraction (outside transaction)
+                if (success && fragmentCount > 0)
+                {
+                    _backgroundJobService.Schedule<FragmentConfidenceScoringJob>(
+                        j => j.ExecuteAsync(default!, default, sourceId), TimeSpan.FromSeconds(5));
+                    _logger.LogInformation("Enqueued confidence scoring job for source {SourceId}", sourceId);
+                }
             }
             catch (Exception ex)
             {
