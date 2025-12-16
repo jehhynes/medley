@@ -345,7 +345,7 @@ public class FragmentDto
     public string? Category { get; set; }
     [Description("Markdown-formatted content")]
     public string? Content { get; set; }
-    [Description("Confidence level indicating how clearly, explicitly, and consistently the information is stated or implied in the source content. Options: High, Medium, Low, Unclear")]
+    [Description("Confidence level indicating how clearly, explicitly, and consistently the information is stated or implied in the source content. Options: Certain, High, Medium, Low, Unclear")]
     public ConfidenceLevel? Confidence { get; set; }
     [Description("Brief explanation of any issues, ambiguities, or concerns that impacted your confidence in this content")]
     public string? ConfidenceComment { get; set; }
