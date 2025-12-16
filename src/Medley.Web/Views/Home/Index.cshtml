@@ -253,15 +253,6 @@
             </div>
         </div>
 
-        <div class="col-lg-6">
-            <div class="chart-card delay-1">
-                <h3 class="chart-card-title"><i class="bi bi-building me-2"></i>Internal vs External Sources</h3>
-                <div class="chart-container small">
-                    <canvas id="sourcesByInternalChart"></canvas>
-                </div>
-                <div id="sourcesByInternalLegend" class="mt-3 text-center"></div>
-            </div>
-        </div>
     </div>
 
     <!-- Processing Status -->
@@ -606,24 +597,6 @@
             },
             options: { ...defaultOptions, plugins: { legend: { display: false } } }
        });
-    }
-
-    // Sources by Internal Status Chart (Doughnut)
-    const sourcesByInternalData = @Html.Raw(Json.Serialize(Model.Metrics.SourcesByInternalStatus));
-    if (sourcesByInternalData.length > 0) {
-        const chart = new Chart(document.getElementById('sourcesByInternalChart'), {
-            type: 'doughnut',
-            data: {
-                labels: sourcesByInternalData.map(x => x.label),
-                datasets: [{
-                    data: sourcesByInternalData.map(x => x.count),
-                    backgroundColor: [colors.primary[3], colors.primary[1], colors.primary[0]], // Internal(Green), External(Red), Unknown(Blue)
-                    borderWidth: 0
-                }]
-            },
-            options: defaultOptions
-        });
-        generateHtmlLegend(chart, 'sourcesByInternalLegend');
     }
 
     // Fragments by Category Chart (Pie)

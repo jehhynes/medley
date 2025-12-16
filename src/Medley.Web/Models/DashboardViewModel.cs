@@ -14,7 +14,6 @@ namespace Medley.Web.Models
         public int TotalSources { get; set; }
         public List<MetricItem> SourcesByType { get; set; } = new();
         public List<MetricItem> SourcesByIntegration { get; set; } = new();
-        public List<MetricItem> SourcesByInternalStatus { get; set; } = new();
         public List<StackedMetricItem> SourcesByYear { get; set; } = new();
         public List<MetricItem> SourcesByMonth { get; set; } = new();
         public List<TagTypeMetrics> SourcesByTagType { get; set; } = new();

@@ -172,19 +172,6 @@ namespace Medley.Web.Controllers
 
             metrics.SourcesByTagType = tagMetricsList.OrderBy(x => x.TagTypeName).ToList();
             
-            var internalSources = await _sourceRepository.Query()
-                .CountAsync(s => s.IsInternal == true);
-            var externalSources = await _sourceRepository.Query()
-                .CountAsync(s => s.IsInternal == false);
-            var unknownSources = await _sourceRepository.Query()
-                .CountAsync(s => s.IsInternal == null);
-            metrics.SourcesByInternalStatus = new List<MetricItem>
-            {
-                new MetricItem { Label = "Internal", Count = internalSources },
-                new MetricItem { Label = "External", Count = externalSources },
-                new MetricItem { Label = "Unknown", Count = unknownSources }
-            };
-            
             metrics.SourcesPendingSmartTagging = await _sourceRepository.Query()
                 .CountAsync(s => s.TagsGenerated == null);
             
