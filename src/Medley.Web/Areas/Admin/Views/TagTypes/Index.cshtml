@@ -25,6 +25,7 @@
             <tr>
                 <th>Name</th>
                 <th>Mode</th>
+                <th>Scope Update</th>
                 <th>Allowed Values</th>
                 <th class="text-end">Actions</th>
             </tr>
@@ -33,7 +34,7 @@
         @if (!Model.Any())
         {
             <tr>
-                <td colspan="4" class="text-muted text-center py-4">No tag types configured.</td>
+                <td colspan="5" class="text-muted text-center py-4">No tag types configured.</td>
             </tr>
         }
         else
@@ -50,6 +51,20 @@
                         else
                         {
                             <span class="badge bg-info-subtle text-info-emphasis">Suggested</span>
+                        }
+                    </td>
+                    <td>
+                        @switch (tagType.ScopeUpdateMode)
+                        {
+                            case Medley.Domain.Enums.ScopeUpdateMode.MarkInternalIfUnknown:
+                                <span class="badge bg-success-subtle text-success-emphasis">Mark Internal</span>
+                                break;
+                            case Medley.Domain.Enums.ScopeUpdateMode.MarkExternalIfUnknown:
+                                <span class="badge bg-warning-subtle text-warning-emphasis">Mark External</span>
+                                break;
+                            default:
+                                <span class="text-muted">None</span>
+                                break;
                         }
                     </td>
                     <td>

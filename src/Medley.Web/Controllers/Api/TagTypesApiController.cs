@@ -1,5 +1,6 @@
 using Medley.Application.Interfaces;
 using Medley.Domain.Entities;
+using Medley.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -30,6 +31,7 @@ public class TagTypesApiController : ControllerBase
                 t.Name,
                 t.Prompt,
                 t.IsConstrained,
+                t.ScopeUpdateMode,
                 AllowedValues = t.AllowedValues.Select(v => v.Value).ToList()
             })
             .ToListAsync();

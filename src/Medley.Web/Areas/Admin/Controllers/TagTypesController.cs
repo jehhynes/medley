@@ -1,5 +1,6 @@
 using Medley.Application.Interfaces;
 using Medley.Domain.Entities;
+using Medley.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -108,6 +109,7 @@ public class TagTypesController : Controller
         existing.Name = model.Name;
         existing.Prompt = model.Prompt;
         existing.IsConstrained = model.IsConstrained;
+        existing.ScopeUpdateMode = model.ScopeUpdateMode;
 
         // Sync allowed values (replace)
         var newValues = ParseAllowedValues(allowedValues).ToList();

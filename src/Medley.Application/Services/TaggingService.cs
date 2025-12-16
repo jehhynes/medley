@@ -1,5 +1,6 @@
 using Medley.Application.Interfaces;
 using Medley.Domain.Entities;
+using Medley.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Text;
@@ -91,6 +92,33 @@ public class TaggingService : ITaggingService
         if (response?.Tags != null && response.Tags.Count > 0 && tagTypes.Count > 0)
         {
             await UpsertTagsAsync(source, response.Tags, tagTypes, cancellationToken);
+        }
+
+        // Update source scope based on tag types' ScopeUpdateMode
+        if (source.IsInternal == null)
+        {
+            var tagsWithScopeUpdate = source.Tags
+                .Where(t => t.TagType != null && t.TagType.ScopeUpdateMode != ScopeUpdateMode.None)
+                .ToList();
+
+            if (tagsWithScopeUpdate.Any())
+            {
+                // Check for MarkExternalIfUnknown first (takes precedence if multiple)
+                var hasExternalTag = tagsWithScopeUpdate.Any(t => t.TagType!.ScopeUpdateMode == ScopeUpdateMode.MarkExternalIfUnknown);
+                if (hasExternalTag)
+                {
+                    source.IsInternal = false;
+                }
+                else
+                {
+                    // Check for MarkInternalIfUnknown
+                    var hasInternalTag = tagsWithScopeUpdate.Any(t => t.TagType!.ScopeUpdateMode == ScopeUpdateMode.MarkInternalIfUnknown);
+                    if (hasInternalTag)
+                    {
+                        source.IsInternal = true;
+                    }
+                }
+            }
         }
 
         source.TagsGenerated = DateTimeOffset.UtcNow;

@@ -36,6 +36,12 @@
                 </select>
             </div>
 
+            <div class="mb-3 form-group-overlap">
+                <label asp-for="ScopeUpdateMode">Scope Update Mode</label>
+                <select asp-for="ScopeUpdateMode" asp-items="Html.GetEnumSelectList<Medley.Domain.Enums.ScopeUpdateMode>()" class="form-select"></select>
+                <small class="form-text text-muted">Determines how this tag type affects source scope when unknown.</small>
+            </div>
+
             <div class="mb-3 form-group-overlap flex-grow-1 d-flex flex-column">
                 <label for="allowedValues">Allowed values (one per line)</label>
                 <textarea name="allowedValues" class="form-control flex-grow-1">@allowedValues</textarea>
