@@ -1,6 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Npgsql.EntityFrameworkCore.PostgreSQL;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
+using EFCore.NamingConventions;
 
 namespace Medley.Infrastructure.Data;
 
@@ -12,7 +14,9 @@ public class ApplicationDbContextDesignTimeFactory : IDesignTimeDbContextFactory
 
         // Use a default connection string for migrations
         // In production, this would come from configuration
-        optionsBuilder.UseNpgsql("Host=localhost;Database=medley_design;Username=postgres;Password=postgres", o => o.UseVector());
+        optionsBuilder
+            .UseNpgsql("Host=localhost;Database=medley_design;Username=postgres;Password=postgres", o => o.UseVector())
+            .UseSnakeCaseNamingConvention();
 
         return new ApplicationDbContext(optionsBuilder.Options);
     }

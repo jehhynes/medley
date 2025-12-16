@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
+using EFCore.NamingConventions;
 
 namespace Medley.Infrastructure.Data;
 
@@ -35,7 +37,8 @@ public static class ApplicationDbContextFactory
         bool suppressWarnings = false)
     {
         var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseNpgsql(dataSource, o => o.UseVector());
+            .UseNpgsql(dataSource, o => o.UseVector())
+            .UseSnakeCaseNamingConvention();
 
         if (suppressWarnings)
         {

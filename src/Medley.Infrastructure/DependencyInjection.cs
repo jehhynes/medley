@@ -20,7 +20,9 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
 using OllamaSharp;
+using EFCore.NamingConventions;
 
 namespace Medley.Infrastructure;
 
@@ -42,7 +44,9 @@ public static class DependencyInjection
         services.AddDbContext<ApplicationDbContext>((sp, options) =>
         {
             var dataSource = sp.GetRequiredService<NpgsqlDataSource>();
-            options.UseNpgsql(dataSource, o => o.UseVector());
+            options
+                .UseNpgsql(dataSource, o => o.UseVector())
+                .UseSnakeCaseNamingConvention();
         });
 
         // Register repositories and unit of work
