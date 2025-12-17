@@ -33,77 +33,77 @@ public class AuthController : Controller
         _logger = logger;
     }
 
-    /// <summary>
-    /// Display registration form
-    /// </summary>
-    [HttpGet]
-    [AllowAnonymous]
-    public IActionResult Register(string? returnUrl = null)
-    {
-        ViewData["ReturnUrl"] = returnUrl;
-        return View();
-    }
+    ///// <summary>
+    ///// Display registration form
+    ///// </summary>
+    //[HttpGet]
+    //[AllowAnonymous]
+    //public IActionResult Register(string? returnUrl = null)
+    //{
+    //    ViewData["ReturnUrl"] = returnUrl;
+    //    return View();
+    //}
 
-    /// <summary>
-    /// Process user registration
-    /// </summary>
-    [HttpPost]
-    [AllowAnonymous]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Register(RegisterViewModel model, string? returnUrl = null)
-    {
-        ViewData["ReturnUrl"] = returnUrl;
+    ///// <summary>
+    ///// Process user registration
+    ///// </summary>
+    //[HttpPost]
+    //[AllowAnonymous]
+    //[ValidateAntiForgeryToken]
+    //public async Task<IActionResult> Register(RegisterViewModel model, string? returnUrl = null)
+    //{
+    //    ViewData["ReturnUrl"] = returnUrl;
 
-        if (!ModelState.IsValid)
-        {
-            return View(model);
-        }
+    //    if (!ModelState.IsValid)
+    //    {
+    //        return View(model);
+    //    }
 
-        var user = new User
-        {
-            UserName = model.Email,
-            Email = model.Email,
-            FullName = model.FullName,
-            IsActive = true,
-            CreatedAt = DateTimeOffset.UtcNow
-        };
+    //    var user = new User
+    //    {
+    //        UserName = model.Email,
+    //        Email = model.Email,
+    //        FullName = model.FullName,
+    //        IsActive = true,
+    //        CreatedAt = DateTimeOffset.UtcNow
+    //    };
 
-        var result = await _userManager.CreateAsync(user, model.Password);
+    //    var result = await _userManager.CreateAsync(user, model.Password);
 
-        if (result.Succeeded)
-        {
-            _logger.LogInformation("User {Email} created successfully", model.Email);
+    //    if (result.Succeeded)
+    //    {
+    //        _logger.LogInformation("User {Email} created successfully", model.Email);
 
-            // Generate email confirmation token and send email
-            var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-            var callbackUrl = Url.Action(
-                nameof(ConfirmEmail),
-                "Auth",
-                new { userId = user.Id, code },
-                protocol: Request.Scheme);
+    //        // Generate email confirmation token and send email
+    //        var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+    //        var callbackUrl = Url.Action(
+    //            nameof(ConfirmEmail),
+    //            "Auth",
+    //            new { userId = user.Id, code },
+    //            protocol: Request.Scheme);
 
-            try
-            {
-                var emailBody = EmailTemplateService.GetEmailConfirmationTemplate(callbackUrl!);
-                await _emailService.SendEmailAsync(model.Email, "Confirm your email - Medley", emailBody);
-                TempData["Success"] = "Registration successful! Please check your email to confirm your account.";
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to send confirmation email to {Email}", model.Email);
-                TempData["Warning"] = "Account created but confirmation email failed to send. Please contact support.";
-            }
+    //        try
+    //        {
+    //            var emailBody = EmailTemplateService.GetEmailConfirmationTemplate(callbackUrl!);
+    //            await _emailService.SendEmailAsync(model.Email, "Confirm your email - Medley", emailBody);
+    //            TempData["Success"] = "Registration successful! Please check your email to confirm your account.";
+    //        }
+    //        catch (Exception ex)
+    //        {
+    //            _logger.LogError(ex, "Failed to send confirmation email to {Email}", model.Email);
+    //            TempData["Warning"] = "Account created but confirmation email failed to send. Please contact support.";
+    //        }
 
-            return RedirectToAction(nameof(Login));
-        }
+    //        return RedirectToAction(nameof(Login));
+    //    }
 
-        foreach (var error in result.Errors)
-        {
-            ModelState.AddModelError(string.Empty, error.Description);
-        }
+    //    foreach (var error in result.Errors)
+    //    {
+    //        ModelState.AddModelError(string.Empty, error.Description);
+    //    }
 
-        return View(model);
-    }
+    //    return View(model);
+    //}
 
     /// <summary>
     /// Display login form

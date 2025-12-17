@@ -38,57 +38,60 @@
 <body>
     <!-- Vue will control everything inside this div -->
     <div class="main-page-container @(hasLeftSidebar ? "has-left-sidebar" : "") @(hasRightSidebar ? "has-right-sidebar" : "")" id="app">
-        <!-- Vertical Menu (Far Left) -->
-        <div class="vertical-menu">
-            <a asp-area="" asp-controller="Home" asp-action="Index" 
-               class="vertical-menu-item @(currentController == "Home" ? "active" : "")" 
-               title="Home">
-                <i class="bi bi-house"></i>
-                <span class="vertical-menu-item-label">Home</span>
-            </a>
-            <a asp-area="" asp-controller="Articles" asp-action="Index"
-               class="vertical-menu-item @(currentController == "Articles" ? "active" : "")"
-               title="Articles">
-                <i class="bi bi-file-text"></i>
-                <span class="vertical-menu-item-label">Articles</span>
-            </a>
-            <a asp-area="" asp-controller="Sources" asp-action="Index" 
-               class="vertical-menu-item @(currentController == "Sources" ? "active" : "")" 
-               title="Sources">
-                <i class="bi bi-camera-video"></i>
-                <span class="vertical-menu-item-label">Sources</span>
-            </a>
-            <a asp-area="" asp-controller="Fragments" asp-action="Index" 
-               class="vertical-menu-item @(currentController == "Fragments" ? "active" : "")" 
-               title="Fragments">
-                <i class="bi bi-puzzle"></i>
-                <span class="vertical-menu-item-label">Fragments</span>
-            </a>
-            <div style="flex: 1;"></div>
-            <a asp-area="Admin" asp-controller="Settings" asp-action="Index" 
-               class="vertical-menu-item @(isSettingsArea ? "active" : "")" 
-               title="Admin">
-                <i class="bi bi-gear"></i>
-                <span class="vertical-menu-item-label">Admin</span>
-            </a>
-            <div class="dropdown">
-                <button class="vertical-menu-item" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="User">
-                    <i class="bi bi-person-circle"></i>
-                    @* <span class="vertical-menu-item-label">User</span> *@
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    <li><h6 class="dropdown-header">@User.Identity?.Name</h6></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li>
-                        <form asp-area="" asp-controller="Auth" asp-action="Logout" method="post">
-                            <button type="submit" class="dropdown-item">
-                                <i class="bi bi-box-arrow-right me-2"></i>Logout
-                            </button>
-                        </form>
-                    </li>
-                </ul>
+            <!-- Vertical Menu (Far Left) -->
+            <div class="vertical-menu">
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <a asp-area="" asp-controller="Home" asp-action="Index" 
+                   class="vertical-menu-item @(currentController == "Home" ? "active" : "")" 
+                   title="Home">
+                    <i class="bi bi-house"></i>
+                    <span class="vertical-menu-item-label">Home</span>
+                </a>
+                <a asp-area="" asp-controller="Articles" asp-action="Index"
+                   class="vertical-menu-item @(currentController == "Articles" ? "active" : "")"
+                   title="Articles">
+                    <i class="bi bi-file-text"></i>
+                    <span class="vertical-menu-item-label">Articles</span>
+                </a>
+                <a asp-area="" asp-controller="Sources" asp-action="Index" 
+                   class="vertical-menu-item @(currentController == "Sources" ? "active" : "")" 
+                   title="Sources">
+                    <i class="bi bi-camera-video"></i>
+                    <span class="vertical-menu-item-label">Sources</span>
+                </a>
+                <a asp-area="" asp-controller="Fragments" asp-action="Index" 
+                   class="vertical-menu-item @(currentController == "Fragments" ? "active" : "")" 
+                   title="Fragments">
+                    <i class="bi bi-puzzle"></i>
+                    <span class="vertical-menu-item-label">Fragments</span>
+                </a>
+                <div style="flex: 1;"></div>
+                <a asp-area="Admin" asp-controller="Settings" asp-action="Index" 
+                   class="vertical-menu-item @(isSettingsArea ? "active" : "")" 
+                   title="Admin">
+                    <i class="bi bi-gear"></i>
+                    <span class="vertical-menu-item-label">Admin</span>
+                </a>
+                <div class="dropdown">
+                    <button class="vertical-menu-item" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="User">
+                        <i class="bi bi-person-circle"></i>
+                        @* <span class="vertical-menu-item-label">User</span> *@
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><h6 class="dropdown-header">@User.Identity?.Name</h6></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form asp-area="" asp-controller="Auth" asp-action="Logout" method="post">
+                                <button type="submit" class="dropdown-item">
+                                    <i class="bi bi-box-arrow-right me-2"></i>Logout
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            }
             </div>
-        </div>
 
         @RenderBody()
     </div>
