@@ -52,13 +52,6 @@
     <chat-panel :article-id="selectedArticleId" />
 </div>
 
-@section VueTemplates {
-    @* Vue Component Templates - outside #app so they don't get destroyed *@
-    @await Html.PartialAsync("Templates/_ArticleTreeTemplate")
-    @await Html.PartialAsync("Templates/_ChatPanelTemplate")
-    @await Html.PartialAsync("Templates/_SourceListTemplate")
-}
-
 @section Scripts {
     <script src="~/js/app.js" asp-append-version="true"></script>
     <script src="~/js/utils.js" asp-append-version="true"></script>
