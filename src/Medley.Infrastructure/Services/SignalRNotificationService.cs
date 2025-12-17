@@ -11,11 +11,11 @@ namespace Medley.Infrastructure.Services;
 /// </summary>
 public class SignalRNotificationService : INotificationService
 {
-    private readonly IHubContext<IntegrationStatusHub> _hubContext;
+    private readonly IHubContext<AdminHub> _hubContext;
     private readonly ILogger<SignalRNotificationService> _logger;
 
     public SignalRNotificationService(
-        IHubContext<IntegrationStatusHub> hubContext,
+        IHubContext<AdminHub> hubContext,
         ILogger<SignalRNotificationService> logger)
     {
         _hubContext = hubContext;
@@ -29,7 +29,7 @@ public class SignalRNotificationService : INotificationService
     {
         try
         {
-            await _hubContext.Clients.Group("IntegrationStatus")
+            await _hubContext.Clients.Group("AdminNotifications")
                 .SendAsync("IntegrationStatusUpdate", integrationId, status.ToString(), message ?? string.Empty);
             
             _logger.LogDebug("Sent integration status update for {IntegrationId}: {Status}", 

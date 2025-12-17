@@ -35,19 +35,7 @@ const ArticleTree = {
             return article.children && article.children.length > 0;
         },
         getIconClass(icon) {
-            if (!icon) {
-                return 'bi bi-file-text';
-            }
-            // If it's a Bootstrap Icon (starts with bi-), add bi base class
-            if (icon.startsWith('bi-')) {
-                return `bi ${icon}`;
-            }
-            // If it's a Font Awesome icon (starts with fa-), add fas (solid) base class
-            if (icon.startsWith('fa-')) {
-                return `fas ${icon}`;
-            }
-            // Default fallback
-            return 'bi bi-file-text';
+            return window.MedleyUtils.getIconClass(icon);
         }
     }
 };

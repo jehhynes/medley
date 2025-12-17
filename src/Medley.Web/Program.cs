@@ -178,8 +178,8 @@ public class Program
             app.MapHealthChecks("/health");
 
             // Map SignalR hubs
-            app.MapHub<IntegrationStatusHub>("/integrationStatusHub");
-            app.MapHub<ArticleBrowserHub>("/articleBrowserHub");
+            app.MapHub<AdminHub>("/adminHub");
+            app.MapHub<ArticleHub>("/articleHub");
 
             app.MapControllerRoute(
                 name: "areas",

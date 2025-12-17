@@ -1,9 +1,9 @@
 /**
- * SignalR Integration Status Updates
- * Real-time status updates for integration connections
+ * SignalR Admin Hub
+ * Real-time administrative notifications
  */
 
-window.IntegrationStatusHub = {
+window.AdminHub = {
     connection: null,
     isConnected: false,
     reconnectAttempts: 0,
@@ -22,7 +22,7 @@ window.IntegrationStatusHub = {
         
         // Create connection
         this.connection = new signalR.HubConnectionBuilder()
-            .withUrl('/integrationStatusHub')
+            .withUrl('/adminHub')
             .withAutomaticReconnect([0, 2000, 10000, 30000]) // Progressive reconnection delays
             .build();
         
@@ -78,11 +78,11 @@ window.IntegrationStatusHub = {
                 console.log('SignalR connection started');
                 self.showConnectionStatus('connected');
                 
-                // Join the integration status group
-                return self.connection.invoke('JoinIntegrationStatusGroup');
+                // Join the admin notifications group
+                return self.connection.invoke('JoinAdminGroup');
             })
             .then(function() {
-                console.log('Joined integration status group');
+                console.log('Joined admin notifications group');
             })
             .catch(function(error) {
                 console.error('Error starting SignalR connection:', error);
@@ -156,7 +156,7 @@ window.IntegrationStatusHub = {
         failedDiv.innerHTML = `
             <div class="alert alert-danger alert-sm mb-0 d-flex align-items-center" role="alert">
                 <i class="bi bi-exclamation-triangle me-2"></i>
-                <small>Real-time updates failed. <button class="btn btn-sm btn-outline-danger ms-2" onclick="window.IntegrationStatusHub.manualReconnect()">Retry</button></small>
+                <small>Real-time updates failed. <button class="btn btn-sm btn-outline-danger ms-2" onclick="window.AdminHub.manualReconnect()">Retry</button></small>
             </div>
         `;
         
@@ -333,6 +333,7 @@ window.IntegrationStatusHub = {
 document.addEventListener('DOMContentLoaded', function() {
     // Only initialize if we're on an integration page
     if (document.querySelector('.test-connection') || window.location.pathname.includes('/Integrations')) {
-        window.IntegrationStatusHub.init();
+        window.AdminHub.init();
     }
 });
+
