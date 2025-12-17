@@ -36,16 +36,35 @@ public class SourcesApiController : ControllerBase
     }
 
     /// <summary>
-    /// Get all sources
+    /// Get all sources, optionally filtered by text search and/or tag
     /// </summary>
     [HttpGet]
-    public async Task<IActionResult> GetAll([FromQuery] int skip = 0, [FromQuery] int take = 100)
+    public async Task<IActionResult> GetAll(
+        [FromQuery] string? query = null, 
+        [FromQuery] Guid? tagTypeId = null, 
+        [FromQuery] string? value = null, 
+        [FromQuery] int skip = 0, 
+        [FromQuery] int take = 100)
     {
-        var sources = await _sourceRepository.Query()
+        IQueryable<Source> queryable = _sourceRepository.Query()
             .Include(s => s.Integration)
             .Include(s => s.Fragments)
             .Include(s => s.Tags)
-                .ThenInclude(t => t.TagType)
+                .ThenInclude(t => t.TagType);
+
+        // Apply text search filter if provided
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            queryable = queryable.Where(s => s.Name != null && s.Name.Contains(query, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Apply tag filter if provided
+        if (tagTypeId.HasValue && tagTypeId.Value != Guid.Empty && !string.IsNullOrWhiteSpace(value))
+        {
+            queryable = queryable.Where(s => s.Tags.Any(t => t.TagTypeId == tagTypeId.Value && t.Value == value));
+        }
+
+        var sources = await queryable
             .OrderByDescending(s => s.Date)
             .Skip(skip)
             .Take(take)
@@ -114,34 +133,6 @@ public class SourcesApiController : ControllerBase
                 AllowedValue = t.TagOption?.Value
             })
         });
-    }
-
-    /// <summary>
-    /// Search sources by name
-    /// </summary>
-    [HttpGet("search")]
-    public async Task<IActionResult> Search([FromQuery] string query, [FromQuery] int take = 20)
-    {
-        if (string.IsNullOrWhiteSpace(query))
-        {
-            return BadRequest("Query parameter is required");
-        }
-
-        var sources = await _sourceRepository.Query()
-            .Where(s => s.Name != null && s.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
-            .OrderByDescending(s => s.Date)
-            .Take(take)
-            .Select(s => new
-            {
-                id = s.Id.ToString(),
-                s.Name,
-                type = s.Type.ToString(),
-                s.Date,
-                extractionStatus = s.ExtractionStatus
-            })
-            .ToListAsync();
-
-        return Ok(sources);
     }
 
     /// <summary>

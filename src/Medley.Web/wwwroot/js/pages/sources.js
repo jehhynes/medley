@@ -41,7 +41,8 @@
                 articleTypes: [],
                 tagging: false,
                 showConfidenceComment: false,
-                detachPopState: null
+                detachPopState: null,
+                activeTagFilter: null
             };
         },
         computed: {
@@ -101,7 +102,12 @@
                 this.loading = true;
                 this.error = null;
                 try {
-                    this.sources = await api.get('/api/sources');
+                    let url = '/api/sources';
+                    if (this.activeTagFilter) {
+                        // Add tag filter parameters
+                        url += `?tagTypeId=${this.activeTagFilter.tagTypeId}&value=${encodeURIComponent(this.activeTagFilter.value)}`;
+                    }
+                    this.sources = await api.get(url);
                 } catch (err) {
                     this.error = 'Failed to load sources: ' + err.message;
                     console.error('Error loading sources:', err);
@@ -120,6 +126,12 @@
 
                 try {
                     this.selectedSource = await api.get(`/api/sources/${source.id}`);
+                    // Update the source in the list with tags for filtering
+                    const sourceIndex = this.sources.findIndex(s => s.id === source.id);
+                    if (sourceIndex !== -1 && this.selectedSource.tags) {
+                        // Update tags in the list item so filtering works
+                        this.sources[sourceIndex].tags = this.selectedSource.tags;
+                    }
                 } catch (err) {
                     console.error('Error loading source:', err);
                     this.selectedSource = null;
@@ -130,11 +142,46 @@
                 const query = this.searchQuery.trim();
                 if (query.length >= 2) {
                     try {
-                        this.sources = await api.get(`/api/sources/search?query=${encodeURIComponent(query)}`);
+                        let url = `/api/sources?query=${encodeURIComponent(query)}`;
+                        // Add tag filter if active
+                        if (this.activeTagFilter) {
+                            url += `&tagTypeId=${this.activeTagFilter.tagTypeId}&value=${encodeURIComponent(this.activeTagFilter.value)}`;
+                        }
+                        this.sources = await api.get(url);
                     } catch (err) {
                         console.error('Search error:', err);
                     }
                 } else if (query.length === 0) {
+                    await this.loadSources();
+                }
+            },
+
+            async filterByTag(tag) {
+                // If clicking the same tag, clear the filter; otherwise set it
+                if (this.activeTagFilter && 
+                    this.activeTagFilter.tagTypeId === tag.tagTypeId && 
+                    this.activeTagFilter.value === tag.value) {
+                    await this.clearTagFilter();
+                } else {
+                    this.activeTagFilter = {
+                        tagTypeId: tag.tagTypeId,
+                        value: tag.value,
+                        tagType: tag.tagType
+                    };
+                    // Clear search query when applying tag filter
+                    // If user wants to combine both, they can type in search box after
+                    this.searchQuery = '';
+                    // Reload sources with the new filter
+                    await this.loadSources();
+                }
+            },
+
+            async clearTagFilter() {
+                this.activeTagFilter = null;
+                // If there's a search query, re-apply it; otherwise load all sources
+                if (this.searchQuery.trim().length >= 2) {
+                    await this.onSearchInput();
+                } else {
                     await this.loadSources();
                 }
             },

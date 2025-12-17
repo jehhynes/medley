@@ -93,6 +93,11 @@
             max-height: 60vh;
             overflow-y: auto;
         }
+        
+        /* Tag filtering styles */
+        .badge[style*="cursor: pointer"]:hover {
+            text-decoration: underline;
+        }
     </style>
 }
 
@@ -100,6 +105,16 @@
 <div class="sidebar left-sidebar">
     <div class="sidebar-header">
         <h6 class="sidebar-title">Sources</h6>
+        <div v-if="activeTagFilter" class="mb-2">
+            <div class="d-flex align-items-center justify-content-between">
+                <span class="badge bg-info rounded-pill">
+                    <i class="bi bi-tag-fill me-1"></i>{{ activeTagFilter.value }}
+                </span>
+                <button class="btn btn-sm btn-link text-muted p-0 ms-2" @@click="clearTagFilter" title="Clear filter">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+        </div>
         <div class="input-group input-group-sm">
             <input type="text" class="form-control" placeholder="Search..." v-model="searchQuery" @@input="onSearchInput">
         </div>
@@ -123,8 +138,10 @@
             <div class="empty-state-icon">
                 <i class="bi bi-camera-video"></i>
             </div>
-            <div class="empty-state-title">No Sources Found</div>
-            <div class="empty-state-text">Connect an integration to import sources</div>
+            <div class="empty-state-title" v-if="activeTagFilter">No Sources with This Tag</div>
+            <div class="empty-state-title" v-else>No Sources Found</div>
+            <div class="empty-state-text" v-if="activeTagFilter">Try selecting a different tag or clear the filter</div>
+            <div class="empty-state-text" v-else>Connect an integration to import sources</div>
         </div>
     </div>
 </div>
@@ -169,7 +186,10 @@
                         <span 
                             v-for="tag in sortedTags" 
                             :key="tag.tagTypeId"
-                            class="badge rounded-pill bg-info me-1 mb-1">
+                            class="badge rounded-pill bg-info me-1 mb-1"
+                            @@click.stop="filterByTag(tag)"
+                            style="cursor: pointer;"
+                            :title="activeTagFilter && activeTagFilter.tagTypeId === tag.tagTypeId && activeTagFilter.value === tag.value ? 'Click to clear filter' : 'Click to filter by this tag'">
                             {{ tag.value }}
                         </span>
                     </div>
