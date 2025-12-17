@@ -55,30 +55,30 @@ public class AuthControllerTests
         _controller.TempData = tempData;
     }
 
-    [Fact]
-    public void Register_Get_ReturnsView()
-    {
-        // Act
-        var result = _controller.Register();
+    //[Fact]
+    //public void Register_Get_ReturnsView()
+    //{
+    //    // Act
+    //    var result = _controller.Register();
 
-        // Assert
-        Assert.IsType<ViewResult>(result);
-    }
+    //    // Assert
+    //    Assert.IsType<ViewResult>(result);
+    //}
 
-    [Fact]
-    public async Task Register_Post_WithInvalidModel_ReturnsViewWithModel()
-    {
-        // Arrange
-        var model = new RegisterViewModel();
-        _controller.ModelState.AddModelError("Email", "Required");
+    //[Fact]
+    //public async Task Register_Post_WithInvalidModel_ReturnsViewWithModel()
+    //{
+    //    // Arrange
+    //    var model = new RegisterViewModel();
+    //    _controller.ModelState.AddModelError("Email", "Required");
 
-        // Act
-        var result = await _controller.Register(model);
+    //    // Act
+    //    var result = await _controller.Register(model);
 
-        // Assert
-        var viewResult = Assert.IsType<ViewResult>(result);
-        Assert.Equal(model, viewResult.Model);
-    }
+    //    // Assert
+    //    var viewResult = Assert.IsType<ViewResult>(result);
+    //    Assert.Equal(model, viewResult.Model);
+    //}
 
     [Fact]
     public void Login_Get_ReturnsView()

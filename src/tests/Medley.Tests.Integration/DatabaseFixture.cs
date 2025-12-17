@@ -15,7 +15,7 @@ public class DatabaseFixture : IAsyncLifetime
     public DatabaseFixture()
     {
         _dbContainer = new PostgreSqlBuilder()
-            .WithImage("pgvector/pgvector:pg16")
+            .WithImage("pgvector/pgvector:pg18")
             .WithDatabase("medley_test")
             .WithUsername("postgres")
             .WithPassword("postgres")
