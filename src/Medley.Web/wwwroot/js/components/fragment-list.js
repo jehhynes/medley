@@ -21,99 +21,25 @@ const FragmentList = {
             this.$emit('select', fragment);
         },
         formatDate(dateString) {
-            if (!dateString) return 'N/A';
-            const date = new Date(dateString);
-            return date.toLocaleDateString();
+            return window.MedleyUtils.formatDate(dateString);
         },
         getSourceIcon(type) {
-            const icons = {
-                'Meeting': 'bi-camera-video',
-                'Document': 'bi-file-text',
-                'Email': 'bi-envelope',
-                'Chat': 'bi-chat-dots',
-                'Repository': 'bi-git',
-                'Other': 'bi-file-earmark'
-            };
-            return icons[type] || 'bi-file-earmark';
+            return window.MedleyUtils.getSourceTypeIcon(type);
         },
         getFragmentCategoryIcon(category) {
-            if (!category) {
-                return 'bi-file-text';
-            }
-            
-            // Normalize: extract only alphabetic characters and convert to lowercase
-            const normalize = (str) => {
-                if (!str) return '';
-                return str.replace(/[^a-zA-Z]/g, '').toLowerCase();
-            };
-            
-            const normalizedCategory = normalize(category);
-            
-            // Hardcoded icon mappings
-            const hardcodedIcons = {
-                'bestpractice': 'bi-shield-check'
-            };
-            
-            if (hardcodedIcons[normalizedCategory]) {
-                return hardcodedIcons[normalizedCategory];
-            }
-            
-            // Match fragment category to article type by normalized name
-            if (this.articleTypes && this.articleTypes.length > 0) {
-                const matchingType = this.articleTypes.find(
-                    at => at.name && normalize(at.name) === normalizedCategory
-                );
-                
-                if (matchingType && matchingType.icon) {
-                    return matchingType.icon;
-                }
-            }
-            
-            // Default fallback
-            return 'bi-file-text';
+            return window.MedleyUtils.getFragmentCategoryIcon(category, this.articleTypes);
         },
         getIconClass(icon) {
-            if (!icon) {
-                return 'bi bi-file-text';
-            }
-            // If it's a Bootstrap Icon (starts with bi-), add bi base class
-            if (icon.startsWith('bi-')) {
-                return `bi ${icon}`;
-            }
-            // If it's a Font Awesome icon (starts with fa-), add fas (solid) base class
-            if (icon.startsWith('fa-')) {
-                return `fas ${icon}`;
-            }
-            // Default fallback
-            return 'bi bi-file-text';
+            return window.MedleyUtils.getIconClass(icon);
         },
         getConfidenceIcon(confidence) {
-            if (!confidence) return 'fa-ban';
-            const level = confidence.toString().toLowerCase();
-            switch(level) {
-                case 'certain': return 'fa-signal-bars';
-                case 'high': return 'fa-signal-bars-good';
-                case 'medium': return 'fa-signal-bars-fair';
-                case 'low': return 'fa-signal-bars-weak';
-                case 'unclear': return 'fa-ban';
-                default: return 'fa-ban';
-            }
+            return window.MedleyUtils.getConfidenceIcon(confidence);
         },
         getConfidenceColor(confidence) {
-            if (!confidence) return 'var(--bs-secondary)';
-            const level = confidence.toString().toLowerCase();
-            switch(level) {
-                case 'certain': return 'var(--bs-success)';
-                case 'high': return 'var(--bs-success)';
-                case 'medium': return 'var(--bs-warning)';
-                case 'low': return 'var(--bs-danger)';
-                case 'unclear': return 'var(--bs-danger)';
-                default: return 'var(--bs-secondary)';
-            }
+            return window.MedleyUtils.getConfidenceColor(confidence);
         },
         getConfidenceLabel(confidence) {
-            if (!confidence) return '';
-            return confidence.toString();
+            return window.MedleyUtils.getConfidenceLabel(confidence);
         }
     }
 };

@@ -148,7 +148,7 @@
 @if (Model.IsEdit)
 {
     @section Scripts {
-    <script src="~/js/integration-connections.js"></script>
+    <script src="~/js/integration-connections.js" asp-append-version="true"></script>
     <script>
         // Set the correct test connection URL for this page
         //window.IntegrationConnections.setTestConnectionUrl('@Url.Action("TestConnection", "Manage", new { area = "Integrations" })');

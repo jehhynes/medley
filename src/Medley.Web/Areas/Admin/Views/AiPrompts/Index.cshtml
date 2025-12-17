@@ -153,13 +153,13 @@
 }
 
 @section Scripts {
-    <script src="~/js/app.js"></script>
-    <script src="~/js/utils.js"></script>
-    <script type="module" src="~/js/components/tiptap-editor.js"></script>
+    <script src="~/js/app.js" asp-append-version="true"></script>
+    <script src="~/js/utils.js" asp-append-version="true"></script>
+    <script type="module" src="~/js/components/tiptap-editor.js" asp-append-version="true"></script>
     <script>
         (function() {
             const { createApp } = Vue;
-            const { api } = window.ArticleBrowserApp;
+            const { api } = window.MedleyApi;
 
             // Wait for TiptapEditor to load before mounting the app
             function initializeApp() {

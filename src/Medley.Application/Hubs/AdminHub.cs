@@ -4,25 +4,25 @@ using Microsoft.AspNetCore.SignalR;
 namespace Medley.Application.Hubs;
 
 /// <summary>
-/// SignalR hub for real-time integration status updates
+/// SignalR hub for real-time administrative notifications
 /// </summary>
 [Authorize(Roles = "Admin")]
-public class IntegrationStatusHub : Hub
+public class AdminHub : Hub
 {
     /// <summary>
-    /// Join the integration status group for real-time updates
+    /// Join the admin notifications group for real-time updates
     /// </summary>
-    public async Task JoinIntegrationStatusGroup()
+    public async Task JoinAdminGroup()
     {
-        await Groups.AddToGroupAsync(Context.ConnectionId, "IntegrationStatus");
+        await Groups.AddToGroupAsync(Context.ConnectionId, "AdminNotifications");
     }
 
     /// <summary>
-    /// Leave the integration status group
+    /// Leave the admin notifications group
     /// </summary>
-    public async Task LeaveIntegrationStatusGroup()
+    public async Task LeaveAdminGroup()
     {
-        await Groups.RemoveFromGroupAsync(Context.ConnectionId, "IntegrationStatus");
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, "AdminNotifications");
     }
 
     /// <summary>
@@ -30,7 +30,7 @@ public class IntegrationStatusHub : Hub
     /// </summary>
     public override async Task OnConnectedAsync()
     {
-        await JoinIntegrationStatusGroup();
+        await JoinAdminGroup();
         await base.OnConnectedAsync();
     }
 
@@ -39,7 +39,8 @@ public class IntegrationStatusHub : Hub
     /// </summary>
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        await LeaveIntegrationStatusGroup();
+        await LeaveAdminGroup();
         await base.OnDisconnectedAsync(exception);
     }
 }
+

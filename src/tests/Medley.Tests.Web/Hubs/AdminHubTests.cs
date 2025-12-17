@@ -8,24 +8,24 @@ using Xunit;
 namespace Medley.Tests.Web.Hubs;
 
 /// <summary>
-/// Unit tests for IntegrationStatusHub
+/// Unit tests for AdminHub
 /// </summary>
-public class IntegrationStatusHubTests
+public class AdminHubTests
 {
     private readonly Mock<IHubCallerClients> _mockClients;
     private readonly Mock<IGroupManager> _mockGroups;
     private readonly Mock<HubCallerContext> _mockContext;
-    private readonly Mock<ILogger<IntegrationStatusHub>> _mockLogger;
-    private readonly IntegrationStatusHub _hub;
+    private readonly Mock<ILogger<AdminHub>> _mockLogger;
+    private readonly AdminHub _hub;
 
-    public IntegrationStatusHubTests()
+    public AdminHubTests()
     {
         _mockClients = new Mock<IHubCallerClients>();
         _mockGroups = new Mock<IGroupManager>();
         _mockContext = new Mock<HubCallerContext>();
-        _mockLogger = new Mock<ILogger<IntegrationStatusHub>>();
+        _mockLogger = new Mock<ILogger<AdminHub>>();
 
-        _hub = new IntegrationStatusHub();
+        _hub = new AdminHub();
         
         // Set up the hub context
         var hubContext = new Mock<HubCallerContext>();
@@ -37,7 +37,7 @@ public class IntegrationStatusHubTests
     }
 
     [Fact]
-    public async Task JoinIntegrationStatusGroup_AddsConnectionToGroup()
+    public async Task JoinAdminGroup_AddsConnectionToGroup()
     {
         // Arrange
         var mockGroups = new Mock<IGroupManager>();
@@ -53,16 +53,16 @@ public class IntegrationStatusHubTests
         contextProperty?.SetValue(_hub, hubContext.Object);
 
         // Act
-        await _hub.JoinIntegrationStatusGroup();
+        await _hub.JoinAdminGroup();
 
         // Assert
         mockGroups.Verify(
-            x => x.AddToGroupAsync("test-connection-id", "IntegrationStatus", CancellationToken.None),
+            x => x.AddToGroupAsync("test-connection-id", "AdminNotifications", CancellationToken.None),
             Times.Once);
     }
 
     [Fact]
-    public async Task LeaveIntegrationStatusGroup_RemovesConnectionFromGroup()
+    public async Task LeaveAdminGroup_RemovesConnectionFromGroup()
     {
         // Arrange
         var mockGroups = new Mock<IGroupManager>();
@@ -78,11 +78,11 @@ public class IntegrationStatusHubTests
         contextProperty?.SetValue(_hub, hubContext.Object);
 
         // Act
-        await _hub.LeaveIntegrationStatusGroup();
+        await _hub.LeaveAdminGroup();
 
         // Assert
         mockGroups.Verify(
-            x => x.RemoveFromGroupAsync("test-connection-id", "IntegrationStatus", CancellationToken.None),
+            x => x.RemoveFromGroupAsync("test-connection-id", "AdminNotifications", CancellationToken.None),
             Times.Once);
     }
 
@@ -107,7 +107,7 @@ public class IntegrationStatusHubTests
 
         // Assert
         mockGroups.Verify(
-            x => x.AddToGroupAsync("test-connection-id", "IntegrationStatus", CancellationToken.None),
+            x => x.AddToGroupAsync("test-connection-id", "AdminNotifications", CancellationToken.None),
             Times.Once);
     }
 
@@ -132,15 +132,15 @@ public class IntegrationStatusHubTests
 
         // Assert
         mockGroups.Verify(
-            x => x.RemoveFromGroupAsync("test-connection-id", "IntegrationStatus", CancellationToken.None),
+            x => x.RemoveFromGroupAsync("test-connection-id", "AdminNotifications", CancellationToken.None),
             Times.Once);
     }
 
     [Fact]
-    public void IntegrationStatusHub_HasAuthorizeAttribute()
+    public void AdminHub_HasAuthorizeAttribute()
     {
         // Arrange & Act
-        var authorizeAttribute = typeof(IntegrationStatusHub)
+        var authorizeAttribute = typeof(AdminHub)
             .GetCustomAttributes(typeof(AuthorizeAttribute), true)
             .FirstOrDefault() as AuthorizeAttribute;
 
@@ -149,3 +149,4 @@ public class IntegrationStatusHubTests
         Assert.Equal("Admin", authorizeAttribute.Roles);
     }
 }
+

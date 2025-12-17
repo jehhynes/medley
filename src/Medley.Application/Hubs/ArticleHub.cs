@@ -4,10 +4,10 @@ using Microsoft.AspNetCore.SignalR;
 namespace Medley.Application.Hubs;
 
 /// <summary>
-/// SignalR hub for real-time article browser updates and chat
+/// SignalR hub for real-time article updates and chat
 /// </summary>
 [Authorize]
-public class ArticleBrowserHub : Hub
+public class ArticleHub : Hub
 {
     /// <summary>
     /// Join a specific article's chat room

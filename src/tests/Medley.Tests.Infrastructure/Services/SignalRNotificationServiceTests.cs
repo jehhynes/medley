@@ -13,7 +13,7 @@ namespace Medley.Tests.Infrastructure.Services;
 /// </summary>
 public class SignalRNotificationServiceTests
 {
-    private readonly Mock<IHubContext<IntegrationStatusHub>> _mockHubContext;
+    private readonly Mock<IHubContext<AdminHub>> _mockHubContext;
     private readonly Mock<IHubClients> _mockHubClients;
     private readonly Mock<IClientProxy> _mockClientProxy;
     private readonly Mock<ILogger<SignalRNotificationService>> _mockLogger;
@@ -21,7 +21,7 @@ public class SignalRNotificationServiceTests
 
     public SignalRNotificationServiceTests()
     {
-        _mockHubContext = new Mock<IHubContext<IntegrationStatusHub>>();
+        _mockHubContext = new Mock<IHubContext<AdminHub>>();
         _mockHubClients = new Mock<IHubClients>();
         _mockClientProxy = new Mock<IClientProxy>();
         _mockLogger = new Mock<ILogger<SignalRNotificationService>>();
