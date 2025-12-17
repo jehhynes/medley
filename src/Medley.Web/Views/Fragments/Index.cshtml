@@ -163,11 +163,6 @@
     </div>
 </div>
 
-@section VueTemplates {
-    @* Vue Component Templates - outside #app so they don't get destroyed *@
-    @await Html.PartialAsync("Templates/_FragmentListTemplate")
-}
-
 @section Scripts {
     <script src="~/lib/marked/marked.min.js" asp-append-version="true"></script>
     <script src="~/js/app.js" asp-append-version="true"></script>

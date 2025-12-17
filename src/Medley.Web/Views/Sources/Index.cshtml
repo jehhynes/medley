@@ -353,11 +353,6 @@
 </div>
 <div v-if="selectedFragment" class="modal-backdrop fade show"></div>
 
-@section VueTemplates {
-    @* Vue Component Templates - outside #app so they don't get destroyed *@
-    @await Html.PartialAsync("Templates/_SourceListTemplate")
-}
-
 @section Scripts {
     <script src="~/lib/marked/marked.min.js" asp-append-version="true"></script>
     <script src="~/lib/bootbox/dist/bootbox.all.min.js" asp-append-version="true"></script>
