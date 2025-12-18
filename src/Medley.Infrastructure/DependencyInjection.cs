@@ -5,6 +5,7 @@ using Hangfire;
 using Hangfire.MissionControl;
 using Hangfire.PostgreSql;
 using Hangfire.RecurringJobCleanUpManager;
+using Medley.Application;
 using Medley.Application.Configuration;
 using Medley.Application.Enums;
 using Medley.Application.Integrations.Interfaces;
@@ -19,6 +20,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Npgsql;
 using OllamaSharp;
 using OpenAI;
@@ -30,8 +32,11 @@ namespace Medley.Infrastructure;
 /// </summary>
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IHostApplicationBuilder builder)
     {
+        var configuration = builder.Configuration;
+        var environment = builder.Environment;
+
         // Add DbContext
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
@@ -96,18 +101,21 @@ public static class DependencyInjection
             .UseMissionControl(typeof(BaseHangfireJob<>).Assembly)
         );
 
-        // Register Hangfire server
-        services.AddHangfireServer(options =>
+        // Register Hangfire server (skip in test environment)
+        if (!environment.IsTesting())
         {
-            options.WorkerCount = 4; //Environment.ProcessorCount * 2;
-            //options.Queues = new[] { "default", "high", "low" };
-            //options.ServerTimeout = TimeSpan.FromMinutes(4);
-            //options.ServerCheckInterval = TimeSpan.FromMinutes(1);
-            //options.SchedulePollingInterval = TimeSpan.FromSeconds(15);
-        });
+            services.AddHangfireServer(options =>
+            {
+                options.WorkerCount = 4; //Environment.ProcessorCount * 2;
+                //options.Queues = new[] { "default", "high", "low" };
+                //options.ServerTimeout = TimeSpan.FromMinutes(4);
+                //options.ServerCheckInterval = TimeSpan.FromMinutes(1);
+                //options.SchedulePollingInterval = TimeSpan.FromSeconds(15);
+            });
+        }
 
         // Configure AWS services
-        ConfigureAwsServices(services, configuration);
+        ConfigureAwsServices(services, builder);
 
         // Configure embedding service (Ollama or OpenAI)
         ConfigureEmbeddingServices(services, configuration);
@@ -115,8 +123,11 @@ public static class DependencyInjection
         return services;
     }
 
-    private static void ConfigureAwsServices(IServiceCollection services, IConfiguration configuration)
+    private static void ConfigureAwsServices(IServiceCollection services, IHostApplicationBuilder builder)
     {
+        var configuration = builder.Configuration;
+        var environment = builder.Environment;
+
         // Bind configuration classes
         services.Configure<FileStorageSettings>(configuration.GetSection("FileStorage"));
         services.Configure<AwsSettings>(configuration.GetSection("AWS"));
@@ -127,19 +138,16 @@ public static class DependencyInjection
         var awsSettings = configuration.GetSection("AWS").Get<AwsSettings>() ?? new AwsSettings();
         var fileStorageSettings = configuration.GetSection("FileStorage").Get<FileStorageSettings>() ?? new FileStorageSettings();
 
-        // Register AWS clients only when credentials are available or not in test environment
+        // Register AWS clients only when credentials are available and not in test environment
         var hasCredentials = !string.IsNullOrEmpty(awsSettings.AccessKeyId) && !string.IsNullOrEmpty(awsSettings.SecretAccessKey);
-        var isTestEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Testing" ||
-                               Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") == "Testing";
-
-        if (hasCredentials || !isTestEnvironment)
+        
+        if (hasCredentials && !environment.IsTesting())
         {
             services.AddSingleton<IAmazonS3>(sp =>
             {
                 var config = new AmazonS3Config
                 {
                     RegionEndpoint = RegionEndpoint.GetBySystemName(awsSettings.Region),
-                    //ServiceURL = null // Use default AWS endpoints
                 };
 
                 if (hasCredentials)
@@ -188,7 +196,7 @@ public static class DependencyInjection
         }
 
         // Register AI processing service only when AWS clients are available
-        if (hasCredentials || !isTestEnvironment)
+        if (hasCredentials && !environment.IsTesting())
         {
             services.AddScoped<IAiProcessingService, BedrockAiService>();
         }

@@ -8,7 +8,7 @@ public class TestDatabaseSettings
     /// <summary>
     /// Gets or sets whether to use Testcontainers (Docker) for test databases.
     /// Default is true (Docker mode).
-    /// When false, LocalConnectionString must be provided for local PostgreSQL.
+    /// When false, ConnectionString must be provided for local PostgreSQL.
     /// </summary>
     public bool UseTestContainers { get; set; } = true;
 
@@ -17,6 +17,6 @@ public class TestDatabaseSettings
     /// Only used when UseTestContainers is false.
     /// Should point to the admin database (e.g., "postgres") for test database creation.
     /// </summary>
-    public string? LocalConnectionString { get; set; }
+    public string? ConnectionString { get; set; }
 }
 

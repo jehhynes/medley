@@ -1,4 +1,5 @@
 using Hangfire;
+using Medley.Application;
 using Medley.Application.Hubs;
 using Medley.Application.Interfaces;
 using Medley.Domain.Entities;
@@ -12,7 +13,7 @@ using UoN.ExpressiveAnnotations.Net8.DependencyInjection;
 
 namespace Medley.Web;
 
-public class Program
+public partial class Program
 {
     public static void Main(string[] args)
     {
@@ -32,7 +33,7 @@ public class Program
             builder.Host.UseSerilog();
 
             // Add services to the container.
-            builder.Services.AddInfrastructure(builder.Configuration);
+            builder.Services.AddInfrastructure(builder);
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
             // Add SignalR
@@ -126,9 +127,8 @@ public class Program
             // Add AWS health checks only when not in test environment and AWS credentials are available
             var awsSettings = builder.Configuration.GetSection("AWS").Get<Medley.Application.Configuration.AwsSettings>();
             var hasCredentials = !string.IsNullOrEmpty(awsSettings?.AccessKeyId) && !string.IsNullOrEmpty(awsSettings?.SecretAccessKey);
-            var isTestEnvironment = builder.Environment.EnvironmentName == "Testing";
 
-            if (hasCredentials && !isTestEnvironment)
+            if (hasCredentials && !builder.Environment.IsTesting())
             {
                 healthChecksBuilder
                     .AddCheck<Medley.Infrastructure.HealthChecks.S3HealthCheck>("aws-s3", tags: new[] { "aws", "s3", "storage" })
@@ -138,21 +138,25 @@ public class Program
             var app = builder.Build();
 
             // Apply migrations automatically in development
-            if (app.Environment.IsDevelopment())
+            //if (app.Environment.IsDevelopment())
             {
                 app.Services.ApplyMigrations();
             }
 
-            // Initialize recurring jobs
-            var jobRegistry = app.Services.GetRequiredService<IJobRegistry>();
-            jobRegistry.InitializeRecurringJobs();
-
+            // Initialize recurring jobs (skip in test environment)
+            if (!app.Environment.IsTesting())
+            {
+                var jobRegistry = app.Services.GetRequiredService<IJobRegistry>();
+                jobRegistry.InitializeRecurringJobs();
+            }
+            
             // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
+            //if (app.Environment.IsDevelopment())
             {
                 app.UseMigrationsEndPoint();
             }
-            else
+
+            if (app.Environment.IsProduction())
             {
                 app.UseExceptionHandler("/Home/Error");
                 // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
@@ -166,13 +170,16 @@ public class Program
 
             app.UseAuthorization();
 
-            // Configure Hangfire dashboard with authentication
-            app.UseHangfireDashboard("/hangfire", new DashboardOptions
+            // Configure Hangfire dashboard with authentication (skip in test environment)
+            if (!app.Environment.IsTesting())
             {
-                Authorization = new[] { new HangfireAuthorizationFilter() },
-                DashboardTitle = "Medley Background Jobs",
-                DisplayStorageConnectionString = false
-            });
+                app.UseHangfireDashboard("/hangfire", new DashboardOptions
+                {
+                    Authorization = new[] { new HangfireAuthorizationFilter() },
+                    DashboardTitle = "Medley Background Jobs",
+                    DisplayStorageConnectionString = false
+                });
+            }
 
             // Map health check endpoint
             app.MapHealthChecks("/health");

@@ -10,7 +10,7 @@ public class UnitOfWorkDatabaseFixture : IAsyncLifetime
 {
     private readonly PostgreSqlContainer? _dbContainer;
     private readonly bool _useTestContainers;
-    private readonly string? _localConnectionString;
+    private readonly string? _connectionString;
     private readonly List<NpgsqlDataSource> _dataSources = new();
     private readonly List<string> _createdDatabases = new();
     private string _baseConnectionString = null!;
@@ -19,7 +19,7 @@ public class UnitOfWorkDatabaseFixture : IAsyncLifetime
     {
         var settings = TestConfigurationHelper.LoadSettings();
         _useTestContainers = settings.UseTestContainers;
-        _localConnectionString = settings.LocalConnectionString;
+        _connectionString = settings.ConnectionString;
 
         // Only create container for Docker mode
         if (_useTestContainers)
@@ -43,14 +43,14 @@ public class UnitOfWorkDatabaseFixture : IAsyncLifetime
         }
         else
         {
-            if (string.IsNullOrWhiteSpace(_localConnectionString))
+            if (string.IsNullOrWhiteSpace(_connectionString))
             {
                 throw new InvalidOperationException(
-                    "UseTestContainers is false but LocalConnectionString is not configured in appsettings.Test.json");
+                    "UseTestContainers is false but ConnectionString is not configured in appsettings.json");
             }
 
             // Use local PostgreSQL connection string directly
-            _baseConnectionString = _localConnectionString;
+            _baseConnectionString = _connectionString;
         }
     }
 
@@ -67,7 +67,7 @@ public class UnitOfWorkDatabaseFixture : IAsyncLifetime
         {
             await _dbContainer.DisposeAsync();
         }
-        else if (!_useTestContainers && !string.IsNullOrWhiteSpace(_localConnectionString))
+        else if (!_useTestContainers && !string.IsNullOrWhiteSpace(_connectionString))
         {
             // Drop all created test databases when not using testcontainers
             foreach (var databaseName in _createdDatabases)
