@@ -20,9 +20,8 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
-using Npgsql.EntityFrameworkCore.PostgreSQL;
 using OllamaSharp;
-using EFCore.NamingConventions;
+using OpenAI;
 
 namespace Medley.Infrastructure;
 
@@ -67,6 +66,7 @@ public static class DependencyInjection
         services.AddScoped<ISourceMetadataProvider, SourceMetadataProvider>();
         services.AddScoped<ITaggingService, TaggingService>();
         services.AddScoped<IContentChunkingService, ContentChunkingService>();
+        services.AddScoped<IEmbeddingHelper, EmbeddingHelper>();
         services.AddScoped<FragmentExtractionService>();
         //services.AddScoped<IntegrationHealthCheckJob>();
         services.AddTransient<FragmentClusteringJob>();
@@ -112,8 +112,8 @@ public static class DependencyInjection
         // Configure AWS services
         ConfigureAwsServices(services, configuration);
 
-        // Configure Ollama embedding service
-        ConfigureOllamaServices(services, configuration);
+        // Configure embedding service (Ollama or OpenAI)
+        ConfigureEmbeddingServices(services, configuration);
 
         return services;
     }
@@ -199,20 +199,46 @@ public static class DependencyInjection
         // Note: AWS health checks are registered in Program.cs conditionally
     }
 
-    private static void ConfigureOllamaServices(IServiceCollection services, IConfiguration configuration)
+    private static void ConfigureEmbeddingServices(IServiceCollection services, IConfiguration configuration)
     {
-        // Get Ollama settings from configuration
-        var ollamaBaseUrl = configuration["Ollama:BaseUrl"] ?? "http://localhost:11434";
-        var ollamaModel = configuration["Ollama:EmbeddingModel"] ?? "qwen3-embedding:4b";
-
-        // Register IEmbeddingGenerator<string, Embedding<float>> using OllamaSharp directly
-        // OllamaApiClient implements IEmbeddingGenerator<string, Embedding<float>> for Microsoft.Extensions.AI
+        // Bind embedding configuration
+        services.Configure<EmbeddingSettings>(configuration.GetSection("Embedding"));
+        
+        // Get embedding settings from configuration
+        var embeddingSettings = configuration.GetSection("Embedding").Get<EmbeddingSettings>() ?? new EmbeddingSettings();
+        
+        // Register IEmbeddingGenerator<string, Embedding<float>> based on the configured provider
         services.AddScoped<IEmbeddingGenerator<string, Embedding<float>>>(sp =>
         {
-            var baseUrl = new Uri(ollamaBaseUrl);
-            var ollamaClient = new OllamaApiClient(baseUrl);
-            ollamaClient.SelectedModel = ollamaModel;
-            return ollamaClient;
+            var provider = embeddingSettings.Provider?.ToLowerInvariant() ?? "ollama";
+            
+            return provider switch
+            {
+                "openai" => ConfigureOpenAIEmbedding(embeddingSettings),
+                "ollama" => ConfigureOllamaEmbedding(embeddingSettings),
+                _ => throw new InvalidOperationException($"Unsupported embedding provider: {embeddingSettings.Provider}")
+            };
         });
+    }
+
+    private static IEmbeddingGenerator<string, Embedding<float>> ConfigureOllamaEmbedding(EmbeddingSettings settings)
+    {
+        var baseUrl = new Uri(settings.Ollama.BaseUrl);
+        var ollamaClient = new OllamaApiClient(baseUrl);
+        ollamaClient.SelectedModel = settings.Ollama.Model;
+        return ollamaClient;
+    }
+
+    private static IEmbeddingGenerator<string, Embedding<float>> ConfigureOpenAIEmbedding(EmbeddingSettings settings)
+    {
+        if (string.IsNullOrEmpty(settings.OpenAI.ApiKey))
+        {
+            throw new InvalidOperationException("OpenAI API key is required when using OpenAI embedding provider. Please configure Embedding:OpenAI:ApiKey in your appsettings.");
+        }
+
+        var openAIClient = new OpenAIClient(settings.OpenAI.ApiKey);
+
+        return openAIClient.GetEmbeddingClient(settings.OpenAI.Model)
+            .AsIEmbeddingGenerator();
     }
 }
