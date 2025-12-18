@@ -1,9 +1,11 @@
+using Medley.Application.Configuration;
 using Medley.Application.Interfaces;
 using Medley.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Options;
 
 namespace Medley.Web.Controllers.Api;
 
@@ -14,15 +16,21 @@ public class FragmentsApiController : ControllerBase
 {
     private readonly IFragmentRepository _fragmentRepository;
     private readonly IEmbeddingGenerator<string, Embedding<float>> _embeddingGenerator;
+    private readonly IEmbeddingHelper _embeddingHelper;
+    private readonly EmbeddingSettings _embeddingSettings;
     private readonly ILogger<FragmentsApiController> _logger;
 
     public FragmentsApiController(
         IFragmentRepository fragmentRepository,
         IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
+        IEmbeddingHelper embeddingHelper,
+        IOptions<EmbeddingSettings> embeddingSettings,
         ILogger<FragmentsApiController> logger)
     {
         _fragmentRepository = fragmentRepository;
         _embeddingGenerator = embeddingGenerator;
+        _embeddingHelper = embeddingHelper;
+        _embeddingSettings = embeddingSettings.Value;
         _logger = logger;
     }
 
@@ -133,16 +141,18 @@ public class FragmentsApiController : ControllerBase
             _logger.LogDebug("Performing semantic search with query: {Query}", query);
 
             // Generate embedding for the search query
-            var options = new EmbeddingGenerationOptions()
+            var options = new EmbeddingGenerationOptions
             {
-                Dimensions = 2000
+                Dimensions = _embeddingSettings.Dimensions
             };
-            
             var embedding = await _embeddingGenerator.GenerateVectorAsync(query, options);
+            
+            // Process embedding (conditionally normalize based on model)
+            var processedVector = _embeddingHelper.ProcessEmbedding(embedding.ToArray());
             
             // Find similar fragments using vector similarity
             var similarFragments = await _fragmentRepository.FindSimilarAsync(
-                embedding.ToArray(), 
+                processedVector, 
                 take);
 
             // Load related data and map to response

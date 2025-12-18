@@ -1,24 +1,28 @@
 using Hangfire;
 using Hangfire.Server;
 using Hangfire.Storage;
+using Medley.Application.Configuration;
 using Medley.Application.Interfaces;
 using Medley.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Pgvector;
 
 namespace Medley.Application.Jobs;
 
 /// <summary>
 /// Background job for generating embeddings for fragments that don't have embeddings yet
-/// Uses Ollama (qwen3-embedding:4b) via Microsoft.Extensions.AI
+/// Uses configurable embedding provider (Ollama or OpenAI) via Microsoft.Extensions.AI
 /// </summary>
 public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
 {
     private readonly IFragmentRepository _fragmentRepository;
     private readonly IEmbeddingGenerator<string, Embedding<float>> _embeddingGenerator;
     private readonly IBackgroundJobService _backgroundJobService;
+    private readonly IEmbeddingHelper _embeddingHelper;
+    private readonly EmbeddingSettings _embeddingSettings;
     
     private const int BatchSize = 100; // Process up to 100 fragments per run
 
@@ -26,12 +30,16 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
         IFragmentRepository fragmentRepository,
         IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
         IBackgroundJobService backgroundJobService,
+        IEmbeddingHelper embeddingHelper,
+        IOptions<EmbeddingSettings> embeddingSettings,
         IUnitOfWork unitOfWork,
         ILogger<EmbeddingGenerationJob> logger) : base(unitOfWork, logger)
     {
         _fragmentRepository = fragmentRepository;
         _embeddingGenerator = embeddingGenerator;
         _backgroundJobService = backgroundJobService;
+        _embeddingHelper = embeddingHelper;
+        _embeddingSettings = embeddingSettings.Value;
     }
 
     /// <summary>
@@ -74,11 +82,11 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
                 {
                     // Generate embeddings for all fragments at once
                     var textsToEmbed = fragmentsWithoutEmbeddings.Select(f => BuildTextForEmbedding(f)).ToList();
-                    var options = new EmbeddingGenerationOptions()
+                    var options = new EmbeddingGenerationOptions
                     {
-                        Dimensions = 2000
+                        Dimensions = _embeddingSettings.Dimensions
                     };
-
+                    
                     var embeddings = await _embeddingGenerator.GenerateAsync(textsToEmbed, options, cancellationToken: cancellationToken);
 
                     // Update fragments with their embeddings (normalized for cosine similarity)
@@ -91,14 +99,15 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
                         var fragment = fragmentsWithoutEmbeddings[j];
                         var embedding = embeddingList[j];
 
-                        // Normalize the embedding vector (L2 normalization) for optimized cosine similarity searches
-                        var normalizedVector = NormalizeVector(embedding.Vector.ToArray());
-                        fragment.Embedding = new Vector(normalizedVector);
+                        // Process embedding (conditionally normalize based on model)
+                        var processedVector = _embeddingHelper.ProcessEmbedding(embedding.Vector.ToArray(), fragment.Id);
+                        
+                        fragment.Embedding = new Vector(processedVector);
 
                         await _fragmentRepository.SaveAsync(fragment);
                         processedCount++;
 
-                        _logger.LogDebug("Generated and normalized embedding for fragment {FragmentId} (Title: {Title}) with {Dimensions} dimensions",
+                        _logger.LogDebug("Generated embedding for fragment {FragmentId} (Title: {Title}) with {Dimensions} dimensions",
                             fragment.Id, fragment.Title ?? "Untitled", embedding.Vector.Length);
                     }
                 }
@@ -150,16 +159,6 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
         }
 
         return string.Join("\n\n", parts);
-    }
-
-    /// <summary>
-    /// Normalizes a vector to unit length (L2 normalization)
-    /// This optimization allows cosine similarity to be computed as a simple dot product
-    /// </summary>
-    private static float[] NormalizeVector(float[] vector)
-    {
-        var magnitude = Math.Sqrt(vector.Sum(x => x * x));
-        return magnitude == 0 ? vector : vector.Select(x => (float)(x / magnitude)).ToArray();
     }
 }
 
