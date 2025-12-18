@@ -1,3 +1,4 @@
+using Hangfire;
 using Hangfire.Server;
 using Medley.Application.Integrations.Interfaces;
 using Medley.Application.Integrations.Models.Fellow;
@@ -19,17 +20,20 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
     private readonly IIntegrationService _integrationService;
     private readonly IRepository<Source> _sourceRepository;
     private readonly FellowIntegrationService _fellowService;
+    private readonly IBackgroundJobClient _backgroundJobClient;
 
     public FellowTranscriptSyncJob(
         IIntegrationService integrationService,
         IRepository<Source> sourceRepository,
         FellowIntegrationService fellowService,
+        IBackgroundJobClient backgroundJobClient,
         IUnitOfWork unitOfWork,
         ILogger<FellowTranscriptSyncJob> logger) : base(unitOfWork, logger)
     {
         _integrationService = integrationService;
         _sourceRepository = sourceRepository;
         _fellowService = fellowService;
+        _backgroundJobClient = backgroundJobClient;
     }
 
     /// <summary>
@@ -61,7 +65,7 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
 
             try
             {
-                await SyncIntegrationTranscriptsAsync(integration, cancellationToken);
+                await SyncIntegrationTranscriptsAsync(context, integration, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -77,7 +81,7 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
     /// <summary>
     /// Syncs transcripts for a specific integration
     /// </summary>
-    private async Task SyncIntegrationTranscriptsAsync(Integration integration, CancellationToken cancellationToken = default)
+    private async Task SyncIntegrationTranscriptsAsync(PerformContext context, Integration integration, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(integration.ApiKey) || string.IsNullOrWhiteSpace(integration.BaseUrl))
         {
@@ -160,11 +164,21 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
             }
 
             // Process this page in a transaction
-            (int processedCount, int createdCount, int skippedCount) = await ProcessPage(integration, response, cancellationToken);
+            (int processedCount, int createdCount, int skippedCount, List<Guid> createdSourceIds) = await ProcessPage(integration, response, cancellationToken);
 
             totalProcessedCount += processedCount;
             totalCreatedCount += createdCount;
             totalSkippedCount += skippedCount;
+
+            // Trigger smart tag processing for each newly created source (outside transaction)
+            var currentJobId = context.BackgroundJob.Id;
+            foreach (var sourceId in createdSourceIds)
+            {
+                _backgroundJobClient.ContinueJobWith<SmartTagProcessorJob>(
+                    currentJobId,
+                    j => j.ExecuteAsync(default!, default, sourceId));
+                _logger.LogDebug("Enqueued smart tag processing job for source {SourceId}", sourceId);
+            }
 
             _logger.LogInformation(
                 "Page {PageNumber} completed for integration {IntegrationId}. Processed: {Processed}, Created: {Created}, Skipped: {Skipped}",
@@ -191,13 +205,14 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
             integration.Id, integration.DisplayName, totalProcessedCount, totalCreatedCount, totalSkippedCount);
     }
 
-    private async Task<(int processedCount, int createdCount, int skippedCount)> ProcessPage(Integration integration, FellowRecordingsResponse response, CancellationToken cancellationToken = default)
+    private async Task<(int processedCount, int createdCount, int skippedCount, List<Guid> createdSourceIds)> ProcessPage(Integration integration, FellowRecordingsResponse response, CancellationToken cancellationToken = default)
     {
         return await ExecuteWithTransactionAsync(async () =>
         {
             var pageProcessed = 0;
             var pageCreated = 0;
             var pageSkipped = 0;
+            var createdSourceIds = new List<Guid>();
 
             foreach (var recording in response.Recordings!.Data!)
             {
@@ -254,12 +269,13 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
 
                 await _sourceRepository.SaveAsync(source);
                 pageCreated++;
+                createdSourceIds.Add(source.Id);
 
                 _logger.LogDebug("Created source for recording {RecordingId} ({Title})",
                     recording.Id, recording.Title);
             }
 
-            return (pageProcessed, pageCreated, pageSkipped);
+            return (pageProcessed, pageCreated, pageSkipped, createdSourceIds);
         });
     }
 

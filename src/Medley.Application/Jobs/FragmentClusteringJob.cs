@@ -1,3 +1,5 @@
+using Hangfire;
+using Hangfire.MissionControl;
 using Hangfire.Server;
 using Hangfire.Storage;
 using Medley.Application.Interfaces;
@@ -9,126 +11,135 @@ using System.Text.Json;
 
 namespace Medley.Application.Jobs;
 
+[MissionLauncher]
 public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
 {
     private readonly IFragmentRepository _fragmentRepository;
     private readonly IAiProcessingService _aiProcessingService;
+    private readonly IBackgroundJobClient _backgroundJobClient;
 
     public FragmentClusteringJob(
         IFragmentRepository fragmentRepository,
         IAiProcessingService aiProcessingService,
+        IBackgroundJobClient backgroundJobClient,
         IUnitOfWork unitOfWork,
         ILogger<FragmentClusteringJob> logger) : base(unitOfWork, logger)
     {
         _fragmentRepository = fragmentRepository;
         _aiProcessingService = aiProcessingService;
+        _backgroundJobClient = backgroundJobClient;
     }
 
+    [DisableMultipleQueuedItemsFilter]
+    [Mission]
     public async Task ExecuteAsync(PerformContext context, CancellationToken cancellationToken)
     {
-        try
+        _logger.LogInformation("Starting Fragment Clustering Job");
+
+        for (int i = 0; i < 10; i++) //Process 10 records per job run to avoid long executions
         {
-            using var dlock = context.Connection.AcquireDistributedLock(nameof(FragmentClusteringJob), TimeSpan.FromSeconds(1));
-
-            _logger.LogInformation("Starting Fragment Clustering Job");
-
-            for (int i = 0; i < 10; i++) //Process 10 records per job run to avoid long executions
+            if (cancellationToken.IsCancellationRequested)
             {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    _logger.LogInformation("Cancellation requested. Exiting job loop.");
-                    break;
-                }
-
-                var shouldContinue = await ExecuteWithTransactionAsync(async () =>
-                {
-                    // 1) Grab the first unprocessed fragment that is not a cluster
-                    var candidate = await _fragmentRepository.Query()
-                        .Where(f => !f.IsCluster && !f.ClusteringProcessed.HasValue && f.Embedding != null)
-                        .OrderBy(f => f.CreatedAt) // FIFO
-                        .FirstOrDefaultAsync(cancellationToken);
-
-                    if (candidate == null)
-                    {
-                        _logger.LogInformation("No more unprocessed fragments found. Job finished.");
-                        return false;
-                    }
-
-                    _logger.LogInformation("Processing fragment {FragmentId}", candidate.Id);
-
-                    // 2) Query for similar fragments
-                    var targetSimilarity = 0.85; //0 to 1 where 1 is identical
-                    var maxDistance = (1 - targetSimilarity) * 2;  //0 to 2 where 0 is identical
-
-                    var similarResults = await _fragmentRepository.FindSimilarAsync(
-                        candidate.Embedding!.ToArray(),
-                        limit: 100,
-                        threshold: maxDistance,
-                        cancellationToken);
-
-                    var similarFragments = similarResults
-                        .Select(r => r.Fragment)
-                        .Where(f => f.Id != candidate.Id && !f.IsCluster)
-                        .ToList();
-
-                    if (!similarFragments.Any())
-                    {
-                        _logger.LogInformation("No similar fragments found for {FragmentId}. Marking as processed.", candidate.Id);
-                        candidate.ClusteringProcessed = DateTimeOffset.UtcNow;
-                        return true;
-                    }
-
-                    var clusterParticipants = new List<Fragment> { candidate };
-                    clusterParticipants.AddRange(similarFragments);
-
-                    _logger.LogInformation("Found {Count} similar fragments to cluster.", similarFragments.Count);
-
-                    // 5) Pass contents to LLM
-                    var clusterResponse = await GenerateClusterAsync(clusterParticipants, cancellationToken);
-                    if (clusterResponse == null)
-                    {
-                        _logger.LogWarning("Failed to generate cluster content for {FragmentId}. Marking as processed to avoid loops.", candidate.Id);
-                        candidate.ClusteringProcessed = DateTimeOffset.UtcNow;
-                        return true;
-                    }
-
-                    // 6) Create new Fragment (Cluster)
-                    var cluster = new Fragment
-                    {
-                        Id = Guid.NewGuid(),
-                        Title = clusterResponse.Title?.Trim().Substring(0, Math.Min(200, clusterResponse.Title.Trim().Length)),
-                        Summary = clusterResponse.Summary?.Trim().Substring(0, Math.Min(500, clusterResponse.Summary.Trim().Length)),
-                        Category = clusterResponse.Category?.Trim().Substring(0, Math.Min(100, clusterResponse.Category.Trim().Length)),
-                        Content = clusterResponse.Content?.Trim().Substring(0, Math.Min(10000, clusterResponse.Content.Trim().Length)) ?? string.Empty,
-                        IsCluster = true,
-                        ClusteringProcessed = DateTimeOffset.UtcNow,
-                        Source = null,
-                        CreatedAt = DateTimeOffset.UtcNow
-                    };
-
-                    await _fragmentRepository.SaveAsync(cluster);
-
-                    // Update participants
-                    foreach (var participant in clusterParticipants)
-                    {
-                        participant.ClusteredInto = cluster;
-                        participant.ClusteringProcessed = DateTimeOffset.UtcNow;
-                    }
-
-                    _logger.LogInformation("Created cluster {ClusterId} with {ParticipantCount} fragments. Message: {Message}",
-                        cluster.Id, clusterParticipants.Count, clusterResponse.Message);
-                    return true;
-                });
-
-                if (!shouldContinue)
-                {
-                    break;
-                }
+                _logger.LogInformation("Cancellation requested. Exiting job loop.");
+                break;
             }
-        }
-        catch (DistributedLockTimeoutException)
-        {
-            // Another job of same type is already running. Just return success.
+
+            Guid? createdClusterId = null;
+            var shouldContinue = await ExecuteWithTransactionAsync(async () =>
+            {
+                // 1) Grab the first unprocessed fragment that is not a cluster
+                var candidate = await _fragmentRepository.Query()
+                    .Where(f => !f.IsCluster && !f.ClusteringProcessed.HasValue && f.Embedding != null)
+                    .OrderBy(f => f.CreatedAt) // FIFO
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                if (candidate == null)
+                {
+                    _logger.LogInformation("No more unprocessed fragments found. Job finished.");
+                    return false;
+                }
+
+                _logger.LogInformation("Processing fragment {FragmentId}", candidate.Id);
+
+                // 2) Query for similar fragments
+                var targetSimilarity = 0.85; //0 to 1 where 1 is identical
+                var maxDistance = (1 - targetSimilarity) * 2;  //0 to 2 where 0 is identical
+
+                var similarResults = await _fragmentRepository.FindSimilarAsync(
+                    candidate.Embedding!.ToArray(),
+                    limit: 100,
+                    threshold: maxDistance,
+                    cancellationToken);
+
+                var similarFragments = similarResults
+                    .Select(r => r.Fragment)
+                    .Where(f => f.Id != candidate.Id && !f.IsCluster)
+                    .ToList();
+
+                if (!similarFragments.Any())
+                {
+                    _logger.LogInformation("No similar fragments found for {FragmentId}. Marking as processed.", candidate.Id);
+                    candidate.ClusteringProcessed = DateTimeOffset.UtcNow;
+                    return true;
+                }
+
+                var clusterParticipants = new List<Fragment> { candidate };
+                clusterParticipants.AddRange(similarFragments);
+
+                _logger.LogInformation("Found {Count} similar fragments to cluster.", similarFragments.Count);
+
+                // 5) Pass contents to LLM
+                var clusterResponse = await GenerateClusterAsync(clusterParticipants, cancellationToken);
+                if (clusterResponse == null)
+                {
+                    _logger.LogWarning("Failed to generate cluster content for {FragmentId}. Marking as processed to avoid loops.", candidate.Id);
+                    candidate.ClusteringProcessed = DateTimeOffset.UtcNow;
+                    return true;
+                }
+
+                // 6) Create new Fragment (Cluster)
+                var cluster = new Fragment
+                {
+                    Id = Guid.NewGuid(),
+                    Title = clusterResponse.Title?.Trim().Substring(0, Math.Min(200, clusterResponse.Title.Trim().Length)),
+                    Summary = clusterResponse.Summary?.Trim().Substring(0, Math.Min(500, clusterResponse.Summary.Trim().Length)),
+                    Category = clusterResponse.Category?.Trim().Substring(0, Math.Min(100, clusterResponse.Category.Trim().Length)),
+                    Content = clusterResponse.Content?.Trim().Substring(0, Math.Min(10000, clusterResponse.Content.Trim().Length)) ?? string.Empty,
+                    IsCluster = true,
+                    ClusteringProcessed = DateTimeOffset.UtcNow,
+                    Source = null,
+                    CreatedAt = DateTimeOffset.UtcNow
+                };
+
+                await _fragmentRepository.SaveAsync(cluster);
+                createdClusterId = cluster.Id;
+
+                // Update participants
+                foreach (var participant in clusterParticipants)
+                {
+                    participant.ClusteredInto = cluster;
+                    participant.ClusteringProcessed = DateTimeOffset.UtcNow;
+                }
+
+                _logger.LogInformation("Created cluster {ClusterId} with {ParticipantCount} fragments. Message: {Message}",
+                    cluster.Id, clusterParticipants.Count, clusterResponse.Message);
+                return true;
+            });
+
+            // Trigger embedding generation for the newly created cluster (outside transaction)
+            if (createdClusterId.HasValue)
+            {
+                var currentJobId = context.BackgroundJob.Id;
+                _backgroundJobClient.ContinueJobWith<EmbeddingGenerationJob>(
+                    currentJobId,
+                    j => j.GenerateFragmentEmbeddings(default!, default, null, createdClusterId.Value));
+                _logger.LogInformation("Enqueued embedding generation job for cluster fragment {ClusterId}", createdClusterId.Value);
+            }
+
+            if (!shouldContinue)
+            {
+                break;
+            }
         }
     }
 

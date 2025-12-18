@@ -106,9 +106,6 @@ public static class DependencyInjection
             //options.SchedulePollingInterval = TimeSpan.FromSeconds(15);
         });
 
-        // Register background job service
-        services.AddScoped<IBackgroundJobService, BackgroundJobService>();
-
         // Configure AWS services
         ConfigureAwsServices(services, configuration);
 

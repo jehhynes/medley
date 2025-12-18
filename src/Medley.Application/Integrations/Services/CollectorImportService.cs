@@ -1,6 +1,8 @@
+using Hangfire;
 using Medley.Application.Integrations.Interfaces;
 using Medley.Application.Integrations.Models.Collector;
 using Medley.Application.Interfaces;
+using Medley.Application.Jobs;
 using Medley.Application.Models;
 using Medley.Domain.Entities;
 using Medley.Domain.Enums;
@@ -19,16 +21,19 @@ public class CollectorImportService : ICollectorImportService
 {
     private readonly IRepository<Source> _sourceRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IBackgroundJobClient _backgroundJobClient;
     private readonly ILogger<CollectorImportService> _logger;
     private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true };
 
     public CollectorImportService(
         IRepository<Source> sourceRepository,
         IUnitOfWork unitOfWork,
+        IBackgroundJobClient backgroundJobClient,
         ILogger<CollectorImportService> logger)
     {
         _sourceRepository = sourceRepository;
         _unitOfWork = unitOfWork;
+        _backgroundJobClient = backgroundJobClient;
         _logger = logger;
     }
 
@@ -91,6 +96,11 @@ public class CollectorImportService : ICollectorImportService
         _logger.LogInformation("Created source for Google Drive video {VideoId} ({Name})",
             video.Id, video.Name);
 
+        // Trigger smart tag processing for the new source
+        _backgroundJobClient.Schedule<SmartTagProcessorJob>(
+            j => j.ExecuteAsync(default!, default, source.Id), TimeSpan.FromMinutes(10));
+        _logger.LogInformation("Enqueued smart tag processing job for source {SourceId}", source.Id);
+
         return source;
     }
 
@@ -150,6 +160,11 @@ public class CollectorImportService : ICollectorImportService
 
         _logger.LogInformation("Created source for Fellow recording {RecordingId} ({Title})",
             recording.Id, recording.Title);
+
+        // Trigger smart tag processing for the new source
+        _backgroundJobClient.Schedule<SmartTagProcessorJob>(
+            j => j.ExecuteAsync(default!, default, source.Id), TimeSpan.FromSeconds(2));
+        _logger.LogInformation("Enqueued smart tag processing job for source {SourceId}", source.Id);
 
         return source;
     }

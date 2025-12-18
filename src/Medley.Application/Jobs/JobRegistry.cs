@@ -24,8 +24,9 @@ public class JobRegistry : IJobRegistry
         {
             //RecurringJobDescriptor.Create<IntegrationHealthCheckJob>(j => j.CheckAllIntegrationsHealthAsync(default!, default), Daily(6, 0)),
             //RecurringJobDescriptor.Create<FellowTranscriptSyncJob>(j => j.SyncTranscriptsAsync(default!, default), Hourly(0)),
-            RecurringJobDescriptor.Create<SmartTagProcessorJob>(j => j.ExecuteAsync(default!, default), MinuteInterval(1)),
-            RecurringJobDescriptor.Create<EmbeddingGenerationJob>(j => j.GenerateFragmentEmbeddings(default!, default), MinuteInterval(1)),
+            RecurringJobDescriptor.Create<EmbeddingGenerationJob>(j => j.GenerateFragmentEmbeddings(default!, default, null), Daily(2, 0)), // Run nightly at 2 AM to pickup missed fragments
+            RecurringJobDescriptor.Create<SmartTagProcessorJob>(j => j.ExecuteAsync(default!, default, null), Daily(3, 0)), // Run nightly at 3 AM to pickup missed sources
+            
             //RecurringJobDescriptor.Create<FragmentClusteringJob>(j => j.ExecuteAsync(default!, default), MinuteInterval(1))
         };
 
