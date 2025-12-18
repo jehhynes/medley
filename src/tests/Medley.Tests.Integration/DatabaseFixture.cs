@@ -11,7 +11,7 @@ public class DatabaseFixture : IAsyncLifetime
 {
     private readonly PostgreSqlContainer? _dbContainer;
     private readonly bool _useTestContainers;
-    private readonly string? _localConnectionString;
+    private readonly string? _connectionString;
     private NpgsqlDataSource? _dataSource;
     private string? _testDatabaseName;
     public string? ConnectionString { get; private set; }
@@ -20,7 +20,7 @@ public class DatabaseFixture : IAsyncLifetime
     {
         var settings = TestConfigurationHelper.LoadSettings();
         _useTestContainers = settings.UseTestContainers;
-        _localConnectionString = settings.LocalConnectionString;
+        _connectionString = settings.ConnectionString;
 
         // Only create container for Docker mode
         if (_useTestContainers)
@@ -44,16 +44,16 @@ public class DatabaseFixture : IAsyncLifetime
         }
         else
         {
-            if (string.IsNullOrWhiteSpace(_localConnectionString))
+            if (string.IsNullOrWhiteSpace(_connectionString))
             {
                 throw new InvalidOperationException(
-                    "UseTestContainers is false but LocalConnectionString is not configured in appsettings.Test.json");
+                    "UseTestContainers is false but ConnectionString is not configured in appsettings.json");
             }
 
             // Use local PostgreSQL connection string directly
             // Create a unique test database name to avoid conflicts
             _testDatabaseName = $"medley_test_{Guid.NewGuid():N}";
-            await using (var adminConnection = new NpgsqlConnection(_localConnectionString))
+            await using (var adminConnection = new NpgsqlConnection(_connectionString))
             {
                 await adminConnection.OpenAsync();
                 
@@ -63,7 +63,7 @@ public class DatabaseFixture : IAsyncLifetime
             }
 
             // Build connection string for the test database
-            var builder = new NpgsqlConnectionStringBuilder(_localConnectionString)
+            var builder = new NpgsqlConnectionStringBuilder(_connectionString)
             {
                 Database = _testDatabaseName
             };
@@ -97,12 +97,12 @@ public class DatabaseFixture : IAsyncLifetime
         {
             await _dbContainer.DisposeAsync();
         }
-        else if (!string.IsNullOrWhiteSpace(_testDatabaseName) && !string.IsNullOrWhiteSpace(_localConnectionString))
+        else if (!string.IsNullOrWhiteSpace(_testDatabaseName) && !string.IsNullOrWhiteSpace(_connectionString))
         {
             // Drop the test database when not using testcontainers
             try
             {
-                await using var adminConnection = new NpgsqlConnection(_localConnectionString);
+                await using var adminConnection = new NpgsqlConnection(_connectionString);
                 await adminConnection.OpenAsync();
                 
                 // Terminate any active connections to the test database

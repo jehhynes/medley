@@ -7,6 +7,10 @@
     <UserSecretsId>aspnet-Medley.Web-1e2983dc-d9d0-4468-ba34-de1e3bf434d4</UserSecretsId>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Medley.Tests.Integration" />
+  </ItemGroup>
+
 	<PropertyGroup Condition="'$(Configuration)' == 'Debug'">
 		<RazorCompileOnBuild>false</RazorCompileOnBuild>
 		<RazorCompileOnPublish>true</RazorCompileOnPublish>

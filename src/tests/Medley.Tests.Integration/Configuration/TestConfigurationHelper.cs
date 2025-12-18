@@ -11,7 +11,7 @@ public static class TestConfigurationHelper
     private static readonly object _lock = new object();
 
     /// <summary>
-    /// Loads test database settings from appsettings.Test.json.
+    /// Loads test database settings from appsettings.json.
     /// Returns default settings (Docker mode) if the file doesn't exist or cannot be loaded.
     /// </summary>
     public static TestDatabaseSettings LoadSettings()
