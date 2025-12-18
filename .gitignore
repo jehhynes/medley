@@ -8,3 +8,4 @@ src/**/obj/
 /src/Medley.Web/appsettings.Development.json
 /src/Medley.Collector/appsettings.Development.json
 /src/**/*.user
+/src/tests/Medley.Tests.Integration/appsettings.Development.json
