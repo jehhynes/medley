@@ -41,104 +41,96 @@ public class FragmentConfidenceScoringJob : BaseHangfireJob<FragmentConfidenceSc
     /// Scores fragments for a specific source
     /// </summary>
     /// <param name="sourceId">The source ID whose fragments need confidence scoring</param>
+    [DisableMultipleQueuedItemsFilter]
     [Mission]
-    public async Task ExecuteAsync(PerformContext context, CancellationToken cancellationToken, Guid sourceId)
+    public async Task ExecuteAsync(Guid sourceId, PerformContext context, CancellationToken cancellationToken)
     {
-        try
+        await ExecuteWithTransactionAsync(async () =>
         {
-            using var sourceLock = context.Connection.AcquireDistributedLock($"{nameof(FragmentConfidenceScoringJob)}_{sourceId}", TimeSpan.FromSeconds(1));
+            _logger.LogInformation("Starting confidence scoring for source {SourceId}", sourceId);
 
-            await ExecuteWithTransactionAsync(async () =>
+            var systemPrompt = await BuildSystemPromptAsync(cancellationToken);
+            if (string.IsNullOrWhiteSpace(systemPrompt))
             {
-                _logger.LogInformation("Starting confidence scoring for source {SourceId}", sourceId);
+                _logger.LogWarning("Confidence scoring template not configured; skipping job.");
+                return;
+            }
 
-                var systemPrompt = await BuildSystemPromptAsync(cancellationToken);
-                if (string.IsNullOrWhiteSpace(systemPrompt))
+            var source = await _sourceRepository.Query()
+                .Include(s => s.Fragments)
+                .FirstOrDefaultAsync(s => s.Id == sourceId, cancellationToken);
+
+            if (source == null)
+            {
+                _logger.LogWarning("Source {SourceId} not found while scoring confidence", sourceId);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(source.Content))
+            {
+                _logger.LogWarning("Source {SourceId} has no content; skipping confidence scoring", sourceId);
+                return;
+            }
+
+            var fragmentsToScore = source.Fragments
+                .Where(f => f.Confidence == null)
+                .ToList();
+
+            if (fragmentsToScore.Count == 0)
+            {
+                _logger.LogInformation("Source {SourceId} has no fragments pending confidence scoring", sourceId);
+                return;
+            }
+
+            _logger.LogInformation("Scoring {Count} fragments for source {SourceId}", fragmentsToScore.Count, sourceId);
+
+            var fragmentsList = fragmentsToScore.ToList();
+            var userPrompt = BuildUserPrompt(source.Content, fragmentsList);
+
+            var response = await _aiProcessingService.ProcessStructuredPromptAsync<ConfidenceScoringResponse>(
+                userPrompt: userPrompt,
+                systemPrompt: systemPrompt,
+                cancellationToken: cancellationToken);
+
+            if (response?.Scores == null || response.Scores.Count == 0)
+            {
+                _logger.LogWarning("Confidence scoring returned no scores for source {SourceId}", sourceId);
+                return;
+            }
+            try
+            {
+                var scoresById = response.Scores.ToDictionary(s => s.FragmentId, s => s);
+                int scoredCount = 0;
+
+                for (int i = 0; i < fragmentsList.Count; i++)
                 {
-                    _logger.LogWarning("Confidence scoring template not configured; skipping job.");
-                    return;
-                }
+                    var fragment = fragmentsList[i];
+                    var fragmentIndex = i + 1; // 1-based index to match prompt
 
-                var source = await _sourceRepository.Query()
-                    .Include(s => s.Fragments)
-                    .FirstOrDefaultAsync(s => s.Id == sourceId, cancellationToken);
-
-                if (source == null)
-                {
-                    _logger.LogWarning("Source {SourceId} not found while scoring confidence", sourceId);
-                    return;
-                }
-
-                if (string.IsNullOrWhiteSpace(source.Content))
-                {
-                    _logger.LogWarning("Source {SourceId} has no content; skipping confidence scoring", sourceId);
-                    return;
-                }
-
-                var fragmentsToScore = source.Fragments
-                    .Where(f => f.Confidence == null)
-                    .ToList();
-
-                if (fragmentsToScore.Count == 0)
-                {
-                    _logger.LogInformation("Source {SourceId} has no fragments pending confidence scoring", sourceId);
-                    return;
-                }
-
-                _logger.LogInformation("Scoring {Count} fragments for source {SourceId}", fragmentsToScore.Count, sourceId);
-
-                var fragmentsList = fragmentsToScore.ToList();
-                var userPrompt = BuildUserPrompt(source.Content, fragmentsList);
-
-                var response = await _aiProcessingService.ProcessStructuredPromptAsync<ConfidenceScoringResponse>(
-                    userPrompt: userPrompt,
-                    systemPrompt: systemPrompt,
-                    cancellationToken: cancellationToken);
-
-                if (response?.Scores == null || response.Scores.Count == 0)
-                {
-                    _logger.LogWarning("Confidence scoring returned no scores for source {SourceId}", sourceId);
-                    return;
-                }
-                try
-                {
-                    var scoresById = response.Scores.ToDictionary(s => s.FragmentId, s => s);
-                    int scoredCount = 0;
-
-                    for (int i = 0; i < fragmentsList.Count; i++)
+                    if (!scoresById.TryGetValue(fragmentIndex, out var score) || !score.Confidence.HasValue)
                     {
-                        var fragment = fragmentsList[i];
-                        var fragmentIndex = i + 1; // 1-based index to match prompt
-
-                        if (!scoresById.TryGetValue(fragmentIndex, out var score) || !score.Confidence.HasValue)
-                        {
-                            _logger.LogWarning("No confidence score returned for fragment {FragmentId} (index {Index})", fragment.Id, fragmentIndex);
-                            continue;
-                        }
-
-                        fragment.Confidence = score.Confidence.Value;
-                        fragment.ConfidenceComment = TrimConfidenceComment(score.ConfidenceComment);
-                        fragment.LastModifiedAt = DateTimeOffset.UtcNow;
-                        await _fragmentRepository.SaveAsync(fragment);
-                        scoredCount++;
-
-                        _logger.LogDebug("Updated confidence for fragment {FragmentId} (index {Index}): {Confidence}",
-                            fragment.Id, fragmentIndex, score.Confidence.Value);
+                        _logger.LogWarning("No confidence score returned for fragment {FragmentId} (index {Index})", fragment.Id, fragmentIndex);
+                        continue;
                     }
 
-                    _logger.LogInformation("Successfully scored {ScoredCount} of {TotalCount} fragments for source {SourceId}",
-                        scoredCount, fragmentsToScore.Count, sourceId);
+                    fragment.Confidence = score.Confidence.Value;
+                    fragment.ConfidenceComment = TrimConfidenceComment(score.ConfidenceComment);
+                    fragment.LastModifiedAt = DateTimeOffset.UtcNow;
+                    await _fragmentRepository.SaveAsync(fragment);
+                    scoredCount++;
+
+                    _logger.LogDebug("Updated confidence for fragment {FragmentId} (index {Index}): {Confidence}",
+                        fragment.Id, fragmentIndex, score.Confidence.Value);
                 }
-                catch (Exception ex)
-                {
-                    throw;
-                }
-            });
-        }
-        catch (DistributedLockTimeoutException)
-        {
-            _logger.LogInformation("Another job is already scoring confidence for source {SourceId}; skipping", sourceId);
-        }
+
+                _logger.LogInformation("Successfully scored {ScoredCount} of {TotalCount} fragments for source {SourceId}",
+                    scoredCount, fragmentsToScore.Count, sourceId);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        });
     }
 
     private async Task<string?> BuildSystemPromptAsync(CancellationToken cancellationToken)

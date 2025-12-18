@@ -1,3 +1,5 @@
+using Hangfire;
+using Hangfire.MissionControl;
 using Hangfire.Server;
 using Medley.Application.Interfaces;
 using Medley.Domain.Entities;
@@ -10,6 +12,7 @@ namespace Medley.Application.Jobs;
 /// Background job for automatically tagging sources via the tagging service.
 /// Processes sources in batches of 100, with each source in its own transaction.
 /// </summary>
+[MissionLauncher]
 public class SmartTagProcessorJob : BaseHangfireJob<SmartTagProcessorJob>
 {
     private const int BatchSize = 10;
@@ -17,30 +20,35 @@ public class SmartTagProcessorJob : BaseHangfireJob<SmartTagProcessorJob>
     private readonly ITaggingService _taggingService;
     private readonly IRepository<Organization> _organizationRepository;
     private readonly IRepository<Source> _sourceRepository;
-    private readonly IBackgroundJobService _backgroundJobService;
+    private readonly IBackgroundJobClient _backgroundJobClient;
 
     public SmartTagProcessorJob(
         ITaggingService taggingService,
         IRepository<Organization> organizationRepository,
         IRepository<Source> sourceRepository,
-        IBackgroundJobService backgroundJobService,
+        IBackgroundJobClient backgroundJobClient,
         IUnitOfWork unitOfWork,
         ILogger<SmartTagProcessorJob> logger) : base(unitOfWork, logger)
     {
         _taggingService = taggingService;
         _organizationRepository = organizationRepository;
         _sourceRepository = sourceRepository;
-        _backgroundJobService = backgroundJobService;
+        _backgroundJobClient = backgroundJobClient;
     }
 
     /// <summary>
     /// Executes the smart tag processing job.
     /// Processes up to 100 sources and reschedules itself if more remain.
     /// </summary>
+    /// <param name="sourceId">Optional source ID to process a specific source only</param>
     [DisableMultipleQueuedItemsFilter]
-    public async Task ExecuteAsync(PerformContext context, CancellationToken cancellationToken)
+    [Mission]
+    public async Task ExecuteAsync(PerformContext context, CancellationToken cancellationToken, Guid? sourceId = null)
     {
-        _logger.LogInformation("Starting SmartTagProcessor job");
+        var logMessage = sourceId.HasValue
+            ? $"Starting SmartTagProcessor job for source {sourceId.Value}"
+            : "Starting SmartTagProcessor job";
+        _logger.LogInformation(logMessage);
 
         try
         {
@@ -59,8 +67,16 @@ public class SmartTagProcessorJob : BaseHangfireJob<SmartTagProcessorJob>
             }
 
             // Get the batch of sources to process
-            var sourceIds = await _sourceRepository.Query()
-                .Where(s => s.TagsGenerated == null)
+            var query = _sourceRepository.Query()
+                .Where(s => s.TagsGenerated == null);
+
+            // Filter by source if specified
+            if (sourceId.HasValue)
+            {
+                query = query.Where(s => s.Id == sourceId.Value);
+            }
+
+            var sourceIds = await query
                 .Select(s => s.Id)
                 .Take(BatchSize)
                 .ToListAsync(cancellationToken);
@@ -78,7 +94,7 @@ public class SmartTagProcessorJob : BaseHangfireJob<SmartTagProcessorJob>
             int errorCount = 0;
 
             // Process each source in its own transaction
-            foreach (var sourceId in sourceIds)
+            foreach (var currentSourceId in sourceIds)
             {
                 if (cancellationToken.IsCancellationRequested)
                 {
@@ -90,7 +106,7 @@ public class SmartTagProcessorJob : BaseHangfireJob<SmartTagProcessorJob>
                 {
                     await ExecuteWithTransactionAsync(async () =>
                     {
-                        var result = await _taggingService.GenerateTagsAsync(sourceId, force: false, cancellationToken);
+                        var result = await _taggingService.GenerateTagsAsync(currentSourceId, force: false, cancellationToken);
                         
                         if (result.Processed)
                         {
@@ -105,7 +121,7 @@ public class SmartTagProcessorJob : BaseHangfireJob<SmartTagProcessorJob>
                 catch (Exception ex)
                 {
                     errorCount++;
-                    _logger.LogError(ex, "Error processing source {SourceId}", sourceId);
+                    _logger.LogError(ex, "Error processing source {SourceId}", currentSourceId);
                     // Continue processing other sources even if one fails
                 }
             }
@@ -114,18 +130,22 @@ public class SmartTagProcessorJob : BaseHangfireJob<SmartTagProcessorJob>
                 "SmartTagProcessor batch completed. Processed: {Processed}/{Total}, Tagged as internal: {TaggedInternal}, Errors: {Errors}",
                 processedCount, sourceIds.Count, taggedInternalCount, errorCount);
 
-            if (sourceIds.Count == BatchSize)
+            if (sourceIds.Count == BatchSize && !sourceId.HasValue)
             {
                 _logger.LogInformation("Rescheduling SmartTagProcessor job for remaining sources");
                 
-                // Schedule the next batch to run in 1 second
-                _backgroundJobService.Schedule<SmartTagProcessorJob>(
-                    job => job.ExecuteAsync(default!, default),
-                    TimeSpan.FromSeconds(1));
+                // Continue with the next batch after this job completes
+                var currentJobId = context.BackgroundJob.Id;
+                _backgroundJobClient.ContinueJobWith<SmartTagProcessorJob>(
+                    currentJobId,
+                    job => job.ExecuteAsync(default!, default, null));
             }
             else
             {
-                _logger.LogInformation("All sources have been processed");
+                var completionMessage = sourceId.HasValue
+                    ? $"Source {sourceId.Value} has been processed"
+                    : "All sources have been processed";
+                _logger.LogInformation(completionMessage);
             }
             
             _logger.LogInformation("SmartTagProcessor job completed successfully");

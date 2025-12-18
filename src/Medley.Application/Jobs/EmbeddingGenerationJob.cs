@@ -1,4 +1,5 @@
 using Hangfire;
+using Hangfire.MissionControl;
 using Hangfire.Server;
 using Hangfire.Storage;
 using Medley.Application.Configuration;
@@ -16,11 +17,12 @@ namespace Medley.Application.Jobs;
 /// Background job for generating embeddings for fragments that don't have embeddings yet
 /// Uses configurable embedding provider (Ollama or OpenAI) via Microsoft.Extensions.AI
 /// </summary>
+[MissionLauncher]
 public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
 {
     private readonly IFragmentRepository _fragmentRepository;
     private readonly IEmbeddingGenerator<string, Embedding<float>> _embeddingGenerator;
-    private readonly IBackgroundJobService _backgroundJobService;
+    private readonly IBackgroundJobClient _backgroundJobClient;
     private readonly IEmbeddingHelper _embeddingHelper;
     private readonly EmbeddingSettings _embeddingSettings;
     
@@ -29,7 +31,7 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
     public EmbeddingGenerationJob(
         IFragmentRepository fragmentRepository,
         IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
-        IBackgroundJobService backgroundJobService,
+        IBackgroundJobClient backgroundJobClient,
         IEmbeddingHelper embeddingHelper,
         IOptions<EmbeddingSettings> embeddingSettings,
         IUnitOfWork unitOfWork,
@@ -37,7 +39,7 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
     {
         _fragmentRepository = fragmentRepository;
         _embeddingGenerator = embeddingGenerator;
-        _backgroundJobService = backgroundJobService;
+        _backgroundJobClient = backgroundJobClient;
         _embeddingHelper = embeddingHelper;
         _embeddingSettings = embeddingSettings.Value;
     }
@@ -45,94 +47,115 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
     /// <summary>
     /// Processes fragments that don't have embeddings and generates embeddings for them
     /// </summary>
-    public async Task GenerateFragmentEmbeddings(PerformContext context, CancellationToken cancellationToken)
+    /// <param name="sourceId">Optional source ID to filter fragments by specific source</param>
+    /// <param name="fragmentId">Optional fragment ID to process a specific fragment</param>
+    [DisableMultipleQueuedItemsFilter]
+    [Mission]
+    public async Task GenerateFragmentEmbeddings(PerformContext context, CancellationToken cancellationToken, Guid? sourceId = null, Guid? fragmentId = null)
     {
-        try
+        bool shouldRequeue = false;
+
+        await ExecuteWithTransactionAsync(async () =>
         {
-            using var dlock = context.Connection.AcquireDistributedLock(nameof(EmbeddingGenerationJob), TimeSpan.FromSeconds(1));
+            var logMessage = fragmentId.HasValue
+                ? $"Starting embedding generation job for fragment {fragmentId.Value}"
+                : sourceId.HasValue
+                    ? $"Starting embedding generation job for source {sourceId.Value}"
+                    : "Starting embedding generation job for fragments without embeddings";
+            _logger.LogInformation(logMessage);
 
-            bool shouldRequeue = false;
+            // Query fragments that don't have embeddings
+            var query = _fragmentRepository.Query()
+                .Where(f => f.Embedding == null);
 
-            await ExecuteWithTransactionAsync(async () =>
+            // Filter by fragment ID if specified (highest priority)
+            if (fragmentId.HasValue)
             {
-                _logger.LogInformation("Starting embedding generation job for fragments without embeddings");
-
-                // Query fragments that don't have embeddings
-                var fragmentsWithoutEmbeddings = await _fragmentRepository.Query()
-                    .Where(f => f.Embedding == null)
-                    .OrderBy(f => f.CreatedAt) // Process oldest first
-                    .Take(BatchSize) // Limit to BatchSize fragments per run to avoid long-running jobs
-                    .ToListAsync(cancellationToken);
-
-                shouldRequeue = fragmentsWithoutEmbeddings.Count == BatchSize;
-
-                if (fragmentsWithoutEmbeddings.Count == 0)
-                {
-                    _logger.LogInformation("No fragments found without embeddings");
-                    return;
-                }
-
-                _logger.LogInformation("Found {Count} fragments without embeddings. Processing all in a single batch",
-                    fragmentsWithoutEmbeddings.Count);
-
-                int processedCount = 0;
-                int errorCount = 0;
-
-                try
-                {
-                    // Generate embeddings for all fragments at once
-                    var textsToEmbed = fragmentsWithoutEmbeddings.Select(f => BuildTextForEmbedding(f)).ToList();
-                    var options = new EmbeddingGenerationOptions
-                    {
-                        Dimensions = _embeddingSettings.Dimensions
-                    };
-                    
-                    var embeddings = await _embeddingGenerator.GenerateAsync(textsToEmbed, options, cancellationToken: cancellationToken);
-
-                    // Update fragments with their embeddings (normalized for cosine similarity)
-                    var embeddingList = embeddings.ToList();
-                    for (int j = 0; j < fragmentsWithoutEmbeddings.Count && j < embeddingList.Count; j++)
-                    {
-                        if (cancellationToken.IsCancellationRequested)
-                            break;
-
-                        var fragment = fragmentsWithoutEmbeddings[j];
-                        var embedding = embeddingList[j];
-
-                        // Process embedding (conditionally normalize based on model)
-                        var processedVector = _embeddingHelper.ProcessEmbedding(embedding.Vector.ToArray(), fragment.Id);
-                        
-                        fragment.Embedding = new Vector(processedVector);
-
-                        await _fragmentRepository.SaveAsync(fragment);
-                        processedCount++;
-
-                        _logger.LogDebug("Generated embedding for fragment {FragmentId} (Title: {Title}) with {Dimensions} dimensions",
-                            fragment.Id, fragment.Title ?? "Untitled", embedding.Vector.Length);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    errorCount = fragmentsWithoutEmbeddings.Count;
-                    _logger.LogError(ex, "Failed to generate embeddings for fragments");
-                    throw;
-                }
-
-                _logger.LogInformation("Embedding generation job completed. Processed: {ProcessedCount}, Errors: {ErrorCount}",
-                    processedCount, errorCount);
-            });
-
-            // If we processed exactly BatchSize fragments, there might be more - requeue the job
-            // This happens outside the transaction to ensure it only runs after successful commit
-            if (shouldRequeue)
-            {
-                _logger.LogInformation("Processed exactly {BatchSize} fragments. Requeuing job to process remaining fragments", BatchSize);
-                _backgroundJobService.Schedule<EmbeddingGenerationJob>(j => j.GenerateFragmentEmbeddings(default!, default), TimeSpan.FromSeconds(1));
+                query = query.Where(f => f.Id == fragmentId.Value);
             }
-        }
-        catch (DistributedLockTimeoutException)
+            // Filter by source if specified
+            else if (sourceId.HasValue)
+            {
+                query = query.Where(f => f.SourceId == sourceId.Value);
+            }
+
+            var fragmentsWithoutEmbeddings = await query
+                .OrderBy(f => f.CreatedAt) // Process oldest first
+                .Take(BatchSize) // Limit to BatchSize fragments per run to avoid long-running jobs
+                .ToListAsync(cancellationToken);
+
+            shouldRequeue = fragmentsWithoutEmbeddings.Count == BatchSize;
+
+            if (fragmentsWithoutEmbeddings.Count == 0)
+            {
+                _logger.LogInformation("No fragments found without embeddings");
+                return;
+            }
+
+            _logger.LogInformation("Found {Count} fragments without embeddings. Processing all in a single batch",
+                fragmentsWithoutEmbeddings.Count);
+
+            int processedCount = 0;
+            int errorCount = 0;
+
+            try
+            {
+                // Generate embeddings for all fragments at once
+                var textsToEmbed = fragmentsWithoutEmbeddings.Select(f => BuildTextForEmbedding(f)).ToList();
+                var options = new EmbeddingGenerationOptions
+                {
+                    Dimensions = _embeddingSettings.Dimensions
+                };
+
+                var embeddings = await _embeddingGenerator.GenerateAsync(textsToEmbed, options, cancellationToken: cancellationToken);
+
+                // Update fragments with their embeddings (normalized for cosine similarity)
+                var embeddingList = embeddings.ToList();
+                for (int j = 0; j < fragmentsWithoutEmbeddings.Count && j < embeddingList.Count; j++)
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                        break;
+
+                    var fragment = fragmentsWithoutEmbeddings[j];
+                    var embedding = embeddingList[j];
+
+                    // Process embedding (conditionally normalize based on model)
+                    var processedVector = _embeddingHelper.ProcessEmbedding(embedding.Vector.ToArray(), fragment.Id);
+
+                    fragment.Embedding = new Vector(processedVector);
+
+                    await _fragmentRepository.SaveAsync(fragment);
+                    processedCount++;
+
+                    _logger.LogDebug("Generated embedding for fragment {FragmentId} (Title: {Title}) with {Dimensions} dimensions",
+                        fragment.Id, fragment.Title ?? "Untitled", embedding.Vector.Length);
+                }
+            }
+            catch (Exception ex)
+            {
+                errorCount = fragmentsWithoutEmbeddings.Count;
+                _logger.LogError(ex, "Failed to generate embeddings for fragments");
+                throw;
+            }
+
+            _logger.LogInformation("Embedding generation job completed. Processed: {ProcessedCount}, Errors: {ErrorCount}",
+                processedCount, errorCount);
+        });
+
+        // If we processed exactly BatchSize fragments, there might be more - requeue the job
+        // This happens outside the transaction to ensure it only runs after successful commit
+        // Don't requeue if processing a specific fragment
+        if (shouldRequeue && !fragmentId.HasValue)
         {
-            // Another job of same type is already running. Just return success.
+            var requeueMessage = sourceId.HasValue
+                ? $"Processed exactly {BatchSize} fragments for source {sourceId.Value}. Continuing with next batch"
+                : $"Processed exactly {BatchSize} fragments. Continuing with next batch";
+            _logger.LogInformation(requeueMessage);
+
+            var currentJobId = context.BackgroundJob.Id;
+            _backgroundJobClient.ContinueJobWith<EmbeddingGenerationJob>(
+                currentJobId,
+                j => j.GenerateFragmentEmbeddings(default!, default, sourceId, null));
         }
     }
 

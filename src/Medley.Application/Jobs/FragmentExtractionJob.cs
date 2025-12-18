@@ -1,3 +1,5 @@
+using Hangfire;
+using Hangfire.MissionControl;
 using Hangfire.Server;
 using Hangfire.Storage;
 using Medley.Application.Interfaces;
@@ -13,93 +15,96 @@ namespace Medley.Application.Jobs;
 /// Background job for extracting fragments from source content using AI
 /// Thin wrapper around FragmentExtractionService for Hangfire execution
 /// </summary>
+[MissionLauncher]
 public class FragmentExtractionJob : BaseHangfireJob<FragmentExtractionJob>
 {
     private readonly FragmentExtractionService _fragmentExtractionService;
     private readonly INotificationService _notificationService;
     private readonly IRepository<Source> _sourceRepository;
-    private readonly IBackgroundJobService _backgroundJobService;
+    private readonly IBackgroundJobClient _backgroundJobClient;
 
     public FragmentExtractionJob(
         FragmentExtractionService fragmentExtractionService,
         INotificationService notificationService,
         IRepository<Source> sourceRepository,
-        IBackgroundJobService backgroundJobService,
+        IBackgroundJobClient backgroundJobClient,
         IUnitOfWork unitOfWork,
         ILogger<FragmentExtractionJob> logger) : base(unitOfWork, logger)
     {
         _fragmentExtractionService = fragmentExtractionService;
         _notificationService = notificationService;
         _sourceRepository = sourceRepository;
-        _backgroundJobService = backgroundJobService;
+        _backgroundJobClient = backgroundJobClient;
     }
 
     /// <summary>
     /// Executes fragment extraction for a specific source
     /// </summary>
     /// <param name="sourceId">The source ID to extract fragments from</param>
-    public async Task ExecuteAsync(PerformContext context, CancellationToken cancellationToken, Guid sourceId)
+    [DisableMultipleQueuedItemsFilter]
+    [Mission]
+    public async Task ExecuteAsync(Guid sourceId, PerformContext context, CancellationToken cancellationToken)
     {
+        int fragmentCount = 0;
+        bool success = false;
+        string? errorMessage = null;
+
+        // Set status to InProgress before starting extraction (separate transaction for immediate visibility)
+        await SetExtractionStatusAsync(sourceId, ExtractionStatus.InProgress, cancellationToken);
+
         try
         {
-            using var dlock = context.Connection.AcquireDistributedLock(nameof(FragmentExtractionJob) + "_" + sourceId, TimeSpan.FromSeconds(1));
-
-            int fragmentCount = 0;
-            bool success = false;
-            string? errorMessage = null;
-
-            // Set status to InProgress before starting extraction (separate transaction for immediate visibility)
-            await SetExtractionStatusAsync(sourceId, ExtractionStatus.InProgress, cancellationToken);
-
-            try
+            await ExecuteWithTransactionAsync(async () =>
             {
-                await ExecuteWithTransactionAsync(async () =>
-                {
-                    _logger.LogInformation("Fragment extraction job started for source {SourceId}", sourceId);
+                _logger.LogInformation("Fragment extraction job started for source {SourceId}", sourceId);
 
-                    var result = await _fragmentExtractionService.ExtractFragmentsAsync(sourceId, cancellationToken);
-                    fragmentCount = result.FragmentCount;
+                var result = await _fragmentExtractionService.ExtractFragmentsAsync(sourceId, cancellationToken);
+                fragmentCount = result.FragmentCount;
 
-                    // Set status to Completed within the same transaction as fragment creation
-                    // Zero fragments is a successful outcome, not a failure
-                    await SetExtractionStatusInTransactionAsync(sourceId, ExtractionStatus.Completed, cancellationToken);
+                // Set status to Completed within the same transaction as fragment creation
+                // Zero fragments is a successful outcome, not a failure
+                await SetExtractionStatusInTransactionAsync(sourceId, ExtractionStatus.Completed, cancellationToken);
 
-                    _logger.LogInformation("Fragment extraction job completed for source {SourceId}. Extracted {Count} fragments.", 
-                        sourceId, fragmentCount);
+                _logger.LogInformation("Fragment extraction job completed for source {SourceId}. Extracted {Count} fragments.", 
+                    sourceId, fragmentCount);
                 
-                    success = true;
-                });
+                success = true;
+            });
 
-                // Enqueue confidence scoring job after successful extraction (outside transaction)
-                if (success && fragmentCount > 0)
-                {
-                    _backgroundJobService.Schedule<FragmentConfidenceScoringJob>(
-                        j => j.ExecuteAsync(default!, default, sourceId), TimeSpan.FromSeconds(5));
-                    _logger.LogInformation("Enqueued confidence scoring job for source {SourceId}", sourceId);
-                }
-            }
-            catch (Exception ex)
+            // Enqueue confidence scoring job after successful extraction (outside transaction)
+            if (success && fragmentCount > 0)
             {
-                _logger.LogError(ex, "Fragment extraction job failed for source {SourceId}", sourceId);
-                errorMessage = ex.Message;
-                success = false;
+                var currentJobId = context.BackgroundJob.Id;
+                    
+                var scoringJobId = _backgroundJobClient.ContinueJobWith<FragmentConfidenceScoringJob>(
+                    currentJobId,
+                    j => j.ExecuteAsync(sourceId, default!, default));
+                _logger.LogInformation("Enqueued confidence scoring job for source {SourceId}", sourceId);
 
-                // Set status to Failed (separate transaction since main transaction was rolled back)
-                await SetExtractionStatusAsync(sourceId, ExtractionStatus.Failed, cancellationToken);
-            }
-            finally
-            {
-                // Send SignalR notification regardless of success/failure
-                var message = success 
-                    ? $"Successfully extracted {fragmentCount} fragment{(fragmentCount != 1 ? "s" : "")}" 
-                    : $"Fragment extraction failed: {errorMessage}";
-            
-                await _notificationService.SendFragmentExtractionCompleteAsync(sourceId, fragmentCount, success, message);
+                // Enqueue embedding generation job after confidence scoring completes
+                _backgroundJobClient.ContinueJobWith<EmbeddingGenerationJob>(
+                    scoringJobId,
+                    j => j.GenerateFragmentEmbeddings(default!, default, sourceId, null));
+                _logger.LogInformation("Enqueued embedding generation job for source {SourceId}", sourceId);
             }
         }
-        catch (DistributedLockTimeoutException)
+        catch (Exception ex)
         {
-            // Another job of same type is already running. Just return success.
+            _logger.LogError(ex, "Fragment extraction job failed for source {SourceId}", sourceId);
+            errorMessage = ex.Message;
+            success = false;
+
+            // Set status to Failed (separate transaction since main transaction was rolled back)
+            await SetExtractionStatusAsync(sourceId, ExtractionStatus.Failed, cancellationToken);
+        }
+        finally
+        {
+            // Send SignalR notification regardless of success/failure
+            var message = success 
+                ? $"Successfully extracted {fragmentCount} fragment{(fragmentCount != 1 ? "s" : "")}" 
+                : $"Fragment extraction failed: {errorMessage}";
+            
+            await _notificationService.SendFragmentExtractionCompleteAsync(sourceId, fragmentCount, success, message);
         }
     }
 

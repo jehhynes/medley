@@ -1,3 +1,4 @@
+using Hangfire;
 using Medley.Application.Interfaces;
 using Medley.Application.Jobs;
 using Medley.Domain.Entities;
@@ -16,7 +17,7 @@ public class SourcesApiController : ControllerBase
     private readonly IRepository<TagType> _tagTypeRepository;
     private readonly ITaggingService _taggingService;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IBackgroundJobService _backgroundJobService;
+    private readonly IBackgroundJobClient _backgroundJobClient;
     private readonly ILogger<SourcesApiController> _logger;
 
     public SourcesApiController(
@@ -24,14 +25,14 @@ public class SourcesApiController : ControllerBase
         IRepository<TagType> tagTypeRepository,
         ITaggingService taggingService,
         IUnitOfWork unitOfWork,
-        IBackgroundJobService backgroundJobService,
+        IBackgroundJobClient backgroundJobClient,
         ILogger<SourcesApiController> logger)
     {
         _sourceRepository = sourceRepository;
         _tagTypeRepository = tagTypeRepository;
         _taggingService = taggingService;
         _unitOfWork = unitOfWork;
-        _backgroundJobService = backgroundJobService;
+        _backgroundJobClient = backgroundJobClient;
         _logger = logger;
     }
 
@@ -160,8 +161,8 @@ public class SourcesApiController : ControllerBase
             }
 
             // Queue the background job
-            var jobId = _backgroundJobService.Enqueue<FragmentExtractionJob>(
-                job => job.ExecuteAsync(default!, default, id));
+            var jobId = _backgroundJobClient.Enqueue<FragmentExtractionJob>(
+                job => job.ExecuteAsync(id, default!, default));
 
             _logger.LogInformation("Fragment extraction job {JobId} queued for source {SourceId}", jobId, id);
 

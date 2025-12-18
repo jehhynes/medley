@@ -41,8 +41,14 @@ public class Fragment : BusinessEntity
     public Vector? Embedding { get; set; }
 
     /// <summary>
+    /// The ID of the originating source
+    /// </summary>
+    public Guid? SourceId { get; set; }
+
+    /// <summary>
     /// Navigation to the originating Source
     /// </summary>
+    [ForeignKey(nameof(SourceId))]
     public virtual Source? Source { get; set; }
 
     /// <summary>
