@@ -1,9 +1,11 @@
 using System;
 using System.Text.RegularExpressions;
+using Medley.Application.Hubs;
 using Medley.Application.Interfaces;
 using Medley.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Medley.Web.Controllers.Api;
@@ -15,13 +17,16 @@ public class ArticlesApiController : ControllerBase
 {
     private readonly IRepository<Article> _articleRepository;
     private readonly IRepository<ArticleType> _articleTypeRepository;
+    private readonly IHubContext<ArticleHub> _hubContext;
 
     public ArticlesApiController(
         IRepository<Article> articleRepository,
-        IRepository<ArticleType> articleTypeRepository)
+        IRepository<ArticleType> articleTypeRepository,
+        IHubContext<ArticleHub> hubContext)
     {
         _articleRepository = articleRepository;
         _articleTypeRepository = articleTypeRepository;
+        _hubContext = hubContext;
     }
 
     /// <summary>
@@ -134,6 +139,16 @@ public class ArticlesApiController : ControllerBase
 
         await _articleRepository.SaveAsync(article);
 
+        // Notify all clients via SignalR
+        await _hubContext.Clients.All.SendAsync("ArticleCreated", new
+        {
+            ArticleId = article.Id,
+            Title = article.Title,
+            ParentArticleId = article.ParentArticleId,
+            ArticleTypeId = article.ArticleTypeId,
+            Timestamp = DateTimeOffset.UtcNow
+        });
+
         return CreatedAtAction(nameof(Get), new { id = article.Id }, new
         {
             id = article.Id.ToString(),
@@ -141,8 +156,8 @@ public class ArticlesApiController : ControllerBase
             article.Status,
             article.ParentArticleId,
             articleTypeId = article.ArticleTypeId,
-            articleTypeIcon = article.ArticleType?.Icon ?? "bi-file-text",
-            article.CreatedAt
+            article.CreatedAt,
+            children = new List<object>()
         });
     }
 
@@ -173,6 +188,16 @@ public class ArticlesApiController : ControllerBase
         }
 
         await _articleRepository.SaveAsync(article);
+
+        // Notify all clients via SignalR
+        await _hubContext.Clients.All.SendAsync("ArticleUpdated", new
+        {
+            ArticleId = article.Id,
+            Title = article.Title,
+            ArticleTypeId = article.ArticleTypeId,
+            Timestamp = DateTimeOffset.UtcNow
+        });
+
         return Ok(article);
     }
 
@@ -209,7 +234,6 @@ public class ArticlesApiController : ControllerBase
                 a.Status,
                 a.CreatedAt,
                 articleTypeId = a.ArticleTypeId,
-                articleTypeIcon = a.ArticleType?.Icon ?? "bi-file-text",
                 children = BuildTree(allArticles, a.Id)
             })
             .ToList<object>();

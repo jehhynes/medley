@@ -14,7 +14,7 @@
                 <button class="btn btn-sm btn-outline-secondary" @@click.stop="toggleSidebarMenu" title="Actions">
                     <i class="bi bi-three-dots"></i>
                 </button>
-                <div v-if="ui.sidebarMenuOpen" class="dropdown-menu show position-absolute" style="right: 0; top: 100%; margin-top: 0.25rem;" @@click.stop>
+                <div v-if="ui.sidebarMenuOpen" v-cloak class="dropdown-menu show position-absolute" style="right: 0; top: 100%; margin-top: 0.25rem;" @@click.stop>
                     <button class="dropdown-item" @@click="showCreateArticleModal(null)">New Article</button>
                 </div>
             </div>
@@ -34,6 +34,7 @@
             :articles="articles.list"
             :selected-id="articles.selectedId"
             :expanded-ids="articles.expandedIds"
+            :article-type-icon-map="articles.typeIconMap"
             @@select="selectArticle"
             @@toggle-expand="toggleExpand"
             @@create-child="showCreateArticleModal"
@@ -64,7 +65,7 @@
 </div>
 
 <!-- Create Article Modal -->
-<div v-if="createModal.visible" class="modal d-block" tabindex="-1" style="background-color: rgba(0, 0, 0, 0.5);" @@click.self="closeCreateModal">
+<div v-if="createModal.visible" v-cloak class="modal d-block" tabindex="-1" style="background-color: rgba(0, 0, 0, 0.5);" @@click.self="closeCreateModal">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
@@ -113,7 +114,7 @@
 </div>
 
 <!-- Edit Article Modal -->
-<div v-if="editModal.visible" class="modal d-block" tabindex="-1" style="background-color: rgba(0, 0, 0, 0.5);" @@click.self="closeEditModal">
+<div v-if="editModal.visible" v-cloak class="modal d-block" tabindex="-1" style="background-color: rgba(0, 0, 0, 0.5);" @@click.self="closeEditModal">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">

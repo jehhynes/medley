@@ -35,6 +35,7 @@
                         selected: null,
                         selectedId: null,
                         types: [],
+                        typeIconMap: {},
                         expandedIds: new Set()
                     },
                     
@@ -92,6 +93,12 @@
                 async loadArticleTypes() {
                     try {
                         this.articles.types = await api.get('/api/articles/types');
+                        
+                        // Build icon map: articleTypeId -> icon
+                        this.articles.typeIconMap = {};
+                        this.articles.types.forEach(type => {
+                            this.articles.typeIconMap[type.id] = type.icon || 'bi-file-text';
+                        });
                     } catch (err) {
                         console.error('Error loading article types:', err);
                     }
@@ -152,6 +159,80 @@
                     }
                 },
 
+                // === Tree Manipulation ===
+                insertArticleIntoTree(article) {
+                    // Check if article already exists (prevent duplicates from SignalR)
+                    const existing = findInTree(this.articles.list, article.id);
+                    if (existing) {
+                        return; // Already exists, don't insert again
+                    }
+
+                    // Ensure the article has a children array
+                    if (!article.children) {
+                        article.children = [];
+                    }
+
+                    if (!article.parentArticleId) {
+                        // Insert at root level
+                        this.articles.list.push(article);
+                    } else {
+                        // Find parent and insert into its children
+                        const parent = findInTree(this.articles.list, article.parentArticleId);
+                        if (parent) {
+                            if (!parent.children) {
+                                parent.children = [];
+                            }
+                            parent.children.push(article);
+                            // Expand parent to show new child
+                            this.articles.expandedIds.add(parent.id);
+                        } else {
+                            // Parent not found, insert at root as fallback
+                            console.warn(`Parent article ${article.parentArticleId} not found, inserting at root`);
+                            this.articles.list.push(article);
+                        }
+                    }
+                },
+
+                updateArticleInTree(articleId, updates) {
+                    const article = findInTree(this.articles.list, articleId);
+                    if (article) {
+                        Object.assign(article, updates);
+                        
+                        // If currently selected article is being updated, update editor state too
+                        if (this.articles.selectedId === articleId) {
+                            if (updates.title !== undefined) {
+                                this.editor.title = updates.title;
+                            }
+                            if (updates.content !== undefined) {
+                                this.editor.content = updates.content;
+                            }
+                            // Update selected article reference
+                            Object.assign(this.articles.selected, updates);
+                        }
+                    } else {
+                        console.warn(`Article ${articleId} not found in tree for update`);
+                    }
+                },
+
+                removeArticleFromTree(articleId) {
+                    const removeFromArray = (articles) => {
+                        for (let i = 0; i < articles.length; i++) {
+                            if (articles[i].id === articleId) {
+                                articles.splice(i, 1);
+                                return true;
+                            }
+                            if (articles[i].children && articles[i].children.length > 0) {
+                                if (removeFromArray(articles[i].children)) {
+                                    return true;
+                                }
+                            }
+                        }
+                        return false;
+                    };
+
+                    removeFromArray(this.articles.list);
+                },
+
                 // === Article Content Editing ===
                 async saveArticle() {
                     if (!this.articles.selected) return;
@@ -163,10 +244,11 @@
                             content: this.editor.content
                         });
 
-                        this.articles.selected.title = this.editor.title;
-                        this.articles.selected.content = this.editor.content;
-
-                        await this.loadArticles();
+                        // Update the article in the tree surgically
+                        this.updateArticleInTree(this.articles.selected.id, {
+                            title: this.editor.title,
+                            content: this.editor.content
+                        });
                     } catch (err) {
                         alert('Failed to save article: ' + err.message);
                         console.error('Error saving article:', err);
@@ -238,7 +320,9 @@
                         });
 
                         this.closeCreateModal();
-                        await this.loadArticles();
+                        
+                        // Insert the new article into the tree surgically
+                        this.insertArticleIntoTree(response);
 
                         // Auto-select the newly created article
                         if (response && response.id) {
@@ -288,16 +372,13 @@
                             articleTypeId: this.editModal.typeId
                         });
 
-                        this.closeEditModal();
-                        await this.loadArticles();
+                        // Update the article in the tree surgically
+                        this.updateArticleInTree(this.editModal.articleId, {
+                            title: this.editModal.title,
+                            articleTypeId: this.editModal.typeId
+                        });
 
-                        // If the edited article is currently selected, refresh its data
-                        if (this.articles.selectedId === this.editModal.articleId) {
-                            const updatedArticle = findInTree(this.articles.list, this.editModal.articleId);
-                            if (updatedArticle) {
-                                await this.selectArticle(updatedArticle, true);
-                            }
-                        }
+                        this.closeEditModal();
                     } catch (err) {
                         alert('Failed to update article: ' + err.message);
                         console.error('Error updating article:', err);
@@ -326,19 +407,50 @@
 
                 this.hubConnection = createSignalRConnection('/articleHub');
 
-                this.hubConnection.on('ArticleCreated', () => {
-                    this.loadArticles();
+                this.hubConnection.on('ArticleCreated', async (data) => {
+                    // SignalR provides articleId, title, parentArticleId, articleTypeId
+                    // Insert surgically using the data from SignalR
+                    const newArticle = {
+                        id: data.articleId,
+                        title: data.title,
+                        parentArticleId: data.parentArticleId,
+                        articleTypeId: data.articleTypeId,
+                        children: []
+                    };
+                    this.insertArticleIntoTree(newArticle);
                 });
 
-                this.hubConnection.on('ArticleUpdated', () => {
-                    this.loadArticles();
+                this.hubConnection.on('ArticleUpdated', async (data) => {
+                    // SignalR provides articleId, title, and articleTypeId
+                    // Update surgically
+                    this.updateArticleInTree(data.articleId, {
+                        title: data.title,
+                        articleTypeId: data.articleTypeId
+                    });
+                    
+                    // If the updated article is currently selected, refresh its full content
+                    if (this.articles.selectedId === data.articleId) {
+                        try {
+                            const fullArticle = await api.get(`/api/articles/${data.articleId}`);
+                            this.editor.title = fullArticle.title;
+                            this.editor.content = fullArticle.content || '';
+                            Object.assign(this.articles.selected, fullArticle);
+                        } catch (err) {
+                            console.error('Error refreshing selected article:', err);
+                        }
+                    }
                 });
 
                 this.hubConnection.on('ArticleDeleted', (data) => {
-                    this.loadArticles();
+                    // Remove the article from the tree surgically
+                    this.removeArticleFromTree(data.articleId);
+                    
+                    // Clear selection if the deleted article was selected
                     if (this.articles.selectedId === data.articleId) {
                         this.articles.selectedId = null;
                         this.articles.selected = null;
+                        this.editor.title = '';
+                        this.editor.content = '';
                     }
                 });
 
