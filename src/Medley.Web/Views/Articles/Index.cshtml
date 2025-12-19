@@ -14,36 +14,37 @@
                 <button class="btn btn-sm btn-outline-secondary" @@click.stop="toggleSidebarMenu" title="Actions">
                     <i class="bi bi-three-dots"></i>
                 </button>
-                <div v-if="showSidebarMenu" class="dropdown-menu show position-absolute" style="right: 0; top: 100%; margin-top: 0.25rem;" @@click.stop>
+                <div v-if="ui.sidebarMenuOpen" class="dropdown-menu show position-absolute" style="right: 0; top: 100%; margin-top: 0.25rem;" @@click.stop>
                     <button class="dropdown-item" @@click="showCreateArticleModal(null)">New Article</button>
                 </div>
             </div>
         </div>
     </div>
     <div class="sidebar-content">
-        <div v-if="loading" class="loading-spinner">
+        <div v-if="ui.loading" class="loading-spinner">
             <div class="spinner-border spinner-border-sm" role="status">
                 <span class="visually-hidden">Loading...</span>
             </div>
         </div>
-        <div v-else-if="error" class="alert alert-danger" v-cloak>
-            {{ error }}
+        <div v-else-if="ui.error" class="alert alert-danger" v-cloak>
+            {{ ui.error }}
         </div>
         <article-tree 
             v-else
-            :articles="articles"
-            :selected-id="selectedArticleId"
-            :expanded-ids="expandedIds"
+            :articles="articles.list"
+            :selected-id="articles.selectedId"
+            :expanded-ids="articles.expandedIds"
             @@select="selectArticle"
             @@toggle-expand="toggleExpand"
             @@create-child="showCreateArticleModal"
+            @@edit-article="showEditArticleModal"
         />
     </div>
 </div>
 
 <!-- Main Content -->
-<div class="main-content" :class="{ 'd-flex flex-column': selectedArticle }" :style="selectedArticle ? 'padding: 0;' : ''">
-    <div v-if="!selectedArticle" class="empty-state">
+<div class="main-content" :class="{ 'd-flex flex-column': articles.selected }" :style="articles.selected ? 'padding: 0;' : ''">
+    <div v-if="!articles.selected" class="empty-state">
         <div class="empty-state-icon">
             <i class="bi bi-file-text"></i>
         </div>
@@ -51,19 +52,19 @@
         <div class="empty-state-text">Select an article from the sidebar to view its details</div>
     </div>
     <tiptap-editor v-else
-                   v-model="editingContent"
-                   :key="selectedArticleId"
+                   v-model="editor.content"
+                   :key="articles.selectedId"
                    class="flex-grow-1"
                    placeholder="Start writing your article content..." />
 </div>
 
 <!-- Right Sidebar -->
 <div class="sidebar right-sidebar">
-    <chat-panel :article-id="selectedArticleId" />
+    <chat-panel :article-id="articles.selectedId" />
 </div>
 
 <!-- Create Article Modal -->
-<div v-if="showCreateModal" class="modal d-block" tabindex="-1" style="background-color: rgba(0, 0, 0, 0.5);" @@click.self="closeCreateModal">
+<div v-if="createModal.visible" class="modal d-block" tabindex="-1" style="background-color: rgba(0, 0, 0, 0.5);" @@click.self="closeCreateModal">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
@@ -72,7 +73,7 @@
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <p class="text-muted small mb-3" v-if="parentArticleIdForNew === null">
+                    <p class="text-muted small mb-3" v-if="createModal.parentId === null">
                         Creating at root level
                     </p>
                     <p class="text-muted small mb-3" v-else>
@@ -84,7 +85,7 @@
                     <input 
                         type="text" 
                         class="form-control" 
-                        v-model="newArticleTitle"
+                        v-model="createModal.title"
                         @@keyup.enter="createArticle"
                         @@keyup.esc="closeCreateModal"
                         ref="titleInput" />
@@ -92,9 +93,9 @@
                 </div>
 
                 <div class="mb-3 form-group-overlap">
-                    <select class="form-select" v-model="newArticleTypeId">
+                    <select class="form-select" v-model="createModal.typeId">
                         <option :value="null" disabled>Select article type</option>
-                        <option v-for="type in articleTypes" :key="type.id" :value="type.id">
+                        <option v-for="type in articles.types" :key="type.id" :value="type.id">
                             {{ type.name }}
                         </option>
                     </select>
@@ -103,8 +104,48 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" @@click="closeCreateModal">Cancel</button>
-                <button type="button" class="btn btn-primary" @@click="createArticle" :disabled="isCreating">
+                <button type="button" class="btn btn-primary" @@click="createArticle" :disabled="createModal.isSubmitting">
                     Create Article
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Article Modal -->
+<div v-if="editModal.visible" class="modal d-block" tabindex="-1" style="background-color: rgba(0, 0, 0, 0.5);" @@click.self="closeEditModal">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Article</h5>
+                <button type="button" class="btn-close" @@click="closeEditModal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3 form-group-overlap">
+                    <input 
+                        type="text" 
+                        class="form-control" 
+                        v-model="editModal.title"
+                        @@keyup.enter="updateArticle"
+                        @@keyup.esc="closeEditModal"
+                        ref="editTitleInput" />
+                    <label>Title *</label>
+                </div>
+
+                <div class="mb-3 form-group-overlap">
+                    <select class="form-select" v-model="editModal.typeId">
+                        <option :value="null" disabled>Select article type</option>
+                        <option v-for="type in articles.types" :key="type.id" :value="type.id">
+                            {{ type.name }}
+                        </option>
+                    </select>
+                    <label>Article Type *</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" @@click="closeEditModal">Cancel</button>
+                <button type="button" class="btn btn-primary" @@click="updateArticle" :disabled="editModal.isSubmitting">
+                    <i class="bi bi-save"></i> Save Changes
                 </button>
             </div>
         </div>

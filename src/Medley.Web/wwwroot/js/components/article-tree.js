@@ -22,6 +22,7 @@ const ArticleTree = {
           <i class="bi bi-three-dots"></i>
         </button>
         <div v-if="openMenuId === article.id" class="tree-actions-dropdown" @click.stop>
+          <button class="tree-actions-dropdown-item" @click="editArticle(article)">Edit</button>
           <button class="tree-actions-dropdown-item" @click="createChild(article.id)">New Article</button>
         </div>
       </div>
@@ -33,6 +34,7 @@ const ArticleTree = {
         @select="selectArticle"
         @toggle-expand="toggleExpand"
         @create-child="createChild"
+        @edit-article="editArticle"
         class="tree-children"
       />
     </li>
@@ -83,6 +85,10 @@ const ArticleTree = {
         createChild(parentArticleId) {
             this.openMenuId = null;
             this.$emit('create-child', parentArticleId);
+        },
+        editArticle(article) {
+            this.openMenuId = null;
+            this.$emit('edit-article', article);
         }
     },
     mounted() {

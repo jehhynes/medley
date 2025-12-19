@@ -167,6 +167,10 @@ public class ArticlesApiController : ControllerBase
         {
             article.Content = request.Content;
         }
+        if (request.ArticleTypeId.HasValue)
+        {
+            article.ArticleTypeId = request.ArticleTypeId.Value;
+        }
 
         await _articleRepository.SaveAsync(article);
         return Ok(article);
@@ -204,6 +208,7 @@ public class ArticlesApiController : ControllerBase
                 a.Title,
                 a.Status,
                 a.CreatedAt,
+                articleTypeId = a.ArticleTypeId,
                 articleTypeIcon = a.ArticleType?.Icon ?? "bi-file-text",
                 children = BuildTree(allArticles, a.Id)
             })
@@ -239,5 +244,6 @@ public class UpdateArticleRequest
     public required string Title { get; set; }
     public Domain.Enums.ArticleStatus? Status { get; set; }
     public string? Content { get; set; }
+    public Guid? ArticleTypeId { get; set; }
 }
 
