@@ -29,36 +29,71 @@
             },
             data() {
                 return {
-                    articles: [],
-                    selectedArticleId: null,
-                    selectedArticle: null,
-                    loading: false,
-                    error: null,
-                    editingTitle: '',
-                    editingContent: '',
-                    isSaving: false,
-                    hubConnection: null,
-                    articleTypes: [],
-                    showCreateModal: false,
-                    newArticleTitle: '',
-                    newArticleTypeId: null,
-                    parentArticleIdForNew: null,
-                    isCreating: false,
-                    showSidebarMenu: false,
-                    expandedIds: new Set()
+                    // Article state
+                    articles: {
+                        list: [],
+                        selected: null,
+                        selectedId: null,
+                        types: [],
+                        expandedIds: new Set()
+                    },
+                    
+                    // Editor state
+                    editor: {
+                        title: '',
+                        content: '',
+                        isSaving: false
+                    },
+                    
+                    // Create modal state
+                    createModal: {
+                        visible: false,
+                        title: '',
+                        typeId: null,
+                        parentId: null,
+                        isSubmitting: false
+                    },
+                    
+                    // Edit modal state
+                    editModal: {
+                        visible: false,
+                        articleId: null,
+                        title: '',
+                        typeId: null,
+                        isSubmitting: false
+                    },
+                    
+                    // UI state
+                    ui: {
+                        loading: false,
+                        error: null,
+                        sidebarMenuOpen: false
+                    },
+                    
+                    // SignalR
+                    hubConnection: null
                 };
             },
             methods: {
+                // === Article Loading & Selection ===
                 async loadArticles() {
-                    this.loading = true;
-                    this.error = null;
+                    this.ui.loading = true;
+                    this.ui.error = null;
                     try {
-                        this.articles = await api.get('/api/articles/tree');
+                        this.articles.list = await api.get('/api/articles/tree');
                     } catch (err) {
-                        this.error = 'Failed to load articles: ' + err.message;
+                        this.ui.error = 'Failed to load articles: ' + err.message;
                         console.error('Error loading articles:', err);
                     } finally {
-                        this.loading = false;
+                        this.ui.loading = false;
+                    }
+                },
+
+                async loadArticleTypes() {
+                    try {
+                        this.articles.types = await api.get('/api/articles/types');
+                    } catch (err) {
+                        console.error('Error loading article types:', err);
                     }
                 },
 
@@ -66,10 +101,10 @@
                     try {
                         const fullArticle = await api.get(`/api/articles/${article.id}`);
 
-                        this.editingTitle = fullArticle.title;
-                        this.editingContent = fullArticle.content || '';
-                        this.selectedArticle = fullArticle;
-                        this.selectedArticleId = article.id;
+                        this.editor.title = fullArticle.title;
+                        this.editor.content = fullArticle.content || '';
+                        this.articles.selected = fullArticle;
+                        this.articles.selectedId = article.id;
 
                         // Expand all parent articles
                         this.expandParents(article.id);
@@ -80,19 +115,20 @@
                         }
                     } catch (err) {
                         console.error('Error loading article:', err);
-                        this.selectedArticle = null;
+                        this.articles.selected = null;
                     }
                 },
 
+                // === Tree Navigation ===
                 toggleExpand(articleId) {
-                    if (this.expandedIds.has(articleId)) {
-                        this.expandedIds.delete(articleId);
+                    if (this.articles.expandedIds.has(articleId)) {
+                        this.articles.expandedIds.delete(articleId);
                     } else {
-                        this.expandedIds.add(articleId);
+                        this.articles.expandedIds.add(articleId);
                     }
                 },
 
-                findArticleParents(articleId, articles = this.articles, parents = []) {
+                findArticleParents(articleId, articles = this.articles.list, parents = []) {
                     for (const article of articles) {
                         if (article.id === articleId) {
                             return parents;
@@ -111,33 +147,31 @@
                     const parents = this.findArticleParents(articleId);
                     if (parents) {
                         parents.forEach(parentId => {
-                            this.expandedIds.add(parentId);
+                            this.articles.expandedIds.add(parentId);
                         });
                     }
                 },
 
-                formatDate,
-                getStatusBadgeClass,
-
+                // === Article Content Editing ===
                 async saveArticle() {
-                    if (!this.selectedArticle) return;
+                    if (!this.articles.selected) return;
 
-                    this.isSaving = true;
+                    this.editor.isSaving = true;
                     try {
-                        await api.put(`/api/articles/${this.selectedArticle.id}`, {
-                            title: this.editingTitle,
-                            content: this.editingContent
+                        await api.put(`/api/articles/${this.articles.selected.id}`, {
+                            title: this.editor.title,
+                            content: this.editor.content
                         });
 
-                        this.selectedArticle.title = this.editingTitle;
-                        this.selectedArticle.content = this.editingContent;
+                        this.articles.selected.title = this.editor.title;
+                        this.articles.selected.content = this.editor.content;
 
                         await this.loadArticles();
                     } catch (err) {
                         alert('Failed to save article: ' + err.message);
                         console.error('Error saving article:', err);
                     } finally {
-                        this.isSaving = false;
+                        this.editor.isSaving = false;
                     }
                 },
 
@@ -147,26 +181,35 @@
                     }
                 },
 
-                async loadArticleTypes() {
-                    try {
-                        this.articleTypes = await api.get('/api/articles/types');
-                    } catch (err) {
-                        console.error('Error loading article types:', err);
-                    }
-                },
-
+                // === UI Helpers ===
                 toggleSidebarMenu() {
-                    this.showSidebarMenu = !this.showSidebarMenu;
+                    this.ui.sidebarMenuOpen = !this.ui.sidebarMenuOpen;
                 },
 
+                formatDate,
+                getStatusBadgeClass,
+
+                // === Validation ===
+                validateArticleForm(title, typeId) {
+                    if (!title?.trim()) {
+                        alert('Please enter a title');
+                        return false;
+                    }
+                    if (!typeId) {
+                        alert('Please select an article type');
+                        return false;
+                    }
+                    return true;
+                },
+
+                // === Create Modal ===
                 showCreateArticleModal(parentArticleId) {
-                    this.showSidebarMenu = false; // Close sidebar menu when opening modal
-                    this.parentArticleIdForNew = parentArticleId;
-                    this.newArticleTitle = '';
-                    this.newArticleTypeId = null;
-                    this.showCreateModal = true;
+                    this.ui.sidebarMenuOpen = false;
+                    this.createModal.parentId = parentArticleId;
+                    this.createModal.title = '';
+                    this.createModal.typeId = null;
+                    this.createModal.visible = true;
                     
-                    // Focus on title input after modal is shown
                     this.$nextTick(() => {
                         if (this.$refs.titleInput) {
                             this.$refs.titleInput.focus();
@@ -175,40 +218,31 @@
                 },
 
                 closeCreateModal() {
-                    this.showCreateModal = false;
-                    this.newArticleTitle = '';
-                    this.newArticleTypeId = null;
-                    this.parentArticleIdForNew = null;
+                    this.createModal.visible = false;
+                    this.createModal.title = '';
+                    this.createModal.typeId = null;
+                    this.createModal.parentId = null;
                 },
 
                 async createArticle() {
-                    // Validate inputs
-                    if (!this.newArticleTitle.trim()) {
-                        alert('Please enter a title');
-                        return;
-                    }
-                    if (!this.newArticleTypeId) {
-                        alert('Please select an article type');
+                    if (!this.validateArticleForm(this.createModal.title, this.createModal.typeId)) {
                         return;
                     }
 
-                    this.isCreating = true;
+                    this.createModal.isSubmitting = true;
                     try {
                         const response = await api.post('/api/articles', {
-                            title: this.newArticleTitle,
-                            articleTypeId: this.newArticleTypeId,
-                            parentArticleId: this.parentArticleIdForNew
+                            title: this.createModal.title,
+                            articleTypeId: this.createModal.typeId,
+                            parentArticleId: this.createModal.parentId
                         });
 
-                        // Close modal
                         this.closeCreateModal();
-
-                        // Reload articles tree
                         await this.loadArticles();
 
                         // Auto-select the newly created article
                         if (response && response.id) {
-                            const newArticle = findInTree(this.articles, response.id);
+                            const newArticle = findInTree(this.articles.list, response.id);
                             if (newArticle) {
                                 await this.selectArticle(newArticle, false);
                             }
@@ -217,7 +251,58 @@
                         alert('Failed to create article: ' + err.message);
                         console.error('Error creating article:', err);
                     } finally {
-                        this.isCreating = false;
+                        this.createModal.isSubmitting = false;
+                    }
+                },
+
+                // === Edit Modal ===
+                showEditArticleModal(article) {
+                    this.editModal.articleId = article.id;
+                    this.editModal.title = article.title;
+                    this.editModal.typeId = article.articleTypeId || null;
+                    this.editModal.visible = true;
+                    
+                    this.$nextTick(() => {
+                        if (this.$refs.editTitleInput) {
+                            this.$refs.editTitleInput.focus();
+                        }
+                    });
+                },
+
+                closeEditModal() {
+                    this.editModal.visible = false;
+                    this.editModal.articleId = null;
+                    this.editModal.title = '';
+                    this.editModal.typeId = null;
+                },
+
+                async updateArticle() {
+                    if (!this.validateArticleForm(this.editModal.title, this.editModal.typeId)) {
+                        return;
+                    }
+
+                    this.editModal.isSubmitting = true;
+                    try {
+                        await api.put(`/api/articles/${this.editModal.articleId}`, {
+                            title: this.editModal.title,
+                            articleTypeId: this.editModal.typeId
+                        });
+
+                        this.closeEditModal();
+                        await this.loadArticles();
+
+                        // If the edited article is currently selected, refresh its data
+                        if (this.articles.selectedId === this.editModal.articleId) {
+                            const updatedArticle = findInTree(this.articles.list, this.editModal.articleId);
+                            if (updatedArticle) {
+                                await this.selectArticle(updatedArticle, true);
+                            }
+                        }
+                    } catch (err) {
+                        alert('Failed to update article: ' + err.message);
+                        console.error('Error updating article:', err);
+                    } finally {
+                        this.editModal.isSubmitting = false;
                     }
                 }
             },
@@ -228,7 +313,7 @@
 
                 const articleIdFromUrl = getUrlParam('id');
                 if (articleIdFromUrl) {
-                    const article = findInTree(this.articles, articleIdFromUrl);
+                    const article = findInTree(this.articles.list, articleIdFromUrl);
                     if (article) {
                         await this.selectArticle(article, true);
                     }
@@ -236,7 +321,7 @@
 
                 // Close sidebar menu when clicking outside
                 document.addEventListener('click', () => {
-                    this.showSidebarMenu = false;
+                    this.ui.sidebarMenuOpen = false;
                 });
 
                 this.hubConnection = createSignalRConnection('/articleHub');
@@ -251,9 +336,9 @@
 
                 this.hubConnection.on('ArticleDeleted', (data) => {
                     this.loadArticles();
-                    if (this.selectedArticleId === data.articleId) {
-                        this.selectedArticleId = null;
-                        this.selectedArticle = null;
+                    if (this.articles.selectedId === data.articleId) {
+                        this.articles.selectedId = null;
+                        this.articles.selected = null;
                     }
                 });
 
