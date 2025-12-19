@@ -10,12 +10,12 @@
         getConfidenceIcon,
         getConfidenceColor,
         getConfidenceLabel,
-        initializeMarkdownRenderer
+        initializeMarkdownRenderer,
+        findInList
     } = window.MedleyUtils;
     const {
         getUrlParam,
         setUrlParam,
-        findInList,
         setupPopStateHandler
     } = window.UrlUtils;
 

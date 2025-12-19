@@ -187,6 +187,37 @@
         toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
     };
 
+    /**
+     * Recursively finds an item in a tree structure by ID
+     * @param {Array} items - Array of items to search
+     * @param {string} id - ID to search for
+     * @param {string} childrenKey - Key name for children array (default: 'children')
+     * @returns {Object|null} Found item or null
+     */
+    const findInTree = (items, id, childrenKey = 'children') => {
+        if (!Array.isArray(items)) return null;
+        for (const item of items) {
+            if (item.id === id) return item;
+            const children = item[childrenKey];
+            if (children && children.length) {
+                const found = findInTree(children, id, childrenKey);
+                if (found) return found;
+            }
+        }
+        return null;
+    };
+
+    /**
+     * Finds an item in a flat list by ID
+     * @param {Array} items - Array of items to search
+     * @param {string} id - ID to search for
+     * @returns {Object|null} Found item or null
+     */
+    const findInList = (items, id) => {
+        if (!Array.isArray(items)) return null;
+        return items.find(i => i && i.id === id) || null;
+    };
+
     // Export utilities
     window.MedleyUtils = {
         formatDate,
@@ -200,6 +231,8 @@
         getConfidenceColor,
         getConfidenceLabel,
         initializeMarkdownRenderer,
-        showToast
+        showToast,
+        findInTree,
+        findInList
     };
 })();
