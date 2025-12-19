@@ -3,10 +3,7 @@ const ChatPanel = {
     name: 'ChatPanel',
     template: `
   <div class="d-flex flex-column h-100">
-    <div class="sidebar-header">
-      <h6 class="sidebar-title">Chat</h6>
-    </div>
-    <div class="sidebar-content" ref="messagesContainer">
+    <div class="sidebar-content flex-grow-1" ref="messagesContainer">
       <div v-if="messages.length === 0" class="empty-state">
         <div class="empty-state-icon">
           <i class="bi bi-chat-dots"></i>

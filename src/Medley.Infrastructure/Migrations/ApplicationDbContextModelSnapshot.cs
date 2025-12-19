@@ -147,6 +147,57 @@ namespace Medley.Infrastructure.Migrations
                     b.ToTable("article_types", (string)null);
                 });
 
+            modelBuilder.Entity("Medley.Domain.Entities.ArticleVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ArticleId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("article_id");
+
+                    b.Property<string>("ContentDiff")
+                        .HasColumnType("text")
+                        .HasColumnName("content_diff");
+
+                    b.Property<string>("ContentSnapshot")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("content_snapshot");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<int>("VersionNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("version_number");
+
+                    b.HasKey("Id")
+                        .HasName("pk_article_versions");
+
+                    b.HasIndex("ArticleId")
+                        .HasDatabaseName("ix_article_versions_article_id");
+
+                    b.HasIndex("CreatedById")
+                        .HasDatabaseName("ix_article_versions_created_by");
+
+                    b.HasIndex("ArticleId", "CreatedAt")
+                        .HasDatabaseName("ix_article_versions_article_id_created_at");
+
+                    b.HasIndex("ArticleId", "VersionNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_article_versions_article_id_version_number");
+
+                    b.ToTable("article_versions", (string)null);
+                });
+
             modelBuilder.Entity("Medley.Domain.Entities.Finding", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1059,6 +1110,26 @@ namespace Medley.Infrastructure.Migrations
                     b.Navigation("ArticleType");
 
                     b.Navigation("ParentArticle");
+                });
+
+            modelBuilder.Entity("Medley.Domain.Entities.ArticleVersion", b =>
+                {
+                    b.HasOne("Medley.Domain.Entities.Article", "Article")
+                        .WithMany()
+                        .HasForeignKey("ArticleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_article_versions_articles_article_id");
+
+                    b.HasOne("Medley.Domain.Entities.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_article_versions_users_created_by");
+
+                    b.Navigation("Article");
+
+                    b.Navigation("CreatedBy");
                 });
 
             modelBuilder.Entity("Medley.Domain.Entities.Fragment", b =>

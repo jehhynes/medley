@@ -1,11 +1,13 @@
 using System.ComponentModel.DataAnnotations;
 using Medley.Domain.Enums;
+using Microsoft.EntityFrameworkCore;
 
 namespace Medley.Domain.Entities;
 
 /// <summary>
 /// Defines a structured tag category with optional AI prompt guidance and allowed values.
 /// </summary>
+[Index(nameof(Name), IsUnique = true)]
 public class TagType : BusinessEntity
 {
     [MaxLength(100)]

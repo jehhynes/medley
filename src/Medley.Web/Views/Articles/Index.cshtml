@@ -54,6 +54,31 @@
         <div class="empty-state-title">No Article Selected</div>
         <div class="empty-state-text">Select an article from the sidebar to view its details</div>
     </div>
+    <div v-else-if="selectedVersion" v-cloak class="diff-viewer d-flex flex-column flex-grow-1">
+        <div class="diff-viewer-header">
+            <button class="btn btn-sm btn-outline-secondary" @@click="clearVersionSelection">
+                <i class="bi bi-arrow-left"></i> Back to Editor
+            </button>
+            <div class="diff-viewer-title">
+                <span class="badge bg-primary me-2">Version {{ selectedVersion.versionNumber }}</span>
+                <span class="text-muted">{{ formatDate(selectedVersion.createdAt) }}</span>
+                <span v-if="selectedVersion.createdByName" class="text-muted ms-2">
+                    by {{ selectedVersion.createdByName }}
+                </span>
+            </div>
+        </div>
+        <div class="diff-viewer-content flex-grow-1">
+            <div v-if="loadingDiff" class="loading-spinner">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading diff...</span>
+                </div>
+            </div>
+            <div v-else-if="diffError" class="alert alert-danger m-3">
+                {{ diffError }}
+            </div>
+            <div v-else-if="diffHtml" v-html="diffHtml" class="diff-content"></div>
+        </div>
+    </div>
     <tiptap-editor v-else
                    ref="tiptapEditor"
                    v-model="editor.content"
@@ -66,7 +91,34 @@
 
 <!-- Right Sidebar -->
 <div class="sidebar right-sidebar">
-    <chat-panel :article-id="articles.selectedId" />
+    <div class="sidebar-header">
+        <div class="sidebar-tabs">
+            <button 
+                class="sidebar-tab" 
+                :class="{ 'active': ui.activeRightTab === 'chat' }"
+                @@click="setActiveRightTab('chat')">
+                <i class="bi bi-chat-dots"></i> Chat
+            </button>
+            <button 
+                class="sidebar-tab" 
+                :class="{ 'active': ui.activeRightTab === 'versions' }"
+                @@click="setActiveRightTab('versions')">
+                <i class="bi bi-clock-history"></i> Versions
+            </button>
+        </div>
+    </div>
+    <div class="sidebar-tab-content">
+        <div v-show="ui.activeRightTab === 'chat'" class="sidebar-tab-pane">
+            <chat-panel :article-id="articles.selectedId" />
+        </div>
+        <div v-show="ui.activeRightTab === 'versions'" class="sidebar-tab-pane">
+            <versions-panel 
+                ref="versionsPanel"
+                :article-id="articles.selectedId"
+                :selected-version-id="selectedVersion?.id"
+                @@select-version="handleVersionSelect" />
+        </div>
+    </div>
 </div>
 
 <!-- Create Article Modal -->
@@ -160,11 +212,14 @@
 
 @section Scripts {
     <script src="~/lib/bootbox/dist/bootbox.all.min.js" asp-append-version="true"></script>
+    <script src="~/lib/marked/marked.min.js" asp-append-version="true"></script>
+    <script src="~/js/htmlDiff.js" asp-append-version="true"></script>
     <script src="~/js/app.js" asp-append-version="true"></script>
     <script src="~/js/utils.js" asp-append-version="true"></script>
     <script src="~/js/url-utils.js" asp-append-version="true"></script>
     <script src="~/js/components/article-tree.js" asp-append-version="true"></script>
     <script src="~/js/components/chat-panel.js" asp-append-version="true"></script>
+    <script src="~/js/components/versions-panel.js" asp-append-version="true"></script>
     <script type="module" src="~/js/components/tiptap-editor.js" asp-append-version="true"></script>
     <script src="~/js/pages/articles.js" asp-append-version="true"></script>
 }
