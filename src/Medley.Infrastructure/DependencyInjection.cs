@@ -72,6 +72,7 @@ public static class DependencyInjection
         services.AddScoped<ITaggingService, TaggingService>();
         services.AddScoped<IContentChunkingService, ContentChunkingService>();
         services.AddScoped<IEmbeddingHelper, EmbeddingHelper>();
+        services.AddScoped<IArticleVersionService, ArticleVersionService>();
         services.AddScoped<FragmentExtractionService>();
         //services.AddScoped<IntegrationHealthCheckJob>();
         services.AddTransient<FragmentClusteringJob>();

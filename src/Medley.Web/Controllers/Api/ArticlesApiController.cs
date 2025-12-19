@@ -1,8 +1,11 @@
 using System;
+using System.Linq;
+using System.Security.Claims;
 using System.Text.RegularExpressions;
 using Medley.Application.Hubs;
 using Medley.Application.Interfaces;
 using Medley.Domain.Entities;
+using Medley.Web.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
@@ -18,15 +21,21 @@ public class ArticlesApiController : ControllerBase
     private readonly IRepository<Article> _articleRepository;
     private readonly IRepository<ArticleType> _articleTypeRepository;
     private readonly IHubContext<ArticleHub> _hubContext;
+    private readonly IArticleVersionService _versionService;
+    private readonly IUnitOfWork _unitOfWork;
 
     public ArticlesApiController(
         IRepository<Article> articleRepository,
         IRepository<ArticleType> articleTypeRepository,
-        IHubContext<ArticleHub> hubContext)
+        IHubContext<ArticleHub> hubContext,
+        IArticleVersionService versionService,
+        IUnitOfWork unitOfWork)
     {
         _articleRepository = articleRepository;
         _articleTypeRepository = articleTypeRepository;
         _hubContext = hubContext;
+        _versionService = versionService;
+        _unitOfWork = unitOfWork;
     }
 
     /// <summary>
@@ -140,14 +149,19 @@ public class ArticlesApiController : ControllerBase
 
         await _articleRepository.SaveAsync(article);
 
-        // Notify all clients via SignalR
-        await _hubContext.Clients.All.SendAsync("ArticleCreated", new
+        // Register post-commit action to send SignalR notification
+        var notification = new
         {
             ArticleId = article.Id,
             Title = article.Title,
             ParentArticleId = article.ParentArticleId,
             ArticleTypeId = article.ArticleTypeId,
             Timestamp = DateTimeOffset.UtcNow
+        };
+        
+        HttpContext.RegisterPostCommitAction(async () =>
+        {
+            await _hubContext.Clients.All.SendAsync("ArticleCreated", notification);
         });
 
         return CreatedAtAction(nameof(Get), new { id = article.Id }, new
@@ -198,13 +212,18 @@ public class ArticlesApiController : ControllerBase
 
         await _articleRepository.SaveAsync(article);
 
-        // Notify all clients via SignalR
-        await _hubContext.Clients.All.SendAsync("ArticleUpdated", new
+        // Register post-commit action to send SignalR notification
+        var notification = new
         {
             ArticleId = article.Id,
             Title = article.Title,
             ArticleTypeId = article.ArticleTypeId,
             Timestamp = DateTimeOffset.UtcNow
+        };
+        
+        HttpContext.RegisterPostCommitAction(async () =>
+        {
+            await _hubContext.Clients.All.SendAsync("ArticleUpdated", notification);
         });
 
         return Ok(article);
@@ -222,6 +241,8 @@ public class ArticlesApiController : ControllerBase
             return NotFound();
         }
 
+        // Capture old content for versioning
+        var oldContent = article.Content;
         var oldTitle = article.Title;
         var newH1 = ExtractFirstH1(request.Content);
         
@@ -244,15 +265,41 @@ public class ArticlesApiController : ControllerBase
 
         await _articleRepository.SaveAsync(article);
 
-        // Notify all clients via SignalR (only if title changed)
+        // Capture version after saving article
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var capturedVersion = Guid.TryParse(userId, out var userGuid)
+            ? await _versionService.CaptureVersionAsync(id, article.Content, oldContent, userGuid)
+            : await _versionService.CaptureVersionAsync(id, article.Content, oldContent, null);
+
+        // Register post-commit action to send SignalR notification
+        var versionNotification = new
+        {
+            ArticleId = id,
+            VersionId = capturedVersion.Id,
+            VersionNumber = capturedVersion.VersionNumber,
+            CreatedAt = capturedVersion.CreatedAt,
+            Timestamp = DateTimeOffset.UtcNow
+        };
+        
+        HttpContext.RegisterPostCommitAction(async () =>
+        {
+            await _hubContext.Clients.All.SendAsync("VersionCreated", versionNotification);
+        });
+
+        // Register post-commit action to send SignalR notification (only if title changed)
         if (article.Title != oldTitle)
         {
-            await _hubContext.Clients.All.SendAsync("ArticleUpdated", new
+            var notification = new
             {
                 ArticleId = article.Id,
                 Title = article.Title,
                 ArticleTypeId = article.ArticleTypeId,
                 Timestamp = DateTimeOffset.UtcNow
+            };
+            
+            HttpContext.RegisterPostCommitAction(async () =>
+            {
+                await _hubContext.Clients.All.SendAsync("ArticleUpdated", notification);
             });
         }
 
@@ -333,13 +380,18 @@ public class ArticlesApiController : ControllerBase
         article.ParentArticleId = request.NewParentArticleId.Value;
         await _articleRepository.SaveAsync(article);
 
-        // Notify all clients via SignalR
-        await _hubContext.Clients.All.SendAsync("ArticleMoved", new
+        // Register post-commit action to send SignalR notification
+        var notification = new
         {
             ArticleId = article.Id,
             OldParentId = oldParentId,
             NewParentId = request.NewParentArticleId.Value,
             Timestamp = DateTimeOffset.UtcNow
+        };
+        
+        HttpContext.RegisterPostCommitAction(async () =>
+        {
+            await _hubContext.Clients.All.SendAsync("ArticleMoved", notification);
         });
 
         return Ok(new 
@@ -502,6 +554,49 @@ public class ArticlesApiController : ControllerBase
     {
         var h1 = ExtractFirstH1(content);
         return h1 != null && h1.Equals(title, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Get version history for an article
+    /// </summary>
+    [HttpGet("{id}/versions")]
+    public async Task<IActionResult> GetVersionHistory(Guid id)
+    {
+        var article = await _articleRepository.GetByIdAsync(id);
+        if (article == null)
+        {
+            return NotFound();
+        }
+
+        var versions = await _versionService.GetVersionHistoryAsync(id);
+        return Ok(versions);
+    }
+
+    /// <summary>
+    /// Get HTML diff for a specific version
+    /// </summary>
+    [HttpGet("{articleId}/versions/{versionId}/diff")]
+    public async Task<IActionResult> GetVersionDiff(Guid articleId, Guid versionId)
+    {
+        var article = await _articleRepository.GetByIdAsync(articleId);
+        if (article == null)
+        {
+            return NotFound(new { message = "Article not found" });
+        }
+
+        var comparison = await _versionService.GetVersionComparisonAsync(versionId);
+        if (comparison == null)
+        {
+            return NotFound(new { message = "Version not found" });
+        }
+
+        return Ok(new 
+        { 
+            beforeContent = comparison.BeforeContent,
+            afterContent = comparison.AfterContent,
+            versionNumber = comparison.VersionNumber,
+            previousVersionNumber = comparison.PreviousVersionNumber
+        });
     }
 }
 

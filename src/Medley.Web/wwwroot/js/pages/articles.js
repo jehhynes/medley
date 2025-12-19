@@ -25,6 +25,7 @@
             components: {
                 'article-tree': ArticleTree,
                 'chat-panel': ChatPanel,
+                'versions-panel': VersionsPanel,
                 'tiptap-editor': window.TiptapEditor
             },
             data() {
@@ -69,8 +70,15 @@
                     ui: {
                         loading: false,
                         error: null,
-                        sidebarMenuOpen: false
+                        sidebarMenuOpen: false,
+                        activeRightTab: 'chat'
                     },
+                    
+                    // Version state
+                    selectedVersion: null,
+                    diffHtml: null,
+                    loadingDiff: false,
+                    diffError: null,
                     
                     // SignalR
                     hubConnection: null
@@ -133,6 +141,9 @@
                         this.editor.originalContent = fullArticle.content || ''; // Track for dirty checking
                         this.articles.selected = fullArticle;
                         this.articles.selectedId = article.id;
+
+                        // Clear version selection when switching articles
+                        this.clearVersionSelection();
 
                         // Expand all parent articles
                         this.expandParents(article.id);
@@ -369,6 +380,10 @@
                 // === UI Helpers ===
                 toggleSidebarMenu() {
                     this.ui.sidebarMenuOpen = !this.ui.sidebarMenuOpen;
+                },
+
+                setActiveRightTab(tab) {
+                    this.ui.activeRightTab = tab;
                 },
 
                 formatDate,
@@ -625,6 +640,62 @@
                     });
                 },
 
+                // === Version History ===
+                async handleVersionSelect(version) {
+                    if (!version || !this.articles.selectedId) return;
+                    
+                    this.selectedVersion = version;
+                    this.loadingDiff = true;
+                    this.diffError = null;
+                    this.diffHtml = null;
+                    
+                    try {
+                        const response = await api.get(
+                            `/api/articles/${this.articles.selectedId}/versions/${version.id}/diff`
+                        );
+                        
+                        // Convert markdown to HTML for both versions
+                        const beforeHtml = this.markdownToHtml(response.beforeContent || '');
+                        const afterHtml = this.markdownToHtml(response.afterContent || '');
+                        
+                        // Use htmlDiff to compare the HTML versions
+                        this.diffHtml = window.HtmlDiff.htmlDiff(beforeHtml, afterHtml);
+                    } catch (err) {
+                        this.diffError = 'Failed to load diff: ' + err.message;
+                        console.error('Error loading diff:', err);
+                    } finally {
+                        this.loadingDiff = false;
+                    }
+                },
+                
+                markdownToHtml(markdown) {
+                    if (!markdown) return '';
+                    
+                    // Use marked library if available
+                    if (window.marked) {
+                        try {
+                            return window.marked.parse(markdown, { 
+                                breaks: true, 
+                                gfm: true,
+                                headerIds: false,
+                                mangle: false
+                            });
+                        } catch (e) {
+                            console.error('Failed to parse markdown:', e);
+                            return markdown;
+                        }
+                    }
+                    
+                    // Fallback: return markdown as-is wrapped in pre
+                    return `<pre>${markdown}</pre>`;
+                },
+
+                clearVersionSelection() {
+                    this.selectedVersion = null;
+                    this.diffHtml = null;
+                    this.diffError = null;
+                },
+
                 // Helper to move article in tree structure
                 moveArticleInTree(articleId, oldParentId, newParentId) {
                     // Find and remove article from old parent
@@ -755,6 +826,14 @@
                     // SignalR provides articleId, oldParentId, newParentId
                     // Move the article in the tree surgically
                     this.moveArticleInTree(data.articleId, data.oldParentId, data.newParentId);
+                });
+
+                this.hubConnection.on('VersionCreated', (data) => {
+                    // SignalR provides articleId, versionId, versionNumber, createdAt
+                    // Refresh the versions panel if it's for the currently selected article
+                    if (this.articles.selectedId === data.articleId && this.$refs.versionsPanel) {
+                        this.$refs.versionsPanel.loadVersions();
+                    }
                 });
 
                 this.hubConnection.start()
