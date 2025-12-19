@@ -43,6 +43,7 @@
                     editor: {
                         title: '',
                         content: '',
+                        originalContent: '', // Track original content for dirty checking
                         isSaving: false
                     },
                     
@@ -74,6 +75,12 @@
                     // SignalR
                     hubConnection: null
                 };
+            },
+            computed: {
+                hasUnsavedChanges() {
+                    return this.articles.selected && 
+                           this.editor.content !== this.editor.originalContent;
+                }
             },
             methods: {
                 // === Article Loading & Selection ===
@@ -110,11 +117,20 @@
                         return;
                     }
 
+                    // Check for unsaved changes before switching
+                    if (this.hasUnsavedChanges) {
+                        const shouldProceed = await this.promptUnsavedChanges();
+                        if (!shouldProceed) {
+                            return;
+                        }
+                    }
+
                     try {
                         const fullArticle = await api.get(`/api/articles/${article.id}`);
 
                         this.editor.title = fullArticle.title;
                         this.editor.content = fullArticle.content || '';
+                        this.editor.originalContent = fullArticle.content || ''; // Track for dirty checking
                         this.articles.selected = fullArticle;
                         this.articles.selectedId = article.id;
 
@@ -312,6 +328,9 @@
                         await api.put(`/api/articles/${this.articles.selected.id}/content`, {
                             content: this.editor.content
                         });
+                        
+                        // Update original content to mark as clean
+                        this.editor.originalContent = this.editor.content;
                     } catch (err) {
                         bootbox.alert({
                             message: `Failed to save article: ${err.message}`,
@@ -354,6 +373,41 @@
 
                 formatDate,
                 getStatusBadgeClass,
+
+                // === Unsaved Changes ===
+                promptUnsavedChanges() {
+                    return new Promise((resolve) => {
+                        bootbox.dialog({
+                            message: 'You have unsaved changes. What would you like to do?',
+                            buttons: {
+                                save: {
+                                    label: '<i class="bi bi-save"></i> Save Changes',
+                                    className: 'btn-primary',
+                                    callback: async () => {
+                                        await this.saveArticle();
+                                        resolve(true);
+                                    }
+                                },
+                                discard: {
+                                    label: 'Discard Changes',
+                                    className: 'btn-outline-danger',
+                                    callback: () => {
+                                        // Reset content to original
+                                        this.editor.content = this.editor.originalContent;
+                                        resolve(true);
+                                    }
+                                },
+                                cancel: {
+                                    label: 'Cancel',
+                                    className: 'btn-secondary',
+                                    callback: () => {
+                                        resolve(false);
+                                    }
+                                }
+                            }
+                        });
+                    });
+                },
 
                 // === Validation ===
                 validateArticleForm(title, typeId) {
@@ -649,6 +703,17 @@
                 };
                 document.addEventListener('keydown', this.handleKeyboardSave);
 
+                // Add beforeunload handler to warn about unsaved changes
+                this.handleBeforeUnload = (event) => {
+                    if (this.hasUnsavedChanges) {
+                        event.preventDefault();
+                        // Modern browsers require returnValue to be set
+                        event.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+                        return event.returnValue;
+                    }
+                };
+                window.addEventListener('beforeunload', this.handleBeforeUnload);
+
                 this.hubConnection = createSignalRConnection('/articleHub');
 
                 this.hubConnection.on('ArticleCreated', async (data) => {
@@ -701,6 +766,11 @@
                 // Remove keyboard shortcut listener
                 if (this.handleKeyboardSave) {
                     document.removeEventListener('keydown', this.handleKeyboardSave);
+                }
+
+                // Remove beforeunload listener
+                if (this.handleBeforeUnload) {
+                    window.removeEventListener('beforeunload', this.handleBeforeUnload);
                 }
 
                 if (this.hubConnection) {
