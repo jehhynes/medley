@@ -1,3 +1,4 @@
+using System;
 using Medley.Application.Interfaces;
 using Medley.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
@@ -50,7 +51,6 @@ public class ArticlesApiController : ControllerBase
         var articles = await _articleRepository.Query()
             .Include(a => a.ChildArticles)
             .Include(a => a.ArticleType)
-            .OrderBy(a => a.Title)
             .ToListAsync();
 
         var tree = BuildTree(articles, null);
@@ -178,6 +178,8 @@ public class ArticlesApiController : ControllerBase
     {
         return allArticles
             .Where(a => a.ParentArticleId == parentId)
+            .OrderBy(a => a.ArticleType?.Name?.Equals("Index", StringComparison.OrdinalIgnoreCase) == true ? 0 : 1)
+            .ThenBy(a => a.Title)
             .Select(a => new
             {
                 id = a.Id.ToString(),
