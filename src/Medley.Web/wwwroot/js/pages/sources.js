@@ -11,12 +11,12 @@
         getConfidenceColor,
         getConfidenceLabel,
         initializeMarkdownRenderer,
-        showToast
+        showToast,
+        findInList
     } = window.MedleyUtils;
     const {
         getUrlParam,
         setUrlParam,
-        findInList,
         setupPopStateHandler
     } = window.UrlUtils;
 

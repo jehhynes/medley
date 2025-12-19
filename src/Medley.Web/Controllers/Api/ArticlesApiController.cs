@@ -118,15 +118,32 @@ public class ArticlesApiController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateArticleRequest request)
     {
+        ArticleType? articleType = null;
+        if (request.ArticleTypeId.HasValue)
+        {
+            articleType = await _articleTypeRepository.GetByIdAsync(request.ArticleTypeId.Value);
+        }
+
         var article = new Article
         {
             Title = request.Title,
             Status = Domain.Enums.ArticleStatus.Draft,
-            ParentArticleId = request.ParentArticleId
+            ParentArticleId = request.ParentArticleId,
+            ArticleType = articleType
         };
 
         await _articleRepository.SaveAsync(article);
-        return CreatedAtAction(nameof(Get), new { id = article.Id }, article);
+
+        return CreatedAtAction(nameof(Get), new { id = article.Id }, new
+        {
+            id = article.Id.ToString(),
+            article.Title,
+            article.Status,
+            article.ParentArticleId,
+            articleTypeId = article.ArticleTypeId,
+            articleTypeIcon = article.ArticleType?.Icon ?? "bi-file-text",
+            article.CreatedAt
+        });
     }
 
     /// <summary>
@@ -214,6 +231,7 @@ public class CreateArticleRequest
 {
     public required string Title { get; set; }
     public Guid? ParentArticleId { get; set; }
+    public Guid? ArticleTypeId { get; set; }
 }
 
 public class UpdateArticleRequest

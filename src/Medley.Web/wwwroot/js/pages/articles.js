@@ -4,12 +4,12 @@
     const { api, createSignalRConnection } = window.MedleyApi;
     const {
         formatDate,
-        getStatusBadgeClass
+        getStatusBadgeClass,
+        findInTree
     } = window.MedleyUtils;
     const {
         getUrlParam,
-        setUrlParam,
-        findInTree
+        setUrlParam
     } = window.UrlUtils;
 
     function waitForTiptapEditor(callback) {
@@ -37,7 +37,15 @@
                     editingTitle: '',
                     editingContent: '',
                     isSaving: false,
-                    hubConnection: null
+                    hubConnection: null,
+                    articleTypes: [],
+                    showCreateModal: false,
+                    newArticleTitle: '',
+                    newArticleTypeId: null,
+                    parentArticleIdForNew: null,
+                    isCreating: false,
+                    showSidebarMenu: false,
+                    expandedIds: new Set()
                 };
             },
             methods: {
@@ -63,6 +71,9 @@
                         this.selectedArticle = fullArticle;
                         this.selectedArticleId = article.id;
 
+                        // Expand all parent articles
+                        this.expandParents(article.id);
+
                         const currentId = getUrlParam('id');
                         if (currentId !== article.id) {
                             setUrlParam('id', article.id, replaceState);
@@ -70,6 +81,38 @@
                     } catch (err) {
                         console.error('Error loading article:', err);
                         this.selectedArticle = null;
+                    }
+                },
+
+                toggleExpand(articleId) {
+                    if (this.expandedIds.has(articleId)) {
+                        this.expandedIds.delete(articleId);
+                    } else {
+                        this.expandedIds.add(articleId);
+                    }
+                },
+
+                findArticleParents(articleId, articles = this.articles, parents = []) {
+                    for (const article of articles) {
+                        if (article.id === articleId) {
+                            return parents;
+                        }
+                        if (article.children && article.children.length > 0) {
+                            const found = this.findArticleParents(articleId, article.children, [...parents, article.id]);
+                            if (found) {
+                                return found;
+                            }
+                        }
+                    }
+                    return null;
+                },
+
+                expandParents(articleId) {
+                    const parents = this.findArticleParents(articleId);
+                    if (parents) {
+                        parents.forEach(parentId => {
+                            this.expandedIds.add(parentId);
+                        });
                     }
                 },
 
@@ -104,21 +147,84 @@
                     }
                 },
 
-                async createNewArticle() {
-                    const title = prompt('Enter article title:');
-                    if (title) {
-                        try {
-                            await api.post('/api/articles', { title });
-                            await this.loadArticles();
-                        } catch (err) {
-                            alert('Failed to create article: ' + err.message);
+                async loadArticleTypes() {
+                    try {
+                        this.articleTypes = await api.get('/api/articles/types');
+                    } catch (err) {
+                        console.error('Error loading article types:', err);
+                    }
+                },
+
+                toggleSidebarMenu() {
+                    this.showSidebarMenu = !this.showSidebarMenu;
+                },
+
+                showCreateArticleModal(parentArticleId) {
+                    this.showSidebarMenu = false; // Close sidebar menu when opening modal
+                    this.parentArticleIdForNew = parentArticleId;
+                    this.newArticleTitle = '';
+                    this.newArticleTypeId = null;
+                    this.showCreateModal = true;
+                    
+                    // Focus on title input after modal is shown
+                    this.$nextTick(() => {
+                        if (this.$refs.titleInput) {
+                            this.$refs.titleInput.focus();
                         }
+                    });
+                },
+
+                closeCreateModal() {
+                    this.showCreateModal = false;
+                    this.newArticleTitle = '';
+                    this.newArticleTypeId = null;
+                    this.parentArticleIdForNew = null;
+                },
+
+                async createArticle() {
+                    // Validate inputs
+                    if (!this.newArticleTitle.trim()) {
+                        alert('Please enter a title');
+                        return;
+                    }
+                    if (!this.newArticleTypeId) {
+                        alert('Please select an article type');
+                        return;
+                    }
+
+                    this.isCreating = true;
+                    try {
+                        const response = await api.post('/api/articles', {
+                            title: this.newArticleTitle,
+                            articleTypeId: this.newArticleTypeId,
+                            parentArticleId: this.parentArticleIdForNew
+                        });
+
+                        // Close modal
+                        this.closeCreateModal();
+
+                        // Reload articles tree
+                        await this.loadArticles();
+
+                        // Auto-select the newly created article
+                        if (response && response.id) {
+                            const newArticle = findInTree(this.articles, response.id);
+                            if (newArticle) {
+                                await this.selectArticle(newArticle, false);
+                            }
+                        }
+                    } catch (err) {
+                        alert('Failed to create article: ' + err.message);
+                        console.error('Error creating article:', err);
+                    } finally {
+                        this.isCreating = false;
                     }
                 }
             },
 
             async mounted() {
                 await this.loadArticles();
+                await this.loadArticleTypes();
 
                 const articleIdFromUrl = getUrlParam('id');
                 if (articleIdFromUrl) {
@@ -127,6 +233,11 @@
                         await this.selectArticle(article, true);
                     }
                 }
+
+                // Close sidebar menu when clicking outside
+                document.addEventListener('click', () => {
+                    this.showSidebarMenu = false;
+                });
 
                 this.hubConnection = createSignalRConnection('/articleHub');
 

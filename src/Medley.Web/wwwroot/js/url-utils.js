@@ -25,30 +25,10 @@
         return () => window.removeEventListener('popstate', handler);
     };
 
-    const findInTree = (items, id, childrenKey = 'children') => {
-        if (!Array.isArray(items)) return null;
-        for (const item of items) {
-            if (item.id === id) return item;
-            const children = item[childrenKey];
-            if (children && children.length) {
-                const found = findInTree(children, id, childrenKey);
-                if (found) return found;
-            }
-        }
-        return null;
-    };
-
-    const findInList = (items, id) => {
-        if (!Array.isArray(items)) return null;
-        return items.find(i => i && i.id === id) || null;
-    };
-
     window.UrlUtils = {
         getUrlParam,
         setUrlParam,
-        setupPopStateHandler,
-        findInTree,
-        findInList
+        setupPopStateHandler
     };
 })();
 

@@ -15,12 +15,24 @@ const ArticleTree = {
         <span v-else class="tree-item-toggle"></span>
         <i :class="['tree-item-icon'].concat(getIconClass(article.articleTypeIcon).split(' '))"></i>
         <span class="tree-item-label">{{ article.title }}</span>
+        <button 
+          class="tree-item-actions"
+          @click.stop="toggleActionsMenu(article.id)"
+          title="Actions">
+          <i class="bi bi-three-dots"></i>
+        </button>
+        <div v-if="openMenuId === article.id" class="tree-actions-dropdown" @click.stop>
+          <button class="tree-actions-dropdown-item" @click="createChild(article.id)">New Article</button>
+        </div>
       </div>
       <article-tree 
         v-if="hasChildren(article) && isExpanded(article.id)"
         :articles="article.children"
         :selected-id="selectedId"
+        :expanded-ids="expandedIds"
         @select="selectArticle"
+        @toggle-expand="toggleExpand"
+        @create-child="createChild"
         class="tree-children"
       />
     </li>
@@ -34,20 +46,20 @@ const ArticleTree = {
         selectedId: {
             type: String,
             default: null
+        },
+        expandedIds: {
+            type: Set,
+            default: () => new Set()
         }
     },
     data() {
         return {
-            expandedIds: new Set()
+            openMenuId: null
         };
     },
     methods: {
         toggleExpand(articleId) {
-            if (this.expandedIds.has(articleId)) {
-                this.expandedIds.delete(articleId);
-            } else {
-                this.expandedIds.add(articleId);
-            }
+            this.$emit('toggle-expand', articleId);
         },
         isExpanded(articleId) {
             return this.expandedIds.has(articleId);
@@ -60,7 +72,24 @@ const ArticleTree = {
         },
         getIconClass(icon) {
             return window.MedleyUtils.getIconClass(icon);
+        },
+        toggleActionsMenu(articleId) {
+            if (this.openMenuId === articleId) {
+                this.openMenuId = null;
+            } else {
+                this.openMenuId = articleId;
+            }
+        },
+        createChild(parentArticleId) {
+            this.openMenuId = null;
+            this.$emit('create-child', parentArticleId);
         }
+    },
+    mounted() {
+        // Close dropdown when clicking outside
+        document.addEventListener('click', () => {
+            this.openMenuId = null;
+        });
     }
 };
 
