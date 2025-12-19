@@ -441,7 +441,7 @@ let TiptapEditor = null;
                     contentType: 'markdown',
                     editorProps: {
                         attributes: {
-                            class: 'tiptap-editor-content'
+                            class: 'tiptap-editor-content markdown-container'
                         }
                     },
                     onUpdate: () => {

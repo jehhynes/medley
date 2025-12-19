@@ -6,5 +6,9 @@
   {
     "outputFile": "wwwroot/css/bootstrap/flatly/bootstrap.css",
     "inputFile": "wwwroot/css/bootstrap/flatly/bootstrap.scss"
+  },
+  {
+    "outputFile": "wwwroot/css/markdown.css",
+    "inputFile": "wwwroot/css/markdown.scss"
   }
 ]
