@@ -105,6 +105,11 @@
                 },
 
                 async selectArticle(article, replaceState = false) {
+                    // Don't reload if the article is already selected
+                    if (article.id === this.articles.selectedId) {
+                        return;
+                    }
+
                     try {
                         const fullArticle = await api.get(`/api/articles/${article.id}`);
 
@@ -303,14 +308,8 @@
 
                     this.editor.isSaving = true;
                     try {
-                        await api.put(`/api/articles/${this.articles.selected.id}`, {
-                            title: this.editor.title,
-                            content: this.editor.content
-                        });
-
-                        // Update the article in the tree surgically
-                        this.updateArticleInTree(this.articles.selected.id, {
-                            title: this.editor.title,
+                        // Save content
+                        await api.put(`/api/articles/${this.articles.selected.id}/content`, {
                             content: this.editor.content
                         });
                     } catch (err) {
@@ -461,7 +460,7 @@
 
                     this.editModal.isSubmitting = true;
                     try {
-                        await api.put(`/api/articles/${this.editModal.articleId}`, {
+                        await api.put(`/api/articles/${this.editModal.articleId}/metadata`, {
                             title: this.editModal.title,
                             articleTypeId: this.editModal.typeId
                         });
@@ -472,6 +471,11 @@
                             articleTypeId: this.editModal.typeId
                         });
 
+                        // If the article is currently selected, sync the first H1 in the editor
+                        if (this.articles.selectedId === this.editModal.articleId) {
+                            this.syncFirstHeadingInEditor(this.editModal.title);
+                        }
+
                         this.closeEditModal();
                     } catch (err) {
                         bootbox.alert({
@@ -481,6 +485,40 @@
                         console.error('Error updating article:', err);
                     } finally {
                         this.editModal.isSubmitting = false;
+                    }
+                },
+
+                // Sync the first H1 heading in the TipTap editor
+                syncFirstHeadingInEditor(newTitle) {
+                    const tiptapEditor = this.$refs.tiptapEditor;
+                    if (!tiptapEditor || !tiptapEditor.editor) {
+                        return;
+                    }
+
+                    const editor = tiptapEditor.editor;
+                    
+                    // Use ProseMirror to find the first heading level 1
+                    let firstH1Pos = null;
+                    let firstH1Node = null;
+                    
+                    editor.state.doc.descendants((node, pos) => {
+                        if (firstH1Pos === null && node.type.name === 'heading' && node.attrs.level === 1) {
+                            firstH1Pos = pos;
+                            firstH1Node = node;
+                            return false; // Stop searching
+                        }
+                    });
+
+                    if (firstH1Pos !== null && firstH1Node !== null) {
+                        // Replace the text content of the first H1
+                        const from = firstH1Pos + 1; // +1 to get inside the node
+                        const to = firstH1Pos + firstH1Node.nodeSize - 1; // -1 to stay inside the node
+                        
+                        editor.chain()
+                            .focus()
+                            .setTextSelection({ from, to })
+                            .insertContent(newTitle)
+                            .run();
                     }
                 },
 
@@ -600,6 +638,17 @@
                     this.ui.sidebarMenuOpen = false;
                 });
 
+                // Add keyboard shortcut for saving (Ctrl+S / Cmd+S)
+                this.handleKeyboardSave = (event) => {
+                    if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+                        event.preventDefault();
+                        if (this.articles.selected && !this.editor.isSaving) {
+                            this.saveArticle();
+                        }
+                    }
+                };
+                document.addEventListener('keydown', this.handleKeyboardSave);
+
                 this.hubConnection = createSignalRConnection('/articleHub');
 
                 this.hubConnection.on('ArticleCreated', async (data) => {
@@ -622,18 +671,6 @@
                         title: data.title,
                         articleTypeId: data.articleTypeId
                     });
-                    
-                    // If the updated article is currently selected, refresh its full content
-                    if (this.articles.selectedId === data.articleId) {
-                        try {
-                            const fullArticle = await api.get(`/api/articles/${data.articleId}`);
-                            this.editor.title = fullArticle.title;
-                            this.editor.content = fullArticle.content || '';
-                            Object.assign(this.articles.selected, fullArticle);
-                        } catch (err) {
-                            console.error('Error refreshing selected article:', err);
-                        }
-                    }
                 });
 
                 this.hubConnection.on('ArticleDeleted', (data) => {
@@ -661,6 +698,11 @@
             },
 
             beforeUnmount() {
+                // Remove keyboard shortcut listener
+                if (this.handleKeyboardSave) {
+                    document.removeEventListener('keydown', this.handleKeyboardSave);
+                }
+
                 if (this.hubConnection) {
                     this.hubConnection.stop()
                         .then(() => console.log('Disconnected from ArticleHub'))

@@ -543,6 +543,20 @@
     background-color: var(--bg-hover);
 }
 
+.tiptap-toolbar-left {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    flex: 1;
+}
+
+.tiptap-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+}
+
 .tiptap-toolbar-btn {
     display: inline-flex;
     align-items: center;

@@ -15,6 +15,7 @@ let TiptapEditor = null;
             template: `
             <div class="tiptap-editor">
                 <div class="tiptap-toolbar" v-if="editor">
+                    <div class="tiptap-toolbar-left">
                     <div class="tiptap-dropdown">
                         <button 
                             type="button"
@@ -237,6 +238,17 @@ let TiptapEditor = null;
                         title="Redo">
                         <i class="bi bi-arrow-clockwise"></i>
                     </button>
+                    </div>
+                    <div class="tiptap-toolbar-right">
+                        <button 
+                            type="button"
+                            @click="handleSave" 
+                            :disabled="isSaving"
+                            class="btn btn-primary btn-sm"
+                            title="Save">
+                            <i class="bi bi-save"></i> Save
+                        </button>
+                    </div>
                 </div>
                 <div ref="editorElement" class="tiptap-content"></div>
             </div>
@@ -245,9 +257,13 @@ let TiptapEditor = null;
                 modelValue: {
                     type: String,
                     default: ''
+                },
+                isSaving: {
+                    type: Boolean,
+                    default: false
                 }
             },
-            emits: ['update:modelValue'],
+            emits: ['update:modelValue', 'save'],
             data() {
                 return {
                     editor: null,
@@ -411,6 +427,10 @@ let TiptapEditor = null;
                     const markdown = this.editor.getMarkdown();
                     this.lastEmittedValue = markdown;
                     this.$emit('update:modelValue', markdown);
+                },
+
+                handleSave() {
+                    this.$emit('save');
                 }
             },
             mounted() {
