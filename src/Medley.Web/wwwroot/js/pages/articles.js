@@ -126,6 +126,37 @@
                     }
                 },
 
+                // === Tree Sorting ===
+                sortArticles(articles) {
+                    articles.sort((a, b) => {
+                        // Get article types
+                        const aType = this.articles.types.find(t => t.id === a.articleTypeId);
+                        const bType = this.articles.types.find(t => t.id === b.articleTypeId);
+                        
+                        const aIsIndex = aType && aType.name.toLowerCase() === 'index';
+                        const bIsIndex = bType && bType.name.toLowerCase() === 'index';
+                        
+                        // Index types come first
+                        if (aIsIndex && !bIsIndex) return -1;
+                        if (!aIsIndex && bIsIndex) return 1;
+                        
+                        // Then sort alphabetically by title (case-insensitive)
+                        return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
+                    });
+                },
+
+                sortArticlesRecursive(articles) {
+                    // Sort current level
+                    this.sortArticles(articles);
+                    
+                    // Recursively sort children
+                    articles.forEach(article => {
+                        if (article.children && article.children.length > 0) {
+                            this.sortArticlesRecursive(article.children);
+                        }
+                    });
+                },
+
                 // === Tree Navigation ===
                 toggleExpand(articleId) {
                     if (this.articles.expandedIds.has(articleId)) {
@@ -147,6 +178,27 @@
                             }
                         }
                     }
+                    return null;
+                },
+
+                findParentArray(articleId, articles = this.articles.list) {
+                    // Check if article is at root level
+                    for (const article of articles) {
+                        if (article.id === articleId) {
+                            return articles;
+                        }
+                    }
+                    
+                    // Search in children
+                    for (const article of articles) {
+                        if (article.children && article.children.length > 0) {
+                            const found = this.findParentArray(articleId, article.children);
+                            if (found) {
+                                return found;
+                            }
+                        }
+                    }
+                    
                     return null;
                 },
 
@@ -175,6 +227,7 @@
                     if (!article.parentArticleId) {
                         // Insert at root level
                         this.articles.list.push(article);
+                        this.sortArticles(this.articles.list);
                     } else {
                         // Find parent and insert into its children
                         const parent = findInTree(this.articles.list, article.parentArticleId);
@@ -183,12 +236,14 @@
                                 parent.children = [];
                             }
                             parent.children.push(article);
+                            this.sortArticles(parent.children);
                             // Expand parent to show new child
                             this.articles.expandedIds.add(parent.id);
                         } else {
                             // Parent not found, insert at root as fallback
                             console.warn(`Parent article ${article.parentArticleId} not found, inserting at root`);
                             this.articles.list.push(article);
+                            this.sortArticles(this.articles.list);
                         }
                     }
                 },
@@ -197,6 +252,15 @@
                     const article = findInTree(this.articles.list, articleId);
                     if (article) {
                         Object.assign(article, updates);
+                        
+                        // If title or articleTypeId changed, re-sort the parent array
+                        if (updates.title !== undefined || updates.articleTypeId !== undefined) {
+                            // Find the parent array that contains this article
+                            const parentArray = this.findParentArray(articleId);
+                            if (parentArray) {
+                                this.sortArticles(parentArray);
+                            }
+                        }
                         
                         // If currently selected article is being updated, update editor state too
                         if (this.articles.selectedId === articleId) {
@@ -250,7 +314,10 @@
                             content: this.editor.content
                         });
                     } catch (err) {
-                        alert('Failed to save article: ' + err.message);
+                        bootbox.alert({
+                            message: `Failed to save article: ${err.message}`,
+                            className: 'bootbox-error'
+                        });
                         console.error('Error saving article:', err);
                     } finally {
                         this.editor.isSaving = false;
@@ -258,9 +325,27 @@
                 },
 
                 deleteArticle() {
-                    if (confirm('Are you sure you want to delete this article?')) {
-                        alert('Delete functionality coming soon');
-                    }
+                    bootbox.confirm({
+                        message: 'Are you sure you want to delete this article?',
+                        buttons: {
+                            confirm: {
+                                label: 'Delete',
+                                className: 'btn-danger'
+                            },
+                            cancel: {
+                                label: 'Cancel',
+                                className: 'btn-secondary'
+                            }
+                        },
+                        callback: (confirmed) => {
+                            if (confirmed) {
+                                bootbox.alert({
+                                    message: 'Delete functionality coming soon',
+                                    className: 'bootbox-info'
+                                });
+                            }
+                        }
+                    });
                 },
 
                 // === UI Helpers ===
@@ -274,11 +359,17 @@
                 // === Validation ===
                 validateArticleForm(title, typeId) {
                     if (!title?.trim()) {
-                        alert('Please enter a title');
+                        bootbox.alert({
+                            message: 'Please enter a title',
+                            className: 'bootbox-warning'
+                        });
                         return false;
                     }
                     if (!typeId) {
-                        alert('Please select an article type');
+                        bootbox.alert({
+                            message: 'Please select an article type',
+                            className: 'bootbox-warning'
+                        });
                         return false;
                     }
                     return true;
@@ -332,7 +423,10 @@
                             }
                         }
                     } catch (err) {
-                        alert('Failed to create article: ' + err.message);
+                        bootbox.alert({
+                            message: `Failed to create article: ${err.message}`,
+                            className: 'bootbox-error'
+                        });
                         console.error('Error creating article:', err);
                     } finally {
                         this.createModal.isSubmitting = false;
@@ -380,10 +474,108 @@
 
                         this.closeEditModal();
                     } catch (err) {
-                        alert('Failed to update article: ' + err.message);
+                        bootbox.alert({
+                            message: `Failed to update article: ${err.message}`,
+                            className: 'bootbox-error'
+                        });
                         console.error('Error updating article:', err);
                     } finally {
                         this.editModal.isSubmitting = false;
+                    }
+                },
+
+                // === Article Move ===
+                async moveArticle(sourceArticleId, targetParentId) {
+                    // Find the source and target articles
+                    const sourceArticle = findInTree(this.articles.list, sourceArticleId);
+                    const targetParent = findInTree(this.articles.list, targetParentId);
+
+                    if (!sourceArticle || !targetParent) {
+                        console.error('Source or target article not found');
+                        bootbox.alert({
+                            message: 'Could not find source or target article',
+                            className: 'bootbox-error'
+                        });
+                        return;
+                    }
+
+                    // Show confirmation dialog using bootbox
+                    bootbox.confirm({
+                        message: `Move <strong>${sourceArticle.title}</strong> under <strong>${targetParent.title}</strong>?`,
+                        buttons: {
+                            confirm: {
+                                label: 'Move',
+                                className: 'btn-primary'
+                            },
+                            cancel: {
+                                label: 'Cancel',
+                                className: 'btn-secondary'
+                            }
+                        },
+                        callback: async (confirmed) => {
+                            if (confirmed) {
+                                try {
+                                    await api.put(`/api/articles/${sourceArticleId}/move`, {
+                                        newParentArticleId: targetParentId
+                                    });
+
+                                    // Move completed successfully
+                                    // The tree update will be handled by the SignalR event
+                                } catch (err) {
+                                    bootbox.alert({
+                                        message: `Failed to move article: ${err.message}`,
+                                        className: 'bootbox-error'
+                                    });
+                                    console.error('Error moving article:', err);
+                                }
+                            }
+                        }
+                    });
+                },
+
+                // Helper to move article in tree structure
+                moveArticleInTree(articleId, oldParentId, newParentId) {
+                    // Find and remove article from old parent
+                    let movedArticle = null;
+
+                    const removeFromParent = (articles) => {
+                        for (let i = 0; i < articles.length; i++) {
+                            if (articles[i].id === articleId) {
+                                movedArticle = articles.splice(i, 1)[0];
+                                return true;
+                            }
+                            if (articles[i].children && articles[i].children.length > 0) {
+                                if (removeFromParent(articles[i].children)) {
+                                    return true;
+                                }
+                            }
+                        }
+                        return false;
+                    };
+
+                    removeFromParent(this.articles.list);
+
+                    if (!movedArticle) {
+                        console.error('Article not found for move:', articleId);
+                        return;
+                    }
+
+                    // Find new parent and add article to its children
+                    const newParent = findInTree(this.articles.list, newParentId);
+                    if (newParent) {
+                        if (!newParent.children) {
+                            newParent.children = [];
+                        }
+                        newParent.children.push(movedArticle);
+                        this.sortArticles(newParent.children);
+                        
+                        // Expand the new parent to show the moved article
+                        this.articles.expandedIds.add(newParentId);
+                    } else {
+                        console.error('New parent not found:', newParentId);
+                        // Add back to root as fallback
+                        this.articles.list.push(movedArticle);
+                        this.sortArticles(this.articles.list);
                     }
                 }
             },
@@ -391,6 +583,9 @@
             async mounted() {
                 await this.loadArticles();
                 await this.loadArticleTypes();
+                
+                // Sort articles after both articles and types are loaded
+                this.sortArticlesRecursive(this.articles.list);
 
                 const articleIdFromUrl = getUrlParam('id');
                 if (articleIdFromUrl) {
@@ -452,6 +647,12 @@
                         this.editor.title = '';
                         this.editor.content = '';
                     }
+                });
+
+                this.hubConnection.on('ArticleMoved', (data) => {
+                    // SignalR provides articleId, oldParentId, newParentId
+                    // Move the article in the tree surgically
+                    this.moveArticleInTree(data.articleId, data.oldParentId, data.newParentId);
                 });
 
                 this.hubConnection.start()

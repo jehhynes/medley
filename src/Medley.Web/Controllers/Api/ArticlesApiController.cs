@@ -219,6 +219,128 @@ public class ArticlesApiController : ControllerBase
     }
 
     /// <summary>
+    /// Move an article to a different parent
+    /// </summary>
+    [HttpPut("{id}/move")]
+    public async Task<IActionResult> Move(Guid id, [FromBody] MoveArticleRequest request)
+    {
+        // Get the article to move
+        var article = await _articleRepository.Query()
+            .Include(a => a.ChildArticles)
+            .FirstOrDefaultAsync(a => a.Id == id);
+        
+        if (article == null)
+        {
+            return NotFound(new { message = "Article not found" });
+        }
+
+        // Validate that a parent is being set (cannot move to root)
+        if (!request.NewParentArticleId.HasValue)
+        {
+            return BadRequest(new { message = "Articles must have a parent. Cannot move to root level." });
+        }
+
+        // Check if moving to the same parent (no-op)
+        if (article.ParentArticleId == request.NewParentArticleId.Value)
+        {
+            return Ok(new { message = "Article is already under this parent" });
+        }
+
+        // Get the new parent article
+        var newParent = await _articleRepository.Query()
+            .Include(a => a.ArticleType)
+            .FirstOrDefaultAsync(a => a.Id == request.NewParentArticleId.Value);
+        
+        if (newParent == null)
+        {
+            return NotFound(new { message = "Target parent article not found" });
+        }
+
+        // Validate that the new parent is of type "Index"
+        if (newParent.ArticleType == null || !newParent.ArticleType.Name.Equals("Index", StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest(new { message = "Articles can only be moved under articles of type 'Index'" });
+        }
+
+        // Check for circular reference (moving under itself or a descendant)
+        if (await IsCircularReference(id, request.NewParentArticleId.Value))
+        {
+            return BadRequest(new { message = "Cannot move an article under itself or one of its descendants" });
+        }
+
+        // Store old parent ID for SignalR notification
+        var oldParentId = article.ParentArticleId;
+
+        // Update the parent
+        article.ParentArticleId = request.NewParentArticleId.Value;
+        await _articleRepository.SaveAsync(article);
+
+        // Notify all clients via SignalR
+        await _hubContext.Clients.All.SendAsync("ArticleMoved", new
+        {
+            ArticleId = article.Id,
+            OldParentId = oldParentId,
+            NewParentId = request.NewParentArticleId.Value,
+            Timestamp = DateTimeOffset.UtcNow
+        });
+
+        return Ok(new 
+        { 
+            message = "Article moved successfully",
+            articleId = article.Id,
+            oldParentId = oldParentId,
+            newParentId = request.NewParentArticleId.Value
+        });
+    }
+
+    /// <summary>
+    /// Check if moving an article would create a circular reference
+    /// </summary>
+    private async Task<bool> IsCircularReference(Guid articleId, Guid targetParentId)
+    {
+        // Cannot move under itself
+        if (articleId == targetParentId)
+        {
+            return true;
+        }
+
+        // Check if targetParent is a descendant of article
+        var currentParentId = targetParentId;
+        var visitedIds = new HashSet<Guid> { targetParentId };
+
+        while (currentParentId != Guid.Empty)
+        {
+            var parent = await _articleRepository.Query()
+                .Where(a => a.Id == currentParentId)
+                .Select(a => new { a.ParentArticleId })
+                .FirstOrDefaultAsync();
+
+            if (parent == null || !parent.ParentArticleId.HasValue)
+            {
+                // Reached root, no circular reference
+                return false;
+            }
+
+            currentParentId = parent.ParentArticleId.Value;
+
+            // If we encounter the article being moved, it's a circular reference
+            if (currentParentId == articleId)
+            {
+                return true;
+            }
+
+            // Prevent infinite loops in case of data corruption
+            if (visitedIds.Contains(currentParentId))
+            {
+                return true; // Circular reference detected in the chain
+            }
+            visitedIds.Add(currentParentId);
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// Helper method to build tree structure
     /// </summary>
     private List<object> BuildTree(List<Article> allArticles, Guid? parentId)
@@ -269,5 +391,10 @@ public class UpdateArticleRequest
     public Domain.Enums.ArticleStatus? Status { get; set; }
     public string? Content { get; set; }
     public Guid? ArticleTypeId { get; set; }
+}
+
+public class MoveArticleRequest
+{
+    public Guid? NewParentArticleId { get; set; }
 }
 
