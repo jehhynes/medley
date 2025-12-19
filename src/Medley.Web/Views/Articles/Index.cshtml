@@ -35,10 +35,12 @@
             :selected-id="articles.selectedId"
             :expanded-ids="articles.expandedIds"
             :article-type-icon-map="articles.typeIconMap"
+            :article-types="articles.types"
             @@select="selectArticle"
             @@toggle-expand="toggleExpand"
             @@create-child="showCreateArticleModal"
             @@edit-article="showEditArticleModal"
+            @@move-article="moveArticle"
         />
     </div>
 </div>
@@ -154,6 +156,7 @@
 </div>
 
 @section Scripts {
+    <script src="~/lib/bootbox/dist/bootbox.all.min.js" asp-append-version="true"></script>
     <script src="~/js/app.js" asp-append-version="true"></script>
     <script src="~/js/utils.js" asp-append-version="true"></script>
     <script src="~/js/url-utils.js" asp-append-version="true"></script>

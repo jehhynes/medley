@@ -251,11 +251,11 @@
             align-items: center;
             padding: 0.375rem 0.5rem;
             border-radius: var(--bs-border-radius);
-            cursor: pointer;
-            transition: background-color 0.15s ease;
+            transition: background-color 0.15s ease, border 0.15s ease;
             text-decoration: none;
             color: var(--bs-body-color);
             margin-bottom: 0.125rem;
+            border: 2px solid transparent;
 
             &:hover {
                 background-color: var(--bg-hover);
@@ -265,6 +265,20 @@
             &.active {
                 background-color: var(--bs-primary);
                 color: var(--bs-white);
+            }
+
+            &.drag-over {
+                border: 2px solid var(--bs-primary);
+                background-color: rgba(var(--bs-primary-rgb), 0.1);
+                
+                &.active {
+                    background-color: rgba(var(--bs-primary-rgb), 0.8);
+                }
+            }
+
+            // Prevent pointer events on child elements during drag to avoid flickering
+            .tree-item-icon, .tree-item-label {
+                pointer-events: none;
             }
         }
     }
