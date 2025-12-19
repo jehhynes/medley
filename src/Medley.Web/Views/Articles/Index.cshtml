@@ -55,8 +55,11 @@
         <div class="empty-state-text">Select an article from the sidebar to view its details</div>
     </div>
     <tiptap-editor v-else
+                   ref="tiptapEditor"
                    v-model="editor.content"
                    :key="articles.selectedId"
+                   :is-saving="editor.isSaving"
+                   @@save="saveArticle"
                    class="flex-grow-1"
                    placeholder="Start writing your article content..." />
 </div>

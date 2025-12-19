@@ -134,7 +134,8 @@ public class ArticlesApiController : ControllerBase
             Title = request.Title,
             Status = Domain.Enums.ArticleStatus.Draft,
             ParentArticleId = request.ParentArticleId,
-            ArticleType = articleType
+            ArticleType = articleType,
+            Content = $"# {request.Title}\n\n"
         };
 
         await _articleRepository.SaveAsync(article);
@@ -162,10 +163,10 @@ public class ArticlesApiController : ControllerBase
     }
 
     /// <summary>
-    /// Update an existing article
+    /// Update article metadata (title, type, status)
     /// </summary>
-    [HttpPut("{id}")]
-    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateArticleRequest request)
+    [HttpPut("{id}/metadata")]
+    public async Task<IActionResult> UpdateMetadata(Guid id, [FromBody] UpdateArticleMetadataRequest request)
     {
         var article = await _articleRepository.GetByIdAsync(id);
         if (article == null)
@@ -173,14 +174,22 @@ public class ArticlesApiController : ControllerBase
             return NotFound();
         }
 
+        // Track if title changed
+        var titleChanged = article.Title != request.Title;
+        var oldTitle = article.Title;
+        
+        // Update title
         article.Title = request.Title;
+        
+        // Conditional sync: Only sync H1 if title and H1 were previously in sync
+        if (titleChanged && TitleMatchesH1(oldTitle, article.Content))
+        {
+            article.Content = UpdateFirstH1InMarkdown(article.Content, request.Title);
+        }
+        
         if (request.Status.HasValue)
         {
             article.Status = request.Status.Value;
-        }
-        if (request.Content != null)
-        {
-            article.Content = request.Content;
         }
         if (request.ArticleTypeId.HasValue)
         {
@@ -197,6 +206,55 @@ public class ArticlesApiController : ControllerBase
             ArticleTypeId = article.ArticleTypeId,
             Timestamp = DateTimeOffset.UtcNow
         });
+
+        return Ok(article);
+    }
+
+    /// <summary>
+    /// Update article content
+    /// </summary>
+    [HttpPut("{id}/content")]
+    public async Task<IActionResult> UpdateContent(Guid id, [FromBody] UpdateArticleContentRequest request)
+    {
+        var article = await _articleRepository.GetByIdAsync(id);
+        if (article == null)
+        {
+            return NotFound();
+        }
+
+        var oldTitle = article.Title;
+        var newH1 = ExtractFirstH1(request.Content);
+        
+        // Conditional sync: Only update title if it currently matches the old H1
+        if (newH1 != null && TitleMatchesH1(article.Title, article.Content))
+        {
+            article.Title = newH1;
+        }
+        
+        // Preserve existing HTML comment header if present
+        var existingHeader = ExtractArticleHeader(article.Content);
+        if (!string.IsNullOrEmpty(existingHeader))
+        {
+            article.Content = existingHeader + request.Content;
+        }
+        else
+        {
+            article.Content = request.Content;
+        }
+
+        await _articleRepository.SaveAsync(article);
+
+        // Notify all clients via SignalR (only if title changed)
+        if (article.Title != oldTitle)
+        {
+            await _hubContext.Clients.All.SendAsync("ArticleUpdated", new
+            {
+                ArticleId = article.Id,
+                Title = article.Title,
+                ArticleTypeId = article.ArticleTypeId,
+                Timestamp = DateTimeOffset.UtcNow
+            });
+        }
 
         return Ok(article);
     }
@@ -362,6 +420,24 @@ public class ArticlesApiController : ControllerBase
     }
 
     /// <summary>
+    /// Helper method to extract HTML comment header from article content
+    /// </summary>
+    private static string? ExtractArticleHeader(string? content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return null;
+        }
+
+        // Extract HTML comment header at the start of the content
+        // Pattern: ^\s*<!--[\s\S]*?-->\s*
+        var pattern = @"^\s*(<!--[\s\S]*?-->\s*)";
+        var match = Regex.Match(content, pattern, RegexOptions.None, TimeSpan.FromSeconds(1));
+        
+        return match.Success ? match.Groups[1].Value : null;
+    }
+
+    /// <summary>
     /// Helper method to strip HTML comment header from article content
     /// </summary>
     private static string? StripArticleHeader(string? content)
@@ -376,6 +452,57 @@ public class ArticlesApiController : ControllerBase
         var pattern = @"^\s*<!--[\s\S]*?-->\s*";
         return Regex.Replace(content, pattern, string.Empty, RegexOptions.None, TimeSpan.FromSeconds(1));
     }
+
+    /// <summary>
+    /// Extract the first H1 heading from markdown content
+    /// </summary>
+    private static string? ExtractFirstH1(string? content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return null;
+        }
+
+        // Pattern to match first H1: # Title
+        var h1Pattern = @"^#\s+(.+)$";
+        var match = Regex.Match(content, h1Pattern, RegexOptions.Multiline);
+        
+        return match.Success ? match.Groups[1].Value.Trim() : null;
+    }
+
+    /// <summary>
+    /// Update the first H1 in markdown content
+    /// </summary>
+    private static string UpdateFirstH1InMarkdown(string? content, string newTitle)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return $"# {newTitle}\n\n";
+        }
+
+        var h1Pattern = @"^#\s+.*?$";
+        var match = Regex.Match(content, h1Pattern, RegexOptions.Multiline);
+        
+        if (match.Success)
+        {
+            return Regex.Replace(content, h1Pattern, $"# {newTitle}", 
+                RegexOptions.Multiline, TimeSpan.FromSeconds(1));
+        }
+        else
+        {
+            // No H1 found, prepend one
+            return $"# {newTitle}\n\n{content}";
+        }
+    }
+
+    /// <summary>
+    /// Check if title and first H1 in content match
+    /// </summary>
+    private static bool TitleMatchesH1(string title, string? content)
+    {
+        var h1 = ExtractFirstH1(content);
+        return h1 != null && h1.Equals(title, StringComparison.Ordinal);
+    }
 }
 
 public class CreateArticleRequest
@@ -385,12 +512,16 @@ public class CreateArticleRequest
     public Guid? ArticleTypeId { get; set; }
 }
 
-public class UpdateArticleRequest
+public class UpdateArticleMetadataRequest
 {
     public required string Title { get; set; }
     public Domain.Enums.ArticleStatus? Status { get; set; }
-    public string? Content { get; set; }
     public Guid? ArticleTypeId { get; set; }
+}
+
+public class UpdateArticleContentRequest
+{
+    public required string Content { get; set; }
 }
 
 public class MoveArticleRequest
