@@ -1,4 +1,5 @@
 using System;
+using System.Text.RegularExpressions;
 using Medley.Application.Interfaces;
 using Medley.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
@@ -78,7 +79,7 @@ public class ArticlesApiController : ControllerBase
         {
             article.Id,
             article.Title,
-            article.Content,
+            Content = StripArticleHeader(article.Content),
             article.Status,
             article.PublishedAt,
             article.CreatedAt,
@@ -190,6 +191,22 @@ public class ArticlesApiController : ControllerBase
                 children = BuildTree(allArticles, a.Id)
             })
             .ToList<object>();
+    }
+
+    /// <summary>
+    /// Helper method to strip HTML comment header from article content
+    /// </summary>
+    private static string? StripArticleHeader(string? content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return content;
+        }
+
+        // Remove HTML comment header at the start of the content
+        // Pattern: ^\s*<!--[\s\S]*?-->\s*
+        var pattern = @"^\s*<!--[\s\S]*?-->\s*";
+        return Regex.Replace(content, pattern, string.Empty, RegexOptions.None, TimeSpan.FromSeconds(1));
     }
 }
 
