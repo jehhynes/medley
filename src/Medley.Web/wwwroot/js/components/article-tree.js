@@ -13,17 +13,23 @@ const ArticleTree = {
           <i class="bi bi-chevron-right"></i>
         </button>
         <span v-else class="tree-item-toggle"></span>
-        <i :class="['tree-item-icon'].concat(getIconClass(article.articleTypeIcon).split(' '))"></i>
+        <i :class="['tree-item-icon'].concat(getIconClass(getArticleIcon(article)).split(' '))"></i>
         <span class="tree-item-label">{{ article.title }}</span>
-        <button 
-          class="tree-item-actions"
-          @click.stop="toggleActionsMenu(article.id)"
-          title="Actions">
-          <i class="bi bi-three-dots"></i>
-        </button>
-        <div v-if="openMenuId === article.id" class="tree-actions-dropdown" @click.stop>
-          <button class="tree-actions-dropdown-item" @click="editArticle(article)">Edit</button>
-          <button class="tree-actions-dropdown-item" @click="createChild(article.id)">New Article</button>
+        <div class="dropdown d-inline-block">
+          <button 
+            class="tree-item-actions"
+            :id="'dropdown-' + article.id"
+            data-bs-toggle="dropdown"
+            data-bs-auto-close="true"
+            aria-expanded="false"
+            @click.stop
+            title="Actions">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end" :aria-labelledby="'dropdown-' + article.id">
+            <li><button class="dropdown-item" @click.stop="editArticle(article)">Edit</button></li>
+            <li><button class="dropdown-item" @click.stop="createChild(article.id)">New Article</button></li>
+          </ul>
         </div>
       </div>
       <article-tree 
@@ -31,6 +37,7 @@ const ArticleTree = {
         :articles="article.children"
         :selected-id="selectedId"
         :expanded-ids="expandedIds"
+        :article-type-icon-map="articleTypeIconMap"
         @select="selectArticle"
         @toggle-expand="toggleExpand"
         @create-child="createChild"
@@ -52,12 +59,11 @@ const ArticleTree = {
         expandedIds: {
             type: Set,
             default: () => new Set()
+        },
+        articleTypeIconMap: {
+            type: Object,
+            default: () => ({})
         }
-    },
-    data() {
-        return {
-            openMenuId: null
-        };
     },
     methods: {
         toggleExpand(articleId) {
@@ -72,30 +78,22 @@ const ArticleTree = {
         hasChildren(article) {
             return article.children && article.children.length > 0;
         },
+        getArticleIcon(article) {
+            // Look up icon from dictionary, fallback to bi-file-text
+            if (article.articleTypeId && this.articleTypeIconMap[article.articleTypeId]) {
+                return this.articleTypeIconMap[article.articleTypeId];
+            }
+            return 'bi-file-text';
+        },
         getIconClass(icon) {
             return window.MedleyUtils.getIconClass(icon);
         },
-        toggleActionsMenu(articleId) {
-            if (this.openMenuId === articleId) {
-                this.openMenuId = null;
-            } else {
-                this.openMenuId = articleId;
-            }
-        },
         createChild(parentArticleId) {
-            this.openMenuId = null;
             this.$emit('create-child', parentArticleId);
         },
         editArticle(article) {
-            this.openMenuId = null;
             this.$emit('edit-article', article);
         }
-    },
-    mounted() {
-        // Close dropdown when clicking outside
-        document.addEventListener('click', () => {
-            this.openMenuId = null;
-        });
     }
 };
 
