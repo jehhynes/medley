@@ -253,5 +253,15 @@ namespace Medley.Web.Controllers
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
+
+        [Route("load-balancer-health-check")]
+        [AllowAnonymous]
+        public IActionResult HealthCheck()
+        {
+            // Simple database connectivity check
+            var _ = _tagRepository.Query().Where(x => true == false).SingleOrDefault();
+
+            return Content("healthy");
+        }
     }
 }
