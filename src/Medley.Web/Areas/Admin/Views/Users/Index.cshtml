@@ -5,6 +5,11 @@
 
 <div class="main-content-header">
     <h1 class="main-content-title">User Management</h1>
+    <div>
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Create New User
+        </a>
+    </div>
 </div>
 
 @if (TempData["Success"] != null)

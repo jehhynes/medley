@@ -57,6 +57,94 @@ public class UsersController : Controller
     }
 
     /// <summary>
+    /// Display user creation form
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> Create()
+    {
+        var allRoles = await _roleManager.Roles.Select(r => r.Name!).ToListAsync();
+
+        var model = new UserCreateViewModel
+        {
+            AvailableRoles = allRoles,
+            IsActive = true
+        };
+
+        return View(model);
+    }
+
+    /// <summary>
+    /// Process user creation form
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Create(UserCreateViewModel model, List<string> selectedRoles)
+    {
+        if (!ModelState.IsValid)
+        {
+            model.AvailableRoles = await _roleManager.Roles.Select(r => r.Name!).ToListAsync();
+            return View(model);
+        }
+
+        // Check if user already exists
+        var existingUser = await _userManager.FindByEmailAsync(model.Email);
+        if (existingUser != null)
+        {
+            ModelState.AddModelError(string.Empty, "A user with this email address already exists");
+            model.AvailableRoles = await _roleManager.Roles.Select(r => r.Name!).ToListAsync();
+            return View(model);
+        }
+
+        var user = new User
+        {
+            UserName = model.Email,
+            Email = model.Email,
+            FullName = model.FullName,
+            IsActive = model.IsActive,
+            EmailConfirmed = true, // Auto-confirm for admin-created users
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        var currentUser = await _userManager.GetUserAsync(User);
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
+
+        var result = await _userManager.CreateAsync(user, model.Password);
+        if (!result.Succeeded)
+        {
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+            model.AvailableRoles = await _roleManager.Roles.Select(r => r.Name!).ToListAsync();
+            return View(model);
+        }
+
+        // Assign selected roles
+        if (selectedRoles.Any())
+        {
+            await _userManager.AddToRolesAsync(user, selectedRoles);
+            await _auditLogService.LogRoleChangeAsync(
+                user.Id,
+                user.UserName!,
+                currentUser?.UserName ?? "System",
+                $"Added roles: {string.Join(", ", selectedRoles)}",
+                ipAddress);
+        }
+
+        // Log user creation
+        await _auditLogService.LogUserManagementAsync(
+            UserAuditAction.UserCreated,
+            user.Id,
+            user.UserName!,
+            currentUser?.UserName ?? "System",
+            ipAddress);
+
+        _logger.LogInformation("User {UserId} created by {AdminUser}", user.Id, currentUser?.UserName);
+        TempData["Success"] = "User created successfully";
+        return RedirectToAction(nameof(Index));
+    }
+
+    /// <summary>
     /// Display user edit form
     /// </summary>
     [HttpGet]
