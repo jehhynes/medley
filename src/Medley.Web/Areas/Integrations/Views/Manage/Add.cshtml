@@ -1,15 +1,13 @@
 @model Medley.Web.Areas.Integrations.Models.AddIntegrationViewModel
 @{
-    ViewData["Title"] = "Add Integration";
+    ViewData["Title"] = "New Integration";
 }
 
-<div class="main-content-header">
-    <h1 class="main-content-title">Add Integration</h1>
-    <div class="btn-toolbar">
-        <a asp-action="Index" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Back to Integrations
-        </a>
-    </div>
+<div class="main-content-header d-flex justify-content-between align-items-center">
+    <h1 class="main-content-title">New Integration</h1>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Integrations
+    </a>
 </div>
 
 @if (TempData["Error"] != null)
