@@ -29,78 +29,72 @@
 <!-- Hidden CSRF token for AJAX requests -->
 @Html.AntiForgeryToken()
 
-<!-- Search and Filter Section -->
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="card-title mb-0">Search & Filter</h5>
-    </div>
-    <div class="card-body">
-        <form method="get" asp-action="Index">
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <div class="form-group-overlap">
-                        <input type="text" class="form-control" id="search" name="search" 
-                               value="@Model.SearchTerm">
-                        <label for="search">Search</label>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-group-overlap">
-                        <select class="form-select" id="type" name="type">
-                            <option value="">All Types</option>
-                            @foreach (var item in Model.IntegrationTypes)
-                            {
-                                <option value="@item.Value" selected="@(item.Value == ((int?)Model.SelectedType)?.ToString())">
-                                    @item.Text
-                                </option>
-                            }
-                        </select>
-                        <label for="type">Type</label>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-group-overlap">
-                        <select class="form-select" id="status" name="status">
-                            <option value="">All Statuses</option>
-                            @foreach (var item in Model.ConnectionStatuses)
-                            {
-                                <option value="@item.Value" selected="@(item.Value == ((int?)Model.SelectedStatus)?.ToString())">
-                                    @item.Text
-                                </option>
-                            }
-                        </select>
-                        <label for="status">Status</label>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-outline-primary">
-                            <i class="bi bi-search"></i> Filter
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
-
 <!-- Integrations List -->
 <div class="card">
     <div class="card-header">
-        <h5 class="card-title mb-0">All Integrations (@Model.Integrations.Count)</h5>
+        <h5 class="card-title mb-0">All Integrations</h5>
     </div>
     <div class="card-body p-0">
-        @if (Model.Integrations.Any())
-        {
+       
             <div class="table-responsive">
+                <div class="p-3">
+                    <form method="get" asp-action="Index">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="form-group-overlap">
+                                    <input type="text" class="form-control" id="search" name="search"
+                                            value="@Model.SearchTerm">
+                                    <label for="search">Search</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group-overlap">
+                                    <select class="form-select" id="type" name="type">
+                                        <option value="">All Types</option>
+                                        @foreach (var item in Model.IntegrationTypes)
+                                        {
+                                            <option value="@item.Value" selected="@(item.Value == ((int?)Model.SelectedType)?.ToString())">
+                                                @item.Text
+                                            </option>
+                                        }
+                                    </select>
+                                    <label for="type">Type</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group-overlap">
+                                    <select class="form-select" id="status" name="status">
+                                        <option value="">All Statuses</option>
+                                        @foreach (var item in Model.ConnectionStatuses)
+                                        {
+                                            <option value="@item.Value" selected="@(item.Value == ((int?)Model.SelectedStatus)?.ToString())">
+                                                @item.Text
+                                            </option>
+                                        }
+                                    </select>
+                                    <label for="status">Status</label>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-outline-primary">
+                                        <i class="bi bi-search"></i> Filter
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                @if (Model.Integrations.Any())
+                {
                 <table class="table table-hover mb-0">
                     <thead>
                         <tr>
-                            <th class="bg-body-tertiary">Name</th>
-                            <th class="bg-body-tertiary">Type</th>
-                            <th class="bg-body-tertiary">Status</th>
-                            <th class="bg-body-tertiary">Last Modified</th>
-                            <th class="bg-body-tertiary" width="200">Actions</th>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Last Modified</th>
+                            <th class="text-end" width="200">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -177,68 +171,54 @@
                                         <span class="text-muted">Never</span>
                                     }
                                 </td>
-                                <td>
-                                    <div class="btn-group btn-group-sm" role="group">
-                                        <a asp-action="Edit" asp-route-id="@integration.Id" 
-                                           class="btn btn-outline-primary" title="Edit">
-                                            <i class="bi bi-pencil"></i>
-                                        </a>
-                                        <button type="button" class="btn btn-outline-info test-connection" 
-                                                data-id="@integration.Id" title="Test Connection">
-                                            <i class="bi bi-check-circle"></i>
+                                <td class="text-end text-nowrap">
+                                    <a asp-action="Edit" asp-route-id="@integration.Id" class="btn btn-sm btn-primary me-2">
+                                        <i class="bi bi-pencil"></i> Edit
+                                    </a>
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-sm btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="bi bi-three-dots"></i>
                                         </button>
-                                        <button type="button" class="btn btn-outline-danger delete-integration" 
-                                                data-id="@integration.Id" data-name="@integration.DisplayName" title="Delete">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li>
+                                                <button type="button" class="dropdown-item test-connection" 
+                                                        data-id="@integration.Id" title="Test Connection">
+                                                    <i class="bi bi-check-circle"></i> Test Connection
+                                                </button>
+                                            </li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <button type="button" class="dropdown-item text-danger delete-integration" 
+                                                        data-id="@integration.Id" data-name="@integration.DisplayName">
+                                                    <i class="bi bi-trash"></i> Delete
+                                                </button>
+                                            </li>
+                                        </ul>
                                     </div>
                                 </td>
                             </tr>
                         }
                     </tbody>
                 </table>
-            </div>
-        }
-        else
-        {
-            <div class="text-center py-5">
-                <i class="bi bi-plug text-muted" style="font-size: 3rem;"></i>
-                <h4 class="text-muted mt-3">No integrations found</h4>
-                <p class="text-muted">Get started by adding your first integration.</p>
-                <a asp-action="Add" class="btn btn-primary">
-                    <i class="bi bi-plus-circle"></i> New Integration
-                </a>
-            </div>
-        }
-    </div>
-</div>
-
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete the integration <strong id="deleteIntegrationName"></strong>?</p>
-                <p class="text-danger"><small>This action cannot be undone.</small></p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form id="deleteForm" method="post" asp-action="Delete" style="display: inline;">
-                    <input type="hidden" id="deleteIntegrationId" name="id" />
-                    @Html.AntiForgeryToken()
-                    <button type="submit" class="btn btn-danger">Delete</button>
-                </form>
-            </div>
+                }
+                else
+                {
+                <div class="text-center py-5">
+                    <i class="bi bi-plug text-muted" style="font-size: 3rem;"></i>
+                    <h4 class="text-muted mt-3">No integrations found</h4>
+                    <p class="text-muted">Get started by adding your first integration.</p>
+                    <a asp-action="Add" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> New Integration
+                    </a>
+                </div>
+                }
         </div>
     </div>
 </div>
 
 @section Scripts {
     @* <script src="~/js/admin-hub.js" asp-append-version="true"></script> *@
+    <script src="~/lib/bootbox/dist/bootbox.all.min.js" asp-append-version="true"></script>
     <script src="~/js/integration-connections.js" asp-append-version="true"></script>
     <script>
         // Set the correct test connection URL for this page
@@ -250,11 +230,38 @@
                 const id = this.dataset.id;
                 const name = this.dataset.name;
                 
-                document.getElementById('deleteIntegrationId').value = id;
-                document.getElementById('deleteIntegrationName').textContent = name;
-                
-                const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
-                modal.show();
+                bootbox.confirm({
+                    message: `Are you sure you want to delete the integration <strong>${name}</strong>?<br><small class="text-danger">This action cannot be undone.</small>`,
+                    buttons: {
+                        cancel: {
+                            label: 'Cancel',
+                            className: 'btn-secondary'
+                        },
+                        confirm: {
+                            label: 'Delete',
+                            className: 'btn-danger'
+                        }
+                    },
+                    callback: function(result) {
+                        if (result) {
+                            const form = document.createElement('form');
+                            form.method = 'POST';
+                            form.action = '@Url.Action("Delete", "Manage")/' + id;
+                            
+                            const token = document.querySelector('input[name="__RequestVerificationToken"]');
+                            if (token) {
+                                const tokenInput = document.createElement('input');
+                                tokenInput.type = 'hidden';
+                                tokenInput.name = '__RequestVerificationToken';
+                                tokenInput.value = token.value;
+                                form.appendChild(tokenInput);
+                            }
+                            
+                            document.body.appendChild(form);
+                            form.submit();
+                        }
+                    }
+                });
             });
         });
         

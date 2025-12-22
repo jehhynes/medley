@@ -530,6 +530,14 @@
     }
 }
 
+.form-layout{
+    .form-group-overlap
+    {
+        max-width:25rem;
+    }
+}
+
+
 /* Tiptap Editor Styles */
 .tiptap-editor {
     background-color: var(--bs-body-bg);
@@ -910,4 +918,14 @@
             }
         }
     }
+}
+
+/* Standardize table header background in card bodies */
+.card .card-body .table > thead > tr > th {
+    background-color: var(--bs-tertiary-bg);
+}
+
+/* Remove caret from actions dropdown toggle buttons in tables */
+.table .btn-group .dropdown-toggle::after {
+    display: none;
 }

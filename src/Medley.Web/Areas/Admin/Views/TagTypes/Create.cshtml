@@ -4,49 +4,62 @@
     Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="mb-0">New Tag Type</h2>
-    <a asp-action="Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back</a>
+<div class="main-content-header d-flex justify-content-between align-items-center">
+    <h1 class="main-content-title">New Tag Type</h1>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back
+    </a>
 </div>
 
-<form asp-action="Create" method="post" style="height: calc(100vh - 125px); display: flex; flex-direction: column;">
-    <div class="row flex-grow-1">
-        <div class="col-8 d-flex flex-column">
-            <div class="mb-3 form-group-overlap">
-                <label asp-for="Name">Name</label>
-                <input asp-for="Name" class="form-control" />
-                <span asp-validation-for="Name" class="text-danger"></span>
-            </div>
-
-            <div class="mb-3 form-group-overlap flex-grow-1 d-flex flex-column">
-                <label asp-for="Prompt">AI Prompt guidance</label>
-                <textarea asp-for="Prompt" class="form-control flex-grow-1" required></textarea>
-                <span asp-validation-for="Prompt" class="text-danger"></span>
-            </div>
-        </div>
-        <div class="col-4 d-flex flex-column">
-            <div class="mb-3 form-group-overlap">
-                <label asp-for="IsConstrained">Mode</label>
-                <select asp-for="IsConstrained" class="form-select">
-                    <option value="false">Suggested (AI can propose any value)</option>
-                    <option value="true">Constrained (must pick from allowed values)</option>
-                </select>
-            </div>
-
-            <div class="mb-3 form-group-overlap">
-                <label asp-for="ScopeUpdateMode">Scope Update Mode</label>
-                <select asp-for="ScopeUpdateMode" asp-items="Html.GetEnumSelectList<Medley.Domain.Enums.ScopeUpdateMode>()" class="form-select"></select>
-                <small class="form-text text-muted">Determines how this tag type affects source scope when unknown.</small>
-            </div>
-
-            <div class="mb-3 form-group-overlap flex-grow-1 d-flex flex-column">
-                <label for="allowedValues">Allowed values (one per line)</label>
-                <textarea name="allowedValues" class="form-control flex-grow-1"></textarea>
-            </div>
-        </div>
+<div class="card" style="height: calc(100vh - 140px); display: flex; flex-direction: column;">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Tag Type Details</h5>
     </div>
+    <div class="card-body flex-grow-1 d-flex flex-column" style="overflow-y: auto;">
+        <form asp-action="Create" method="post" class="d-flex flex-column flex-grow-1">
+            <div class="row flex-grow-1">
+                <div class="col-8 d-flex flex-column">
+                    <div class="mb-3 form-group-overlap">
+                        <label asp-for="Name">Name</label>
+                        <input asp-for="Name" class="form-control" />
+                        <span asp-validation-for="Name" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3 form-group-overlap flex-grow-1 d-flex flex-column">
+                        <label asp-for="Prompt">AI Prompt guidance</label>
+                        <textarea asp-for="Prompt" class="form-control flex-grow-1" required></textarea>
+                        <span asp-validation-for="Prompt" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-4 d-flex flex-column">
+                    <div class="mb-3 form-group-overlap">
+                        <label asp-for="IsConstrained">Mode</label>
+                        <select asp-for="IsConstrained" class="form-select">
+                            <option value="false">Suggested (AI can propose any value)</option>
+                            <option value="true">Constrained (must pick from allowed values)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3 form-group-overlap">
+                        <label asp-for="ScopeUpdateMode">Scope Update Mode</label>
+                        <select asp-for="ScopeUpdateMode" asp-items="Html.GetEnumSelectList<Medley.Domain.Enums.ScopeUpdateMode>()" class="form-select"></select>
+                        <small class="form-text text-muted">Determines how this tag type affects source scope when unknown.</small>
+                    </div>
+
+                    <div class="mb-3 form-group-overlap flex-grow-1 d-flex flex-column">
+                        <label for="allowedValues">Allowed values (one per line)</label>
+                        <textarea name="allowedValues" class="form-control flex-grow-1"></textarea>
+                    </div>
+                </div>
+            </div>
    
-    <div>
-        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save Tag Type</button>
+            <div>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save Tag Type</button>
+            </div>
+        </form>
     </div>
-</form>
+</div>
+
+@section Scripts {
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+}

@@ -6,7 +6,7 @@
 <div class="main-content-header d-flex justify-content-between align-items-center">
     <h1 class="main-content-title">@(Model.IsEdit ? "Edit Fellow Integration" : "Add Fellow Integration")</h1>
     <a asp-action="Index" asp-controller="Manage" asp-area="Integrations" class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left"></i> Back to Integrations
+        <i class="bi bi-arrow-left"></i> Back
     </a>
 </div>
 
@@ -25,7 +25,7 @@
                 <h5 class="card-title mb-0">Fellow Integration Details</h5>
             </div>
             <div class="card-body">
-                <form asp-action="Edit" method="post">
+                <form asp-action="Edit" method="post" class="form-layout">
                     @if (Model.IsEdit)
                     {
                         <input asp-for="Id" type="hidden" />
@@ -66,7 +66,6 @@
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-save"></i> Save Integration
                         </button>
-                        <a asp-action="Index" asp-controller="Integrations" asp-area="" class="btn btn-outline-secondary ms-2">Cancel</a>
                     </div>
                 </form>
             </div>
@@ -140,13 +139,14 @@
     </div>
 </div>
 
-@if (Model.IsEdit)
-{
-    @section Scripts {
-    <script src="~/js/integration-connections.js" asp-append-version="true"></script>
-    <script>
-        // Set the correct test connection URL for this page
-        //window.IntegrationConnections.setTestConnectionUrl('@Url.Action("TestConnection", "Manage", new { area = "Integrations" })');
-    </script>
-}
+@section Scripts {
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+    @if (Model.IsEdit)
+    {
+        <script src="~/js/integration-connections.js" asp-append-version="true"></script>
+        <script>
+            // Set the correct test connection URL for this page
+            //window.IntegrationConnections.setTestConnectionUrl('@Url.Action("TestConnection", "Manage", new { area = "Integrations" })');
+        </script>
+    }
 }
