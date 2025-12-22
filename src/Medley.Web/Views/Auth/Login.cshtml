@@ -22,13 +22,13 @@
                     
                     <input type="hidden" asp-for="ReturnUrl" />
                     
-                    <div class="mb-3">
+                    <div class="mb-3 form-group-overlap">
                         <label asp-for="Email" class="form-label"></label>
                         <input asp-for="Email" class="form-control" autocomplete="email" autofocus />
                         <span asp-validation-for="Email" class="text-danger"></span>
                     </div>
                     
-                    <div class="mb-3">
+                    <div class="mb-3 form-group-overlap">
                         <label asp-for="Password" class="form-label"></label>
                         <input asp-for="Password" class="form-control" autocomplete="current-password" />
                         <span asp-validation-for="Password" class="text-danger"></span>

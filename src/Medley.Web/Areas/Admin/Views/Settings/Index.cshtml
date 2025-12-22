@@ -38,7 +38,7 @@
         <form asp-action="SaveOrganizationSettings" method="post">
             <input type="hidden" name="organizationId" value="@organizationId" />
             
-            <div class="mb-3">
+            <div class="mb-3 form-group-overlap">
                 <label for="emailDomain" class="form-label">Email Domain</label>
                 <input type="text" 
                        class="form-control" 
@@ -66,8 +66,8 @@
                     </label>
                 </div>
                 <div class="form-text">
-                    When enabled, the system will automatically tag sources as internal/external based on attendee email domains 
-                    and meeting name patterns. The SmartTagProcessor job runs hourly at :30.
+                    When enabled, the system will automatically add tags and mark sources as internal/external based on attendee email domains 
+                    and meeting name patterns. 
                 </div>
             </div>
             <div class="d-flex gap-2">
