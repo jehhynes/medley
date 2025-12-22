@@ -243,10 +243,12 @@ let TiptapEditor = null;
                         <button 
                             type="button"
                             @click="handleSave" 
-                            :disabled="isSaving"
+                            :disabled="isSaving || !hasChanges"
                             class="btn btn-primary btn-sm"
                             title="Save">
-                            <i class="bi bi-save"></i> Save
+                            <span v-if="isSaving" class="spinner-border spinner-border-sm me-1"></span>
+                            <i v-else class="bi bi-save"></i>
+                            {{ isSaving ? 'Saving...' : 'Save' }}
                         </button>
                     </div>
                 </div>
@@ -271,6 +273,7 @@ let TiptapEditor = null;
                     canRedo: false,
                     isInTable: false,
                     lastEmittedValue: '',
+                    originalContent: '', // Track original content for change detection
                     showHeadingDropdown: false,
                     showListDropdown: false,
                     showDeleteDropdown: false,
@@ -297,6 +300,9 @@ let TiptapEditor = null;
                 },
                 isListActive() {
                     return this.isBulletListActive || this.isOrderedListActive;
+                },
+                hasChanges() {
+                    return this.lastEmittedValue !== this.originalContent;
                 }
             },
             watch: {
@@ -309,6 +315,18 @@ let TiptapEditor = null;
 
                         // The Markdown extension allows direct markdown content
                         this.editor.commands.setContent(newValue || '', false);
+                        
+                        // Update original content when content is loaded from parent
+                        this.originalContent = newValue || '';
+                        this.lastEmittedValue = newValue || '';
+                    }
+                },
+                isSaving: {
+                    handler(newValue, oldValue) {
+                        // When saving completes, update original content to mark as clean
+                        if (oldValue === true && newValue === false) {
+                            this.originalContent = this.lastEmittedValue;
+                        }
                     }
                 }
             },
@@ -443,6 +461,17 @@ let TiptapEditor = null;
                 };
                 document.addEventListener('click', this.handleClickOutside);
                 
+                // Handle Ctrl+S / Cmd+S to save
+                this.handleKeyDown = (event) => {
+                    if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+                        event.preventDefault();
+                        if (!this.isSaving && this.hasChanges) {
+                            this.handleSave();
+                        }
+                    }
+                };
+                document.addEventListener('keydown', this.handleKeyDown);
+                
                 // Create the editor with markdown content type
                 this.editor = new Editor({
                     element: this.$refs.editorElement,
@@ -472,11 +501,14 @@ let TiptapEditor = null;
                     }
                 });
                 
-                // Initialize active states after editor creation
+                // Initialize original content and active states after editor creation
+                this.originalContent = this.modelValue || '';
+                this.lastEmittedValue = this.modelValue || '';
                 this.updateActiveStates();
             },
             beforeUnmount() {
                 document.removeEventListener('click', this.handleClickOutside);
+                document.removeEventListener('keydown', this.handleKeyDown);
                 if (this.editor) {
                     this.editor.destroy();
                     this.editor = null;

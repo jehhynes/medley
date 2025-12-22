@@ -50,27 +50,12 @@
     </div>
 
     <template v-else v-cloak>
-        <!-- Template Header -->
-        <div class="template-editor-header">
-            <div class="template-editor-header-content">
-                <h5 class="template-name">{{ selectedTemplate.name }}</h5>
-            </div>
-            <div class="template-editor-actions">
-                <button type="button" 
-                        class="btn btn-sm btn-primary" 
-                        @@click="saveTemplate"
-                        :disabled="isSaving || !hasChanges">
-                    <span v-if="isSaving" class="spinner-border spinner-border-sm me-1"></span>
-                    <i v-else class="bi bi-save me-1"></i>
-                    {{ isSaving ? 'Saving...' : 'Save' }}
-                </button>
-            </div>
-        </div>
-
         <!-- Editor -->
         <tiptap-editor 
             v-model="editingContent"
             :key="selectedTemplateId"
+            :is-saving="isSaving"
+            @@save="saveTemplate"
             class="flex-grow-1"
             placeholder="Enter the prompt template content..." />
 
@@ -107,40 +92,6 @@
 
         .sidebar-breadcrumb-title span {
             color: var(--bs-body-color);
-        }
-
-        .template-editor-header {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            padding: 1rem 1.5rem;
-            border-bottom: 1px solid var(--bs-border-color);
-            background-color: var(--bs-body-bg);
-            gap: 1rem;
-        }
-
-        .template-editor-header-content {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .template-name {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: var(--bs-body-color);
-            margin: 0 0 0.25rem 0;
-        }
-
-        .template-description {
-            font-size: 0.875rem;
-            color: var(--bs-secondary-color);
-            margin: 0;
-        }
-
-        .template-editor-actions {
-            display: flex;
-            gap: 0.5rem;
-            flex-shrink: 0;
         }
 
         .template-save-indicator {
@@ -180,15 +131,9 @@
                             loading: false,
                             error: null,
                             editingContent: '',
-                            originalContent: '',
                             isSaving: false,
                             lastSaved: null
                         };
-                    },
-                    computed: {
-                        hasChanges() {
-                            return this.editingContent !== this.originalContent;
-                        }
                     },
                     methods: {
                         async loadTemplates() {
@@ -211,7 +156,6 @@
                                 this.selectedTemplate = fullTemplate;
                                 this.selectedTemplateId = template.id;
                                 this.editingContent = fullTemplate.content || '';
-                                this.originalContent = fullTemplate.content || '';
                                 this.lastSaved = fullTemplate.lastModifiedAt ? new Date(fullTemplate.lastModifiedAt) : null;
                                 
                                 // Update URL
@@ -236,7 +180,6 @@
                                 });
 
                                 this.selectedTemplate = updated;
-                                this.originalContent = updated.content;
                                 this.lastSaved = new Date();
                             } catch (err) {
                                 console.error('Error saving template:', err);
