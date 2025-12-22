@@ -6,13 +6,11 @@
     var totalCount = (int)ViewData["TotalCount"]!;
 }
 
-<div class="main-content-header">
+<div class="main-content-header d-flex justify-content-between align-items-center">
     <h1 class="main-content-title">User Audit Log</h1>
-    <div class="btn-toolbar">
-        <a asp-action="Index" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Back to Users
-        </a>
-    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Users
+    </a>
 </div>
 
     <div class="card">

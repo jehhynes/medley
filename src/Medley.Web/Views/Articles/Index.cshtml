@@ -126,7 +126,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Create New Article</h5>
+                <h5 class="modal-title">New Article</h5>
                 <button type="button" class="btn-close" @@click="closeCreateModal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -163,7 +163,7 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" @@click="closeCreateModal">Cancel</button>
                 <button type="button" class="btn btn-primary" @@click="createArticle" :disabled="createModal.isSubmitting">
-                    Create Article
+                    <i class="bi bi-save"></i> Save Article
                 </button>
             </div>
         </div>
@@ -203,7 +203,7 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" @@click="closeEditModal">Cancel</button>
                 <button type="button" class="btn btn-primary" @@click="updateArticle" :disabled="editModal.isSubmitting">
-                    <i class="bi bi-save"></i> Save Changes
+                    <i class="bi bi-save"></i> Save Article
                 </button>
             </div>
         </div>

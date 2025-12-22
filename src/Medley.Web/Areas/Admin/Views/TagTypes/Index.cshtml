@@ -1,12 +1,12 @@
 @model IEnumerable<Medley.Domain.Entities.TagType>
 @{
-    ViewData["Title"] = "Tag Types";
+    ViewData["Title"] = "Tags";
     Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="main-content-header d-flex justify-content-between align-items-start mb-4">
     <div>
-        <h2 class="mb-0">Tag Types</h2>
+        <h1 class="main-content-title">Tags</h1>
         <p class="text-muted">Manage structured tag categories and allowed values.</p>
     </div>
     <a asp-action="Create" class="btn btn-primary">
