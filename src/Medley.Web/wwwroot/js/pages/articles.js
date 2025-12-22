@@ -44,7 +44,6 @@
                     editor: {
                         title: '',
                         content: '',
-                        originalContent: '', // Track original content for dirty checking
                         isSaving: false
                     },
                     
@@ -86,8 +85,8 @@
             },
             computed: {
                 hasUnsavedChanges() {
-                    return this.articles.selected && 
-                           this.editor.content !== this.editor.originalContent;
+                    // Delegate to the tiptap editor component
+                    return this.$refs.tiptapEditor?.hasChanges || false;
                 }
             },
             methods: {
@@ -138,7 +137,6 @@
 
                         this.editor.title = fullArticle.title;
                         this.editor.content = fullArticle.content || '';
-                        this.editor.originalContent = fullArticle.content || ''; // Track for dirty checking
                         this.articles.selected = fullArticle;
                         this.articles.selectedId = article.id;
 
@@ -339,9 +337,6 @@
                         await api.put(`/api/articles/${this.articles.selected.id}/content`, {
                             content: this.editor.content
                         });
-                        
-                        // Update original content to mark as clean
-                        this.editor.originalContent = this.editor.content;
                     } catch (err) {
                         bootbox.alert({
                             message: `Failed to save article: ${err.message}`,
@@ -407,8 +402,7 @@
                                     label: 'Discard Changes',
                                     className: 'btn-outline-danger',
                                     callback: () => {
-                                        // Reset content to original
-                                        this.editor.content = this.editor.originalContent;
+                                        // Just proceed - the content will be replaced when new article loads
                                         resolve(true);
                                     }
                                 },
@@ -763,16 +757,7 @@
                     this.ui.sidebarMenuOpen = false;
                 });
 
-                // Add keyboard shortcut for saving (Ctrl+S / Cmd+S)
-                this.handleKeyboardSave = (event) => {
-                    if ((event.ctrlKey || event.metaKey) && event.key === 's') {
-                        event.preventDefault();
-                        if (this.articles.selected && !this.editor.isSaving) {
-                            this.saveArticle();
-                        }
-                    }
-                };
-                document.addEventListener('keydown', this.handleKeyboardSave);
+                // Note: Ctrl+S / Cmd+S keyboard shortcut is now handled by the tiptap editor component
 
                 // Add beforeunload handler to warn about unsaved changes
                 this.handleBeforeUnload = (event) => {
@@ -842,11 +827,6 @@
             },
 
             beforeUnmount() {
-                // Remove keyboard shortcut listener
-                if (this.handleKeyboardSave) {
-                    document.removeEventListener('keydown', this.handleKeyboardSave);
-                }
-
                 // Remove beforeunload listener
                 if (this.handleBeforeUnload) {
                     window.removeEventListener('beforeunload', this.handleBeforeUnload);
