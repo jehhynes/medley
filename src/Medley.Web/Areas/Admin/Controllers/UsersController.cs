@@ -44,8 +44,8 @@ public class UsersController : Controller
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
             query = query.Where(u => 
-                u.Email!.Contains(searchTerm) || 
-                u.FullName!.Contains(searchTerm));
+                u.Email!.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) || 
+                u.FullName!.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
         }
 
         var users = await query

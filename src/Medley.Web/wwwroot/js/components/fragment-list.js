@@ -13,7 +13,7 @@ const FragmentList = {
           <div class="list-item-title">{{ fragment.title || 'Untitled Fragment' }}</div>
           <div class="list-item-subtitle">
             {{ formatDate(fragment.sourceDate) }} • {{ fragment.sourceType }}
-            <span v-if="fragment.similarity !== undefined" class="badge bg-success ms-2" :title="'Similarity: ' + (fragment.similarity * 100).toFixed(1) + '%'">
+            <span v-if="fragment.similarity !== undefined" class="badge bg-info ms-2" :title="'Similarity: ' + (fragment.similarity * 100).toFixed(1) + '%'">
               {{ (fragment.similarity * 100).toFixed(0) }}%
             </span>
             <span v-if="fragment.confidence !== null && fragment.confidence !== undefined" class="ms-2">
