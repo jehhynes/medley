@@ -1,6 +1,7 @@
 // Article Tree Component - Recursive tree view for articles
 const ArticleTree = {
     name: 'ArticleTree',
+    mixins: [window.dropdownMixin],
     template: `
   <ul class="tree-view">
     <li v-for="article in articles" :key="article.id" class="tree-item">
@@ -26,16 +27,16 @@ const ArticleTree = {
         <span v-else class="tree-item-toggle"></span>
         <i :class="['tree-item-icon'].concat(getIconClass(getArticleIcon(article)).split(' '))"></i>
         <span class="tree-item-label">{{ article.title }}</span>
-        <div class="tree-item-status-actions">
-          <i :class="'bi ' + getStatusIcon(article.status) + ' ' + getStatusColorClass(article.status)" class="tree-item-status" :title="article.status"></i>
-          <div class="dropdown d-inline-block tree-item-actions-container">
+        <div class="status-actions">
+          <i :class="'bi ' + getStatusIcon(article.status) + ' ' + getStatusColorClass(article.status)" class="status-icon" :title="article.status"></i>
+          <div class="dropdown actions-container">
             <button 
-              class="tree-item-actions"
+              class="actions-btn"
               :id="'dropdown-' + article.id"
               data-bs-toggle="dropdown"
               data-bs-auto-close="true"
               aria-expanded="false"
-              @click.stop
+              @click.stop="handleDropdownClick($event, article.id)"
               title="Actions">
               <i class="bi bi-three-dots"></i>
             </button>

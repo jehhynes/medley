@@ -1,6 +1,7 @@
 // Article List Component - Flat div view for articles
 const ArticleList = {
     name: 'ArticleList',
+    mixins: [window.dropdownMixin],
     template: `
   <div class="article-list-container" ref="scrollContainer">
     <div 
@@ -18,16 +19,16 @@ const ArticleList = {
           {{ getBreadcrumbs(article) }}
         </div>
       </div>
-      <div class="article-list-status-actions">
-        <i :class="'bi ' + getStatusIcon(article.status) + ' ' + getStatusColorClass(article.status)" class="article-status-icon" :title="article.status"></i>
-        <div class="dropdown d-inline-block article-actions-container">
+      <div class="status-actions">
+        <i :class="'bi ' + getStatusIcon(article.status) + ' ' + getStatusColorClass(article.status)" class="status-icon" :title="article.status"></i>
+        <div class="dropdown actions-container">
           <button 
-            class="btn btn-sm btn-link article-actions-btn"
+            class="actions-btn"
             :id="'dropdown-' + article.id"
             data-bs-toggle="dropdown"
             data-bs-auto-close="true"
             aria-expanded="false"
-            @click.stop
+            @click.stop="handleDropdownClick($event, article.id)"
             title="Actions">
             <i class="bi bi-three-dots"></i>
           </button>
