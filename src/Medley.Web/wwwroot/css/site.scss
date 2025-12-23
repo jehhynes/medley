@@ -326,90 +326,6 @@
         text-overflow: ellipsis;
     }
 
-    .tree-item-status-actions {
-        width: 2rem;
-        flex-shrink: 0;
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding-left: 0.25rem;
-        padding-right: 0.5rem;
-
-        .tree-item-status {
-            font-size: 1rem;
-            transition: opacity 0.15s ease;
-        }
-
-        .tree-item-actions-container {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            opacity: 0;
-            transition: opacity 0.15s ease;
-            z-index: 10;
-
-            .tree-item-actions {
-                padding: 0;
-                color: inherit;
-                width: 1.5rem;
-                height: 1.5rem;
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                border-radius: var(--bs-border-radius);
-                transition: background-color 0.15s ease;
-                border: none;
-                background: transparent;
-                cursor: pointer;
-
-                &:hover {
-                    background-color: rgba(0, 0, 0, 0.1);
-                }
-
-                i {
-                    font-size: 1rem;
-                }
-            }
-
-            .dropdown-menu {
-                z-index: 1050; // Ensure dropdown menu is above status icon
-            }
-        }
-
-        // Hide status icon when dropdown is open
-        &:has(.dropdown.show) .tree-item-status {
-            opacity: 0;
-            pointer-events: none; // Prevent interaction when hidden
-        }
-    }
-
-    .tree-item-content:hover {
-        .tree-item-status {
-            opacity: 0;
-        }
-
-        .tree-item-actions-container {
-            opacity: 1;
-        }
-    }
-
-    .tree-item-content .dropdown.show .tree-item-actions-container {
-        opacity: 1;
-    }
-
-    .tree-item-content.active {
-        .tree-item-actions {
-            color: var(--bs-white);
-
-            &:hover {
-                background-color: rgba(255, 255, 255, 0.2);
-            }
-        }
-    }
-
-
     .tree-item {
         position: relative;
     }
@@ -480,80 +396,6 @@
         }
     }
 
-    .article-list-status-actions {
-        width: 2rem;
-        flex-shrink: 0;
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding-left: 0.25rem;
-        padding-right: 0.5rem;
-
-        .article-status-icon {
-            font-size: 1rem;
-            transition: opacity 0.15s ease;
-        }
-
-        .article-actions-container {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            opacity: 0;
-            transition: opacity 0.15s ease;
-            z-index: 10;
-
-            .article-actions-btn {
-                padding: 0;
-                color: inherit;
-                width: 1.5rem;
-                height: 1.5rem;
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                border-radius: var(--bs-border-radius);
-                transition: background-color 0.15s ease;
-
-                &:hover {
-                    background-color: rgba(0, 0, 0, 0.1);
-                }
-            }
-
-            .dropdown-menu {
-                z-index: 1050; // Ensure dropdown menu is above status icon
-            }
-        }
-        // Hide status icon when dropdown is open
-        &:has(.dropdown.show) .article-status-icon {
-            opacity: 0;
-            pointer-events: none; // Prevent interaction when hidden
-        }
-    }
-
-    &:hover {
-        .article-status-icon {
-            opacity: 0;
-        }
-
-        .article-actions-container {
-            opacity: 1;
-        }
-    }
-
-    .dropdown.show .article-actions-container {
-        opacity: 1;
-    }
-
-    &.active {
-        .article-actions-btn {
-            color: var(--bs-white);
-
-            &:hover {
-                background-color: rgba(255, 255, 255, 0.2);
-            }
-        }
-    }
 }
 
 .article-list-loading {
@@ -562,6 +404,92 @@
     align-items: center;
     padding: 1rem;
     color: var(--bs-secondary);
+}
+
+/* Shared status/actions behavior - used by both tree-item-content and article-list-row */
+.status-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding-left: 0.25rem;
+    padding-right: 0.5rem;
+    min-width: 2rem; // Reserve space so layout doesn't shift
+
+    .status-icon {
+        font-size: 1rem;
+        display: block; // Visible by default
+    }
+
+    .actions-container {
+        display: none; // Hidden by default
+        align-items: center;
+
+        .actions-btn {
+            padding: 0;
+            color: inherit;
+            width: 1.5rem;
+            height: 1.5rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--bs-border-radius);
+            transition: background-color 0.15s ease;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+
+            &:hover {
+                background-color: rgba(0, 0, 0, 0.1);
+            }
+
+            i {
+                font-size: 1rem;
+            }
+        }
+
+        .dropdown-menu {
+            z-index: 1050;
+        }
+    }
+}
+
+// Show actions on hover, hide status icon
+.tree-item-content:hover,
+.article-list-row:hover {
+    .status-actions {
+        .status-icon {
+            display: none;
+        }
+
+        .actions-container {
+            display: flex;
+        }
+    }
+}
+
+// Show actions on hover, hide status icon
+.article-list-row:hover {
+    .status-actions {
+        .status-icon {
+            display: none;
+        }
+
+        .actions-container {
+            display: flex;
+        }
+    }
+}
+
+// White action button when parent is active
+.tree-item-content.active,
+.article-list-row.active {
+    .actions-btn {
+        color: var(--bs-white);
+
+        &:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+    }
 }
 
 
