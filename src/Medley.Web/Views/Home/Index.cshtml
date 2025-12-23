@@ -289,7 +289,7 @@
             var safeId = System.Text.RegularExpressions.Regex.Replace(tagMetric.TagTypeName, "[^a-zA-Z0-9]", "");
             <div class="col-lg-6">
                 <div class="chart-card">
-                    <h3 class="chart-card-title"><i class="bi bi-tag me-2"></i>@tagMetric.TagTypeName</h3>
+                    <h3 class="chart-card-title"><i class="bi bi-tag me-2"></i>Sources by @tagMetric.TagTypeName</h3>
                     <div class="chart-container small">
                          <canvas id="tagChart_@safeId"></canvas>
                     </div>
