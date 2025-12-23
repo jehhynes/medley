@@ -8,6 +8,7 @@
     var isKnowledgeBuilderImport = currentArea == "Admin" && currentController == "KnowledgeBuilderImport";
     var isSourceImport = currentArea == "Admin" && currentController == "SourceImport";
     var isTagTypes = currentArea == "Admin" && currentController == "TagTypes";
+    var isArticleTypes = currentArea == "Admin" && currentController == "ArticleTypes";
 }
 
 <div class="sidebar-header">
@@ -36,6 +37,14 @@
                 <i class="list-item-icon bi bi-tags"></i>
                 <div class="list-item-body">
                     <div class="list-item-title">Tags</div>
+                </div>
+            </a>
+        </li>
+        <li class="list-item">
+            <a asp-area="Admin" asp-controller="ArticleTypes" asp-action="Index" class="list-item-content @(isArticleTypes ? "active" : "")">
+                <i class="list-item-icon bi bi-file-text"></i>
+                <div class="list-item-body">
+                    <div class="list-item-title">Article Types</div>
                 </div>
             </a>
         </li>
