@@ -195,6 +195,7 @@
                         'Re-extracting will delete existing fragments. Continue?';
 
                     bootbox.confirm({
+                        title: 'Confirm Fragment Extraction',
                         message: confirmMessage,
                         buttons: {
                             confirm: {
