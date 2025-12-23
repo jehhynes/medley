@@ -326,42 +326,86 @@
         text-overflow: ellipsis;
     }
 
-    .tree-item-actions {
-        opacity: 0;
-        margin-left: 0.5rem;
-        width: 1.5rem;
-        height: 1.5rem;
-        display: inline-flex;
+    .tree-item-status-actions {
+        width: 2rem;
+        flex-shrink: 0;
+        position: relative;
+        display: flex;
         align-items: center;
         justify-content: center;
-        border: none;
-        background: transparent;
-        padding: 0;
-        color: inherit;
-        cursor: pointer;
-        border-radius: var(--bs-border-radius);
-        transition: opacity 0.15s ease, background-color 0.15s ease;
+        padding-left: 0.25rem;
+        padding-right: 0.5rem;
 
-        &:hover {
-            background-color: rgba(0, 0, 0, 0.1);
+        .tree-item-status {
+            font-size: 1rem;
+            transition: opacity 0.15s ease;
         }
 
-        i {
-            font-size: 1rem;
+        .tree-item-actions-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0;
+            transition: opacity 0.15s ease;
+            z-index: 10;
+
+            .tree-item-actions {
+                padding: 0;
+                color: inherit;
+                width: 1.5rem;
+                height: 1.5rem;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: var(--bs-border-radius);
+                transition: background-color 0.15s ease;
+                border: none;
+                background: transparent;
+                cursor: pointer;
+
+                &:hover {
+                    background-color: rgba(0, 0, 0, 0.1);
+                }
+
+                i {
+                    font-size: 1rem;
+                }
+            }
+
+            .dropdown-menu {
+                z-index: 1050; // Ensure dropdown menu is above status icon
+            }
+        }
+
+        // Hide status icon when dropdown is open
+        &:has(.dropdown.show) .tree-item-status {
+            opacity: 0;
+            pointer-events: none; // Prevent interaction when hidden
         }
     }
 
-    // Show actions button on hover or when dropdown is open
-    .tree-item-content:hover .tree-item-actions,
-    .tree-item-content .dropdown.show .tree-item-actions {
+    .tree-item-content:hover {
+        .tree-item-status {
+            opacity: 0;
+        }
+
+        .tree-item-actions-container {
+            opacity: 1;
+        }
+    }
+
+    .tree-item-content .dropdown.show .tree-item-actions-container {
         opacity: 1;
     }
 
-    .tree-item-content.active .tree-item-actions {
-        color: var(--bs-white);
+    .tree-item-content.active {
+        .tree-item-actions {
+            color: var(--bs-white);
 
-        &:hover {
-            background-color: rgba(255, 255, 255, 0.2);
+            &:hover {
+                background-color: rgba(255, 255, 255, 0.2);
+            }
         }
     }
 

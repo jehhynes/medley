@@ -122,7 +122,7 @@
 
                     // If the article is currently selected, sync the first H1 in the editor
                     if (this.articles.selectedId === this.editModal.articleId) {
-                        this.syncFirstHeadingInEditor(this.editModal.title);
+                        this.$refs.tiptapEditor?.syncHeading(this.editModal.title);
                     }
 
                     this.closeEditModal();
@@ -134,40 +134,6 @@
                     console.error('Error updating article:', err);
                 } finally {
                     this.editModal.isSubmitting = false;
-                }
-            },
-
-            // Sync the first H1 heading in the TipTap editor
-            syncFirstHeadingInEditor(newTitle) {
-                const tiptapEditor = this.$refs.tiptapEditor;
-                if (!tiptapEditor || !tiptapEditor.editor) {
-                    return;
-                }
-
-                const editor = tiptapEditor.editor;
-                
-                // Use ProseMirror to find the first heading level 1
-                let firstH1Pos = null;
-                let firstH1Node = null;
-                
-                editor.state.doc.descendants((node, pos) => {
-                    if (firstH1Pos === null && node.type.name === 'heading' && node.attrs.level === 1) {
-                        firstH1Pos = pos;
-                        firstH1Node = node;
-                        return false; // Stop searching
-                    }
-                });
-
-                if (firstH1Pos !== null && firstH1Node !== null) {
-                    // Replace the text content of the first H1
-                    const from = firstH1Pos + 1; // +1 to get inside the node
-                    const to = firstH1Pos + firstH1Node.nodeSize - 1; // -1 to stay inside the node
-                    
-                    editor.chain()
-                        .focus()
-                        .setTextSelection({ from, to })
-                        .insertContent(newTitle)
-                        .run();
                 }
             }
         }

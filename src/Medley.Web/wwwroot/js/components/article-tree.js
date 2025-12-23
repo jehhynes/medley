@@ -26,21 +26,24 @@ const ArticleTree = {
         <span v-else class="tree-item-toggle"></span>
         <i :class="['tree-item-icon'].concat(getIconClass(getArticleIcon(article)).split(' '))"></i>
         <span class="tree-item-label">{{ article.title }}</span>
-        <div class="dropdown d-inline-block">
-          <button 
-            class="tree-item-actions"
-            :id="'dropdown-' + article.id"
-            data-bs-toggle="dropdown"
-            data-bs-auto-close="true"
-            aria-expanded="false"
-            @click.stop
-            title="Actions">
-            <i class="bi bi-three-dots"></i>
-          </button>
-          <ul class="dropdown-menu dropdown-menu-end" :aria-labelledby="'dropdown-' + article.id">
-            <li><button class="dropdown-item" @click.stop="editArticle(article)">Edit</button></li>
-            <li><button class="dropdown-item" @click.stop="createChild(article.id)">New Article</button></li>
-          </ul>
+        <div class="tree-item-status-actions">
+          <i :class="'bi ' + getStatusIcon(article.status) + ' ' + getStatusColorClass(article.status)" class="tree-item-status" :title="article.status"></i>
+          <div class="dropdown d-inline-block tree-item-actions-container">
+            <button 
+              class="tree-item-actions"
+              :id="'dropdown-' + article.id"
+              data-bs-toggle="dropdown"
+              data-bs-auto-close="true"
+              aria-expanded="false"
+              @click.stop
+              title="Actions">
+              <i class="bi bi-three-dots"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" :aria-labelledby="'dropdown-' + article.id">
+              <li><button class="dropdown-item" @click.stop="editArticle(article)">Edit</button></li>
+              <li><button class="dropdown-item" @click.stop="createChild(article.id)">New Article</button></li>
+            </ul>
+          </div>
         </div>
       </div>
       <article-tree 
@@ -110,6 +113,12 @@ const ArticleTree = {
         },
         getIconClass(icon) {
             return window.MedleyUtils.getIconClass(icon);
+        },
+        getStatusIcon(status) {
+            return window.MedleyUtils.getStatusIcon(status);
+        },
+        getStatusColorClass(status) {
+            return window.MedleyUtils.getStatusColorClass(status);
         },
         createChild(parentArticleId) {
             this.$emit('create-child', parentArticleId);
@@ -225,4 +234,3 @@ const ArticleTree = {
         }
     }
 };
-
