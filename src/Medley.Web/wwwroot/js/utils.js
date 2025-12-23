@@ -13,13 +13,14 @@
 
     /**
      * Returns Bootstrap badge class for article status
-     * @param {string} status - Article status (Draft, Published, Archived)
+     * @param {string|number} status - Article status (Draft, Review, Approved, Archived)
      * @returns {string} Bootstrap badge class
      */
     const getStatusBadgeClass = (status) => {
         const classes = {
             'Draft': 'bg-secondary',
-            'Published': 'bg-success',
+            'Review': 'bg-info',
+            'Approved': 'bg-success',
             'Archived': 'bg-warning'
         };
         return classes[status] || 'bg-secondary';

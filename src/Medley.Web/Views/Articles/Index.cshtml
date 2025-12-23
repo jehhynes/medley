@@ -10,7 +10,21 @@
     <div class="sidebar-header">
         <div class="d-flex align-items-center gap-2">
             <h6 class="sidebar-title mb-0 flex-grow-1">Articles</h6>
-            <div class="position-relative">
+            <div class="dropdown" v-cloak>
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="View Mode">
+                    <i :class="viewMode === 'tree' ? 'bi bi-diagram-3' : 'bi bi-list-ul'"></i>
+                    <span class="d-none d-md-inline ms-1">{{ viewMode === 'tree' ? 'Tree' : 'List' }}</span>
+                </button>
+                <ul class="dropdown-menu">
+                    <li><button class="dropdown-item" :class="{ active: viewMode === 'tree' }" @@click="setViewMode('tree')">
+                        <i class="bi bi-diagram-3"></i> Tree View
+                    </button></li>
+                    <li><button class="dropdown-item" :class="{ active: viewMode === 'list' }" @@click="setViewMode('list')">
+                        <i class="bi bi-list-ul"></i> List View
+                    </button></li>
+                </ul>
+            </div>
+            <div v-if="viewMode === 'tree'" class="position-relative">
                 <button class="btn btn-sm btn-outline-secondary" @@click.stop="toggleSidebarMenu" title="Actions">
                     <i class="bi bi-three-dots"></i>
                 </button>
@@ -29,19 +43,36 @@
         <div v-else-if="ui.error" class="alert alert-danger" v-cloak>
             {{ ui.error }}
         </div>
-        <article-tree 
-            v-else
-            :articles="articles.list"
-            :selected-id="articles.selectedId"
-            :expanded-ids="articles.expandedIds"
-            :article-type-icon-map="articles.typeIconMap"
-            :article-types="articles.types"
-            @@select="selectArticle"
-            @@toggle-expand="toggleExpand"
-            @@create-child="showCreateArticleModal"
-            @@edit-article="showEditArticleModal"
-            @@move-article="moveArticle"
-        />
+        <template v-else>
+            <article-tree 
+                v-show="viewMode === 'tree'"
+                v-cloak
+                :articles="articles.list"
+                :selected-id="articles.selectedId"
+                :expanded-ids="articles.expandedIds"
+                :article-type-icon-map="articles.typeIconMap"
+                :article-types="articles.types"
+                @@select="selectArticle"
+                @@toggle-expand="toggleExpand"
+                @@create-child="showCreateArticleModal"
+                @@edit-article="showEditArticleModal"
+                @@move-article="moveArticle"
+            ></article-tree>
+            <article-list
+                v-show="viewMode === 'list'"
+                v-cloak
+                :articles="flatArticlesList"
+                :selected-id="articles.selectedId"
+                :article-type-icon-map="articles.typeIconMap"
+                :article-types="articles.types"
+                :has-more="hasMoreArticles"
+                :all-articles-tree="articles.list"
+                @@select="selectArticle"
+                @@create-child="showCreateArticleModal"
+                @@edit-article="showEditArticleModal"
+                @@load-more="loadMoreArticles"
+            ></article-list>
+        </template>
     </div>
 </div>
 
@@ -218,6 +249,7 @@
     <script src="~/js/utils.js" asp-append-version="true"></script>
     <script src="~/js/url-utils.js" asp-append-version="true"></script>
     <script src="~/js/components/article-tree.js" asp-append-version="true"></script>
+    <script src="~/js/components/article-list.js" asp-append-version="true"></script>
     <script src="~/js/components/chat-panel.js" asp-append-version="true"></script>
     <script src="~/js/components/versions-panel.js" asp-append-version="true"></script>
     <script type="module" src="~/js/components/tiptap-editor.js" asp-append-version="true"></script>
