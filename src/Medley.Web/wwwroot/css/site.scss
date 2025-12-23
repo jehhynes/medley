@@ -1,4 +1,4 @@
-﻿/* Article Browser Layout Styles - Bootstrap 5 Theme-Aware */
+/* Article Browser Layout Styles - Bootstrap 5 Theme-Aware */
 
 /* Vue.js v-cloak directive - hides elements until Vue is ready */
 [v-cloak] {
@@ -45,10 +45,132 @@
     }
 }
 
+/* Mobile header bar */
+.mobile-header {
+    height: 3.5rem;
+    background-color: var(--bg-vertical-menu);
+    border-bottom: 1px solid var(--bs-border-color);
+    display: flex;
+    align-items: center;
+    padding: 0 0.5rem;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1050;
 
+    .mobile-header-left, .mobile-header-right {
+        flex: 0 0 3rem;
+        display: flex;
+        justify-content: center;
+    }
+
+    .mobile-header-center {
+        flex: 1;
+        text-align: center;
+        overflow: hidden;
+    }
+
+    .mobile-header-title {
+        font-weight: 600;
+        font-size: 1.1rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: block;
+    }
+
+    .mobile-header-left i,
+    .mobile-header-right i {
+        font-size: 1.8rem;
+    }
+
+    .mobile-header-left i {
+        transform: scaleX(-1);
+    }
+}
+
+/* Mobile sidebar backdrop */
+.mobile-sidebar-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1039;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    pointer-events: none;
+
+    &.show {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+    }
+}
+
+@media (min-width: 1200px) {
+    .mobile-sidebar-backdrop {
+        display: none;
+    }
+}
+
+/* Medium breakpoint (lg to xl: 993px - 1199px) */
+@media (min-width: 993px) and (max-width: 1199px) {
+    .main-page-container {
+        // Left sidebar stays in grid, right sidebar becomes overlaid
+        &.has-left-sidebar,
+        &.has-left-sidebar.has-right-sidebar {
+            grid-template-columns: 5rem minmax(15rem, 20vw) 1fr;
+        }
+
+        &.has-right-sidebar {
+            grid-template-rows: calc(100vh - 3.5rem);
+            height: calc(100vh - 3.5rem);
+            margin-top: 3.5rem;
+            
+            // If only right sidebar (no left), keep default columns
+            &:not(.has-left-sidebar) {
+                grid-template-columns: 5rem 1fr;
+            }
+        }
+    }
+
+    .vertical-menu {
+        top: 3.5rem;
+    }
+
+    .left-sidebar {
+        top: 3.5rem;
+    }
+
+    .right-sidebar {
+        position: fixed;
+        right: 0;
+        top: 3.5rem;
+        bottom: 0;
+        width: min(20rem, 30vw);
+        z-index: 1040;
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+        border-left: 1px solid var(--bs-border-color) !important;
+        box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+
+        &.show {
+            transform: translateX(0);
+        }
+    }
+}
+
+/* Mobile breakpoint (< 993px) */
 @media (max-width: 992px) {
     .main-page-container {
         grid-template-columns: 1fr;
+        grid-template-rows: 1fr;
+        height: calc(100vh - 3.5rem);
+        margin-top: 3.5rem;
 
         &.has-left-sidebar,
         &.has-right-sidebar,
@@ -60,11 +182,11 @@
     .vertical-menu {
         position: fixed;
         left: 0;
-        top: 0;
+        top: 3.5rem;
         bottom: 0;
         width: 5rem;
         z-index: 1041;
-        transform: translateX(-25rem);
+        transform: translateX(-30rem);
         transition: transform 0.3s ease;
         
         &.show {
@@ -74,7 +196,7 @@
 
     .sidebar {
         position: fixed;
-        top: 0;
+        top: 3.5rem;
         bottom: 0;
         z-index: 1040;
         transition: transform 0.3s ease;
@@ -83,7 +205,9 @@
     .left-sidebar {
         left: 5rem;
         width: min(20rem, 85vw);
-        transform: translateX(-25rem);
+        transform: translateX(-30rem);
+        border-right: 1px solid var(--bs-border-color) !important;
+        box-shadow: 5px 0 15px rgba(0,0,0,0.1);
 
         &.show {
             transform: translateX(0);
@@ -94,6 +218,17 @@
         right: 0;
         width: min(20rem, 85vw);
         transform: translateX(100%);
+        border-left: 1px solid var(--bs-border-color) !important;
+        box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+
+        &.show {
+            transform: translateX(0);
+        }
+    }
+
+    /* Adjust main content padding on mobile */
+    .main-content {
+        padding: 1rem 1.25rem;
     }
 }
 
