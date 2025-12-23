@@ -150,12 +150,6 @@ public partial class Program
                 jobRegistry.InitializeRecurringJobs();
             }
             
-            // Configure the HTTP request pipeline.
-            //if (app.Environment.IsDevelopment())
-            {
-                app.UseMigrationsEndPoint();
-            }
-
             if (app.Environment.IsProduction())
             {
                 app.UseExceptionHandler("/Home/Error");

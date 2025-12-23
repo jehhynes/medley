@@ -65,9 +65,9 @@ const ArticleList = {
             type: Boolean,
             default: false
         },
-        allArticlesTree: {
-            type: Array,
-            default: () => []
+        breadcrumbsCache: {
+            type: Map,
+            default: () => new Map()
         }
     },
     methods: {
@@ -108,51 +108,9 @@ const ArticleList = {
         editArticle(article) {
             this.$emit('edit-article', article);
         },
-        findArticleInTree(articleId, articles = this.allArticlesTree) {
-            // Recursively find an article by ID in the tree
-            for (const article of articles) {
-                if (article.id === articleId) {
-                    return article;
-                }
-                if (article.children && article.children.length > 0) {
-                    const found = this.findArticleInTree(articleId, article.children);
-                    if (found) {
-                        return found;
-                    }
-                }
-            }
-            return null;
-        },
-        findParentInTree(articleId, articles = this.allArticlesTree, parentPath = []) {
-            // Recursively find an article and return its parent path
-            for (const article of articles) {
-                if (article.id === articleId) {
-                    return parentPath;
-                }
-                if (article.children && article.children.length > 0) {
-                    const found = this.findParentInTree(articleId, article.children, [...parentPath, article]);
-                    if (found !== null) {
-                        return found;
-                    }
-                }
-            }
-            return null;
-        },
         getBreadcrumbs(article) {
-            if (!article.parentArticleId || !this.allArticlesTree || this.allArticlesTree.length === 0) {
-                return null;
-            }
-
-            // Find the parent path in the tree
-            const parentPath = this.findParentInTree(article.id);
-            if (!parentPath || parentPath.length === 0) {
-                return null;
-            }
-
-            // Get all parents in the chain (full recursive breadcrumbs)
-            const breadcrumbTitles = parentPath.map(parent => parent.title);
-
-            return breadcrumbTitles.length > 0 ? breadcrumbTitles.join(' > ') : null;
+            // Use pre-computed breadcrumbs from cache for O(1) lookup
+            return this.breadcrumbsCache.get(article.id) || null;
         },
         handleScroll(event) {
             if (!this.hasMore) return;
