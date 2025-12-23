@@ -171,7 +171,7 @@
     </div>
 
     <!-- Source Metrics -->
-    <h2 class="section-title">Source Analytics</h2>
+    <h2 class="section-title"><i class="bi bi-camera-video me-2"></i>Source Analytics</h2>
     <div class="row g-3 mb-4">
         @if (Model.Metrics.SourcesByType.Count > 1)
         {
@@ -218,7 +218,7 @@
     </div>
 
     <!-- Processing Status -->
-    <h2 class="section-title">Processing Status</h2>
+    <h2 class="section-title"><i class="bi bi-hourglass-split me-2"></i>Processing Status</h2>
     <div class="row g-3 mb-4">
         <div class="col-md-4">
             <div class="metric-card delay-2">
@@ -228,7 +228,7 @@
                         <div class="metric-card-value">@Model.Metrics.FragmentsPendingEmbedding</div>
                         <small style="opacity: 0.9;">of @Model.Metrics.TotalFragments total</small>
                     </div>
-                    <i class="bi bi-hourglass-split metric-card-icon"></i>
+                    
                 </div>
             </div>
         </div>
@@ -240,7 +240,6 @@
                         <div class="metric-card-value">@Model.Metrics.SourcesPendingSmartTagging</div>
                         <small style="opacity: 0.9;">of @Model.Metrics.TotalSources total</small>
                     </div>
-                    <i class="bi bi-tags metric-card-icon"></i>
                 </div>
             </div>
         </div>
@@ -252,7 +251,6 @@
                         <div class="metric-card-value">@Model.Metrics.SourcesPendingFragmentGeneration</div>
                         <small style="opacity: 0.9;">of @Model.Metrics.TotalSources total</small>
                     </div>
-                    <i class="bi bi-camera-video metric-card-icon"></i>
                 </div>
             </div>
         </div>
@@ -263,7 +261,7 @@
     <div class="row g-3 mb-4">
         <div class="col-lg-6">
             <div class="chart-card delay-4">
-                <h3 class="chart-card-title"><i class="bi bi-pie-chart me-2"></i>Fragments by Category</h3>
+                <h3 class="chart-card-title"><i class="bi bi-puzzle me-2"></i>Fragments by Category</h3>
                 <div class="chart-container small">
                     <canvas id="fragmentsByCategoryChart"></canvas>
                 </div>
@@ -272,7 +270,7 @@
         </div>
         <div class="col-lg-6">
             <div class="chart-card delay-5">
-                <h3 class="chart-card-title"><i class="bi bi-pie-chart me-2"></i>Articles by Type</h3>
+                <h3 class="chart-card-title"><i class="bi bi-file-text me-2"></i>Articles by Type</h3>
                 <div class="chart-container small">
                     <canvas id="articlesByTypeChart"></canvas>
                 </div>
@@ -289,7 +287,7 @@
             var safeId = System.Text.RegularExpressions.Regex.Replace(tagMetric.TagTypeName, "[^a-zA-Z0-9]", "");
             <div class="col-lg-6">
                 <div class="chart-card">
-                    <h3 class="chart-card-title"><i class="bi bi-tag me-2"></i>Sources by @tagMetric.TagTypeName</h3>
+                    <h3 class="chart-card-title">Sources by @tagMetric.TagTypeName</h3>
                     <div class="chart-container small">
                          <canvas id="tagChart_@safeId"></canvas>
                     </div>

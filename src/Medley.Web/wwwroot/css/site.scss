@@ -33,17 +33,18 @@
     background-color: var(--bg-main);
 
     &.has-left-sidebar {
-        grid-template-columns: 5rem 25rem 1fr;
+        grid-template-columns: 5rem minmax(15rem, 20vw) 1fr;
     }
 
     &.has-right-sidebar {
-        grid-template-columns: 5rem 1fr 20rem;
+        grid-template-columns: 5rem 1fr minmax(15rem, 20vw);
     }
 
     &.has-left-sidebar.has-right-sidebar {
-        grid-template-columns: 5rem 25rem 1fr 20rem;
+        grid-template-columns: 5rem minmax(15rem, 20vw) 1fr minmax(15rem, 20vw);
     }
 }
+
 
 @media (max-width: 992px) {
     .main-page-container {
@@ -81,7 +82,7 @@
 
     .left-sidebar {
         left: 5rem;
-        width: 20rem;
+        width: min(20rem, 85vw);
         transform: translateX(-25rem);
 
         &.show {
@@ -91,7 +92,7 @@
 
     .right-sidebar {
         right: 0;
-        width: 20rem;
+        width: min(20rem, 85vw);
         transform: translateX(100%);
     }
 }
