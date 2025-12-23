@@ -8,6 +8,7 @@
             validateArticleForm(title, typeId) {
                 if (!title?.trim()) {
                     bootbox.alert({
+                        title: 'Validation Error',
                         message: 'Please enter a title',
                         className: 'bootbox-warning'
                     });
@@ -15,6 +16,7 @@
                 }
                 if (!typeId) {
                     bootbox.alert({
+                        title: 'Validation Error',
                         message: 'Please select an article type',
                         className: 'bootbox-warning'
                     });
@@ -72,6 +74,7 @@
                     }
                 } catch (err) {
                     bootbox.alert({
+                        title: 'Create Article Failed',
                         message: `Failed to create article: ${err.message}`,
                         className: 'bootbox-error'
                     });
@@ -128,6 +131,7 @@
                     this.closeEditModal();
                 } catch (err) {
                     bootbox.alert({
+                        title: 'Update Article Failed',
                         message: `Failed to update article: ${err.message}`,
                         className: 'bootbox-error'
                     });

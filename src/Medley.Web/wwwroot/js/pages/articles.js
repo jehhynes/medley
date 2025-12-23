@@ -559,6 +559,7 @@
                         });
                     } catch (err) {
                         bootbox.alert({
+                            title: 'Save Failed',
                             message: `Failed to save article: ${err.message}`,
                             className: 'bootbox-error'
                         });
@@ -570,6 +571,7 @@
 
                 deleteArticle() {
                     bootbox.confirm({
+                        title: 'Delete Article',
                         message: 'Are you sure you want to delete this article?',
                         buttons: {
                             confirm: {
@@ -584,6 +586,7 @@
                         callback: (confirmed) => {
                             if (confirmed) {
                                 bootbox.alert({
+                                    title: 'Delete Article',
                                     message: 'Delete functionality coming soon',
                                     className: 'bootbox-info'
                                 });
@@ -647,6 +650,7 @@
                 promptUnsavedChanges() {
                     return new Promise((resolve) => {
                         bootbox.dialog({
+                            title: 'Unsaved Changes',
                             message: 'You have unsaved changes. What would you like to do?',
                             buttons: {
                                 save: {
@@ -693,6 +697,7 @@
                     if (!sourceArticle || !targetParent) {
                         console.error('Source or target article not found');
                         bootbox.alert({
+                            title: 'Move Article',
                             message: 'Could not find source or target article',
                             className: 'bootbox-error'
                         });
@@ -701,6 +706,7 @@
 
                     // Show confirmation dialog using bootbox
                     bootbox.confirm({
+                        title: 'Move Article',
                         message: `Move <strong>${sourceArticle.title}</strong> under <strong>${targetParent.title}</strong>?`,
                         buttons: {
                             confirm: {
@@ -723,6 +729,7 @@
                                     // The tree update will be handled by the SignalR event
                                 } catch (err) {
                                     bootbox.alert({
+                                        title: 'Move Article',
                                         message: `Failed to move article: ${err.message}`,
                                         className: 'bootbox-error'
                                     });
