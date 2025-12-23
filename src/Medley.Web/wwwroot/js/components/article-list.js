@@ -108,10 +108,22 @@ const ArticleList = {
         editArticle(article) {
             this.$emit('edit-article', article);
         },
+        /**
+         * Get breadcrumbs for an article
+         * Uses pre-computed breadcrumbs cache for O(1) lookup instead of traversing tree.
+         * @param {Object} article - Article to get breadcrumbs for
+         * @returns {string|null} Breadcrumb string (e.g., "Parent > Grandparent") or null if root level
+         */
         getBreadcrumbs(article) {
             // Use pre-computed breadcrumbs from cache for O(1) lookup
             return this.breadcrumbsCache.get(article.id) || null;
         },
+        /**
+         * Handle scroll event for infinite scrolling
+         * Emits load-more event when user scrolls within 100px of bottom.
+         * Debounced to prevent excessive calls.
+         * @param {Event} event - DOM scroll event
+         */
         handleScroll(event) {
             if (!this.hasMore) return;
 

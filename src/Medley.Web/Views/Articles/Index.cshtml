@@ -85,29 +85,29 @@
         <div class="empty-state-title">No Article Selected</div>
         <div class="empty-state-text">Select an article from the sidebar to view its details</div>
     </div>
-    <div v-else-if="selectedVersion" v-cloak class="diff-viewer d-flex flex-column flex-grow-1">
+    <div v-else-if="version.selected" v-cloak class="diff-viewer d-flex flex-column flex-grow-1">
         <div class="diff-viewer-header">
             <button class="btn btn-sm btn-outline-secondary" @@click="clearVersionSelection">
                 <i class="bi bi-arrow-left"></i> Back to Editor
             </button>
             <div class="diff-viewer-title">
-                <span class="badge bg-primary me-2">Version {{ selectedVersion.versionNumber }}</span>
-                <span class="text-muted">{{ formatDate(selectedVersion.createdAt) }}</span>
-                <span v-if="selectedVersion.createdByName" class="text-muted ms-2">
-                    by {{ selectedVersion.createdByName }}
+                <span class="badge bg-primary me-2">Version {{ version.selected.versionNumber }}</span>
+                <span class="text-muted">{{ formatDate(version.selected.createdAt) }}</span>
+                <span v-if="version.selected.createdByName" class="text-muted ms-2">
+                    by {{ version.selected.createdByName }}
                 </span>
             </div>
         </div>
         <div class="diff-viewer-content flex-grow-1">
-            <div v-if="loadingDiff" class="loading-spinner">
+            <div v-if="version.loadingDiff" class="loading-spinner">
                 <div class="spinner-border" role="status">
                     <span class="visually-hidden">Loading diff...</span>
                 </div>
             </div>
-            <div v-else-if="diffError" class="alert alert-danger m-3">
-                {{ diffError }}
+            <div v-else-if="version.diffError" class="alert alert-danger m-3">
+                {{ version.diffError }}
             </div>
-            <div v-else-if="diffHtml" v-html="diffHtml" class="diff-content"></div>
+            <div v-else-if="version.diffHtml" v-html="version.diffHtml" class="diff-content"></div>
         </div>
     </div>
     <tiptap-editor v-else
@@ -146,7 +146,7 @@
             <versions-panel 
                 ref="versionsPanel"
                 :article-id="articles.selectedId"
-                :selected-version-id="selectedVersion?.id"
+                :selected-version-id="version.selected?.id"
                 @@select-version="handleVersionSelect" />
         </div>
     </div>
@@ -253,5 +253,8 @@
     <script src="~/js/components/chat-panel.js" asp-append-version="true"></script>
     <script src="~/js/components/versions-panel.js" asp-append-version="true"></script>
     <script type="module" src="~/js/components/tiptap-editor.js" asp-append-version="true"></script>
+    <script src="~/js/mixins/articleModalMixin.js" asp-append-version="true"></script>
+    <script src="~/js/mixins/articleVersionMixin.js" asp-append-version="true"></script>
+    <script src="~/js/mixins/articleSignalRMixin.js" asp-append-version="true"></script>
     <script src="~/js/pages/articles.js" asp-append-version="true"></script>
 }
