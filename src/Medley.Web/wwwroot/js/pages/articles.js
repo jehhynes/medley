@@ -4,8 +4,7 @@
     const { api, createSignalRConnection } = window.MedleyApi;
     const {
         formatDate,
-        getStatusBadgeClass,
-        findInTree
+        getStatusBadgeClass
     } = window.MedleyUtils;
     const {
         getUrlParam,
@@ -38,13 +37,19 @@
                         selectedId: null,
                         types: [],
                         typeIconMap: {},
-                        expandedIds: new Set()
+                        expandedIds: new Set(),
+                        index: new Map(), // articleId -> article reference for O(1) lookups
+                        parentPathCache: new Map(), // articleId -> [{id, title}, ...] parent chain
+                        breadcrumbsCache: new Map() // articleId -> breadcrumb string
                     },
                     
                     // View mode state
                     viewMode: 'tree', // 'tree' or 'list'
                     listViewVisibleCount: 50, // Number of items to show in list view (infinite scroll)
                     isLoadingMore: false, // Flag to prevent multiple simultaneous loads
+                    
+                    // Cached data for performance
+                    cachedFlatList: [], // Cached flat list of all articles, sorted
                     
                     // Editor state
                     editor: {
@@ -86,7 +91,9 @@
                     diffError: null,
                     
                     // SignalR
-                    hubConnection: null
+                    hubConnection: null,
+                    signalRUpdateQueue: [],
+                    processingSignalR: false
                 };
             },
             computed: {
@@ -94,37 +101,13 @@
                     // Delegate to the tiptap editor component
                     return this.$refs.tiptapEditor?.hasChanges || false;
                 },
-                allFlatArticlesList() {
-                    // Flatten the hierarchical tree into a flat array (all articles)
-                    // Also add parentArticleId to each article based on tree structure
-                    const flattenArticles = (articles, parentId = null) => {
-                        let result = [];
-                        for (const article of articles) {
-                            // Create a copy with parentArticleId added
-                            const articleWithParent = {
-                                ...article,
-                                parentArticleId: parentId
-                            };
-                            result.push(articleWithParent);
-                            if (article.children && article.children.length > 0) {
-                                result = result.concat(flattenArticles(article.children, article.id));
-                            }
-                        }
-                        return result;
-                    };
-                    return flattenArticles(this.articles.list);
-                },
                 flatArticlesList() {
-                    // Sort alphabetically by title (case-insensitive)
-                    const sorted = [...this.allFlatArticlesList].sort((a, b) => {
-                        return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
-                    });
-                    // Return visible items for infinite scroll
-                    return sorted.slice(0, this.listViewVisibleCount);
+                    // Return visible items for infinite scroll from cached flat list
+                    return this.cachedFlatList.slice(0, this.listViewVisibleCount);
                 },
                 hasMoreArticles() {
                     // Check if there are more articles to load
-                    return this.listViewVisibleCount < this.allFlatArticlesList.length;
+                    return this.listViewVisibleCount < this.cachedFlatList.length;
                 }
             },
             methods: {
@@ -134,6 +117,12 @@
                     this.ui.error = null;
                     try {
                         this.articles.list = await api.get('/api/articles/tree');
+                        // Build article index for O(1) lookups
+                        this.buildArticleIndex();
+                        // Build parent path cache for breadcrumbs
+                        this.buildParentPathCache();
+                        // Build flat list cache for list view
+                        this.rebuildFlatListCache();
                         // Reset visible count when articles are reloaded
                         if (this.viewMode === 'list') {
                             this.listViewVisibleCount = 50;
@@ -158,6 +147,111 @@
                     } catch (err) {
                         console.error('Error loading article types:', err);
                     }
+                },
+
+                buildArticleIndex(articles = this.articles.list) {
+                    const index = new Map();
+                    const traverse = (items) => {
+                        items.forEach(article => {
+                            index.set(article.id, article);
+                            if (article.children && article.children.length > 0) {
+                                traverse(article.children);
+                            }
+                        });
+                    };
+                    traverse(articles);
+                    this.articles.index = index;
+                },
+
+                buildParentPathCache(articles = this.articles.list, path = []) {
+                    articles.forEach(article => {
+                        // Store the parent path (array of parent objects with id and title)
+                        this.articles.parentPathCache.set(article.id, [...path]);
+                        
+                        // Build breadcrumb string from parent path
+                        if (path.length > 0) {
+                            const breadcrumb = path.map(p => p.title).join(' > ');
+                            this.articles.breadcrumbsCache.set(article.id, breadcrumb);
+                        } else {
+                            this.articles.breadcrumbsCache.set(article.id, null);
+                        }
+                        
+                        // Recursively process children
+                        if (article.children && article.children.length > 0) {
+                            this.buildParentPathCache(article.children, [...path, { id: article.id, title: article.title }]);
+                        }
+                    });
+                },
+
+                rebuildFlatListCache() {
+                    // Flatten the tree
+                    const flattenArticles = (articles, parentId = null) => {
+                        let result = [];
+                        for (const article of articles) {
+                            const articleWithParent = {
+                                ...article,
+                                parentArticleId: parentId
+                            };
+                            result.push(articleWithParent);
+                            if (article.children && article.children.length > 0) {
+                                result = result.concat(flattenArticles(article.children, article.id));
+                            }
+                        }
+                        return result;
+                    };
+                    
+                    // Sort alphabetically by title (case-insensitive)
+                    const flattened = flattenArticles(this.articles.list);
+                    this.cachedFlatList = flattened.sort((a, b) => {
+                        return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
+                    });
+                },
+                
+                rebuildFlatListCacheDebounced() {
+                    // Debounced version to avoid rebuilding multiple times during rapid updates
+                    if (!this._debouncedRebuildFlatListCache) {
+                        this._debouncedRebuildFlatListCache = window.MedleyUtils.debounce(() => {
+                            this.rebuildFlatListCache();
+                        }, 100);
+                    }
+                    this._debouncedRebuildFlatListCache();
+                },
+
+                processSignalRQueue() {
+                    if (this.processingSignalR || this.signalRUpdateQueue.length === 0) {
+                        return;
+                    }
+                    
+                    this.processingSignalR = true;
+                    
+                    // Process all queued updates
+                    const queue = [...this.signalRUpdateQueue];
+                    this.signalRUpdateQueue = [];
+                    
+                    queue.forEach(update => {
+                        switch (update.type) {
+                            case 'ArticleCreated':
+                                this.insertArticleIntoTree(update.article);
+                                break;
+                            case 'ArticleUpdated':
+                                this.updateArticleInTree(update.articleId, update.updates);
+                                break;
+                            case 'ArticleDeleted':
+                                this.removeArticleFromTree(update.articleId);
+                                if (this.articles.selectedId === update.articleId) {
+                                    this.articles.selectedId = null;
+                                    this.articles.selected = null;
+                                    this.editor.title = '';
+                                    this.editor.content = '';
+                                }
+                                break;
+                            case 'ArticleMoved':
+                                this.moveArticleInTree(update.articleId, update.oldParentId, update.newParentId);
+                                break;
+                        }
+                    });
+                    
+                    this.processingSignalR = false;
                 },
 
                 async selectArticle(article, replaceState = false) {
@@ -286,7 +380,7 @@
                 // === Tree Manipulation ===
                 insertArticleIntoTree(article) {
                     // Check if article already exists (prevent duplicates from SignalR)
-                    const existing = findInTree(this.articles.list, article.id);
+                    const existing = this.articles.index.get(article.id);
                     if (existing) {
                         return; // Already exists, don't insert again
                     }
@@ -300,9 +394,12 @@
                         // Insert at root level
                         this.articles.list.push(article);
                         this.sortArticles(this.articles.list);
+                        // Update caches for root article
+                        this.articles.parentPathCache.set(article.id, []);
+                        this.articles.breadcrumbsCache.set(article.id, null);
                     } else {
                         // Find parent and insert into its children
-                        const parent = findInTree(this.articles.list, article.parentArticleId);
+                        const parent = this.articles.index.get(article.parentArticleId);
                         if (parent) {
                             if (!parent.children) {
                                 parent.children = [];
@@ -311,19 +408,42 @@
                             this.sortArticles(parent.children);
                             // Expand parent to show new child
                             this.articles.expandedIds.add(parent.id);
+                            
+                            // Update caches for new child
+                            const parentPath = this.articles.parentPathCache.get(parent.id) || [];
+                            const newPath = [...parentPath, { id: parent.id, title: parent.title }];
+                            this.articles.parentPathCache.set(article.id, newPath);
+                            const breadcrumb = newPath.map(p => p.title).join(' > ');
+                            this.articles.breadcrumbsCache.set(article.id, breadcrumb);
                         } else {
                             // Parent not found, insert at root as fallback
                             console.warn(`Parent article ${article.parentArticleId} not found, inserting at root`);
                             this.articles.list.push(article);
                             this.sortArticles(this.articles.list);
+                            this.articles.parentPathCache.set(article.id, []);
+                            this.articles.breadcrumbsCache.set(article.id, null);
                         }
                     }
+                    
+                    // Add to index
+                    this.articles.index.set(article.id, article);
+                    
+                    // Rebuild flat list cache for list view
+                    this.rebuildFlatListCache();
                 },
 
                 updateArticleInTree(articleId, updates) {
-                    const article = findInTree(this.articles.list, articleId);
+                    const article = this.articles.index.get(articleId);
                     if (article) {
                         Object.assign(article, updates);
+                        
+                        // If title changed, rebuild breadcrumbs for this article's descendants
+                        if (updates.title !== undefined && article.children && article.children.length > 0) {
+                            this.buildParentPathCache(article.children, [
+                                ...(this.articles.parentPathCache.get(articleId) || []),
+                                { id: article.id, title: article.title }
+                            ]);
+                        }
                         
                         // If title or articleTypeId changed, re-sort the parent array
                         if (updates.title !== undefined || updates.articleTypeId !== undefined) {
@@ -332,6 +452,8 @@
                             if (parentArray) {
                                 this.sortArticles(parentArray);
                             }
+                            // Rebuild flat list cache since sorting changed
+                            this.rebuildFlatListCache();
                         }
                         
                         // If currently selected article is being updated, update editor state too
@@ -351,6 +473,9 @@
                 },
 
                 removeArticleFromTree(articleId) {
+                    // Get the article before removing to access its children
+                    const article = this.articles.index.get(articleId);
+                    
                     const removeFromArray = (articles) => {
                         for (let i = 0; i < articles.length; i++) {
                             if (articles[i].id === articleId) {
@@ -367,6 +492,22 @@
                     };
 
                     removeFromArray(this.articles.list);
+                    
+                    // Remove from caches (including descendants)
+                    const removeFromCaches = (art) => {
+                        if (!art) return;
+                        this.articles.index.delete(art.id);
+                        this.articles.parentPathCache.delete(art.id);
+                        this.articles.breadcrumbsCache.delete(art.id);
+                        if (art.children && art.children.length > 0) {
+                            art.children.forEach(child => removeFromCaches(child));
+                        }
+                    };
+                    
+                    removeFromCaches(article);
+                    
+                    // Rebuild flat list cache
+                    this.rebuildFlatListCache();
                 },
 
                 // === Article Content Editing ===
@@ -449,7 +590,7 @@
                         // Load 50 more items at a time
                         const newCount = Math.min(
                             this.listViewVisibleCount + 50,
-                            this.allFlatArticlesList.length
+                            this.cachedFlatList.length
                         );
                         
                         if (newCount > this.listViewVisibleCount) {
@@ -555,7 +696,7 @@
 
                         // Auto-select the newly created article
                         if (response && response.id) {
-                            const newArticle = findInTree(this.articles.list, response.id);
+                            const newArticle = this.articles.index.get(response.id);
                             if (newArticle) {
                                 await this.selectArticle(newArticle, false);
                             }
@@ -664,8 +805,8 @@
                 // === Article Move ===
                 async moveArticle(sourceArticleId, targetParentId) {
                     // Find the source and target articles
-                    const sourceArticle = findInTree(this.articles.list, sourceArticleId);
-                    const targetParent = findInTree(this.articles.list, targetParentId);
+                    const sourceArticle = this.articles.index.get(sourceArticleId);
+                    const targetParent = this.articles.index.get(targetParentId);
 
                     if (!sourceArticle || !targetParent) {
                         console.error('Source or target article not found');
@@ -794,13 +935,18 @@
                     }
 
                     // Find new parent and add article to its children
-                    const newParent = findInTree(this.articles.list, newParentId);
+                    const newParent = this.articles.index.get(newParentId);
                     if (newParent) {
                         if (!newParent.children) {
                             newParent.children = [];
                         }
                         newParent.children.push(movedArticle);
                         this.sortArticles(newParent.children);
+                        
+                        // Rebuild parent path cache for the moved article and its descendants
+                        const parentPath = this.articles.parentPathCache.get(newParentId) || [];
+                        const newPath = [...parentPath, { id: newParent.id, title: newParent.title }];
+                        this.buildParentPathCache([movedArticle], newPath);
                         
                         // Expand the new parent to show the moved article
                         this.articles.expandedIds.add(newParentId);
@@ -809,7 +955,12 @@
                         // Add back to root as fallback
                         this.articles.list.push(movedArticle);
                         this.sortArticles(this.articles.list);
+                        // Rebuild caches for root
+                        this.buildParentPathCache([movedArticle], []);
                     }
+                    
+                    // Rebuild flat list cache
+                    this.rebuildFlatListCache();
                 }
             },
 
@@ -831,7 +982,7 @@
 
                 const articleIdFromUrl = getUrlParam('id');
                 if (articleIdFromUrl) {
-                    const article = findInTree(this.articles.list, articleIdFromUrl);
+                    const article = this.articles.index.get(articleIdFromUrl);
                     if (article) {
                         await this.selectArticle(article, true);
                     }
@@ -856,46 +1007,58 @@
                 window.addEventListener('beforeunload', this.handleBeforeUnload);
 
                 this.hubConnection = createSignalRConnection('/articleHub');
+                
+                // Create debounced processor for SignalR events
+                this.processSignalRQueueDebounced = window.MedleyUtils.debounce(() => {
+                    this.processSignalRQueue();
+                }, 50);
 
                 this.hubConnection.on('ArticleCreated', async (data) => {
-                    // SignalR provides articleId, title, parentArticleId, articleTypeId
-                    // Insert surgically using the data from SignalR
-                    const newArticle = {
-                        id: data.articleId,
-                        title: data.title,
-                        parentArticleId: data.parentArticleId,
-                        articleTypeId: data.articleTypeId,
-                        children: []
-                    };
-                    this.insertArticleIntoTree(newArticle);
+                    // Queue the update
+                    this.signalRUpdateQueue.push({
+                        type: 'ArticleCreated',
+                        article: {
+                            id: data.articleId,
+                            title: data.title,
+                            parentArticleId: data.parentArticleId,
+                            articleTypeId: data.articleTypeId,
+                            children: []
+                        }
+                    });
+                    this.processSignalRQueueDebounced();
                 });
 
                 this.hubConnection.on('ArticleUpdated', async (data) => {
-                    // SignalR provides articleId, title, and articleTypeId
-                    // Update surgically
-                    this.updateArticleInTree(data.articleId, {
-                        title: data.title,
-                        articleTypeId: data.articleTypeId
+                    // Queue the update
+                    this.signalRUpdateQueue.push({
+                        type: 'ArticleUpdated',
+                        articleId: data.articleId,
+                        updates: {
+                            title: data.title,
+                            articleTypeId: data.articleTypeId
+                        }
                     });
+                    this.processSignalRQueueDebounced();
                 });
 
                 this.hubConnection.on('ArticleDeleted', (data) => {
-                    // Remove the article from the tree surgically
-                    this.removeArticleFromTree(data.articleId);
-                    
-                    // Clear selection if the deleted article was selected
-                    if (this.articles.selectedId === data.articleId) {
-                        this.articles.selectedId = null;
-                        this.articles.selected = null;
-                        this.editor.title = '';
-                        this.editor.content = '';
-                    }
+                    // Queue the deletion
+                    this.signalRUpdateQueue.push({
+                        type: 'ArticleDeleted',
+                        articleId: data.articleId
+                    });
+                    this.processSignalRQueueDebounced();
                 });
 
                 this.hubConnection.on('ArticleMoved', (data) => {
-                    // SignalR provides articleId, oldParentId, newParentId
-                    // Move the article in the tree surgically
-                    this.moveArticleInTree(data.articleId, data.oldParentId, data.newParentId);
+                    // Queue the move
+                    this.signalRUpdateQueue.push({
+                        type: 'ArticleMoved',
+                        articleId: data.articleId,
+                        oldParentId: data.oldParentId,
+                        newParentId: data.newParentId
+                    });
+                    this.processSignalRQueueDebounced();
                 });
 
                 this.hubConnection.on('VersionCreated', (data) => {
