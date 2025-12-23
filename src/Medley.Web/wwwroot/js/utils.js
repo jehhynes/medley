@@ -163,7 +163,7 @@
             'Draft': 'text-secondary',
             'Review': 'text-info',
             'Approved': 'text-success',
-            'Archived': 'text-warning'
+            'Archived': 'text-danger'
         };
         return colorMap[status] || 'text-secondary';
     };

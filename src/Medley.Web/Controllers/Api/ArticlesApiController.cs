@@ -58,15 +58,77 @@ public class ArticlesApiController : ControllerBase
     }
 
     /// <summary>
-    /// Get all articles as a tree structure
+    /// Get all articles as a tree structure, optionally filtered
     /// </summary>
     [HttpGet("tree")]
-    public async Task<IActionResult> GetTree()
+    public async Task<IActionResult> GetTree(
+        [FromQuery] string? query = null,
+        [FromQuery] int[]? statuses = null,
+        [FromQuery] Guid[]? articleTypeIds = null)
     {
-        var articles = await _articleRepository.Query()
-            .Include(a => a.ChildArticles)
-            .Include(a => a.ArticleType)
-            .ToListAsync();
+        // Check if any filters are applied
+        var hasFilters = !string.IsNullOrWhiteSpace(query) || 
+                        (statuses != null && statuses.Length > 0) || 
+                        (articleTypeIds != null && articleTypeIds.Length > 0);
+
+        List<Article> articles;
+
+        if (hasFilters)
+        {
+            // Get all articles first (we'll need them for parent resolution)
+            var allArticles = await _articleRepository.Query()
+                .Include(a => a.ChildArticles)
+                .Include(a => a.ArticleType)
+                .ToListAsync();
+
+            // Apply filters to get matching articles
+            var matchingArticles = allArticles.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(query))
+            {
+                matchingArticles = matchingArticles.Where(a => a.Title.Contains(query, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (statuses != null && statuses.Length > 0)
+            {
+                var statusEnums = statuses.Select(s => (Domain.Enums.ArticleStatus)s).ToList();
+                matchingArticles = matchingArticles.Where(a => statusEnums.Contains(a.Status));
+            }
+
+            if (articleTypeIds != null && articleTypeIds.Length > 0)
+            {
+                matchingArticles = matchingArticles.Where(a => a.ArticleTypeId.HasValue && articleTypeIds.Contains(a.ArticleTypeId.Value));
+            }
+
+            var matchingArticlesList = matchingArticles.ToList();
+
+            // Include all ancestor articles for each matching article
+            var articlesToInclude = new HashSet<Guid>();
+            foreach (var article in matchingArticlesList)
+            {
+                articlesToInclude.Add(article.Id);
+                
+                // Walk up the parent chain
+                var currentParentId = article.ParentArticleId;
+                while (currentParentId.HasValue)
+                {
+                    articlesToInclude.Add(currentParentId.Value);
+                    var parent = allArticles.FirstOrDefault(a => a.Id == currentParentId.Value);
+                    currentParentId = parent?.ParentArticleId;
+                }
+            }
+
+            // Filter to only include matching articles and their ancestors
+            articles = allArticles.Where(a => articlesToInclude.Contains(a.Id)).ToList();
+        }
+        else
+        {
+            // No filters, return all articles
+            articles = await _articleRepository.Query()
+                .Include(a => a.ChildArticles)
+                .Include(a => a.ArticleType)
+                .ToListAsync();
+        }
 
         var tree = BuildTree(articles, null);
         return Ok(tree);

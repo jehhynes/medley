@@ -24,7 +24,8 @@
             mixins: [
                 window.articleModalMixin,
                 window.articleVersionMixin,
-                window.articleSignalRMixin
+                window.articleSignalRMixin,
+                window.articleFilterMixin
             ],
             components: {
                 'article-tree': ArticleTree,
@@ -143,7 +144,8 @@
                     this.ui.loading = true;
                     this.ui.error = null;
                     try {
-                        this.articles.list = await api.get('/api/articles/tree');
+                        const queryString = this.buildFilterQueryString();
+                        this.articles.list = await api.get(`/api/articles/tree${queryString}`);
                         // Build article index for O(1) lookups
                         this.buildArticleIndex();
                         // Build parent path cache for breadcrumbs
@@ -610,6 +612,11 @@
                     if (mode === 'list') {
                         this.listViewVisibleCount = 50;
                     }
+                },
+                
+                toggleViewMode() {
+                    const newMode = this.viewMode === 'tree' ? 'list' : 'tree';
+                    this.setViewMode(newMode);
                 },
 
                 // === Infinite Scroll ===
