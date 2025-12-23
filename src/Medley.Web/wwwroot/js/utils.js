@@ -148,6 +148,26 @@
         return confidence.toString();
     };
 
+    const getStatusIcon = (status) => {
+        const iconMap = {
+            'Draft': 'bi-pencil',
+            'Review': 'bi-eye',
+            'Approved': 'bi-check-circle',
+            'Archived': 'bi-archive'
+        };
+        return iconMap[status] || 'bi-circle';
+    };
+
+    const getStatusColorClass = (status) => {
+        const colorMap = {
+            'Draft': 'text-secondary',
+            'Review': 'text-info',
+            'Approved': 'text-success',
+            'Archived': 'text-warning'
+        };
+        return colorMap[status] || 'text-secondary';
+    };
+
     const initializeMarkdownRenderer = () => {
         if (typeof marked !== 'undefined') {
             return marked;
@@ -223,6 +243,8 @@
     window.MedleyUtils = {
         formatDate,
         getStatusBadgeClass,
+        getStatusIcon,
+        getStatusColorClass,
         copyToClipboard,
         debounce,
         getIconClass,

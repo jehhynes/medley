@@ -85,22 +85,10 @@ const ArticleList = {
             return window.MedleyUtils.getIconClass(icon);
         },
         getStatusIcon(status) {
-            const iconMap = {
-                'Draft': 'bi-pencil',
-                'Review': 'bi-eye',
-                'Approved': 'bi-check-circle',
-                'Archived': 'bi-archive'
-            };
-            return iconMap[status] || 'bi-circle';
+            return window.MedleyUtils.getStatusIcon(status);
         },
         getStatusColorClass(status) {
-            const colorMap = {
-                'Draft': 'text-secondary',
-                'Review': 'text-info',
-                'Approved': 'text-success',
-                'Archived': 'text-warning'
-            };
-            return colorMap[status] || 'text-secondary';
+            return window.MedleyUtils.getStatusColorClass(status);
         },
         createChild(parentArticleId) {
             this.$emit('create-child', parentArticleId);
@@ -144,12 +132,11 @@ const ArticleList = {
         // Find the actual scrollable container (sidebar-content)
         // Use $el to get the root element and find the scrollable parent
         this.$nextTick(() => {
-            const scrollableParent = this.$el.closest('.sidebar-content');
-            if (scrollableParent) {
+            this.scrollableParent = this.$el.closest('.sidebar-content');
+            if (this.scrollableParent) {
                 // Debounce scroll handler to avoid too many calls
                 this.debouncedScrollHandler = window.MedleyUtils.debounce(this.handleScroll.bind(this), 100);
-                scrollableParent.addEventListener('scroll', this.debouncedScrollHandler);
-                this.scrollableParent = scrollableParent;
+                this.scrollableParent.addEventListener('scroll', this.debouncedScrollHandler);
             }
         });
     },

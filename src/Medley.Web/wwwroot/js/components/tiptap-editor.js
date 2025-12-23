@@ -449,6 +449,39 @@ let TiptapEditor = null;
 
                 handleSave() {
                     this.$emit('save');
+                },
+
+                /**
+                 * Sync the first H1 heading in the editor with a new title
+                 * This is called when the article metadata is updated
+                 * @param {string} newTitle - The new title to set
+                 */
+                syncHeading(newTitle) {
+                    if (!this.editor) return;
+                    
+                    // Use ProseMirror to find the first heading level 1
+                    let firstH1Pos = null;
+                    let firstH1Node = null;
+                    
+                    this.editor.state.doc.descendants((node, pos) => {
+                        if (firstH1Pos === null && node.type.name === 'heading' && node.attrs.level === 1) {
+                            firstH1Pos = pos;
+                            firstH1Node = node;
+                            return false; // Stop searching
+                        }
+                    });
+
+                    if (firstH1Pos !== null && firstH1Node !== null) {
+                        // Replace the text content of the first H1
+                        const from = firstH1Pos + 1; // +1 to get inside the node
+                        const to = firstH1Pos + firstH1Node.nodeSize - 1; // -1 to stay inside the node
+                        
+                        this.editor.chain()
+                            .focus()
+                            .setTextSelection({ from, to })
+                            .insertContent(newTitle)
+                            .run();
+                    }
                 }
             },
             mounted() {

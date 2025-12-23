@@ -42,6 +42,7 @@
                         selectedId: null,
                         types: [],
                         typeIconMap: {},
+                        typeIndexMap: {}, // typeId -> type object for O(1) lookups
                         expandedIds: new Set(),
                         index: new Map(), // articleId -> article reference for O(1) lookups
                         parentPathCache: new Map(), // articleId -> [{id, title}, ...] parent chain
@@ -132,6 +133,12 @@
             },
             methods: {
                 // === Article Loading & Selection ===
+                /**
+                 * Load all articles from the API and build caches
+                 * Builds article index, parent path cache, breadcrumbs cache, and flat list cache
+                 * @returns {Promise<void>}
+                 * @throws {Error} If API call fails
+                 */
                 async loadArticles() {
                     this.ui.loading = true;
                     this.ui.error = null;
@@ -155,17 +162,25 @@
                     }
                 },
 
+                /**
+                 * Load article types from the API and build type caches
+                 * Builds typeIconMap (typeId -> icon) and typeIndexMap (typeId -> type object)
+                 * @returns {Promise<void>}
+                 */
                 async loadArticleTypes() {
                     try {
                         this.articles.types = await api.get('/api/articles/types');
                         
-                        // Build icon map: articleTypeId -> icon
+                        // Build icon map and type index: articleTypeId -> icon/type
                         this.articles.typeIconMap = {};
+                        this.articles.typeIndexMap = {};
                         this.articles.types.forEach(type => {
                             this.articles.typeIconMap[type.id] = type.icon || 'bi-file-text';
+                            this.articles.typeIndexMap[type.id] = type;
                         });
                     } catch (err) {
                         console.error('Error loading article types:', err);
+                        window.MedleyUtils.showToast('error', 'Failed to load article types');
                     }
                 },
 
@@ -256,6 +271,13 @@
                     this._debouncedRebuildFlatListCache();
                 },
 
+                /**
+                 * Select an article and load its full content
+                 * Checks for unsaved changes, loads full article data, expands parents in tree, and updates URL
+                 * @param {Object} article - Article object to select (must have id property)
+                 * @param {boolean} replaceState - Whether to replace browser history state (default: false)
+                 * @returns {Promise<void>}
+                 */
                 async selectArticle(article, replaceState = false) {
                     // Don't reload if the article is already selected
                     if (article.id === this.articles.selectedId) {
@@ -297,12 +319,12 @@
                 // === Tree Sorting ===
                 sortArticles(articles) {
                     articles.sort((a, b) => {
-                        // Get article types
-                        const aType = this.articles.types.find(t => t.id === a.articleTypeId);
-                        const bType = this.articles.types.find(t => t.id === b.articleTypeId);
+                        // Get article types from cached index for O(1) lookup
+                        const aType = this.articles.typeIndexMap[a.articleTypeId];
+                        const bType = this.articles.typeIndexMap[b.articleTypeId];
                         
-                        const aIsIndex = aType && aType.name.toLowerCase() === 'index';
-                        const bIsIndex = bType && bType.name.toLowerCase() === 'index';
+                        const aIsIndex = aType?.name.toLowerCase() === 'index';
+                        const bIsIndex = bType?.name.toLowerCase() === 'index';
                         
                         // Index types come first
                         if (aIsIndex && !bIsIndex) return -1;
@@ -334,19 +356,10 @@
                     }
                 },
 
-                findArticleParents(articleId, articles = this.articles.list, parents = []) {
-                    for (const article of articles) {
-                        if (article.id === articleId) {
-                            return parents;
-                        }
-                        if (article.children && article.children.length > 0) {
-                            const found = this.findArticleParents(articleId, article.children, [...parents, article.id]);
-                            if (found) {
-                                return found;
-                            }
-                        }
-                    }
-                    return null;
+                getArticleParents(articleId) {
+                    // Use cached parent path for O(1) lookup
+                    const parentPath = this.articles.parentPathCache.get(articleId);
+                    return parentPath ? parentPath.map(p => p.id) : [];
                 },
 
                 findParentArray(articleId, articles = this.articles.list) {
@@ -371,7 +384,7 @@
                 },
 
                 expandParents(articleId) {
-                    const parents = this.findArticleParents(articleId);
+                    const parents = this.getArticleParents(articleId);
                     if (parents) {
                         parents.forEach(parentId => {
                             this.articles.expandedIds.add(parentId);
@@ -528,6 +541,11 @@
                 },
 
                 // === Article Content Editing ===
+                /**
+                 * Save the currently selected article's content
+                 * Updates article content via API and handles errors with user notification
+                 * @returns {Promise<void>}
+                 */
                 async saveArticle() {
                     if (!this.articles.selected) return;
 
@@ -653,6 +671,13 @@
                 },
 
                 // === Article Move ===
+                /**
+                 * Move an article to a new parent via drag and drop
+                 * Shows confirmation dialog before moving, updates via API, and handles SignalR update
+                 * @param {string} sourceArticleId - ID of article to move
+                 * @param {string} targetParentId - ID of new parent article (must be Index type)
+                 * @returns {Promise<void>}
+                 */
                 async moveArticle(sourceArticleId, targetParentId) {
                     // Find the source and target articles
                     const sourceArticle = this.articles.index.get(sourceArticleId);

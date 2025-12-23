@@ -1,6 +1,7 @@
 // Article SignalR Mixin - Handles real-time updates via SignalR
 (function() {
     const { createSignalRConnection } = window.MedleyApi;
+    const MAX_QUEUE_SIZE = 100;
     
     window.articleSignalRMixin = {
         methods: {
@@ -60,7 +61,11 @@
                 }, 50);
 
                 this.signalr.connection.on('ArticleCreated', async (data) => {
-                    // Queue the update
+                    // Queue the update with size limit
+                    if (this.signalr.updateQueue.length >= MAX_QUEUE_SIZE) {
+                        console.warn('SignalR update queue full, dropping oldest updates');
+                        this.signalr.updateQueue.shift();
+                    }
                     this.signalr.updateQueue.push({
                         type: 'ArticleCreated',
                         article: {
@@ -75,7 +80,11 @@
                 });
 
                 this.signalr.connection.on('ArticleUpdated', async (data) => {
-                    // Queue the update
+                    // Queue the update with size limit
+                    if (this.signalr.updateQueue.length >= MAX_QUEUE_SIZE) {
+                        console.warn('SignalR update queue full, dropping oldest updates');
+                        this.signalr.updateQueue.shift();
+                    }
                     this.signalr.updateQueue.push({
                         type: 'ArticleUpdated',
                         articleId: data.articleId,
@@ -88,7 +97,11 @@
                 });
 
                 this.signalr.connection.on('ArticleDeleted', (data) => {
-                    // Queue the deletion
+                    // Queue the deletion with size limit
+                    if (this.signalr.updateQueue.length >= MAX_QUEUE_SIZE) {
+                        console.warn('SignalR update queue full, dropping oldest updates');
+                        this.signalr.updateQueue.shift();
+                    }
                     this.signalr.updateQueue.push({
                         type: 'ArticleDeleted',
                         articleId: data.articleId
@@ -97,7 +110,11 @@
                 });
 
                 this.signalr.connection.on('ArticleMoved', (data) => {
-                    // Queue the move
+                    // Queue the move with size limit
+                    if (this.signalr.updateQueue.length >= MAX_QUEUE_SIZE) {
+                        console.warn('SignalR update queue full, dropping oldest updates');
+                        this.signalr.updateQueue.shift();
+                    }
                     this.signalr.updateQueue.push({
                         type: 'ArticleMoved',
                         articleId: data.articleId,
