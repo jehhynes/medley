@@ -21,6 +21,11 @@
 
     function createArticlesApp() {
         const app = createApp({
+            mixins: [
+                window.articleModalMixin,
+                window.articleVersionMixin,
+                window.articleSignalRMixin
+            ],
             components: {
                 'article-tree': ArticleTree,
                 'article-list': ArticleList,
@@ -85,15 +90,30 @@
                     },
                     
                     // Version state
-                    selectedVersion: null,
-                    diffHtml: null,
-                    loadingDiff: false,
-                    diffError: null,
+                    version: {
+                        selected: null,
+                        diffHtml: null,
+                        loadingDiff: false,
+                        diffError: null
+                    },
                     
-                    // SignalR
-                    hubConnection: null,
-                    signalRUpdateQueue: [],
-                    processingSignalR: false
+                    // SignalR state
+                    signalr: {
+                        connection: null,
+                        updateQueue: [],
+                        processing: false
+                    },
+                    
+                    // Drag state (for article-tree component)
+                    dragState: {
+                        draggingArticleId: null,
+                        dragOverId: null
+                    }
+                };
+            },
+            provide() {
+                return {
+                    dragState: this.dragState
                 };
             },
             computed: {
@@ -149,6 +169,12 @@
                     }
                 },
 
+                /**
+                 * Build article index map for O(1) lookups
+                 * Traverses the entire tree and creates a Map of articleId -> article object references.
+                 * This eliminates the need for O(n) tree traversals when looking up articles.
+                 * @param {Array} articles - Root level articles array (defaults to this.articles.list)
+                 */
                 buildArticleIndex(articles = this.articles.list) {
                     const index = new Map();
                     const traverse = (items) => {
@@ -163,6 +189,13 @@
                     this.articles.index = index;
                 },
 
+                /**
+                 * Build parent path cache and breadcrumbs cache
+                 * Pre-calculates breadcrumbs for all articles to avoid expensive tree traversals during rendering.
+                 * Each article gets a parent path array and a pre-computed breadcrumb string for O(1) lookups.
+                 * @param {Array} articles - Articles array to process (defaults to root level)
+                 * @param {Array} path - Current parent path (used internally for recursion)
+                 */
                 buildParentPathCache(articles = this.articles.list, path = []) {
                     articles.forEach(article => {
                         // Store the parent path (array of parent objects with id and title)
@@ -183,6 +216,12 @@
                     });
                 },
 
+                /**
+                 * Rebuild flat list cache for list view
+                 * Flattens the hierarchical tree into a sorted array for efficient list view rendering.
+                 * Called when tree structure changes (create, delete, move, update with title change).
+                 * Prevents expensive re-computation on every render.
+                 */
                 rebuildFlatListCache() {
                     // Flatten the tree
                     const flattenArticles = (articles, parentId = null) => {
@@ -215,43 +254,6 @@
                         }, 100);
                     }
                     this._debouncedRebuildFlatListCache();
-                },
-
-                processSignalRQueue() {
-                    if (this.processingSignalR || this.signalRUpdateQueue.length === 0) {
-                        return;
-                    }
-                    
-                    this.processingSignalR = true;
-                    
-                    // Process all queued updates
-                    const queue = [...this.signalRUpdateQueue];
-                    this.signalRUpdateQueue = [];
-                    
-                    queue.forEach(update => {
-                        switch (update.type) {
-                            case 'ArticleCreated':
-                                this.insertArticleIntoTree(update.article);
-                                break;
-                            case 'ArticleUpdated':
-                                this.updateArticleInTree(update.articleId, update.updates);
-                                break;
-                            case 'ArticleDeleted':
-                                this.removeArticleFromTree(update.articleId);
-                                if (this.articles.selectedId === update.articleId) {
-                                    this.articles.selectedId = null;
-                                    this.articles.selected = null;
-                                    this.editor.title = '';
-                                    this.editor.content = '';
-                                }
-                                break;
-                            case 'ArticleMoved':
-                                this.moveArticleInTree(update.articleId, update.oldParentId, update.newParentId);
-                                break;
-                        }
-                    });
-                    
-                    this.processingSignalR = false;
                 },
 
                 async selectArticle(article, replaceState = false) {
@@ -378,6 +380,12 @@
                 },
 
                 // === Tree Manipulation ===
+                /**
+                 * Insert a new article into the tree
+                 * Surgically adds the article to the correct location and updates all caches.
+                 * Optimized to only rebuild affected caches (parent path, breadcrumbs, flat list).
+                 * @param {Object} article - Article object to insert
+                 */
                 insertArticleIntoTree(article) {
                     // Check if article already exists (prevent duplicates from SignalR)
                     const existing = this.articles.index.get(article.id);
@@ -432,6 +440,15 @@
                     this.rebuildFlatListCache();
                 },
 
+                /**
+                 * Update an article's properties in the tree
+                 * Selectively rebuilds only affected caches based on what changed.
+                 * - Title change: Rebuilds breadcrumbs for descendants only
+                 * - Title/Type change: Re-sorts parent array and flat list
+                 * - Other changes: No cache rebuild (object reference remains valid)
+                 * @param {string} articleId - ID of article to update
+                 * @param {Object} updates - Properties to update
+                 */
                 updateArticleInTree(articleId, updates) {
                     const article = this.articles.index.get(articleId);
                     if (article) {
@@ -635,173 +652,6 @@
                     });
                 },
 
-                // === Validation ===
-                validateArticleForm(title, typeId) {
-                    if (!title?.trim()) {
-                        bootbox.alert({
-                            message: 'Please enter a title',
-                            className: 'bootbox-warning'
-                        });
-                        return false;
-                    }
-                    if (!typeId) {
-                        bootbox.alert({
-                            message: 'Please select an article type',
-                            className: 'bootbox-warning'
-                        });
-                        return false;
-                    }
-                    return true;
-                },
-
-                // === Create Modal ===
-                showCreateArticleModal(parentArticleId) {
-                    this.ui.sidebarMenuOpen = false;
-                    this.createModal.parentId = parentArticleId;
-                    this.createModal.title = '';
-                    this.createModal.typeId = null;
-                    this.createModal.visible = true;
-                    
-                    this.$nextTick(() => {
-                        if (this.$refs.titleInput) {
-                            this.$refs.titleInput.focus();
-                        }
-                    });
-                },
-
-                closeCreateModal() {
-                    this.createModal.visible = false;
-                    this.createModal.title = '';
-                    this.createModal.typeId = null;
-                    this.createModal.parentId = null;
-                },
-
-                async createArticle() {
-                    if (!this.validateArticleForm(this.createModal.title, this.createModal.typeId)) {
-                        return;
-                    }
-
-                    this.createModal.isSubmitting = true;
-                    try {
-                        const response = await api.post('/api/articles', {
-                            title: this.createModal.title,
-                            articleTypeId: this.createModal.typeId,
-                            parentArticleId: this.createModal.parentId
-                        });
-
-                        this.closeCreateModal();
-                        
-                        // Insert the new article into the tree surgically
-                        this.insertArticleIntoTree(response);
-
-                        // Auto-select the newly created article
-                        if (response && response.id) {
-                            const newArticle = this.articles.index.get(response.id);
-                            if (newArticle) {
-                                await this.selectArticle(newArticle, false);
-                            }
-                        }
-                    } catch (err) {
-                        bootbox.alert({
-                            message: `Failed to create article: ${err.message}`,
-                            className: 'bootbox-error'
-                        });
-                        console.error('Error creating article:', err);
-                    } finally {
-                        this.createModal.isSubmitting = false;
-                    }
-                },
-
-                // === Edit Modal ===
-                showEditArticleModal(article) {
-                    this.editModal.articleId = article.id;
-                    this.editModal.title = article.title;
-                    this.editModal.typeId = article.articleTypeId || null;
-                    this.editModal.visible = true;
-                    
-                    this.$nextTick(() => {
-                        if (this.$refs.editTitleInput) {
-                            this.$refs.editTitleInput.focus();
-                        }
-                    });
-                },
-
-                closeEditModal() {
-                    this.editModal.visible = false;
-                    this.editModal.articleId = null;
-                    this.editModal.title = '';
-                    this.editModal.typeId = null;
-                },
-
-                async updateArticle() {
-                    if (!this.validateArticleForm(this.editModal.title, this.editModal.typeId)) {
-                        return;
-                    }
-
-                    this.editModal.isSubmitting = true;
-                    try {
-                        await api.put(`/api/articles/${this.editModal.articleId}/metadata`, {
-                            title: this.editModal.title,
-                            articleTypeId: this.editModal.typeId
-                        });
-
-                        // Update the article in the tree surgically
-                        this.updateArticleInTree(this.editModal.articleId, {
-                            title: this.editModal.title,
-                            articleTypeId: this.editModal.typeId
-                        });
-
-                        // If the article is currently selected, sync the first H1 in the editor
-                        if (this.articles.selectedId === this.editModal.articleId) {
-                            this.syncFirstHeadingInEditor(this.editModal.title);
-                        }
-
-                        this.closeEditModal();
-                    } catch (err) {
-                        bootbox.alert({
-                            message: `Failed to update article: ${err.message}`,
-                            className: 'bootbox-error'
-                        });
-                        console.error('Error updating article:', err);
-                    } finally {
-                        this.editModal.isSubmitting = false;
-                    }
-                },
-
-                // Sync the first H1 heading in the TipTap editor
-                syncFirstHeadingInEditor(newTitle) {
-                    const tiptapEditor = this.$refs.tiptapEditor;
-                    if (!tiptapEditor || !tiptapEditor.editor) {
-                        return;
-                    }
-
-                    const editor = tiptapEditor.editor;
-                    
-                    // Use ProseMirror to find the first heading level 1
-                    let firstH1Pos = null;
-                    let firstH1Node = null;
-                    
-                    editor.state.doc.descendants((node, pos) => {
-                        if (firstH1Pos === null && node.type.name === 'heading' && node.attrs.level === 1) {
-                            firstH1Pos = pos;
-                            firstH1Node = node;
-                            return false; // Stop searching
-                        }
-                    });
-
-                    if (firstH1Pos !== null && firstH1Node !== null) {
-                        // Replace the text content of the first H1
-                        const from = firstH1Pos + 1; // +1 to get inside the node
-                        const to = firstH1Pos + firstH1Node.nodeSize - 1; // -1 to stay inside the node
-                        
-                        editor.chain()
-                            .focus()
-                            .setTextSelection({ from, to })
-                            .insertContent(newTitle)
-                            .run();
-                    }
-                },
-
                 // === Article Move ===
                 async moveArticle(sourceArticleId, targetParentId) {
                     // Find the source and target articles
@@ -849,62 +699,6 @@
                             }
                         }
                     });
-                },
-
-                // === Version History ===
-                async handleVersionSelect(version) {
-                    if (!version || !this.articles.selectedId) return;
-                    
-                    this.selectedVersion = version;
-                    this.loadingDiff = true;
-                    this.diffError = null;
-                    this.diffHtml = null;
-                    
-                    try {
-                        const response = await api.get(
-                            `/api/articles/${this.articles.selectedId}/versions/${version.id}/diff`
-                        );
-                        
-                        // Convert markdown to HTML for both versions
-                        const beforeHtml = this.markdownToHtml(response.beforeContent || '');
-                        const afterHtml = this.markdownToHtml(response.afterContent || '');
-                        
-                        // Use htmlDiff to compare the HTML versions
-                        this.diffHtml = window.HtmlDiff.htmlDiff(beforeHtml, afterHtml);
-                    } catch (err) {
-                        this.diffError = 'Failed to load diff: ' + err.message;
-                        console.error('Error loading diff:', err);
-                    } finally {
-                        this.loadingDiff = false;
-                    }
-                },
-                
-                markdownToHtml(markdown) {
-                    if (!markdown) return '';
-                    
-                    // Use marked library if available
-                    if (window.marked) {
-                        try {
-                            return window.marked.parse(markdown, { 
-                                breaks: true, 
-                                gfm: true,
-                                headerIds: false,
-                                mangle: false
-                            });
-                        } catch (e) {
-                            console.error('Failed to parse markdown:', e);
-                            return markdown;
-                        }
-                    }
-                    
-                    // Fallback: return markdown as-is wrapped in pre
-                    return `<pre>${markdown}</pre>`;
-                },
-
-                clearVersionSelection() {
-                    this.selectedVersion = null;
-                    this.diffHtml = null;
-                    this.diffError = null;
                 },
 
                 // Helper to move article in tree structure
@@ -1006,72 +800,8 @@
                 };
                 window.addEventListener('beforeunload', this.handleBeforeUnload);
 
-                this.hubConnection = createSignalRConnection('/articleHub');
-                
-                // Create debounced processor for SignalR events
-                this.processSignalRQueueDebounced = window.MedleyUtils.debounce(() => {
-                    this.processSignalRQueue();
-                }, 50);
-
-                this.hubConnection.on('ArticleCreated', async (data) => {
-                    // Queue the update
-                    this.signalRUpdateQueue.push({
-                        type: 'ArticleCreated',
-                        article: {
-                            id: data.articleId,
-                            title: data.title,
-                            parentArticleId: data.parentArticleId,
-                            articleTypeId: data.articleTypeId,
-                            children: []
-                        }
-                    });
-                    this.processSignalRQueueDebounced();
-                });
-
-                this.hubConnection.on('ArticleUpdated', async (data) => {
-                    // Queue the update
-                    this.signalRUpdateQueue.push({
-                        type: 'ArticleUpdated',
-                        articleId: data.articleId,
-                        updates: {
-                            title: data.title,
-                            articleTypeId: data.articleTypeId
-                        }
-                    });
-                    this.processSignalRQueueDebounced();
-                });
-
-                this.hubConnection.on('ArticleDeleted', (data) => {
-                    // Queue the deletion
-                    this.signalRUpdateQueue.push({
-                        type: 'ArticleDeleted',
-                        articleId: data.articleId
-                    });
-                    this.processSignalRQueueDebounced();
-                });
-
-                this.hubConnection.on('ArticleMoved', (data) => {
-                    // Queue the move
-                    this.signalRUpdateQueue.push({
-                        type: 'ArticleMoved',
-                        articleId: data.articleId,
-                        oldParentId: data.oldParentId,
-                        newParentId: data.newParentId
-                    });
-                    this.processSignalRQueueDebounced();
-                });
-
-                this.hubConnection.on('VersionCreated', (data) => {
-                    // SignalR provides articleId, versionId, versionNumber, createdAt
-                    // Refresh the versions panel if it's for the currently selected article
-                    if (this.articles.selectedId === data.articleId && this.$refs.versionsPanel) {
-                        this.$refs.versionsPanel.loadVersions();
-                    }
-                });
-
-                this.hubConnection.start()
-                    .then(() => console.log('Connected to ArticleHub'))
-                    .catch(err => console.error('SignalR connection error:', err));
+                // Initialize SignalR connection (from mixin)
+                this.initializeSignalRConnection();
             },
 
             beforeUnmount() {
@@ -1080,11 +810,8 @@
                     window.removeEventListener('beforeunload', this.handleBeforeUnload);
                 }
 
-                if (this.hubConnection) {
-                    this.hubConnection.stop()
-                        .then(() => console.log('Disconnected from ArticleHub'))
-                        .catch(err => console.error('Error disconnecting from SignalR:', err));
-                }
+                // Disconnect from SignalR (from mixin)
+                this.disconnectSignalR();
             }
         });
 

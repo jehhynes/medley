@@ -1,10 +1,4 @@
 // Article Tree Component - Recursive tree view for articles
-// Shared drag state across all tree instances
-const dragState = {
-    draggingArticleId: null,
-    dragOverId: null
-};
-
 const ArticleTree = {
     name: 'ArticleTree',
     template: `
@@ -88,10 +82,9 @@ const ArticleTree = {
             default: () => []
         }
     },
+    inject: ['dragState'],
     data() {
         return {
-            // Use shared drag state
-            dragState: dragState,
             dragCounter: 0
         };
     },
@@ -124,6 +117,12 @@ const ArticleTree = {
         editArticle(article) {
             this.$emit('edit-article', article);
         },
+        /**
+         * Check if an article is of type "Index"
+         * Index articles can accept other articles as children via drag and drop.
+         * @param {Object} article - Article to check
+         * @returns {boolean} True if article is an Index type
+         */
         isIndexType(article) {
             if (!article.articleTypeId) {
                 return false;
@@ -131,6 +130,12 @@ const ArticleTree = {
             const articleType = this.articleTypes.find(t => t.id === article.articleTypeId);
             return articleType && articleType.name.toLowerCase() === 'index';
         },
+        /**
+         * Handle drag start event
+         * Initiates article drag operation and stores dragging article ID in shared state.
+         * @param {DragEvent} event - DOM drag event
+         * @param {Object} article - Article being dragged
+         */
         handleDragStart(event, article) {
             this.dragState.draggingArticleId = article.id;
             event.dataTransfer.effectAllowed = 'move';
@@ -141,6 +146,12 @@ const ArticleTree = {
             dragImage.style.opacity = '0.5';
             event.dataTransfer.setDragImage(event.target, 0, 0);
         },
+        /**
+         * Handle drag over event
+         * Validates drop target (must be Index type, not self) and shows visual feedback.
+         * @param {DragEvent} event - DOM drag event
+         * @param {Object} article - Article being dragged over (potential drop target)
+         */
         handleDragOver(event, article) {
             // Don't allow dropping on itself
             if (article.id === this.dragState.draggingArticleId) {
@@ -177,6 +188,13 @@ const ArticleTree = {
                 }
             }
         },
+        /**
+         * Handle drop event
+         * Completes the drag operation by emitting a move-article event to the parent.
+         * Validates drop target and clears drag state.
+         * @param {DragEvent} event - DOM drop event
+         * @param {Object} targetArticle - Article receiving the drop (new parent)
+         */
         handleDrop(event, targetArticle) {
             event.preventDefault();
             event.stopPropagation();
