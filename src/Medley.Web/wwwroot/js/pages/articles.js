@@ -24,6 +24,7 @@
         const app = createApp({
             components: {
                 'article-tree': ArticleTree,
+                'article-list': ArticleList,
                 'chat-panel': ChatPanel,
                 'versions-panel': VersionsPanel,
                 'tiptap-editor': window.TiptapEditor
@@ -39,6 +40,11 @@
                         typeIconMap: {},
                         expandedIds: new Set()
                     },
+                    
+                    // View mode state
+                    viewMode: 'tree', // 'tree' or 'list'
+                    listViewVisibleCount: 50, // Number of items to show in list view (infinite scroll)
+                    isLoadingMore: false, // Flag to prevent multiple simultaneous loads
                     
                     // Editor state
                     editor: {
@@ -87,6 +93,38 @@
                 hasUnsavedChanges() {
                     // Delegate to the tiptap editor component
                     return this.$refs.tiptapEditor?.hasChanges || false;
+                },
+                allFlatArticlesList() {
+                    // Flatten the hierarchical tree into a flat array (all articles)
+                    // Also add parentArticleId to each article based on tree structure
+                    const flattenArticles = (articles, parentId = null) => {
+                        let result = [];
+                        for (const article of articles) {
+                            // Create a copy with parentArticleId added
+                            const articleWithParent = {
+                                ...article,
+                                parentArticleId: parentId
+                            };
+                            result.push(articleWithParent);
+                            if (article.children && article.children.length > 0) {
+                                result = result.concat(flattenArticles(article.children, article.id));
+                            }
+                        }
+                        return result;
+                    };
+                    return flattenArticles(this.articles.list);
+                },
+                flatArticlesList() {
+                    // Sort alphabetically by title (case-insensitive)
+                    const sorted = [...this.allFlatArticlesList].sort((a, b) => {
+                        return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
+                    });
+                    // Return visible items for infinite scroll
+                    return sorted.slice(0, this.listViewVisibleCount);
+                },
+                hasMoreArticles() {
+                    // Check if there are more articles to load
+                    return this.listViewVisibleCount < this.allFlatArticlesList.length;
                 }
             },
             methods: {
@@ -96,6 +134,10 @@
                     this.ui.error = null;
                     try {
                         this.articles.list = await api.get('/api/articles/tree');
+                        // Reset visible count when articles are reloaded
+                        if (this.viewMode === 'list') {
+                            this.listViewVisibleCount = 50;
+                        }
                     } catch (err) {
                         this.ui.error = 'Failed to load articles: ' + err.message;
                         console.error('Error loading articles:', err);
@@ -383,6 +425,40 @@
 
                 formatDate,
                 getStatusBadgeClass,
+
+                // === View Mode ===
+                setViewMode(mode) {
+                    this.viewMode = mode;
+                    localStorage.setItem('articlesViewMode', mode);
+                    // Reset visible count when switching view modes
+                    if (mode === 'list') {
+                        this.listViewVisibleCount = 50;
+                    }
+                },
+
+                // === Infinite Scroll ===
+                loadMoreArticles() {
+                    if (!this.hasMoreArticles || this.isLoadingMore) {
+                        return;
+                    }
+                    
+                    this.isLoadingMore = true;
+                    
+                    // Use nextTick to ensure reactivity
+                    this.$nextTick(() => {
+                        // Load 50 more items at a time
+                        const newCount = Math.min(
+                            this.listViewVisibleCount + 50,
+                            this.allFlatArticlesList.length
+                        );
+                        
+                        if (newCount > this.listViewVisibleCount) {
+                            this.listViewVisibleCount = newCount;
+                        }
+                        
+                        this.isLoadingMore = false;
+                    });
+                },
 
                 // === Unsaved Changes ===
                 promptUnsavedChanges() {
@@ -738,8 +814,17 @@
             },
 
             async mounted() {
-                await this.loadArticles();
-                await this.loadArticleTypes();
+                // Load view mode from localStorage
+                const savedViewMode = localStorage.getItem('articlesViewMode');
+                if (savedViewMode && (savedViewMode === 'tree' || savedViewMode === 'list')) {
+                    this.viewMode = savedViewMode;
+                }
+
+                // Load article types and articles simultaneously
+                await Promise.all([
+                    this.loadArticleTypes(),
+                    this.loadArticles()
+                ]);
                 
                 // Sort articles after both articles and types are loaded
                 this.sortArticlesRecursive(this.articles.list);
