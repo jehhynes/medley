@@ -1,0 +1,40 @@
+/* Main grid layout */
+.main-page-container {
+    display: grid;
+    grid-template-columns: $vertical-menu-width 1fr;
+    grid-template-rows: 100vh;
+    height: 100vh;
+    overflow: hidden;
+    background-color: var(--bg-main);
+
+    &.has-left-sidebar {
+        grid-template-columns: $vertical-menu-width minmax($sidebar-width-min, $sidebar-width-max) 1fr;
+    }
+
+    &.has-right-sidebar {
+        grid-template-columns: $vertical-menu-width 1fr minmax($sidebar-width-min, $sidebar-width-max);
+    }
+
+    &.has-left-sidebar.has-right-sidebar {
+        grid-template-columns: $vertical-menu-width minmax($sidebar-width-min, $sidebar-width-max) 1fr minmax($sidebar-width-min, $sidebar-width-max);
+    }
+}
+
+/* Main content area */
+.main-content {
+    background-color: var(--bg-main);
+    overflow-y: auto;
+    padding: 2rem 2.5rem;
+
+    .main-content-header {
+        margin-bottom: 2rem;
+    }
+
+    .main-content-title {
+        font-size: 1.75rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: var(--bs-body-color);
+    }
+}
+

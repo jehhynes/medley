@@ -1,0 +1,33 @@
+/* Layout Dimensions */
+$vertical-menu-width: 5rem;              // 80px - far left navigation
+$mobile-header-height: 3.5rem;           // 56px - mobile top bar
+
+// Sidebar Widths
+$sidebar-width-min: 15rem;               // 240px - minimum sidebar width
+$sidebar-width-max: 20vw;                // maximum as viewport percentage
+$sidebar-width-fixed: 20rem;             // 320px - fixed width for mobile overlay
+$sidebar-width-mobile: 85vw;             // mobile sidebar width
+$sidebar-width-tablet: 30vw;             // tablet right sidebar width
+
+// Responsive Breakpoints (Bootstrap 5 standard)
+$breakpoint-lg: 992px;                   // Large devices and up
+$breakpoint-xl: 1200px;                  // Extra large devices and up
+
+/* Custom theme-aware variables (only what Bootstrap doesn't provide) */
+[data-bs-theme="light"] {
+    --bg-sidebar: var(--bs-white);
+    --bg-main: var(--bs-gray-100);
+    --bg-hover: var(--bs-gray-200);
+    --bg-vertical-menu: var(--bs-gray-100);
+    --bs-body-color: var(--bs-gray-800);
+}
+
+[data-bs-theme="dark"] {
+    --bg-sidebar: color-mix(in oklab, var(--bs-body-bg), black 10%);
+    --bg-main: var(--bs-body-bg);
+    --bg-hover: color-mix(in oklab, var(--bs-body-bg), white 5%);
+    --bg-vertical-menu: color-mix(in oklab, var(--bs-body-bg), black 30%);
+    --bs-border-color: var(--bs-secondary-bg);
+    --bs-body-color: var(--bs-gray-500);
+}
+

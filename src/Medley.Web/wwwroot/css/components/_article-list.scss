@@ -1,0 +1,155 @@
+/* Article List Styles */
+.article-list-container {
+    overflow-x: hidden;
+    margin: -0.5rem;
+    padding: 0;
+}
+
+.article-list-row {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    background-color: transparent;
+    padding: 0.375rem 0rem 0.375rem 0.5rem;
+    font-size: 0.8125rem;
+
+    &:hover {
+        background-color: var(--bg-hover);
+    }
+
+    &.active {
+        background-color: var(--bs-primary);
+        color: var(--bs-white);
+    }
+
+    .article-list-icon {
+        width: 1.5rem;
+        padding-right: 0.25rem;
+        flex-shrink: 0;
+
+        .article-icon {
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+    }
+
+    .article-list-title {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        padding-right: 0.5rem;
+
+        .article-title-text {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: block;
+        }
+
+        .article-breadcrumbs {
+            font-size: 0.75rem;
+            color: var(--bs-secondary);
+            margin-top: 0.125rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    }
+
+}
+
+.article-list-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+    color: var(--bs-secondary);
+}
+
+/* Shared status/actions behavior - used by both tree-item-content and article-list-row */
+.status-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding-left: 0.25rem;
+    padding-right: 0.5rem;
+    min-width: 2rem; // Reserve space so layout doesn't shift
+
+    .status-icon {
+        font-size: 1rem;
+        display: block; // Visible by default
+    }
+
+    .actions-container {
+        display: none; // Hidden by default
+        align-items: center;
+
+        .actions-btn {
+            padding: 0;
+            color: inherit;
+            width: 1.5rem;
+            height: 1.5rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--bs-border-radius);
+            transition: background-color 0.15s ease;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+
+            &:hover {
+                background-color: rgba(0, 0, 0, 0.1);
+            }
+
+            i {
+                font-size: 1rem;
+            }
+        }
+
+        .dropdown-menu {
+            z-index: 1050;
+        }
+    }
+}
+
+// Show actions on hover, hide status icon
+.tree-item-content:hover,
+.article-list-row:hover {
+    .status-actions {
+        .status-icon {
+            display: none;
+        }
+
+        .actions-container {
+            display: flex;
+        }
+    }
+}
+
+// Show actions on hover, hide status icon
+.article-list-row:hover {
+    .status-actions {
+        .status-icon {
+            display: none;
+        }
+
+        .actions-container {
+            display: flex;
+        }
+    }
+}
+
+// White action button when parent is active
+.tree-item-content.active,
+.article-list-row.active {
+    .actions-btn {
+        color: var(--bs-white);
+
+        &:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+    }
+}
+
