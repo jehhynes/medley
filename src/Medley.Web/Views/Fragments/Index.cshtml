@@ -1,7 +1,14 @@
+@model Guid?
+
 @{
     ViewData["Title"] = "Fragments";
     ViewData["HasRightSidebar"] = false;
     ViewData["HasLeftSidebar"] = true;
+
+    // Only open sidebar on mobile if no specific record is selected
+    var openSidebarOnMobile = Model == null;
+    ViewData["OpenSidebarOnMobile"] = openSidebarOnMobile;
+    
     Layout = "_VueLayout";
 }
 
@@ -49,7 +56,7 @@
 }
 
 <!-- Left Sidebar (List) -->
-<div class="sidebar left-sidebar">
+<div class="sidebar left-sidebar @(openSidebarOnMobile ? "show" : "")">
     <div class="sidebar-header">
         <h6 class="sidebar-title">Fragments</h6>
         <div class="input-group input-group-sm">

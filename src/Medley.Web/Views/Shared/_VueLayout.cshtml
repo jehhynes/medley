@@ -4,6 +4,9 @@
     var hasLeftSidebar = ViewData["HasLeftSidebar"] as bool? ?? false;
     var hasRightSidebar = ViewData["HasRightSidebar"] as bool? ?? false;
     var isSettingsArea = currentArea == "Admin" || currentArea == "Integrations";
+    
+    // Views can set OpenSidebarOnMobile to true to have the left sidebar open on initial page load (mobile only)
+    var openSidebarOnMobile = ViewData["OpenSidebarOnMobile"] as bool? ?? false;
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -57,12 +60,12 @@
     </header>
 
     <!-- Mobile sidebar backdrop -->
-    <div id="mobile-sidebar-backdrop" class="mobile-sidebar-backdrop"></div>
+    <div id="mobile-sidebar-backdrop" class="mobile-sidebar-backdrop @(openSidebarOnMobile ? "show" : "")"></div>
 
     <!-- Vue will control everything inside this div -->
     <div class="main-page-container @(hasLeftSidebar ? "has-left-sidebar" : "") @(hasRightSidebar ? "has-right-sidebar" : "")" id="app">
             <!-- Vertical Menu (Far Left) -->
-            <div class="vertical-menu">
+            <div class="vertical-menu @(openSidebarOnMobile ? "show" : "")">
             @if (User.Identity?.IsAuthenticated == true)
             {
                 <a asp-area="" asp-controller="Home" asp-action="Index" 

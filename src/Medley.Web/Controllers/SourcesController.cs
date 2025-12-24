@@ -6,9 +6,9 @@ namespace Medley.Web.Controllers;
 [Authorize]
 public class SourcesController : Controller
 {
-    public IActionResult Index()
+    public IActionResult Index(Guid? id = null)
     {
-        return View();
+        return View(id);
     }
 }
 
