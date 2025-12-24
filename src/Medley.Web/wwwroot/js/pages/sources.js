@@ -21,6 +21,7 @@
     } = window.UrlUtils;
 
     const app = createApp({
+        mixins: [window.infiniteScrollMixin],
         components: {
             'source-list': SourceList
         },
@@ -99,20 +100,48 @@
         },
         methods: {
             async loadSources() {
+                this.resetPagination();
                 this.loading = true;
                 this.error = null;
                 try {
-                    let url = '/api/sources';
+                    let url = `/api/sources?skip=0&take=${this.pagination.pageSize}`;
                     if (this.activeTagFilter) {
                         // Add tag filter parameters
-                        url += `?tagTypeId=${this.activeTagFilter.tagTypeId}&value=${encodeURIComponent(this.activeTagFilter.value)}`;
+                        url += `&tagTypeId=${this.activeTagFilter.tagTypeId}&value=${encodeURIComponent(this.activeTagFilter.value)}`;
                     }
-                    this.sources = await api.get(url);
+                    const sources = await api.get(url);
+                    this.sources = sources;
+                    this.updateHasMore(sources);
                 } catch (err) {
                     this.error = 'Failed to load sources: ' + err.message;
                     console.error('Error loading sources:', err);
                 } finally {
                     this.loading = false;
+                }
+            },
+
+            async loadMoreItems() {
+                const skip = this.pagination.page * this.pagination.pageSize;
+                try {
+                    let url = `/api/sources?skip=${skip}&take=${this.pagination.pageSize}`;
+                    
+                    // Include search query if present
+                    const query = this.searchQuery.trim();
+                    if (query.length >= 2) {
+                        url += `&query=${encodeURIComponent(query)}`;
+                    }
+                    
+                    // Include tag filter if active
+                    if (this.activeTagFilter) {
+                        url += `&tagTypeId=${this.activeTagFilter.tagTypeId}&value=${encodeURIComponent(this.activeTagFilter.value)}`;
+                    }
+                    
+                    const sources = await api.get(url);
+                    this.sources.push(...sources);
+                    return sources;
+                } catch (err) {
+                    console.error('Error loading more sources:', err);
+                    throw err;
                 }
             },
 
@@ -141,13 +170,16 @@
             async onSearchInput() {
                 const query = this.searchQuery.trim();
                 if (query.length >= 2) {
+                    this.resetPagination();
                     try {
-                        let url = `/api/sources?query=${encodeURIComponent(query)}`;
+                        let url = `/api/sources?query=${encodeURIComponent(query)}&skip=0&take=${this.pagination.pageSize}`;
                         // Add tag filter if active
                         if (this.activeTagFilter) {
                             url += `&tagTypeId=${this.activeTagFilter.tagTypeId}&value=${encodeURIComponent(this.activeTagFilter.value)}`;
                         }
-                        this.sources = await api.get(url);
+                        const sources = await api.get(url);
+                        this.sources = sources;
+                        this.updateHasMore(sources);
                     } catch (err) {
                         console.error('Search error:', err);
                     }
@@ -338,6 +370,9 @@
 
             await this.loadArticleTypes();
             await this.loadSources();
+
+            // Setup infinite scroll
+            this.setupInfiniteScroll('.sidebar-content');
 
             const sourceIdFromUrl = getUrlParam('id');
             if (sourceIdFromUrl) {

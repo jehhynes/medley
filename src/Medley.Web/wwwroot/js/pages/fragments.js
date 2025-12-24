@@ -20,6 +20,7 @@
     } = window.UrlUtils;
 
     const app = createApp({
+        mixins: [window.infiniteScrollMixin],
         components: {
             'fragment-list': FragmentList
         },
@@ -54,10 +55,13 @@
         },
         methods: {
             async loadFragments() {
+                this.resetPagination();
                 this.loading = true;
                 this.error = null;
                 try {
-                    this.fragments = await api.get('/api/fragments');
+                    const fragments = await api.get(`/api/fragments?skip=0&take=${this.pagination.pageSize}`);
+                    this.fragments = fragments;
+                    this.updateHasMore(fragments);
                 } catch (err) {
                     this.error = 'Failed to load fragments: ' + err.message;
                     console.error('Error loading fragments:', err);
@@ -96,9 +100,14 @@
             async performSearch() {
                 const query = this.searchQuery.trim();
                 if (query.length >= 2) {
+                    this.resetPagination();
                     this.searching = true;
                     try {
-                        this.fragments = await api.get(`/api/fragments/search?query=${encodeURIComponent(query)}`);
+                        // Load all search results at once (no pagination for semantic search)
+                        const fragments = await api.get(`/api/fragments/search?query=${encodeURIComponent(query)}&take=100`);
+                        this.fragments = fragments;
+                        // Disable infinite scroll for search results
+                        this.pagination.hasMore = false;
                     } catch (err) {
                         console.error('Search error:', err);
                         this.error = 'Search failed: ' + err.message;
@@ -107,6 +116,25 @@
                     }
                 } else if (query.length === 0) {
                     await this.loadFragments();
+                }
+            },
+
+            async loadMoreItems() {
+                // Only load more for regular list view, not for search results
+                const query = this.searchQuery.trim();
+                if (query.length >= 2) {
+                    // Search results don't support pagination - return empty to stop loading
+                    return [];
+                }
+                
+                const skip = this.pagination.page * this.pagination.pageSize;
+                try {
+                    const fragments = await api.get(`/api/fragments?skip=${skip}&take=${this.pagination.pageSize}`);
+                    this.fragments.push(...fragments);
+                    return fragments;
+                } catch (err) {
+                    console.error('Error loading more fragments:', err);
+                    throw err;
                 }
             },
 
@@ -138,6 +166,9 @@
 
             await this.loadArticleTypes();
             await this.loadFragments();
+
+            // Setup infinite scroll
+            this.setupInfiniteScroll('.sidebar-content');
 
             const fragmentIdFromUrl = getUrlParam('id');
             if (fragmentIdFromUrl) {

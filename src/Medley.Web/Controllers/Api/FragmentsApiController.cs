@@ -44,6 +44,7 @@ public class FragmentsApiController : ControllerBase
             .Include(f => f.Source)
             .OrderByDescending(f => f.Source.Date)
             .ThenByDescending(f => f.CreatedAt)
+            .ThenBy(f => f.Id) // Deterministic tiebreaker for pagination
             .Skip(skip)
             .Take(take)
             .Select(f => new
@@ -108,6 +109,7 @@ public class FragmentsApiController : ControllerBase
             .Include(f => f.Source)
             .Where(f => f.Source.Id == sourceId)
             .OrderByDescending(f => f.CreatedAt)
+            .ThenBy(f => f.Id) // Deterministic tiebreaker
             .Select(f => new
             {
                 f.Id,
