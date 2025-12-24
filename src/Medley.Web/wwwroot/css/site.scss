@@ -5,6 +5,7 @@
 
 // Core
 @import 'components/variables';
+@import 'components/utilities';
 @import 'components/layout';
 
 // Navigation & Structure
@@ -15,8 +16,8 @@
 // Components
 @import 'components/tree-view';
 @import 'components/list-view';
+@import 'components/virtual-scroller';
 @import 'components/article-list';
 @import 'components/tiptap-editor';
 @import 'components/versions';
 @import 'components/forms';
-@import 'components/utilities';
