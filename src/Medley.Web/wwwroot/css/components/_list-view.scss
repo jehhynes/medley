@@ -1,0 +1,64 @@
+/* List view styles */
+.list-view {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+
+
+    .list-item {
+        display: block;
+        margin-bottom: 0.125rem;
+    }
+
+    .list-item-content {
+        display: flex;
+        align-items: center;
+        padding: 0.625rem 0.75rem;
+        border-radius: var(--bs-border-radius);
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+        text-decoration: none;
+        color: var(--bs-body-color);
+
+        &:hover {
+            background-color: var(--bg-hover);
+            color: var(--bs-body-color);
+        }
+
+        &.active {
+            background-color: var(--bs-primary);
+            color: var(--bs-white);
+        }
+    }
+
+    .list-item-icon {
+        margin-right: 0.75rem;
+        width: 1rem;
+        text-align: center;
+        font-size: 1.1rem;
+        opacity: 0.8;
+    }
+
+    .list-item-body {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .list-item-title {
+        font-size: 0.8125rem;
+        font-weight: 500;
+        margin-bottom: 0.125rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .list-item-subtitle {
+        font-size: 0.6875rem;
+        color: var(--bs-gray-600);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}
+
