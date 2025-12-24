@@ -26,23 +26,7 @@
         overflow-y: auto;
         overflow-x: hidden;
         padding: 0.5rem;
-        /* Custom scrollbar */
-        &::-webkit-scrollbar {
-            width: 0.4rem;
-        }
-
-        &::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        &::-webkit-scrollbar-thumb {
-            background: var(--bg-hover);
-            border-radius: 0.3125rem;
-
-            &:hover {
-                background: var(--bs-border-color);
-            }
-        }
+        @include custom-scrollbar;
     }
 
     .sidebar-footer {

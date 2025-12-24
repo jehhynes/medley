@@ -1,0 +1,12 @@
+/* Virtual Scroller Component Styles */
+.virtual-scroller {
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: relative;
+    @include custom-scrollbar;
+}
+
+.virtual-scroller-spacer {
+    width: 100%;
+}
+

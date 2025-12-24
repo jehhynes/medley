@@ -52,8 +52,6 @@
                     
                     // View mode state
                     viewMode: 'tree', // 'tree' or 'list'
-                    listViewVisibleCount: 50, // Number of items to show in list view (infinite scroll)
-                    isLoadingMore: false, // Flag to prevent multiple simultaneous loads
                     
                     // Cached data for performance
                     cachedFlatList: [], // Cached flat list of all articles, sorted
@@ -124,12 +122,8 @@
                     return this.$refs.tiptapEditor?.hasChanges || false;
                 },
                 flatArticlesList() {
-                    // Return visible items for infinite scroll from cached flat list
-                    return this.cachedFlatList.slice(0, this.listViewVisibleCount);
-                },
-                hasMoreArticles() {
-                    // Check if there are more articles to load
-                    return this.listViewVisibleCount < this.cachedFlatList.length;
+                    // Return all articles from cached flat list for virtual scrolling
+                    return this.cachedFlatList;
                 }
             },
             methods: {
@@ -152,10 +146,6 @@
                         this.buildParentPathCache();
                         // Build flat list cache for list view
                         this.rebuildFlatListCache();
-                        // Reset visible count when articles are reloaded
-                        if (this.viewMode === 'list') {
-                            this.listViewVisibleCount = 50;
-                        }
                     } catch (err) {
                         this.ui.error = 'Failed to load articles: ' + err.message;
                         console.error('Error loading articles:', err);
@@ -627,39 +617,11 @@
                 setViewMode(mode) {
                     this.viewMode = mode;
                     localStorage.setItem('articlesViewMode', mode);
-                    // Reset visible count when switching view modes
-                    if (mode === 'list') {
-                        this.listViewVisibleCount = 50;
-                    }
                 },
                 
                 toggleViewMode() {
                     const newMode = this.viewMode === 'tree' ? 'list' : 'tree';
                     this.setViewMode(newMode);
-                },
-
-                // === Infinite Scroll ===
-                loadMoreArticles() {
-                    if (!this.hasMoreArticles || this.isLoadingMore) {
-                        return;
-                    }
-                    
-                    this.isLoadingMore = true;
-                    
-                    // Use nextTick to ensure reactivity
-                    this.$nextTick(() => {
-                        // Load 50 more items at a time
-                        const newCount = Math.min(
-                            this.listViewVisibleCount + 50,
-                            this.cachedFlatList.length
-                        );
-                        
-                        if (newCount > this.listViewVisibleCount) {
-                            this.listViewVisibleCount = newCount;
-                        }
-                        
-                        this.isLoadingMore = false;
-                    });
                 },
 
                 // === Unsaved Changes ===

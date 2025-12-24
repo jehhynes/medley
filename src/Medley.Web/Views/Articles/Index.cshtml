@@ -73,12 +73,10 @@
                 :selected-id="articles.selectedId"
                 :article-type-icon-map="articles.typeIconMap"
                 :article-types="articles.types"
-                :has-more="hasMoreArticles"
                 :breadcrumbs-cache="articles.breadcrumbsCache"
                 @@select="selectArticle"
                 @@create-child="showCreateArticleModal"
                 @@edit-article="showEditArticleModal"
-                @@load-more="loadMoreArticles"
             ></article-list>
         </template>
     </div>
@@ -348,6 +346,7 @@
     <script src="~/js/mixins/articleModalMixin.js" asp-append-version="true"></script>
     <script src="~/js/mixins/articleFilterMixin.js" asp-append-version="true"></script>
     <script src="~/js/components/article-tree.js" asp-append-version="true"></script>
+    <script src="~/js/components/virtual-scroller.js" asp-append-version="true"></script>
     <script src="~/js/components/article-list.js" asp-append-version="true"></script>
     <script src="~/js/components/chat-panel.js" asp-append-version="true"></script>
     <script src="~/js/components/versions-panel.js" asp-append-version="true"></script>

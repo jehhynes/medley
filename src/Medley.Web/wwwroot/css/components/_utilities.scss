@@ -78,3 +78,23 @@
     display: none;
 }
 
+/* Custom scrollbar mixin */
+@mixin custom-scrollbar {
+    &::-webkit-scrollbar {
+        width: 0.4rem;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: var(--bg-hover);
+        border-radius: 0.3125rem;
+
+        &:hover {
+            background: var(--bs-border-color);
+        }
+    }
+}
+
