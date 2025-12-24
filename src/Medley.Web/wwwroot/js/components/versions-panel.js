@@ -98,6 +98,8 @@ const VersionsPanel = {
         },
         selectVersion(version) {
             this.$emit('select-version', version);
+            // Collapse right sidebar on mobile after selection
+            window.MedleySidebar?.collapseRightSidebar();
         },
         formatDate(dateString) {
             const date = new Date(dateString);

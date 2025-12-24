@@ -141,4 +141,39 @@
             updateBackdrop();
         }
     });
+    
+    // Expose public API for Vue components to collapse sidebars on record selection
+    window.MedleySidebar = {
+        /**
+         * Collapse left sidebar on mobile devices
+         * Called by Vue components when a record is selected from the left sidebar
+         */
+        collapseLeftSidebar: function() {
+            // Only collapse on mobile breakpoint
+            if (!isMobileBreakpoint()) return;
+            
+            const verticalMenu = document.querySelector('.vertical-menu');
+            const leftSidebar = document.querySelector('.left-sidebar');
+            
+            if (verticalMenu) verticalMenu.classList.remove('show');
+            if (leftSidebar) leftSidebar.classList.remove('show');
+            
+            updateBackdrop();
+        },
+        
+        /**
+         * Collapse right sidebar on mobile devices
+         * Called by Vue components when a record is selected from the right sidebar
+         */
+        collapseRightSidebar: function() {
+            // Only collapse on mobile breakpoint
+            if (!isMobileBreakpoint()) return;
+            
+            const rightSidebar = document.querySelector('.right-sidebar');
+            
+            if (rightSidebar) rightSidebar.classList.remove('show');
+            
+            updateBackdrop();
+        }
+    };
 })();
