@@ -43,6 +43,8 @@ const SourceList = {
     methods: {
         selectSource(source) {
             this.$emit('select', source);
+            // Collapse left sidebar on mobile after selection
+            window.MedleySidebar?.collapseLeftSidebar();
         },
         formatDate(dateString) {
             return window.MedleyUtils.formatDate(dateString);

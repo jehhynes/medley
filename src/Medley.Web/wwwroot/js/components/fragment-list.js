@@ -46,6 +46,8 @@ const FragmentList = {
     methods: {
         selectFragment(fragment) {
             this.$emit('select', fragment);
+            // Collapse left sidebar on mobile after selection
+            window.MedleySidebar?.collapseLeftSidebar();
         },
         formatDate(dateString) {
             return window.MedleyUtils.formatDate(dateString);

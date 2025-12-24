@@ -74,6 +74,8 @@ const ArticleList = {
     methods: {
         selectArticle(article) {
             this.$emit('select', article);
+            // Collapse left sidebar on mobile after selection
+            window.MedleySidebar?.collapseLeftSidebar();
         },
         getArticleIcon(article) {
             // Look up icon from dictionary, fallback to bi-file-text

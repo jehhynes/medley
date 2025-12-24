@@ -101,6 +101,8 @@ const ArticleTree = {
         },
         selectArticle(article) {
             this.$emit('select', article);
+            // Collapse left sidebar on mobile after selection
+            window.MedleySidebar?.collapseLeftSidebar();
         },
         hasChildren(article) {
             return article.children && article.children.length > 0;
