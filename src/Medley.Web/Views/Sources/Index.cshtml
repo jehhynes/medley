@@ -141,6 +141,11 @@
             :selected-id="selectedSourceId"
             @@select="selectSource"
         />
+        <div v-if="pagination && pagination.loadingMore" class="text-center py-3">
+            <div class="spinner-border spinner-border-sm text-secondary" role="status">
+                <span class="visually-hidden">Loading more...</span>
+            </div>
+        </div>
         <div v-if="!loading && sources.length === 0" class="empty-state">
             <div class="empty-state-icon">
                 <i class="bi bi-camera-video"></i>
@@ -386,6 +391,7 @@
     <script src="~/js/app.js" asp-append-version="true"></script>
     <script src="~/js/utils.js" asp-append-version="true"></script>
     <script src="~/js/url-utils.js" asp-append-version="true"></script>
+    <script src="~/js/mixins/infiniteScrollMixin.js" asp-append-version="true"></script>
     <script src="~/js/components/source-list.js" asp-append-version="true"></script>
     <script src="~/js/pages/sources.js" asp-append-version="true"></script>
 }

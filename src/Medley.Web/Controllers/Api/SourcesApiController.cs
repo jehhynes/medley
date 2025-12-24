@@ -67,6 +67,7 @@ public class SourcesApiController : ControllerBase
 
         var sources = await queryable
             .OrderByDescending(s => s.Date)
+            .ThenBy(s => s.Id) // Deterministic tiebreaker for pagination
             .Skip(skip)
             .Take(take)
             .Select(s => new
