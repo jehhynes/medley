@@ -238,17 +238,33 @@
                  * Flattens the hierarchical tree into a sorted array for efficient list view rendering.
                  * Called when tree structure changes (create, delete, move, update with title change).
                  * Prevents expensive re-computation on every render.
+                 * Applies client-side filtering for article types and statuses to exclude parent items that don't match filters.
                  */
                 rebuildFlatListCache() {
-                    // Flatten the tree
+                    // Flatten the tree with article type and status filtering
                     const flattenArticles = (articles, parentId = null) => {
                         let result = [];
                         for (const article of articles) {
-                            const articleWithParent = {
-                                ...article,
-                                parentArticleId: parentId
-                            };
-                            result.push(articleWithParent);
+                            // Apply article type filter if active
+                            const matchesArticleType = this.filters.articleTypeIds.length === 0 ||
+                                                       this.filters.articleTypeIds.includes(article.articleTypeId);
+                            
+                            // Apply status filter if active
+                            const matchesStatus = this.filters.statuses.length === 0 ||
+                                                  this.filters.statuses.includes(article.status);
+                            
+                            // Include article only if it matches both filters
+                            const shouldInclude = matchesArticleType && matchesStatus;
+                            
+                            if (shouldInclude) {
+                                const articleWithParent = {
+                                    ...article,
+                                    parentArticleId: parentId
+                                };
+                                result.push(articleWithParent);
+                            }
+                            
+                            // Always recurse into children regardless of parent inclusion
                             if (article.children && article.children.length > 0) {
                                 result = result.concat(flattenArticles(article.children, article.id));
                             }
