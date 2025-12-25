@@ -89,11 +89,20 @@
     }
 
     &::-webkit-scrollbar-thumb {
-        background: var(--bg-hover);
+        background: var(--bs-gray-600);
         border-radius: 0.3125rem;
 
         &:hover {
-            background: var(--bs-border-color);
+            background: var(--bs-gray-700);
+        }
+    }
+
+    // Dark mode: lighter on hover (like Chrome)
+    [data-bs-theme="dark"] & {
+        &::-webkit-scrollbar-thumb {
+            &:hover {
+                background: var(--bs-gray-400);
+            }
         }
     }
 }
