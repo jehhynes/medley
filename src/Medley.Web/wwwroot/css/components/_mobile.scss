@@ -62,6 +62,15 @@
         visibility: visible;
         pointer-events: auto;
     }
+
+    // show-initial is set by server on page load, only shows on mobile (< 993px)
+    &.show-initial {
+        @media (max-width: $breakpoint-lg - 1px) {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+    }
 }
 
 @media (min-width: $breakpoint-xl) {

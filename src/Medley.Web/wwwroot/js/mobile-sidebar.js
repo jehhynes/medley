@@ -15,12 +15,6 @@
     }
 
     function updateBackdrop() {
-        // Hide backdrop on xl and above (>= 1200px)
-        if (window.innerWidth >= 1200) {
-            if (backdrop) backdrop.classList.remove('show');
-            return;
-        }
-        
         const verticalMenu = document.querySelector('.vertical-menu');
         const leftSidebar = document.querySelector('.left-sidebar');
         const rightSidebar = document.querySelector('.right-sidebar');
@@ -29,6 +23,10 @@
         const isRightOpen = rightSidebar && rightSidebar.classList.contains('show');
         
         if (backdrop) {
+            // Remove show-initial if present (set by server on page load)
+            backdrop.classList.remove('show-initial');
+            
+            // Show backdrop if either sidebar is open
             if (isLeftOpen || isRightOpen) {
                 backdrop.classList.add('show');
             } else {
