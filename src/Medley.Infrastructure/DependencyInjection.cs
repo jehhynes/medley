@@ -21,6 +21,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.SemanticKernel;
 using Npgsql;
 using OllamaSharp;
 using OpenAI;
@@ -76,6 +77,7 @@ public static class DependencyInjection
         services.AddScoped<FragmentExtractionService>();
         //services.AddScoped<IntegrationHealthCheckJob>();
         services.AddTransient<FragmentClusteringJob>();
+        services.AddTransient<ArticleChatJob>();
         services.AddSingleton<RecurringJobCleanUpManager>();
         services.AddSingleton<IJobRegistry, JobRegistry>();
 
@@ -102,16 +104,30 @@ public static class DependencyInjection
             .UseMissionControl(typeof(BaseHangfireJob<>).Assembly)
         );
 
-        // Register Hangfire server (skip in test environment)
+        // Register Hangfire servers (skip in test environment)
         if (!environment.IsTesting())
         {
+            // Default queue server for background processing
             services.AddHangfireServer(options =>
             {
                 options.WorkerCount = 4; //Environment.ProcessorCount * 2;
-                //options.Queues = new[] { "default", "high", "low" };
+                options.Queues = new[] { "default" };
+                options.ServerName = "Background";
                 //options.ServerTimeout = TimeSpan.FromMinutes(4);
                 //options.ServerCheckInterval = TimeSpan.FromMinutes(1);
                 //options.SchedulePollingInterval = TimeSpan.FromSeconds(15);
+            });
+
+            // Dedicated UI queue server for user-facing operations (chat, notifications)
+            services.AddHangfireServer(options =>
+            {
+                options.WorkerCount = 8; 
+                options.Queues = new[] { "ui" };
+                options.ServerName = "UI";
+                // More responsive settings for UI jobs
+                //options.ServerTimeout = TimeSpan.FromMinutes(2);
+                //options.ServerCheckInterval = TimeSpan.FromSeconds(30);
+                //options.SchedulePollingInterval = TimeSpan.FromSeconds(5);
             });
         }
 
@@ -200,9 +216,38 @@ public static class DependencyInjection
         if (hasCredentials && !environment.IsTesting())
         {
             services.AddScoped<IAiProcessingService, BedrockAiService>();
+            
+            // Configure Semantic Kernel for chat functionality
+            ConfigureSemanticKernel(services, configuration, awsSettings);
         }
 
         // Note: AWS health checks are registered in Program.cs conditionally
+    }
+
+    private static void ConfigureSemanticKernel(
+        IServiceCollection services,
+        IConfiguration configuration,
+        AwsSettings awsSettings)
+    {
+        // Bind Semantic Kernel settings
+        services.Configure<SemanticKernelSettings>(configuration.GetSection("SemanticKernel"));
+
+        // Register Semantic Kernel with Bedrock connector
+        services.AddSingleton<Kernel>(sp =>
+        {
+            var bedrockClient = sp.GetRequiredService<AmazonBedrockRuntimeClient>();
+            var bedrockSettings = configuration.GetSection("AWS:Bedrock").Get<BedrockSettings>() ?? new BedrockSettings();
+
+            var builder = Kernel.CreateBuilder();
+
+            // Add Bedrock chat completion service
+            builder.Services.AddBedrockChatCompletionService(bedrockSettings.ModelId, bedrockClient);
+
+            return builder.Build();
+        });
+
+        // Register ArticleChatService
+        services.AddScoped<IArticleChatService, ArticleChatService>();
     }
 
     private static void ConfigureEmbeddingServices(IServiceCollection services, IConfiguration configuration)

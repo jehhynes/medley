@@ -1,3 +1,5 @@
+@using Medley.Application.Interfaces
+@inject IMedleyContext MedleyContext
 @{
     var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
     var currentArea = ViewContext.RouteData.Values["area"]?.ToString();
@@ -7,6 +9,10 @@
     
     // Views can set OpenSidebarOnMobile to true to have the left sidebar open on initial page load (mobile only)
     var openSidebarOnMobile = ViewData["OpenSidebarOnMobile"] as bool? ?? false;
+    
+    // Get current user via MedleyContext (cached for this request)
+    var currentUser = await MedleyContext.GetCurrentUserAsync();
+    var displayName = currentUser?.FullName ?? currentUser?.Email ?? "User";
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -105,7 +111,7 @@
                         @* <span class="vertical-menu-item-label">User</span> *@
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
-                        <li><h6 class="dropdown-header">@User.Identity?.Name</h6></li>
+                        <li><h6 class="dropdown-header">@displayName</h6></li>
                         <li><hr class="dropdown-divider"></li>
                         <li>
                             <a asp-area="" asp-controller="Account" asp-action="ChangePassword" class="dropdown-item">

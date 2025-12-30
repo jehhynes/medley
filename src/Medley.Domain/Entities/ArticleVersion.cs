@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Medley.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace Medley.Domain.Entities;
@@ -10,6 +11,8 @@ namespace Medley.Domain.Entities;
 [Index(nameof(ArticleId))]
 [Index(nameof(ArticleId), nameof(CreatedAt))]
 [Index(nameof(ArticleId), nameof(VersionNumber), IsUnique = true)]
+[Index(nameof(ParentVersionId))]
+[Index(nameof(VersionType))]
 public class ArticleVersion : BaseEntity
 {
     /// <summary>
@@ -56,6 +59,34 @@ public class ArticleVersion : BaseEntity
     /// When this version was created
     /// </summary>
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+
+    /// <summary>
+    /// Type of version (User or AI draft)
+    /// </summary>
+    public VersionType VersionType { get; set; } = VersionType.User;
+
+    /// <summary>
+    /// Parent version ID for AI draft chains (nullable for user versions)
+    /// </summary>
+    public Guid? ParentVersionId { get; set; }
+
+    /// <summary>
+    /// Navigation property to parent version
+    /// </summary>
+    [ForeignKey(nameof(ParentVersionId))]
+    [DeleteBehavior(DeleteBehavior.Restrict)]
+    public virtual ArticleVersion? ParentVersion { get; set; }
+
+    /// <summary>
+    /// Commit-style message describing changes in this version
+    /// </summary>
+    [MaxLength(500)]
+    public string? ChangeMessage { get; set; }
+
+    /// <summary>
+    /// Indicates if this version is currently active in its chain
+    /// </summary>
+    public bool IsActive { get; set; } = true;
 }
 
 

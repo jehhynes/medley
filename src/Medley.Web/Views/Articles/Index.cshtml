@@ -83,8 +83,8 @@
 </div>
 
 <!-- Main Content -->
-<div class="main-content" :class="{ 'd-flex flex-column': articles.selected }" :style="articles.selected ? 'padding: 0;' : ''">
-    <div v-if="!articles.selected" class="empty-state">
+<div class="main-content d-flex flex-column" :style="articles.selected ? 'padding: 0;' : ''">
+    <div v-if="!articles.selected" class="empty-state" v-cloak>
         <div class="empty-state-icon">
             <i class="bi bi-file-text"></i>
         </div>
@@ -132,9 +132,9 @@
         <div class="sidebar-tabs">
             <button 
                 class="sidebar-tab" 
-                :class="{ 'active': ui.activeRightTab === 'chat' }"
-                @@click="setActiveRightTab('chat')">
-                <i class="bi bi-chat-dots"></i> Chat
+                :class="{ 'active': ui.activeRightTab === 'assistant' }"
+                @@click="setActiveRightTab('assistant')">
+                <i class="bi bi-chat-dots"></i> Assistant
             </button>
             <button 
                 class="sidebar-tab" 
@@ -145,7 +145,7 @@
         </div>
     </div>
     <div class="sidebar-tab-content">
-        <div v-show="ui.activeRightTab === 'chat'" class="sidebar-tab-pane">
+        <div v-show="ui.activeRightTab === 'assistant'" class="sidebar-tab-pane">
             <chat-panel :article-id="articles.selectedId" />
         </div>
         <div v-show="ui.activeRightTab === 'versions'" class="sidebar-tab-pane">

@@ -86,7 +86,7 @@
                         loading: false,
                         error: null,
                         sidebarMenuOpen: false,
-                        activeRightTab: 'chat'
+                        activeRightTab: 'assistant'
                     },
                     
                     // Version state
