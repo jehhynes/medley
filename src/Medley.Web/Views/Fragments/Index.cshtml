@@ -41,17 +41,6 @@
             white-space: pre-wrap;
             word-wrap: break-word;
         }
-        
-        /* Empty state should be centered */
-        .main-content .empty-state {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            padding: 2rem 2.5rem;
-        }
     </style>
 }
 
@@ -95,7 +84,7 @@
                 <span class="visually-hidden">Loading more...</span>
             </div>
         </div>
-        <div v-if="!loading && fragments.length === 0" class="empty-state">
+        <div v-if="!loading && fragments.length === 0" class="empty-state" v-cloak>
             <div class="empty-state-icon">
                 <i class="bi bi-puzzle"></i>
             </div>
@@ -108,7 +97,7 @@
 
 <!-- Main Content -->
 <div class="main-content">
-    <div v-if="!selectedFragment" class="empty-state">
+    <div v-if="!selectedFragment" class="empty-state" v-cloak>
         <div class="empty-state-icon">
             <i class="bi bi-puzzle"></i>
         </div>

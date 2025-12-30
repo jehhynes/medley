@@ -39,6 +39,9 @@ public partial class Program
             // Add SignalR
             builder.Services.AddSignalR();
 
+            // Add HttpContextAccessor for accessing HttpContext in services
+            builder.Services.AddHttpContextAccessor();
+
             // Configure ASP.NET Core Identity with custom User entity and roles
             builder.Services.AddIdentity<User, IdentityRole<Guid>>(options =>
             {
@@ -80,6 +83,9 @@ public partial class Program
             {
                 options.ValidationInterval = TimeSpan.FromMinutes(30);
             });
+
+            // Register MedleyContext for current user access
+            builder.Services.AddScoped<IMedleyContext, Medley.Application.Services.MedleyContext>();
 
             // Configure authorization policies
             builder.Services.AddAuthorization(options =>

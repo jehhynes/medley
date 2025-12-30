@@ -40,6 +40,16 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     public DbSet<TagType> TagTypes { get; set; } = null!;
     public DbSet<TagOption> TagOptions { get; set; } = null!;
     public DbSet<Tag> Tags { get; set; } = null!;
+    
+    /// <summary>
+    /// Chat conversations about articles
+    /// </summary>
+    public DbSet<ChatConversation> ChatConversations { get; set; } = null!;
+    
+    /// <summary>
+    /// Messages in chat conversations
+    /// </summary>
+    public DbSet<ChatMessage> ChatMessages { get; set; } = null!;
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -55,8 +65,5 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
         base.OnModelCreating(builder);
 
         //builder.HasPostgresExtension("vector");
-
-        // Additional entity configurations can be added here if needed
-        // Most configuration is handled via data annotations on entities
     }
 }

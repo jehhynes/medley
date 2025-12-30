@@ -5,11 +5,11 @@ let TiptapEditor = null;
 (async () => {
     try {
         // Import Tiptap modules from esm.sh CDN
-        const { Editor } = await import('https://esm.sh/@tiptap/vue-3@3.11.1');
-        const { StarterKit } = await import('https://esm.sh/@tiptap/starter-kit@3.11.1');
-        const { TableKit } = await import('https://esm.sh/@tiptap/extension-table@3.11.1');
-        const { Markdown } = await import('https://esm.sh/@tiptap/markdown@3.11.1');
-        const { Link } = await import('https://esm.sh/@tiptap/extension-link@3.11.1');
+        const { Editor } = await import('https://esm.sh/@tiptap/vue-3@3.14.0');
+        const { StarterKit } = await import('https://esm.sh/@tiptap/starter-kit@3.14.0');
+        const { TableKit } = await import('https://esm.sh/@tiptap/extension-table@3.14.0');
+        const { Markdown } = await import('https://esm.sh/@tiptap/markdown@3.14.0');
+        const { Link } = await import('https://esm.sh/@tiptap/extension-link@3.14.0');
 
         TiptapEditor = {
             template: `

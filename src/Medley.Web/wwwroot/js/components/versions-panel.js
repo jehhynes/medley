@@ -4,7 +4,7 @@ const VersionsPanel = {
     template: `
   <div class="d-flex flex-column h-100">
     <div class="sidebar-content flex-grow-1">
-      <div v-if="!articleId" class="empty-state">
+      <div v-if="!articleId" class="empty-state" v-cloak>
         <div class="empty-state-icon">
           <i class="bi bi-clock-history"></i>
         </div>
@@ -19,7 +19,7 @@ const VersionsPanel = {
       <div v-else-if="error" class="alert alert-danger">
         {{ error }}
       </div>
-      <div v-else-if="versions.length === 0" class="empty-state">
+      <div v-else-if="versions.length === 0" class="empty-state" v-cloak>
         <div class="empty-state-icon">
           <i class="bi bi-clock-history"></i>
         </div>
