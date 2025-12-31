@@ -72,9 +72,9 @@ public class BedrockAiService : IAiProcessingService
         {
             var messages = BuildMessages(userPrompt, systemPrompt, assistantPrompt);
             var options = BuildChatOptions(temperature, ChatResponseFormat.Json);
-
-            var response = await _chatClient.GetResponseAsync<T>(messages, options, useJsonSchemaResponseFormat: false, cancellationToken);
-
+            
+            var response = await _chatClient.GetResponseAsync<T>(messages, options);
+            
             //Strip the markdown json fences that Claude likes to add before deserializing
             if (response.Messages.Count == 1 && response.Messages.Single().Contents.Count == 1 && response.Messages.Single().Contents.Single() is TextContent textContent
                 && textContent.Text.StartsWith("```json"))

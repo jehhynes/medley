@@ -1,5 +1,4 @@
 using Medley.Domain.Entities;
-using Microsoft.SemanticKernel.ChatCompletion;
 
 namespace Medley.Application.Interfaces;
 

@@ -21,7 +21,6 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.SemanticKernel;
 using Npgsql;
 using OllamaSharp;
 using OpenAI;
@@ -217,36 +216,24 @@ public static class DependencyInjection
         {
             services.AddScoped<IAiProcessingService, BedrockAiService>();
             
-            // Configure Semantic Kernel for chat functionality
-            ConfigureSemanticKernel(services, configuration, awsSettings);
+            // Configure chat service
+            ConfigureChatService(services, configuration);
         }
 
         // Note: AWS health checks are registered in Program.cs conditionally
     }
 
-    private static void ConfigureSemanticKernel(
+    private static void ConfigureChatService(
         IServiceCollection services,
-        IConfiguration configuration,
-        AwsSettings awsSettings)
+        IConfiguration configuration)
     {
-        // Bind Semantic Kernel settings
-        services.Configure<SemanticKernelSettings>(configuration.GetSection("SemanticKernel"));
+        // Bind Bedrock settings for chat service
+        services.Configure<BedrockSettings>(configuration.GetSection("AWS:Bedrock"));
 
-        // Register Semantic Kernel with Bedrock connector
-        services.AddSingleton<Kernel>(sp =>
-        {
-            var bedrockClient = sp.GetRequiredService<AmazonBedrockRuntimeClient>();
-            var bedrockSettings = configuration.GetSection("AWS:Bedrock").Get<BedrockSettings>() ?? new BedrockSettings();
+        // Register ArticleAssistantPlugins (for function calling tools)
+        services.AddScoped<ArticleAssistantPlugins>();
 
-            var builder = Kernel.CreateBuilder();
-
-            // Add Bedrock chat completion service
-            builder.Services.AddBedrockChatCompletionService(bedrockSettings.ModelId, bedrockClient);
-
-            return builder.Build();
-        });
-
-        // Register ArticleChatService
+        // Register ArticleChatService (which constructs its own IChatClient)
         services.AddScoped<IArticleChatService, ArticleChatService>();
     }
 

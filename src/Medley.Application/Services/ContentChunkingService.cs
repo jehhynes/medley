@@ -4,8 +4,8 @@ using Medley.Application.Interfaces;
 using Medley.Application.Models;
 using Medley.Domain.Entities;
 using Microsoft.Extensions.Logging;
-using Microsoft.SemanticKernel.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace Medley.Application.Services;
 
@@ -162,12 +162,10 @@ public class ContentChunkingService : IContentChunkingService
         // Concatenate all segments into a single text
         var fullText = string.Join(" ", googleSegments.Select(s => s.Text ?? string.Empty));
 
-        // Use TextChunker to split into lines based on sentence boundaries
+        // Split into lines based on sentence boundaries
         // 1 token ≈ 4 characters, so ~50 tokens = ~200 chars ≈ 1-2 sentences
-        const int maxTokensPerLine = 50; // Target ~1-2 sentences per segment
-#pragma warning disable SKEXP0050 // Type is for evaluation purposes only and is subject to change or removal in future updates
-        var lines = TextChunker.SplitPlainTextLines(fullText, maxTokensPerLine);
-#pragma warning restore SKEXP0050
+        const int maxCharsPerLine = 200; // Target ~1-2 sentences per segment
+        var lines = SplitTextBySentences(fullText, maxCharsPerLine);
         
         // Convert lines into SpeechSegment objects
         var segments = lines.Select((line, idx) => new SpeechSegment
@@ -182,6 +180,57 @@ public class ContentChunkingService : IContentChunkingService
             googleSegments.Count, segments.Count);
 
         return segments;
+    }
+
+    /// <summary>
+    /// Splits text into lines based on sentence boundaries, targeting approximately maxCharsPerLine characters per line
+    /// </summary>
+    private static List<string> SplitTextBySentences(string text, int maxCharsPerLine)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return new List<string>();
+        }
+
+        // Split by sentence endings (. ! ?) but keep the punctuation
+        var sentencePattern = @"([.!?]+)\s+";
+        var sentences = Regex.Split(text, sentencePattern)
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .ToList();
+
+        var lines = new List<string>();
+        var currentLine = new System.Text.StringBuilder();
+
+        foreach (var sentence in sentences)
+        {
+            var trimmedSentence = sentence.Trim();
+            if (string.IsNullOrWhiteSpace(trimmedSentence))
+            {
+                continue;
+            }
+
+            // If adding this sentence would exceed the limit and we have content, start a new line
+            if (currentLine.Length > 0 && currentLine.Length + trimmedSentence.Length + 1 > maxCharsPerLine)
+            {
+                lines.Add(currentLine.ToString().Trim());
+                currentLine.Clear();
+            }
+
+            // Add sentence to current line
+            if (currentLine.Length > 0)
+            {
+                currentLine.Append(' ');
+            }
+            currentLine.Append(trimmedSentence);
+        }
+
+        // Add any remaining content
+        if (currentLine.Length > 0)
+        {
+            lines.Add(currentLine.ToString().Trim());
+        }
+
+        return lines;
     }
 
     private async Task<List<ContentChunk>> GetSegmentBasedChunksAsync(

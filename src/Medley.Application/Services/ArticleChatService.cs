@@ -1,47 +1,57 @@
 using System.Text;
+using Amazon.BedrockRuntime;
 using Medley.Application.Configuration;
 using Medley.Application.Interfaces;
 using Medley.Domain.Entities;
 using Medley.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.ChatCompletion;
-using Microsoft.SemanticKernel.Connectors.Amazon;
-using Microsoft.SemanticKernel.Connectors.OpenAI;
 
 namespace Medley.Application.Services;
 
 /// <summary>
-/// Service for AI-powered chat conversations about articles using Semantic Kernel
+/// Service for AI-powered chat conversations about articles using Microsoft.Extensions.AI
 /// </summary>
 public class ArticleChatService : IArticleChatService
 {
     private readonly IRepository<ChatConversation> _conversationRepository;
-    private readonly IRepository<ChatMessage> _chatMessageRepository;
+    private readonly IRepository<Medley.Domain.Entities.ChatMessage> _chatMessageRepository;
     private readonly IRepository<Article> _articleRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly Kernel _kernel;
-    private readonly SemanticKernelSettings _settings;
+    private readonly IChatClient _chatClient;
+    private readonly ArticleAssistantPlugins _assistantPlugins;
     private readonly ILogger<ArticleChatService> _logger;
+    
+    // Chat configuration constants
+    private const int MaxTokens = 4096;
+    private const double Temperature = 0.1;
+    private const int MaxHistoryMessages = 20;
 
     public ArticleChatService(
         IRepository<ChatConversation> conversationRepository,
-        IRepository<ChatMessage> chatMessageRepository,
+        IRepository<Medley.Domain.Entities.ChatMessage> chatMessageRepository,
         IRepository<Article> articleRepository,
         IUnitOfWork unitOfWork,
-        Kernel kernel,
-        IOptions<SemanticKernelSettings> settings,
+        AmazonBedrockRuntimeClient bedrockClient,
+        ArticleAssistantPlugins assistantPlugins,
+        IOptions<BedrockSettings> bedrockSettings,
         ILogger<ArticleChatService> logger)
     {
         _conversationRepository = conversationRepository;
         _chatMessageRepository = chatMessageRepository;
         _articleRepository = articleRepository;
         _unitOfWork = unitOfWork;
-        _kernel = kernel;
-        _settings = settings.Value;
+        _assistantPlugins = assistantPlugins;
         _logger = logger;
+
+        // Construct the ChatClient directly
+        _chatClient = bedrockClient.AsIChatClient(bedrockSettings.Value.ModelId);
+
+        //Wrap the chat client to enable function invocation
+        _chatClient = new ChatClientBuilder(_chatClient).UseFunctionInvocation().Build();
     }
 
     public async Task<ChatConversation> CreateConversationAsync(
@@ -85,7 +95,7 @@ public class ArticleChatService : IArticleChatService
             .FirstOrDefaultAsync(c => c.Id == conversationId, cancellationToken);
     }
 
-    public async Task<ChatMessage> ProcessChatMessageAsync(
+    public async Task<Domain.Entities.ChatMessage> ProcessChatMessageAsync(
         Guid conversationId,
         CancellationToken cancellationToken = default)
     {
@@ -109,26 +119,36 @@ public class ArticleChatService : IArticleChatService
         // Build chat history with all messages (including the latest user message)
         var chatHistory = await BuildChatHistoryAsync(conversationId, conversation.Article, cancellationToken);
 
-        // Get chat completion service from kernel
-        var chatCompletion = _kernel.GetRequiredService<IChatCompletionService>();
-
-        var executionSettings = new AmazonClaudeExecutionSettings
+        // Configure chat options with tools from ArticleAssistantPlugins
+        var chatOptions = new ChatOptions
         {
-            MaxTokensToSample = _settings.MaxTokens,
-            Temperature = (float)_settings.Temperature
+            MaxOutputTokens = MaxTokens,
+            Temperature = (float)Temperature,
+            // Add tools for function calling using AIFunctionFactory
+            Tools = [
+                AIFunctionFactory.Create(
+                    _assistantPlugins.SearchFragmentsAsync,
+                    "search_fragments",
+                    "Search for fragments semantically similar to a query string. Returns fragments with similarity scores."
+                ),
+                AIFunctionFactory.Create(
+                    _assistantPlugins.FindSimilarFragmentsAsync,
+                    "find_similar_to_article",
+                    "Find fragments semantically similar to the current article content. Useful for finding related content to enhance or expand the article."
+                )
+            ]
         };
 
         // Get AI response
-        var result = await chatCompletion.GetChatMessageContentAsync(
+        var response = await _chatClient.GetResponseAsync(
             chatHistory,
-            executionSettings: executionSettings,
-            kernel: _kernel,
-            cancellationToken: cancellationToken);
+            chatOptions,
+            cancellationToken);
 
-        var responseContent = result.Content ?? string.Empty;
+        var responseContent = response.Text ?? string.Empty;
 
         // Save assistant message
-        var assistantMessage = new ChatMessage
+        var assistantMessage = new Domain.Entities.ChatMessage
         {
             ConversationId = conversationId,
             UserId = null, // Assistant messages don't have a user
@@ -145,35 +165,35 @@ public class ArticleChatService : IArticleChatService
         return assistantMessage;
     }
 
-    private async Task<ChatHistory> BuildChatHistoryAsync(
+    private async Task<List<Microsoft.Extensions.AI.ChatMessage>> BuildChatHistoryAsync(
         Guid conversationId,
         Article article,
         CancellationToken cancellationToken = default)
     {
-        var chatHistory = new ChatHistory();
+        var chatHistory = new List<Microsoft.Extensions.AI.ChatMessage>();
 
         // Add system message with article context
         var systemMessage = BuildSystemMessage(article);
-        chatHistory.AddSystemMessage(systemMessage);
+        chatHistory.Add(new Microsoft.Extensions.AI.ChatMessage(ChatRole.System, systemMessage));
 
         // Load recent messages from conversation
         var messages = await _chatMessageRepository.Query()
             .Where(m => m.ConversationId == conversationId)
             .OrderBy(m => m.CreatedAt)
-            .Take(_settings.MaxHistoryMessages)
+            .Take(MaxHistoryMessages)
             .Include(m => m.User)
             .ToListAsync(cancellationToken);
 
-        // Convert to Semantic Kernel ChatHistory format
+        // Convert to Microsoft.Extensions.AI ChatMessage format
         foreach (var msg in messages)
         {
             switch (msg.MessageType)
             {
                 case ChatMessageType.User:
-                    chatHistory.AddUserMessage(msg.Content);
+                    chatHistory.Add(new Microsoft.Extensions.AI.ChatMessage(ChatRole.User, msg.Content));
                     break;
                 case ChatMessageType.Assistant:
-                    chatHistory.AddAssistantMessage(msg.Content);
+                    chatHistory.Add(new Microsoft.Extensions.AI.ChatMessage(ChatRole.Assistant, msg.Content));
                     break;
                 case ChatMessageType.ToolCall:
                     // Tool calls can be handled as needed in the future
@@ -185,7 +205,7 @@ public class ArticleChatService : IArticleChatService
         return chatHistory;
     }
 
-    public async Task<List<ChatMessage>> GetConversationMessagesAsync(
+    public async Task<List<Domain.Entities.ChatMessage>> GetConversationMessagesAsync(
         Guid conversationId,
         int? limit = null,
         CancellationToken cancellationToken = default)
@@ -197,7 +217,7 @@ public class ArticleChatService : IArticleChatService
 
         if (limit.HasValue)
         {
-            query = (IOrderedQueryable<ChatMessage>)query.Take(limit.Value);
+            query = (IOrderedQueryable<Domain.Entities.ChatMessage>)query.Take(limit.Value);
         }
 
         return await query.ToListAsync(cancellationToken);
