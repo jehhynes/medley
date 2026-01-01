@@ -53,7 +53,7 @@ public class ArticleAssistantPlugins
     /// <summary>
     /// Set the current user ID for plan creation
     /// </summary>
-    public void SetCurrentUserId(Guid userId)
+    public virtual void SetCurrentUserId(Guid userId)
     {
         _currentUserId = userId;
     }
@@ -61,7 +61,7 @@ public class ArticleAssistantPlugins
     /// <summary>
     /// Search for fragments semantically similar to a query string
     /// </summary>
-    public async Task<string> SearchFragmentsAsync(
+    public virtual async Task<string> SearchFragmentsAsync(
         string query,
         int limit = 10,
         double? threshold = 0.7,
@@ -181,7 +181,7 @@ public class ArticleAssistantPlugins
     /// <summary>
     /// Find fragments semantically similar to the current article content
     /// </summary>
-    public async Task<string> FindSimilarFragmentsAsync(
+    public virtual async Task<string> FindSimilarFragmentsAsync(
         int limit = 10,
         double? threshold = 0.7,
         CancellationToken cancellationToken = default)
@@ -355,7 +355,7 @@ public class ArticleAssistantPlugins
     /// Get full content and details for a specific fragment
     /// </summary>
     [Description("Get the full content and details of a specific fragment by its ID")]
-    public async Task<string> GetFragmentContentAsync(
+    public virtual async Task<string> GetFragmentContentAsync(
         Guid fragmentId,
         CancellationToken cancellationToken = default)
     {
@@ -416,7 +416,7 @@ public class ArticleAssistantPlugins
     /// Create an article improvement plan with fragment recommendations
     /// </summary>
     [Description("Create a structured improvement plan for an article with fragment recommendations")]
-    public async Task<string> CreatePlanAsync(
+    public virtual async Task<string> CreatePlanAsync(
         string instructions,
         PlanFragmentRecommendation[] recommendations,
         CancellationToken cancellationToken = default)

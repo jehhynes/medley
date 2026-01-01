@@ -1,3 +1,4 @@
+using Medley.Application.Models;
 using Medley.Domain.Entities;
 
 namespace Medley.Application.Interfaces;
@@ -50,6 +51,16 @@ public interface IArticleChatService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Process a chat message with streaming updates
+    /// </summary>
+    /// <param name="conversationId">The conversation ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Async enumerable of streaming updates</returns>
+    IAsyncEnumerable<ChatStreamUpdate> ProcessChatMessageStreamingAsync(
+        Guid conversationId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Get messages for a conversation
     /// </summary>
     /// <param name="conversationId">The conversation ID</param>
@@ -96,6 +107,16 @@ public interface IArticleChatService
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>The saved assistant message entity</returns>
     Task<ChatMessage> ProcessPlanGenerationAsync(
+        Guid conversationId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Process a plan generation message with streaming updates
+    /// </summary>
+    /// <param name="conversationId">The conversation ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Async enumerable of streaming updates</returns>
+    IAsyncEnumerable<ChatStreamUpdate> ProcessPlanGenerationStreamingAsync(
         Guid conversationId,
         CancellationToken cancellationToken = default);
 }

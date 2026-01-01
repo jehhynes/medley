@@ -13,6 +13,11 @@
                 throw new Error(`API error: ${response.statusText}`);
             }
             
+            // Handle 204 No Content responses
+            if (response.status === 204) {
+                return null;
+            }
+            
             return response.json();
         },
         
@@ -29,6 +34,11 @@
                 throw new Error(`API error: ${response.statusText}`);
             }
             
+            // Handle 204 No Content responses
+            if (response.status === 204) {
+                return null;
+            }
+            
             return response.json();
         },
         
@@ -43,6 +53,11 @@
             
             if (!response.ok) {
                 throw new Error(`API error: ${response.statusText}`);
+            }
+            
+            // Handle 204 No Content responses
+            if (response.status === 204) {
+                return null;
             }
             
             return response.json();
