@@ -36,37 +36,41 @@ public class ArticleVersionService : IArticleVersionService
     {
         try
         {
-            // Get the next version number
-            var maxVersion = await _versionRepository.Query()
+            // Get the latest version with parent version loaded
+            var latestVersion = await _versionRepository.Query()
                 .Where(v => v.ArticleId == articleId)
-                .MaxAsync(v => (int?)v.VersionNumber, cancellationToken) ?? 0;
+                .Include(v => v.ParentVersion)
+                .OrderByDescending(v => v.VersionNumber)
+                .FirstOrDefaultAsync(cancellationToken);
 
-            var nextVersion = maxVersion + 1;
+            bool isNewVersion = true;
+            ArticleVersion version;
 
-            // Generate diff if there's previous content
-            string? diffPatch = null;
-            if (!string.IsNullOrEmpty(previousContent))
+            // Check if we can update the existing version (draft mode)
+            if (latestVersion != null && userId.HasValue)
             {
-                var diffs = _diffMatchPatch.diff_main(previousContent, newContent);
-                _diffMatchPatch.diff_cleanupSemantic(diffs);
-                diffPatch = _diffMatchPatch.patch_toText(_diffMatchPatch.patch_make(diffs));
+                var lastModified = latestVersion.ModifiedAt ?? latestVersion.CreatedAt;
+                var timeSinceModified = DateTimeOffset.UtcNow - lastModified;
+                
+                // Update existing version if same user and within 30 minutes
+                if (latestVersion.CreatedById == userId && timeSinceModified.TotalMinutes <= 30)
+                {
+                    // Update existing version (draft mode)
+                    isNewVersion = false;
+                    version = await UpdateExistingVersionAsync(latestVersion, newContent, cancellationToken);
+                }
+                else
+                {
+                    // Create new version with latestVersion as parent
+                    version = await CreateNewVersionAsync(articleId, newContent, latestVersion, userId, cancellationToken);
+                }
             }
-
-            var version = new ArticleVersion
+            else
             {
-                ArticleId = articleId,
-                ContentSnapshot = newContent,
-                ContentDiff = diffPatch,
-                VersionNumber = nextVersion,
-                CreatedById = userId,
-                CreatedAt = DateTimeOffset.UtcNow
-            };
-
-            await _versionRepository.SaveAsync(version);
-
-            _logger.LogInformation(
-                "Captured version {VersionNumber} for article {ArticleId} by user {UserId}",
-                nextVersion, articleId, userId);
+                // Create new version (no latest version or no user)
+                // latestVersion will be null for first version
+                version = await CreateNewVersionAsync(articleId, newContent, latestVersion, userId, cancellationToken);
+            }
 
             // Get user details for the DTO
             string? createdByName = null;
@@ -92,7 +96,8 @@ public class ArticleVersionService : IArticleVersionService
                 CreatedBy = userId,
                 CreatedByName = createdByName,
                 CreatedByEmail = createdByEmail,
-                CreatedAt = version.CreatedAt
+                CreatedAt = version.CreatedAt,
+                IsNewVersion = isNewVersion
             };
         }
         catch (Exception ex)
@@ -101,6 +106,80 @@ public class ArticleVersionService : IArticleVersionService
                 "Failed to capture version for article {ArticleId}", articleId);
             throw;
         }
+    }
+
+    /// <summary>
+    /// Update an existing draft version with new content
+    /// </summary>
+    private async Task<ArticleVersion> UpdateExistingVersionAsync(
+        ArticleVersion existingVersion,
+        string newContent,
+        CancellationToken cancellationToken)
+    {
+        // Generate diff from the parent version's content (the version this was based on)
+        string? diffPatch = null;
+        if (existingVersion.ParentVersion != null && !string.IsNullOrEmpty(existingVersion.ParentVersion.ContentSnapshot))
+        {
+            var diffs = _diffMatchPatch.diff_main(existingVersion.ParentVersion.ContentSnapshot, newContent);
+            _diffMatchPatch.diff_cleanupSemantic(diffs);
+            diffPatch = _diffMatchPatch.patch_toText(_diffMatchPatch.patch_make(diffs));
+        }
+
+        existingVersion.ContentSnapshot = newContent;
+        existingVersion.ContentDiff = diffPatch;
+        existingVersion.ModifiedAt = DateTimeOffset.UtcNow;
+        
+        await _versionRepository.SaveAsync(existingVersion);
+
+        _logger.LogInformation(
+            "Updated draft version {VersionNumber} for article {ArticleId} by user {UserId}",
+            existingVersion.VersionNumber, existingVersion.ArticleId, existingVersion.CreatedById);
+
+        return existingVersion;
+    }
+
+    /// <summary>
+    /// Create a new version with the parent version reference
+    /// </summary>
+    private async Task<ArticleVersion> CreateNewVersionAsync(
+        Guid articleId,
+        string newContent,
+        ArticleVersion? parentVersion,
+        Guid? userId,
+        CancellationToken cancellationToken)
+    {
+        var nextVersion = (parentVersion?.VersionNumber ?? 0) + 1;
+
+        // Generate diff from parent version if it exists
+        string? diffPatch = null;
+        if (parentVersion != null && !string.IsNullOrEmpty(parentVersion.ContentSnapshot))
+        {
+            var diffs = _diffMatchPatch.diff_main(parentVersion.ContentSnapshot, newContent);
+            _diffMatchPatch.diff_cleanupSemantic(diffs);
+            diffPatch = _diffMatchPatch.patch_toText(_diffMatchPatch.patch_make(diffs));
+        }
+
+
+        var version = new ArticleVersion
+        {
+            ArticleId = articleId,
+            ContentSnapshot = newContent,
+            ContentDiff = diffPatch,
+            VersionNumber = nextVersion,
+            CreatedById = userId,
+            CreatedAt = DateTimeOffset.UtcNow,
+            ParentVersionId = parentVersion?.Id // Set parent version reference
+        };
+
+        version.ModifiedAt = version.CreatedAt;
+
+        await _versionRepository.SaveAsync(version);
+
+        _logger.LogInformation(
+            "Created new version {VersionNumber} for article {ArticleId} by user {UserId} (parent version: {ParentVersionId})",
+            nextVersion, articleId, userId, parentVersion?.Id);
+
+        return version;
     }
 
     public async Task<List<ArticleVersionDto>> GetVersionHistoryAsync(

@@ -61,6 +61,11 @@ public class ArticleVersion : BaseEntity
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
     /// <summary>
+    /// When this version was last modified (for draft versions that get updated)
+    /// </summary>
+    public DateTimeOffset? ModifiedAt { get; set; }
+
+    /// <summary>
     /// Type of version (User or AI draft)
     /// </summary>
     public VersionType VersionType { get; set; } = VersionType.User;

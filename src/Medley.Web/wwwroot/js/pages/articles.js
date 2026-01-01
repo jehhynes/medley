@@ -552,24 +552,36 @@
                 /**
                  * Save the currently selected article's content
                  * Updates article content via API and handles errors with user notification
+                 * @param {number} retryCount - Number of retry attempts (for auto-save retry logic)
                  * @returns {Promise<void>}
                  */
-                async saveArticle() {
+                async saveArticle(retryCount = 0) {
                     if (!this.articles.selected) return;
 
                     this.editor.isSaving = true;
                     try {
                         // Save content
-                        await api.put(`/api/articles/${this.articles.selected.id}/content`, {
+                        const response = await api.put(`/api/articles/${this.articles.selected.id}/content`, {
                             content: this.editor.content
                         });
+                        
+                        // Log version info for debugging (silent for auto-save)
+                        if (response && response.versionNumber) {
+                            console.log(`Article saved - Version ${response.versionNumber} (${response.isNewVersion ? 'new' : 'updated'})`);
+                        }
                     } catch (err) {
-                        bootbox.alert({
-                            title: 'Save Failed',
-                            message: `Failed to save article: ${err.message}`,
-                            className: 'bootbox-error'
-                        });
                         console.error('Error saving article:', err);
+                        
+                        // Retry logic for auto-save (max 3 attempts with exponential backoff)
+                        if (retryCount < 3) {
+                            const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+                            console.log(`Retrying save in ${delay}ms (attempt ${retryCount + 1}/3)...`);
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            return this.saveArticle(retryCount + 1);
+                        }
+                        
+                        // After 3 failed attempts, still fail silently but log it
+                        console.error('Failed to save article after 3 attempts');
                     } finally {
                         this.editor.isSaving = false;
                     }

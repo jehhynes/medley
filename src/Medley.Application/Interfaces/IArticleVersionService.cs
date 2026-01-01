@@ -44,6 +44,7 @@ public class ArticleVersionDto
     public string? CreatedByName { get; set; }
     public string? CreatedByEmail { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
+    public bool IsNewVersion { get; set; }
 }
 
 /// <summary>
