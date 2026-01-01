@@ -365,7 +365,13 @@ public class ArticlesApiController : ControllerBase
             });
         }
 
-        return Ok(article);
+        return Ok(new
+        {
+            success = true,
+            versionId = capturedVersion.Id,
+            versionNumber = capturedVersion.VersionNumber,
+            isNewVersion = capturedVersion.IsNewVersion
+        });
     }
 
     /// <summary>

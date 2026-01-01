@@ -240,7 +240,13 @@ let TiptapEditor = null;
                     </button>
                     </div>
                     <div class="tiptap-toolbar-right">
+                        <!-- Show auto-save indicator when auto-save is enabled -->
+                        <div v-if="autoSave" class="auto-save-indicator">
+                            <i :class="autoSaveIconClass" :title="autoSaveIndicatorText"></i>
+                        </div>
+                        <!-- Show Save button when showSaveButton is true -->
                         <button 
+                            v-if="showSaveButton"
                             type="button"
                             @click="handleSave" 
                             :disabled="isSaving || !hasChanges"
@@ -263,6 +269,14 @@ let TiptapEditor = null;
                 isSaving: {
                     type: Boolean,
                     default: false
+                },
+                autoSave: {
+                    type: Boolean,
+                    default: false
+                },
+                showSaveButton: {
+                    type: Boolean,
+                    default: true
                 }
             },
             emits: ['update:modelValue', 'save'],
@@ -277,6 +291,9 @@ let TiptapEditor = null;
                     showHeadingDropdown: false,
                     showListDropdown: false,
                     showDeleteDropdown: false,
+                    // Auto-save state
+                    autoSaveTimer: null,
+                    autoSaveState: 'saved', // 'saved' | 'saving' | 'changed'
                     // Active states for toolbar buttons (updated on selection change)
                     isBoldActive: false,
                     isItalicActive: false,
@@ -303,6 +320,18 @@ let TiptapEditor = null;
                 },
                 hasChanges() {
                     return this.lastEmittedValue !== this.originalContent;
+                },
+                autoSaveIndicatorText() {
+                    if (this.autoSaveState === 'saving' || this.autoSaveState === 'changed') {
+                        return 'Saving...';
+                    }
+                    return 'Saved';
+                },
+                autoSaveIconClass() {
+                    if (this.autoSaveState === 'saving' || this.autoSaveState === 'changed') {
+                        return 'far fa-arrows-rotate fa-spin';
+                    }
+                    return 'far fa-cloud-check';
                 }
             },
             watch: {
@@ -326,6 +355,11 @@ let TiptapEditor = null;
                         // When saving completes, update original content to mark as clean
                         if (oldValue === true && newValue === false) {
                             this.originalContent = this.lastEmittedValue;
+                            
+                            // Update auto-save state when save completes
+                            if (this.autoSave) {
+                                this.autoSaveState = 'saved';
+                            }
                         }
                     }
                 }
@@ -443,8 +477,39 @@ let TiptapEditor = null;
 
                     // Use the Tiptap Markdown extension's getMarkdown() method
                     const markdown = this.editor.getMarkdown();
-                    this.lastEmittedValue = markdown;
-                    this.$emit('update:modelValue', markdown);
+                    
+                    // Only emit and trigger auto-save if content actually changed
+                    if (markdown !== this.lastEmittedValue) {
+                        this.lastEmittedValue = markdown;
+                        this.$emit('update:modelValue', markdown);
+                        
+                        // Trigger auto-save if enabled
+                        if (this.autoSave) {
+                            this.scheduleAutoSave();
+                        }
+                    }
+                },
+
+                scheduleAutoSave() {
+                    // Clear existing timer
+                    if (this.autoSaveTimer) {
+                        clearTimeout(this.autoSaveTimer);
+                    }
+                    
+                    // Set state to indicate we're waiting to save
+                    this.autoSaveState = 'changed';
+                    
+                    // Schedule auto-save after 5 seconds of inactivity
+                    this.autoSaveTimer = setTimeout(() => {
+                        this.triggerAutoSave();
+                    }, 5000);
+                },
+
+                triggerAutoSave() {
+                    if (this.autoSaveState === 'changed') {
+                        this.autoSaveState = 'saving';
+                        this.$emit('save');
+                    }
                 },
 
                 handleSave() {
@@ -542,6 +607,12 @@ let TiptapEditor = null;
             beforeUnmount() {
                 document.removeEventListener('click', this.handleClickOutside);
                 document.removeEventListener('keydown', this.handleKeyDown);
+                
+                // Clean up auto-save timers
+                if (this.autoSaveTimer) {
+                    clearTimeout(this.autoSaveTimer);
+                }
+                
                 if (this.editor) {
                     this.editor.destroy();
                     this.editor = null;

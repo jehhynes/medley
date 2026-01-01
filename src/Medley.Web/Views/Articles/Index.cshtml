@@ -121,6 +121,8 @@
                    v-model="editor.content"
                    :key="articles.selectedId"
                    :is-saving="editor.isSaving"
+                   :auto-save="true"
+                   :show-save-button="false"
                    @@save="saveArticle"
                    class="flex-grow-1"
                    placeholder="Start writing your article content..." />
