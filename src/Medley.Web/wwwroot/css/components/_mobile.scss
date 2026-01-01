@@ -1,6 +1,6 @@
 /* Mobile header bar */
 .mobile-header {
-    height: $mobile-header-height;
+    height: var(--mobile-header-height);
     background-color: var(--bg-vertical-menu);
     border-bottom: 1px solid var(--bs-border-color);
     display: flex;
@@ -85,35 +85,35 @@
         // Left sidebar stays in grid, right sidebar becomes overlaid
         &.has-left-sidebar,
         &.has-left-sidebar.has-right-sidebar {
-            grid-template-columns: $vertical-menu-width minmax($sidebar-width-min, $sidebar-width-max) 1fr;
+            grid-template-columns: var(--vertical-menu-width) minmax(var(--sidebar-left-width-min), min(var(--sidebar-left-width), var(--sidebar-left-width-max))) 1fr;
         }
 
         &.has-right-sidebar {
-            grid-template-rows: calc(100vh - $mobile-header-height);
-            height: calc(100vh - $mobile-header-height);
-            margin-top: $mobile-header-height;
+            grid-template-rows: calc(100vh - var(--mobile-header-height));
+            height: calc(100vh - var(--mobile-header-height));
+            margin-top: var(--mobile-header-height);
             
             // If only right sidebar (no left), keep default columns
             &:not(.has-left-sidebar) {
-                grid-template-columns: $vertical-menu-width 1fr;
+                grid-template-columns: var(--vertical-menu-width) 1fr;
             }
         }
     }
 
     .vertical-menu {
-        top: $mobile-header-height;
+        top: var(--mobile-header-height);
     }
 
     .left-sidebar {
-        top: $mobile-header-height;
+        top: var(--mobile-header-height);
     }
 
     .right-sidebar {
         position: fixed;
         right: 0;
-        top: $mobile-header-height;
+        top: var(--mobile-header-height);
         bottom: 0;
-        width: min($sidebar-width-fixed, $sidebar-width-tablet);
+        width: min(var(--sidebar-right-width-mobile-max), var(--sidebar-right-width-mobile));
         z-index: 1040;
         transform: translateX(100%);
         transition: transform 0.3s ease;
@@ -131,8 +131,8 @@
     .main-page-container {
         grid-template-columns: 1fr;
         grid-template-rows: 1fr;
-        height: calc(100vh - $mobile-header-height);
-        margin-top: $mobile-header-height;
+        height: calc(100vh - var(--mobile-header-height));
+        margin-top: var(--mobile-header-height);
 
         &.has-left-sidebar,
         &.has-right-sidebar,
@@ -144,9 +144,9 @@
     .vertical-menu {
         position: fixed;
         left: 0;
-        top: $mobile-header-height;
+        top: var(--mobile-header-height);
         bottom: 0;
-        width: $vertical-menu-width;
+        width: var(--vertical-menu-width);
         z-index: 1041;
         transform: translateX(-30rem);
         transition: transform 0.3s ease;
@@ -158,15 +158,15 @@
 
     .sidebar {
         position: fixed;
-        top: $mobile-header-height;
+        top: var(--mobile-header-height);
         bottom: 0;
         z-index: 1040;
         transition: transform 0.3s ease;
     }
 
     .left-sidebar {
-        left: $vertical-menu-width;
-        width: min($sidebar-width-fixed, $sidebar-width-mobile);
+        left: var(--vertical-menu-width);
+        width: min(var(--sidebar-left-width-mobile-max), var(--sidebar-left-width-mobile));
         transform: translateX(-30rem);
         border-right: 1px solid var(--bs-border-color) !important;
         box-shadow: 5px 0 15px rgba(0,0,0,0.1);
@@ -178,7 +178,7 @@
 
     .right-sidebar {
         right: 0;
-        width: min($sidebar-width-fixed, $sidebar-width-mobile);
+        width: min(var(--sidebar-right-width-mobile-max), var(--sidebar-right-width-mobile));
         transform: translateX(100%);
         border-left: 1px solid var(--bs-border-color) !important;
         box-shadow: -5px 0 15px rgba(0,0,0,0.1);

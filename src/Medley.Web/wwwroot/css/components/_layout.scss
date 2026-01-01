@@ -1,22 +1,22 @@
 /* Main grid layout */
 .main-page-container {
     display: grid;
-    grid-template-columns: $vertical-menu-width 1fr;
+    grid-template-columns: var(--vertical-menu-width) 1fr;
     grid-template-rows: 100vh;
     height: 100vh;
     overflow: hidden;
     background-color: var(--bg-main);
 
     &.has-left-sidebar {
-        grid-template-columns: $vertical-menu-width minmax($sidebar-width-min, $sidebar-width-max) 1fr;
+        grid-template-columns: var(--vertical-menu-width) minmax(var(--sidebar-left-width-min), min(var(--sidebar-left-width), var(--sidebar-left-width-max))) 1fr;
     }
 
     &.has-right-sidebar {
-        grid-template-columns: $vertical-menu-width 1fr minmax($sidebar-width-min, $sidebar-width-max);
+        grid-template-columns: var(--vertical-menu-width) 1fr minmax(var(--sidebar-right-width-min), min(var(--sidebar-right-width), var(--sidebar-right-width-max)));
     }
 
     &.has-left-sidebar.has-right-sidebar {
-        grid-template-columns: $vertical-menu-width minmax($sidebar-width-min, $sidebar-width-max) 1fr minmax($sidebar-width-min, $sidebar-width-max);
+        grid-template-columns: var(--vertical-menu-width) minmax(var(--sidebar-left-width-min), min(var(--sidebar-left-width), var(--sidebar-left-width-max))) 1fr minmax(var(--sidebar-right-width-min), min(var(--sidebar-right-width), var(--sidebar-right-width-max)));
     }
 }
 

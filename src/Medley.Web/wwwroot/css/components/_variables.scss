@@ -1,13 +1,20 @@
-/* Layout Dimensions */
-$vertical-menu-width: 5rem;              // 80px - far left navigation
-$mobile-header-height: 3.5rem;           // 56px - mobile top bar
-
-// Sidebar Widths
-$sidebar-width-min: 15rem;               // 240px - minimum sidebar width
-$sidebar-width-max: 20vw;                // maximum as viewport percentage
-$sidebar-width-fixed: 20rem;             // 320px - fixed width for mobile overlay
-$sidebar-width-mobile: 85vw;             // mobile sidebar width
-$sidebar-width-tablet: 30vw;             // tablet right sidebar width
+/* CSS Variables - Layout Dimensions */
+:root {
+    --vertical-menu-width: 5rem; // 80px - far left navigation
+    --mobile-header-height: 3.5rem; // 56px - mobile top bar
+    // Sidebar Widths - Left Sidebar
+    --sidebar-left-width: 20vw; // viewport-based left sidebar width
+    --sidebar-left-width-min: 15rem; // 240px - fixed minimum left sidebar width
+    --sidebar-left-width-max: 25rem; // 400px - fixed maximum left sidebar width
+    --sidebar-left-width-mobile: calc(100vw - var(--vertical-menu-width)); // mobile left sidebar width
+    --sidebar-left-width-mobile-max: 25rem; // 400px - fixed maximum width for mobile overlay
+    // Sidebar Widths - Right Sidebar
+    --sidebar-right-width: 27vw; // viewport-based right sidebar width
+    --sidebar-right-width-min: 15rem; // 240px - fixed minimum right sidebar width
+    --sidebar-right-width-max: 45rem; // 400px - fixed maximum right sidebar width
+    --sidebar-right-width-mobile: 100vw; // mobile right sidebar width
+    --sidebar-right-width-mobile-max: 35rem; // 320px - fixed maximum width for mobile overlay
+}
 
 // Responsive Breakpoints (Bootstrap 5 standard)
 $breakpoint-lg: 992px;                   // Large devices and up
