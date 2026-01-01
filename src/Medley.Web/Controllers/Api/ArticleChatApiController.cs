@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using System.Text.Json;
+using Microsoft.Extensions.AI;
 
 namespace Medley.Web.Controllers.Api;
 
@@ -21,7 +23,7 @@ public class ArticleChatApiController : ControllerBase
 {
     private readonly IArticleChatService _chatService;
     private readonly IRepository<Article> _articleRepository;
-    private readonly IRepository<ChatMessage> _chatMessageRepository;
+    private readonly IRepository<Domain.Entities.ChatMessage> _chatMessageRepository;
     private readonly IRepository<Plan> _planRepository;
     private readonly IRepository<User> _userRepository;
     private readonly IBackgroundJobClient _backgroundJobClient;
@@ -31,7 +33,7 @@ public class ArticleChatApiController : ControllerBase
     public ArticleChatApiController(
         IArticleChatService chatService,
         IRepository<Article> articleRepository,
-        IRepository<ChatMessage> chatMessageRepository,
+        IRepository<Domain.Entities.ChatMessage> chatMessageRepository,
         IRepository<Plan> planRepository,
         IRepository<User> userRepository,
         IBackgroundJobClient backgroundJobClient,
@@ -122,14 +124,64 @@ public class ArticleChatApiController : ControllerBase
 
         var messages = await _chatService.GetConversationMessagesAsync(conversationId, limit);
 
-        return Ok(messages.Select(m => new
+        // First: deserialize all messages
+        var deserializedMessages = messages.Select(m => new
         {
-            id = m.Id,
-            role = m.Role.ToString().ToLower(),
-            content = m.Content,
-            userName = m.User?.FullName ?? (m.Role == ChatMessageRole.Assistant ? ChatConstants.AssistantDisplayName : "Unknown"),
-            createdAt = m.CreatedAt
-        }));
+            Message = m,
+            AiMessage = !string.IsNullOrEmpty(m.SerializedMessage)
+                ? TryDeserializeMessage(m.SerializedMessage, m.Id)
+                : null
+        }).ToList();
+
+        // Second: collect all completed call IDs
+        var completedCallIds = new HashSet<string>();
+        foreach (var item in deserializedMessages.Where(x => x.AiMessage?.Contents != null))
+        {
+            foreach (var callId in item.AiMessage!.Contents
+                .OfType<FunctionResultContent>()
+                .Where(fr => !string.IsNullOrEmpty(fr.CallId))
+                .Select(fr => fr.CallId!))
+            {
+                completedCallIds.Add(callId);
+            }
+        }
+
+        // Third: build final result with completion status (exclude Tool messages)
+        var results = deserializedMessages
+            .Where(item => item.Message.Role != ChatMessageRole.Tool) // Filter out Tool messages
+            .Select(item =>
+            {
+                List<object>? toolCalls = null;
+                
+                if (item.AiMessage?.Contents != null)
+                {
+                    var calls = item.AiMessage.Contents
+                        .OfType<FunctionCallContent>()
+                        .Select(fc => new {
+                            name = fc.Name,
+                            callId = fc.CallId,
+                            completed = !string.IsNullOrEmpty(fc.CallId) && completedCallIds.Contains(fc.CallId)
+                        } as object)
+                        .ToList();
+                    
+                    if (calls.Any())
+                    {
+                        toolCalls = calls;
+                    }
+                }
+
+                return new
+                {
+                    id = item.Message.Id,
+                    role = item.Message.Role.ToString().ToLower(),
+                    content = item.Message.Content,
+                    userName = item.Message.User?.FullName ?? (item.Message.Role == ChatMessageRole.Assistant ? ChatConstants.AssistantDisplayName : "Unknown"),
+                    createdAt = item.Message.CreatedAt,
+                    toolCalls = toolCalls ?? new List<object>()
+                };
+            }).ToList();
+
+        return Ok(results);
     }
 
     /// <summary>
@@ -160,7 +212,7 @@ public class ArticleChatApiController : ControllerBase
         var userId = GetUserId();
 
         // Save user message
-        var userMessage = new ChatMessage
+        var userMessage = new Domain.Entities.ChatMessage
         {
             ConversationId = conversationId,
             UserId = userId,
@@ -333,7 +385,7 @@ public class ArticleChatApiController : ControllerBase
         var userId = GetUserId();
 
         // Save user message requesting plan creation
-        var userMessage = new ChatMessage
+        var userMessage = new Domain.Entities.ChatMessage
         {
             ConversationId = conversationId,
             UserId = userId,
@@ -459,6 +511,19 @@ public class ArticleChatApiController : ControllerBase
             throw new UnauthorizedAccessException("User ID not found in claims");
         }
         return userId;
+    }
+
+    private Microsoft.Extensions.AI.ChatMessage? TryDeserializeMessage(string serializedMessage, Guid messageId)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<Microsoft.Extensions.AI.ChatMessage>(serializedMessage);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to deserialize SerializedMessage for message {MessageId}", messageId);
+            return null;
+        }
     }
 
     /// <summary>

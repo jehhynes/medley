@@ -17,7 +17,8 @@ const ChatPanel = {
             isAiThinking: false,
             error: null,
             isLoading: false,
-            isCreatingPlan: false
+            isCreatingPlan: false,
+            turnExpansionState: {} // Track which turns are expanded
         };
     },
     computed: {
@@ -28,6 +29,44 @@ const ChatPanel = {
             return this.articleId && 
                    this.newMessage.trim() !== '' && 
                    !this.isAiThinking;
+        },
+        groupedMessages() {
+            // Group consecutive assistant messages into "turns"
+            const grouped = [];
+            let currentAssistantTurn = null;
+
+            for (const message of this.messages) {
+                if (message.role === 'user') {
+                    // Close any current assistant turn
+                    currentAssistantTurn = null;
+
+                    // Add user message as standalone
+                    grouped.push({
+                        type: 'user',
+                        ...message
+                    });
+                } else {
+                    // Non-user message (assistant, tool)
+                    if (currentAssistantTurn) {
+                        // Add to existing turn
+                        currentAssistantTurn.messages.push(message);
+                        currentAssistantTurn.latestMessage = message;
+                    } else {
+                        // Start a new turn
+                        const turnId = `turn-${message.id}`;
+                        currentAssistantTurn = {
+                            type: 'assistant-turn',
+                            id: turnId,
+                            messages: [message],
+                            latestMessage: message,
+                            expanded: this.turnExpansionState[turnId] || false
+                        };
+                        grouped.push(currentAssistantTurn);
+                    }
+                }
+            }
+
+            return grouped;
         }
     },
     watch: {
@@ -78,6 +117,9 @@ const ChatPanel = {
                 // Set up event listeners
                 this.connection.on('ChatMessageProcessing', this.onMessageProcessing);
                 this.connection.on('ChatMessageReceived', this.onMessageReceived);
+                this.connection.on('ChatMessageStreaming', this.onMessageStreaming);
+                this.connection.on('ChatToolInvoked', this.onToolInvoked);
+                this.connection.on('ChatToolCompleted', this.onToolCompleted);
                 this.connection.on('ChatMessageComplete', this.onMessageComplete);
                 this.connection.on('ChatError', this.onChatError);
 
@@ -247,20 +289,137 @@ const ChatPanel = {
             this.$nextTick(() => this.scrollToBottom());
         },
 
+        onMessageStreaming(data) {
+            // Handle streaming text updates
+            if (data.conversationId !== this.conversationId) {
+                return;
+            }
+            
+            // Use messageId if provided, otherwise fall back to temporary ID
+            const messageId = data.messageId || 'streaming-temp';
+            
+            // Find or create the streaming message by ID
+            let streamingMsg = this.messages.find(m => m.id === messageId && m.isStreaming);
+            if (!streamingMsg) {
+                // Create a new streaming message placeholder
+                streamingMsg = {
+                    id: messageId,
+                    role: 'assistant',
+                    content: '',
+                    isStreaming: true,
+                    toolCalls: [],
+                    userName: 'Medley Assistant',
+                    createdAt: new Date().toISOString()
+                };
+                this.messages.push(streamingMsg);
+            }
+            
+            // Append the streamed content
+            streamingMsg.content += data.content;
+            this.$nextTick(() => this.scrollToBottom());
+        },
+
+        onToolInvoked(data) {
+            // Handle tool invocation notifications
+            if (data.conversationId !== this.conversationId) {
+                return;
+            }
+            
+            console.log(`AI Agent invoked tool: ${data.toolName}`);
+            
+            // Use messageId if provided to associate tool with message
+            const messageId = data.messageId || 'streaming-temp';
+            
+            // Find the streaming message and add tool invocation
+            let streamingMsg = this.messages.find(m => m.id === messageId && m.isStreaming);
+            if (!streamingMsg) {
+                // Create a new streaming message if it doesn't exist yet
+                streamingMsg = {
+                    id: messageId,
+                    role: 'assistant',
+                    content: '',
+                    isStreaming: true,
+                    toolCalls: [],
+                    userName: 'Medley Assistant',
+                    createdAt: new Date().toISOString()
+                };
+                this.messages.push(streamingMsg);
+            }
+            
+            // Add tool call to the message (pending state)
+            if (!streamingMsg.toolCalls) {
+                streamingMsg.toolCalls = [];
+            }
+            
+            streamingMsg.toolCalls.push({
+                name: data.toolName,
+                callId: data.toolCallId,
+                completed: false,
+                timestamp: data.timestamp
+            });
+            
+            this.$nextTick(() => this.scrollToBottom());
+        },
+
+        onToolCompleted(data) {
+            // Handle tool completion notifications
+            if (data.conversationId !== this.conversationId) {
+                return;
+            }
+            
+            console.log(`AI Agent completed tool: ${data.toolName}`);
+            
+            // Loop backwards through messages to find the matching tool call by callId
+            // (it will almost always be in the most recent message)
+            for (let i = this.messages.length - 1; i >= 0; i--) {
+                const msg = this.messages[i];
+                if (msg.toolCalls && msg.toolCalls.length > 0) {
+                    const toolCall = msg.toolCalls.find(t => t.callId === data.toolCallId);
+                    if (toolCall) {
+                        toolCall.completed = true;
+                        break; // Found and updated, stop searching
+                    }
+                }
+            }
+            
+            this.$nextTick(() => this.scrollToBottom());
+        },
+
         onMessageComplete(data) {
             // Verify this is for the current conversation
             if (data.conversationId !== this.conversationId) {
                 return;
             }
             
-            // Add assistant message to list
-            this.messages.push({
-                id: data.id,
-                role: data.role,
-                content: data.content,
-                userName: data.userName,
-                createdAt: data.createdAt
-            });
+            // Find the streaming message by ID if it exists
+            const streamingIdx = this.messages.findIndex(m => 
+                m.isStreaming && (m.id === data.id || m.id === 'streaming-temp')
+            );
+            
+            if (streamingIdx >= 0) {
+                // Update the existing streaming message to be the final version
+                const streamingMsg = this.messages[streamingIdx];
+                this.messages.splice(streamingIdx, 1, {
+                    id: data.id,
+                    role: data.role,
+                    content: data.content,
+                    userName: data.userName,
+                    createdAt: data.createdAt,
+                    toolCalls: streamingMsg.toolCalls || [],
+                    isStreaming: false
+                });
+            } else {
+                // No streaming message found, add the complete message
+                this.messages.push({
+                    id: data.id,
+                    role: data.role,
+                    content: data.content,
+                    userName: data.userName,
+                    createdAt: data.createdAt,
+                    toolCalls: [],
+                    isStreaming: false
+                });
+            }
 
             this.isAiThinking = false;
             this.$nextTick(() => this.scrollToBottom());
@@ -285,6 +444,11 @@ const ChatPanel = {
             this.newMessage = '';
             this.isAiThinking = false;
             this.error = null;
+            this.turnExpansionState = {};
+        },
+
+        toggleTurnExpansion(turnId) {
+            this.turnExpansionState[turnId] = !this.turnExpansionState[turnId];
         },
 
         formatDate(dateString) {
@@ -313,6 +477,15 @@ const ChatPanel = {
             }
             // Fallback to plain text if marked is not available
             return content.replace(/\n/g, '<br>');
+        },
+
+        formatToolName(toolName) {
+            if (!toolName) return '';
+            // Convert snake_case to Title Case
+            return toolName
+                .split('_')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
         },
 
         async createPlan() {
@@ -351,6 +524,11 @@ const ChatPanel = {
 
                 // The plan generation will happen in the background
                 // SignalR will notify us when it's ready
+                // Set AI thinking state to show processing
+                this.isAiThinking = true;
+                
+                // Scroll to bottom to show the thinking indicator
+                this.$nextTick(() => this.scrollToBottom());
             } catch (err) {
                 console.error('Error creating plan:', err);
                 this.error = err.message;
@@ -387,21 +565,89 @@ const ChatPanel = {
                         </button>
                     </div>
 
-                    <div v-for="message in messages" 
-                         :key="message.id" 
-                         class="chat-message"
-                         :class="'chat-message-' + message.role">
-                        <div class="chat-message-header">
-                            <span class="chat-message-author">{{ message.userName }}</span>
-                            <span class="chat-message-time">{{ formatDate(message.createdAt) }}</span>
+                    <!-- Render grouped messages (turns) -->
+                    <template v-for="item in groupedMessages" :key="item.id">
+                        <!-- User message -->
+                        <div v-if="item.type === 'user'" 
+                             class="chat-message chat-message-user">
+                            <div class="chat-message-header">
+                                <span class="chat-message-author">{{ item.userName }}</span>
+                                <span class="chat-message-time">{{ formatDate(item.createdAt) }}</span>
+                            </div>
+                            <div class="chat-message-body">{{ item.content }}</div>
                         </div>
-                        <div class="chat-message-body" 
-                             :class="{ 'markdown-container': message.role === 'assistant' }"
-                             v-if="message.role === 'assistant'"
-                             v-html="renderMarkdown(message.content)"></div>
-                        <div class="chat-message-body" 
-                             v-else>{{ message.content }}</div>
-                    </div>
+
+                        <!-- Assistant turn -->
+                        <div v-else-if="item.type === 'assistant-turn'" 
+                             class="chat-message chat-message-assistant">
+                            <div class="chat-message-header">
+                                <span class="chat-message-author">{{ item.latestMessage.userName }}</span>
+                                <span class="chat-message-time">{{ formatDate(item.latestMessage.createdAt) }}</span>
+                            </div>
+
+                            <div class="chat-message-body">
+                                <!-- Show expand button if there are multiple messages -->
+                                <div v-if="item.messages.length > 1 && !item.expanded" 
+                                     class="chat-turn-expand">
+                                    <button 
+                                        @click="toggleTurnExpansion(item.id)"
+                                        class="btn btn-sm btn-link text-muted">
+                                        <i class="bi bi-chevron-down"></i>
+                                        Show {{ item.messages.length - 1 }} previous {{ item.messages.length - 1 === 1 ? 'message' : 'messages' }}
+                                    </button>
+                                </div>
+
+                                <!-- Show previous messages when expanded -->
+                                <template v-if="item.messages.length > 1 && item.expanded">
+                                    <div v-for="(msg, idx) in item.messages.slice(0, -1)" 
+                                         :key="msg.id"
+                                         class="chat-turn-previous-message">
+
+                                        <div class="markdown-container"
+                                             v-html="renderMarkdown(msg.content)"></div>
+
+                                        <div v-if="msg.toolCalls && msg.toolCalls.length > 0" 
+                                             class="chat-message-tools mt-2">
+                                            <span v-for="(tool, toolIdx) in msg.toolCalls" 
+                                                 :key="toolIdx" 
+                                                 class="badge bg-info me-1">
+                                                <i v-if="tool.completed" class="bi bi-check-circle me-1"></i>
+                                                <span v-else class="spinner-border spinner-border-xs me-1" role="status"></span>
+                                                {{ formatToolName(tool.name) }}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Collapse button -->
+                                    <div class="chat-turn-collapse">
+                                        <button 
+                                            @click="toggleTurnExpansion(item.id)"
+                                            class="btn btn-sm btn-link text-muted">
+                                            <i class="bi bi-chevron-up"></i>
+                                            Hide previous messages
+                                        </button>
+                                    </div>
+                                </template>
+
+                                <!-- Latest message (always shown) -->
+
+                                <div class="markdown-container"
+                                     v-html="renderMarkdown(item.latestMessage.content)"></div>
+
+                                <div v-if="item.latestMessage.toolCalls && item.latestMessage.toolCalls.length > 0" 
+                                     class="chat-message-tools mt-2">
+                                    <span v-for="(tool, idx) in item.latestMessage.toolCalls" 
+                                         :key="idx" 
+                                         class="badge me-1"
+                                         :class="tool.completed ? 'bg-success' : 'bg-secondary'">
+                                        <i v-if="tool.completed" class="bi bi-check-circle me-1"></i>
+                                        <span v-else class="spinner-border spinner-border-xs me-1" role="status"></span>
+                                        {{ formatToolName(tool.name) }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
 
                     <div v-if="isAiThinking" class="chat-message chat-message-assistant thinking">
                         <div class="chat-message-header">

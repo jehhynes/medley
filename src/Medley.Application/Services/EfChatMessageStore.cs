@@ -104,6 +104,17 @@ public sealed class EfChatMessageStore : ChatMessageStore
                     UserId = null // Assistant/system/tool messages don't have a user
                 };
 
+                // Use the message ID from the AI message if available, or generate one for tool messages
+                if (aiMessage.Role == ChatRole.Tool)
+                {
+                    // Tool call messages don't have unique IDs, so generate one
+                    chatMessage.Id = Guid.NewGuid();
+                }
+                else if (!string.IsNullOrEmpty(aiMessage.MessageId) && Guid.TryParse(aiMessage.MessageId, out var messageId))
+                {
+                    chatMessage.Id = messageId;
+                }
+
                 await _messageRepository.SaveAsync(chatMessage);
             }
         }

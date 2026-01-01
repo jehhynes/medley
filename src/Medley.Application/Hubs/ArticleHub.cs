@@ -5,6 +5,15 @@ namespace Medley.Application.Hubs;
 
 /// <summary>
 /// SignalR hub for real-time article updates and chat
+/// 
+/// Events sent by server (via IHubContext in background jobs):
+/// - ChatMessageProcessing: Sent when AI agent starts processing a message
+/// - ChatMessageReceived: Sent when a user message is received and saved
+/// - ChatMessageStreaming: Sent for each text chunk as the AI generates a response
+/// - ChatToolInvoked: Sent when the AI agent invokes a tool/function (e.g., search_fragments)
+/// - ChatMessageComplete: Sent when the AI response is complete and saved to database
+/// - ChatError: Sent when an error occurs during chat processing
+/// - PlanGenerated: Sent when an improvement plan is created
 /// </summary>
 [Authorize]
 public class ArticleHub : Hub
