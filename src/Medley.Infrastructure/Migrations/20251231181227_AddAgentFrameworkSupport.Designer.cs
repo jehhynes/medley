@@ -3,6 +3,7 @@ using System;
 using Medley.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -12,9 +13,11 @@ using Pgvector;
 namespace Medley.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251231181227_AddAgentFrameworkSupport")]
+    partial class AddAgentFrameworkSupport
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -244,9 +247,17 @@ namespace Medley.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("created_by_user_id");
 
+                    b.Property<string>("SerializedAgentState")
+                        .HasColumnType("text")
+                        .HasColumnName("serialized_agent_state");
+
                     b.Property<int>("State")
                         .HasColumnType("integer")
                         .HasColumnName("state");
+
+                    b.Property<string>("ThreadKey")
+                        .HasColumnType("text")
+                        .HasColumnName("thread_key");
 
                     b.HasKey("Id")
                         .HasName("pk_chat_conversations");
@@ -270,6 +281,10 @@ namespace Medley.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("AuthorName")
+                        .HasColumnType("text")
+                        .HasColumnName("author_name");
+
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasColumnType("text")
@@ -283,8 +298,20 @@ namespace Medley.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<int>("Role")
+                    b.Property<string>("MessageId")
+                        .HasColumnType("text")
+                        .HasColumnName("message_id");
+
+                    b.Property<int>("MessageType")
                         .HasColumnType("integer")
+                        .HasColumnName("message_type");
+
+                    b.Property<string>("Metadata")
+                        .HasColumnType("text")
+                        .HasColumnName("metadata");
+
+                    b.Property<string>("Role")
+                        .HasColumnType("text")
                         .HasColumnName("role");
 
                     b.Property<string>("SerializedMessage")

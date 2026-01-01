@@ -23,7 +23,7 @@ public class ChatMessage : BaseEntity
     public virtual ChatConversation Conversation { get; set; } = null!;
 
     /// <summary>
-    /// The user who sent the message (null for assistant messages)
+    /// The user who sent the message (null for assistant/system/tool messages)
     /// </summary>
     public Guid? UserId { get; set; }
 
@@ -35,9 +35,9 @@ public class ChatMessage : BaseEntity
     public virtual User? User { get; set; }
 
     /// <summary>
-    /// Type of the message (User, Assistant, ToolCall)
+    /// Role of the message (User, Assistant, System, Tool)
     /// </summary>
-    public ChatMessageType MessageType { get; set; }
+    public ChatMessageRole Role { get; set; }
 
     /// <summary>
     /// The content of the message
@@ -50,8 +50,7 @@ public class ChatMessage : BaseEntity
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
     /// <summary>
-    /// Optional metadata (e.g., tokens used, response time) stored as JSON
+    /// Full serialized Microsoft.Extensions.AI ChatMessage as JSON for Agent Framework
     /// </summary>
-    public string? Metadata { get; set; }
+    public string? SerializedMessage { get; set; }
 }
-

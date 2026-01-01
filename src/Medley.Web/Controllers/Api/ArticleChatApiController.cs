@@ -121,9 +121,9 @@ public class ArticleChatApiController : ControllerBase
         return Ok(messages.Select(m => new
         {
             id = m.Id,
-            role = m.MessageType.ToString().ToLower(),
+            role = m.Role.ToString().ToLower(),
             content = m.Content,
-            userName = m.User?.FullName ?? (m.MessageType == ChatMessageType.Assistant ? ChatConstants.AssistantDisplayName : "Unknown"),
+            userName = m.User?.FullName ?? (m.Role == ChatMessageRole.Assistant ? ChatConstants.AssistantDisplayName : "Unknown"),
             createdAt = m.CreatedAt
         }));
     }
@@ -160,7 +160,7 @@ public class ArticleChatApiController : ControllerBase
         {
             ConversationId = conversationId,
             UserId = userId,
-            MessageType = ChatMessageType.User,
+            Role = ChatMessageRole.User,
             Content = request.Message,
             CreatedAt = DateTimeOffset.UtcNow
         };

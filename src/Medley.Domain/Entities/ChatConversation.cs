@@ -55,4 +55,3 @@ public class ChatConversation : BaseEntity
     /// </summary>
     public virtual ICollection<ChatMessage> Messages { get; set; } = new List<ChatMessage>();
 }
-
