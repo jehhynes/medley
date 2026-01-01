@@ -230,8 +230,8 @@ public static class DependencyInjection
         // Bind Bedrock settings for chat service
         services.Configure<BedrockSettings>(configuration.GetSection("AWS:Bedrock"));
 
-        // Register ArticleAssistantPlugins (for function calling tools)
-        services.AddScoped<ArticleAssistantPlugins>();
+        // Register ArticleAssistantPluginsFactory (for creating article-scoped plugin instances)
+        services.AddScoped<ArticleAssistantPluginsFactory>();
 
         // Register ArticleChatService (which constructs its own IChatClient)
         services.AddScoped<IArticleChatService, ArticleChatService>();

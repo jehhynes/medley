@@ -8,28 +8,8 @@
             async handleVersionSelect(version) {
                 if (!version || !this.articles.selectedId) return;
                 
-                this.version.selected = version;
-                this.version.loadingDiff = true;
-                this.version.diffError = null;
-                this.version.diffHtml = null;
-                
-                try {
-                    const response = await api.get(
-                        `/api/articles/${this.articles.selectedId}/versions/${version.id}/diff`
-                    );
-                    
-                    // Convert markdown to HTML for both versions
-                    const beforeHtml = this.markdownToHtml(response.beforeContent || '');
-                    const afterHtml = this.markdownToHtml(response.afterContent || '');
-                    
-                    // Use htmlDiff to compare the HTML versions
-                    this.version.diffHtml = window.HtmlDiff.htmlDiff(beforeHtml, afterHtml);
-                } catch (err) {
-                    this.version.diffError = 'Failed to load diff: ' + err.message;
-                    console.error('Error loading diff:', err);
-                } finally {
-                    this.version.loadingDiff = false;
-                }
+                // Open version in a new tab instead of replacing content
+                this.openVersionTab(version);
             },
             
             markdownToHtml(markdown) {
@@ -55,6 +35,12 @@
             },
 
             clearVersionSelection() {
+                // Switch back to editor tab
+                if (this.switchContentTab) {
+                    this.switchContentTab('editor');
+                }
+                
+                // Clear old version state (for backwards compatibility)
                 this.version.selected = null;
                 this.version.diffHtml = null;
                 this.version.diffError = null;

@@ -50,6 +50,16 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     /// Messages in chat conversations
     /// </summary>
     public DbSet<ChatMessage> ChatMessages { get; set; } = null!;
+    
+    /// <summary>
+    /// Article improvement plans
+    /// </summary>
+    public DbSet<Plan> Plans { get; set; } = null!;
+    
+    /// <summary>
+    /// Fragment recommendations within plans
+    /// </summary>
+    public DbSet<PlanFragment> PlanFragments { get; set; } = null!;
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {

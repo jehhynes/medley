@@ -16,7 +16,8 @@ const ChatPanel = {
             isConnected: false,
             isAiThinking: false,
             error: null,
-            isLoading: false
+            isLoading: false,
+            isCreatingPlan: false
         };
     },
     computed: {
@@ -312,6 +313,50 @@ const ChatPanel = {
             }
             // Fallback to plain text if marked is not available
             return content.replace(/\n/g, '<br>');
+        },
+
+        async createPlan() {
+            if (!this.articleId || this.isCreatingPlan || this.isAiThinking) return;
+
+            this.isCreatingPlan = true;
+            this.error = null;
+
+            try {
+                // Create conversation if needed
+                if (!this.conversationId) {
+                    const response = await fetch(`/api/articles/${this.articleId}/assistant/conversation`, {
+                        method: 'POST'
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to create conversation');
+                    }
+
+                    const conversation = await response.json();
+                    this.conversationId = conversation.id;
+                }
+
+                // Send plan creation request
+                const response = await fetch(
+                    `/api/articles/${this.articleId}/assistant/conversations/${this.conversationId}/create-plan`,
+                    {
+                        method: 'POST'
+                    }
+                );
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to create plan');
+                }
+
+                // The plan generation will happen in the background
+                // SignalR will notify us when it's ready
+            } catch (err) {
+                console.error('Error creating plan:', err);
+                this.error = err.message;
+            } finally {
+                this.isCreatingPlan = false;
+            }
         }
     },
     template: `
@@ -333,6 +378,13 @@ const ChatPanel = {
                         <i class="bi bi-chat-dots empty-state-icon"></i>
                         <p class="empty-state-text">Start a conversation with the AI assistant</p>
                         <p class="empty-state-hint">Ask questions or request improvements to your article</p>
+                        <button 
+                            @click="createPlan"
+                            :disabled="isCreatingPlan || isAiThinking"
+                            class="btn btn-primary mt-3">
+                            <i class="bi bi-lightbulb"></i>
+                            {{ isCreatingPlan ? 'Creating Plan...' : 'Create a Plan' }}
+                        </button>
                     </div>
 
                     <div v-for="message in messages" 

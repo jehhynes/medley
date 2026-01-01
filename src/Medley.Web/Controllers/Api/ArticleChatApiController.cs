@@ -9,6 +9,7 @@ using Medley.Web.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace Medley.Web.Controllers.Api;
@@ -21,6 +22,7 @@ public class ArticleChatApiController : ControllerBase
     private readonly IArticleChatService _chatService;
     private readonly IRepository<Article> _articleRepository;
     private readonly IRepository<ChatMessage> _chatMessageRepository;
+    private readonly IRepository<Plan> _planRepository;
     private readonly IRepository<User> _userRepository;
     private readonly IBackgroundJobClient _backgroundJobClient;
     private readonly IHubContext<ArticleHub> _hubContext;
@@ -30,6 +32,7 @@ public class ArticleChatApiController : ControllerBase
         IArticleChatService chatService,
         IRepository<Article> articleRepository,
         IRepository<ChatMessage> chatMessageRepository,
+        IRepository<Plan> planRepository,
         IRepository<User> userRepository,
         IBackgroundJobClient backgroundJobClient,
         IHubContext<ArticleHub> hubContext,
@@ -38,6 +41,7 @@ public class ArticleChatApiController : ControllerBase
         _chatService = chatService;
         _articleRepository = articleRepository;
         _chatMessageRepository = chatMessageRepository;
+        _planRepository = planRepository;
         _userRepository = userRepository;
         _backgroundJobClient = backgroundJobClient;
         _hubContext = hubContext;
@@ -306,6 +310,144 @@ public class ArticleChatApiController : ControllerBase
         {
             id = conversationId,
             state = ConversationState.Cancelled.ToString()
+        });
+    }
+
+    /// <summary>
+    /// Create a plan for improving the article (sends plan generation message through chat)
+    /// </summary>
+    [HttpPost("conversations/{conversationId}/create-plan")]
+    public async Task<IActionResult> CreatePlan(Guid articleId, Guid conversationId)
+    {
+        var conversation = await _chatService.GetConversationAsync(conversationId);
+        if (conversation == null || conversation.ArticleId != articleId)
+        {
+            return NotFound(new { error = "Conversation not found" });
+        }
+
+        if (conversation.State != ConversationState.Active)
+        {
+            return BadRequest(new { error = "Conversation is not active" });
+        }
+
+        var userId = GetUserId();
+
+        // Save user message requesting plan creation
+        var userMessage = new ChatMessage
+        {
+            ConversationId = conversationId,
+            UserId = userId,
+            Role = ChatMessageRole.User,
+            Content = "Create a plan for improving this article",
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        await _chatMessageRepository.SaveAsync(userMessage);
+
+        // Get user's full name for broadcast
+        var user = await _userRepository.GetByIdAsync(userId);
+        var userName = user?.FullName ?? "User";
+
+        // Register SignalR notification
+        RegisterSignalRNotification(
+            $"Article_{articleId}",
+            "ChatMessageReceived",
+            new
+            {
+                id = userMessage.Id.ToString(),
+                conversationId = conversationId.ToString(),
+                role = "user",
+                content = userMessage.Content,
+                userName = userName,
+                createdAt = userMessage.CreatedAt,
+                articleId = articleId.ToString()
+            });
+
+        // Enqueue plan generation job
+        var messageId = userMessage.Id;
+        HttpContext.RegisterPostCommitAction(async () =>
+        {
+            try
+            {
+                _backgroundJobClient.Enqueue<ArticleChatJob>(
+                    job => job.ProcessPlanGenerationAsync(messageId, conversationId, CancellationToken.None));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to enqueue plan generation job for message {MessageId}", messageId);
+            }
+        });
+
+        return Accepted(new
+        {
+            conversationId = conversationId.ToString(),
+            messageId = messageId.ToString()
+        });
+    }
+
+    /// <summary>
+    /// Get the active plan for an article
+    /// </summary>
+    [HttpGet("plans/active")]
+    public async Task<IActionResult> GetActivePlan(Guid articleId)
+    {
+        var article = await _articleRepository.GetByIdAsync(articleId);
+        if (article == null)
+        {
+            return NotFound(new { error = "Article not found" });
+        }
+
+        var plan = await _planRepository.Query()
+            .Where(p => p.ArticleId == articleId && p.Status == PlanStatus.Draft)
+            .Include(p => p.PlanFragments)
+                .ThenInclude(pf => pf.Fragment)
+                    .ThenInclude(f => f.Source)
+            .Include(p => p.CreatedBy)
+            .OrderByDescending(p => p.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        if (plan == null)
+        {
+            return NoContent();
+        }
+
+        return Ok(new
+        {
+            id = plan.Id,
+            articleId = plan.ArticleId,
+            instructions = plan.Instructions,
+            status = plan.Status.ToString(),
+            createdAt = plan.CreatedAt,
+            createdBy = new
+            {
+                id = plan.CreatedBy.Id,
+                name = plan.CreatedBy.FullName ?? plan.CreatedBy.Email
+            },
+            fragments = plan.PlanFragments.Select(pf => new
+            {
+                id = pf.Id,
+                fragmentId = pf.FragmentId,
+                similarityScore = pf.SimilarityScore,
+                include = pf.Include,
+                reasoning = pf.Reasoning,
+                instructions = pf.Instructions,
+                fragment = new
+                {
+                    id = pf.Fragment.Id,
+                    title = pf.Fragment.Title,
+                    summary = pf.Fragment.Summary,
+                    category = pf.Fragment.Category,
+                    content = pf.Fragment.Content,
+                    confidence = pf.Fragment.Confidence?.ToString(),
+                    source = pf.Fragment.Source != null ? new
+                    {
+                        id = pf.Fragment.Source.Id,
+                        name = pf.Fragment.Source.Name,
+                        type = pf.Fragment.Source.Type.ToString(),
+                        date = pf.Fragment.Source.Date
+                    } : null
+                }
+            }).ToList()
         });
     }
 

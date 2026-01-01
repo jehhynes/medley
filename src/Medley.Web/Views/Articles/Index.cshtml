@@ -91,41 +91,81 @@
         <div class="empty-state-title">No Article Selected</div>
         <div class="empty-state-text">Select an article from the sidebar to view its details</div>
     </div>
-    <div v-else-if="version.selected" v-cloak class="diff-viewer d-flex flex-column flex-grow-1">
-        <div class="diff-viewer-header">
-            <button class="btn btn-sm btn-outline-secondary" @@click="clearVersionSelection">
-                <i class="bi bi-arrow-left"></i> Back to Editor
-            </button>
-            <div class="diff-viewer-title">
-                <span class="badge bg-primary me-2">Version {{ version.selected.versionNumber }}</span>
-                <span class="text-muted">{{ formatDate(version.selected.createdAt) }}</span>
-                <span v-if="version.selected.createdByName" class="text-muted ms-2">
-                    by {{ version.selected.createdByName }}
-                </span>
-            </div>
+    <template v-else v-cloak>
+        <!-- Content Tabs (only show if more than Editor tab exists) -->
+        <div v-if="availableTabs.length > 1" class="content-tabs-container">
+            <ul class="nav nav-tabs">
+                <li v-for="tab in availableTabs" :key="tab.id" class="nav-item">
+                    <button
+                        class="nav-link"
+                        :class="{ 'active': contentTabs.activeTabId === tab.id }"
+                        type="button"
+                        @@click="switchContentTab(tab.id)">
+                        {{ tab.label }}
+                        <i
+                            v-if="tab.closeable"
+                            class="bi bi-x-lg tab-close-icon"
+                            @@click.stop="closeContentTab(tab.id)"
+                            aria-label="Close"></i>
+                    </button>
+                </li>
+            </ul>
         </div>
-        <div class="diff-viewer-content flex-grow-1">
-            <div v-if="version.loadingDiff" class="loading-spinner">
-                <div class="spinner-border" role="status">
-                    <span class="visually-hidden">Loading diff...</span>
+
+        <!-- Tab Content -->
+        <div class="content-tab-panes flex-grow-1 position-relative">
+            <!-- Editor Tab -->
+            <div v-show="contentTabs.activeTabId === 'editor'" class="content-tab-pane">
+                <tiptap-editor
+                    ref="tiptapEditor"
+                    v-model="editor.content"
+                    :key="articles.selectedId"
+                    :is-saving="editor.isSaving"
+                    :auto-save="true"
+                    :show-save-button="false"
+                    @@save="saveArticle"
+                    class="flex-grow-1"
+                    placeholder="Start writing your article content..." />
+            </div>
+
+            <!-- Version Tab (single, reused) -->
+            <div
+                v-if="contentTabs.versionData"
+                v-show="contentTabs.activeTabId === 'version'"
+                class="content-tab-pane diff-viewer">
+                <div class="diff-viewer-header">
+                    <div class="diff-viewer-title">
+                        <span class="badge bg-primary me-2">Version {{ contentTabs.versionData.versionNumber }}</span>
+                        <span class="text-muted">{{ formatDate(contentTabs.versionData.createdAt) }}</span>
+                        <span v-if="contentTabs.versionData.createdByName" class="text-muted ms-2">
+                            by {{ contentTabs.versionData.createdByName }}
+                        </span>
+                    </div>
+                </div>
+                <div class="diff-viewer-content flex-grow-1">
+                    <div v-if="contentTabs.versionData.loadingDiff" class="loading-spinner">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading diff...</span>
+                        </div>
+                    </div>
+                    <div v-else-if="contentTabs.versionData.diffError" class="alert alert-danger m-3">
+                        {{ contentTabs.versionData.diffError }}
+                    </div>
+                    <div v-else-if="contentTabs.versionData.diffHtml" v-html="contentTabs.versionData.diffHtml" class="diff-content markdown-container"></div>
                 </div>
             </div>
-            <div v-else-if="version.diffError" class="alert alert-danger m-3">
-                {{ version.diffError }}
+
+            <!-- Plan Tab (single, reused) -->
+            <div
+                v-if="contentTabs.planData"
+                v-show="contentTabs.activeTabId === 'plan'"
+                class="content-tab-pane">
+                <plan-viewer
+                    :plan-id="contentTabs.planData.planId"
+                    :article-id="articles.selectedId" />
             </div>
-            <div v-else-if="version.diffHtml" v-html="version.diffHtml" class="diff-content"></div>
         </div>
-    </div>
-    <tiptap-editor v-else
-                   ref="tiptapEditor"
-                   v-model="editor.content"
-                   :key="articles.selectedId"
-                   :is-saving="editor.isSaving"
-                   :auto-save="true"
-                   :show-save-button="false"
-                   @@save="saveArticle"
-                   class="flex-grow-1"
-                   placeholder="Start writing your article content..." />
+    </template>
 </div>
 
 <!-- Right Sidebar -->
@@ -352,6 +392,7 @@
     <script src="~/js/components/article-list.js" asp-append-version="true"></script>
     <script src="~/js/components/chat-panel.js" asp-append-version="true"></script>
     <script src="~/js/components/versions-panel.js" asp-append-version="true"></script>
+    <script src="~/js/components/plan-viewer.js" asp-append-version="true"></script>
     <script type="module" src="~/js/components/tiptap-editor.js" asp-append-version="true"></script>
     <script src="~/js/mixins/articleVersionMixin.js" asp-append-version="true"></script>
     <script src="~/js/mixins/articleSignalRMixin.js" asp-append-version="true"></script>

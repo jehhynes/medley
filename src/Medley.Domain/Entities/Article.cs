@@ -59,4 +59,9 @@ public class Article : BusinessEntity
     /// Chat conversations about this article
     /// </summary>
     public virtual ICollection<ChatConversation> ChatConversations { get; set; } = new List<ChatConversation>();
+    
+    /// <summary>
+    /// Improvement plans for this article
+    /// </summary>
+    public virtual ICollection<Plan> Plans { get; set; } = new List<Plan>();
 }
