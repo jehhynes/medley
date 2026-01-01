@@ -32,6 +32,7 @@
                 'article-list': ArticleList,
                 'chat-panel': ChatPanel,
                 'versions-panel': VersionsPanel,
+                'plan-viewer': window.PlanViewer,
                 'tiptap-editor': window.TiptapEditor
             },
             data() {
@@ -62,6 +63,13 @@
                         content: '',
                         isSaving: false
                     },
+                    
+                // Content tabs state
+                contentTabs: {
+                    activeTabId: 'editor',
+                    versionData: null, // { versionId, versionNumber, createdAt, createdByName, loadingDiff, diffError, diffHtml }
+                    planData: null // { planId }
+                },
                     
                     // Create modal state
                     createModal: {
@@ -122,9 +130,33 @@
                     return this.$refs.tiptapEditor?.hasChanges || false;
                 },
                 flatArticlesList() {
-                    // Return all articles from cached flat list for virtual scrolling
-                    return this.cachedFlatList;
+                // Return all articles from cached flat list for virtual scrolling
+                return this.cachedFlatList;
+            },
+            availableTabs() {
+                // Build array of available tabs based on state
+                const tabs = [{ id: 'editor', label: 'Editor', closeable: false, type: 'editor' }];
+                
+                if (this.contentTabs.versionData) {
+                    tabs.push({
+                        id: 'version',
+                        label: `Version ${this.contentTabs.versionData.versionNumber}`,
+                        closeable: true,
+                        type: 'version'
+                    });
                 }
+                
+                if (this.contentTabs.planData) {
+                    tabs.push({
+                        id: 'plan',
+                        label: 'Plan',
+                        closeable: true,
+                        type: 'plan'
+                    });
+                }
+                
+                return tabs;
+            }
             },
             methods: {
                 // === Article Loading & Selection ===
@@ -310,6 +342,12 @@
 
                         // Clear version selection when switching articles
                         this.clearVersionSelection();
+                        
+                        // Clear all tabs when switching articles
+                        this.clearAllTabs();
+
+                        // Load draft plan if exists
+                        await this.loadDraftPlan(article.id);
 
                         // Expand all parent articles
                         this.expandParents(article.id);
@@ -784,6 +822,91 @@
                     
                     // Rebuild flat list cache
                     this.rebuildFlatListCache();
+                },
+
+                // === Content Tab Management ===
+                switchContentTab(tabId) {
+                    this.contentTabs.activeTabId = tabId;
+                },
+
+                closeContentTab(tabId) {
+                    if (tabId === 'version') {
+                        this.contentTabs.versionData = null;
+                        this.contentTabs.activeTabId = 'editor';
+                    } else if (tabId === 'plan') {
+                        this.contentTabs.planData = null;
+                        this.contentTabs.activeTabId = 'editor';
+                    }
+                },
+
+                openPlanTab(planId) {
+                    // Set or update plan data (reuses the single plan tab)
+                    this.contentTabs.planData = { planId };
+                    this.contentTabs.activeTabId = 'plan';
+                },
+
+                openVersionTab(version) {
+                    // Set or update version data (reuses the single version tab)
+                    this.contentTabs.versionData = {
+                        versionId: version.id,
+                        versionNumber: version.versionNumber,
+                        createdAt: version.createdAt,
+                        createdByName: version.createdByName,
+                        loadingDiff: true,
+                        diffError: null,
+                        diffHtml: null
+                    };
+
+                    this.contentTabs.activeTabId = 'version';
+
+                    // Load the diff
+                    this.loadVersionDiff();
+                },
+
+                async loadVersionDiff() {
+                    if (!this.contentTabs.versionData) return;
+                    
+                    try {
+                        const response = await api.get(
+                            `/api/articles/${this.articles.selectedId}/versions/${this.contentTabs.versionData.versionId}/diff`
+                        );
+                        
+                        // Convert markdown to HTML for both versions
+                        const beforeHtml = this.markdownToHtml(response.beforeContent || '');
+                        const afterHtml = this.markdownToHtml(response.afterContent || '');
+                        
+                        // Use htmlDiff to compare the HTML versions
+                        this.contentTabs.versionData.diffHtml = window.HtmlDiff.htmlDiff(beforeHtml, afterHtml);
+                        this.contentTabs.versionData.loadingDiff = false;
+                    } catch (err) {
+                        this.contentTabs.versionData.diffError = 'Failed to load diff: ' + err.message;
+                        this.contentTabs.versionData.loadingDiff = false;
+                        console.error('Error loading diff:', err);
+                    }
+                },
+
+                async loadDraftPlan(articleId) {
+                    try {
+                        const response = await api.get(`/api/articles/${articleId}/assistant/plans/active`);
+                        
+                        // If a draft plan exists, open it
+                        if (response && response.id) {
+                            this.openPlanTab(response.id);
+                        }
+                    } catch (err) {
+                        // 204 No Content means no draft plan exists, which is fine
+                        if (err.response && err.response.status === 204) {
+                            return;
+                        }
+                        console.error('Error loading draft plan:', err);
+                    }
+                },
+
+                clearAllTabs() {
+                    // Reset tabs to just editor
+                    this.contentTabs.versionData = null;
+                    this.contentTabs.planData = null;
+                    this.contentTabs.activeTabId = 'editor';
                 }
             },
 

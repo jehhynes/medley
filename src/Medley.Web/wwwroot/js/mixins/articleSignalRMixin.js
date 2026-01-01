@@ -132,6 +132,17 @@
                     }
                 });
 
+                this.signalr.connection.on('PlanGenerated', async (data) => {
+                    // Open plan tab when plan is generated
+                    if (this.articles.selectedId === data.articleId) {
+                        console.log('Plan generated:', data.planId);
+                        // Open the plan tab
+                        if (this.openPlanTab) {
+                            this.openPlanTab(data.planId);
+                        }
+                    }
+                });
+
                 this.signalr.connection.start()
                     .then(() => console.log('Connected to ArticleHub'))
                     .catch(err => console.error('SignalR connection error:', err));

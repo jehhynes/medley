@@ -22,9 +22,10 @@ public class ArticleChatService : IArticleChatService
     private readonly IRepository<ChatConversation> _conversationRepository;
     private readonly IRepository<DomainChatMessage> _chatMessageRepository;
     private readonly IRepository<Article> _articleRepository;
+    private readonly IRepository<Template> _templateRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IChatClient _chatClient;
-    private readonly ArticleAssistantPlugins _assistantPlugins;
+    private readonly ArticleAssistantPluginsFactory _pluginsFactory;
     private readonly ILogger<ArticleChatService> _logger;
     
     // Chat configuration constants
@@ -35,17 +36,19 @@ public class ArticleChatService : IArticleChatService
         IRepository<ChatConversation> conversationRepository,
         IRepository<DomainChatMessage> chatMessageRepository,
         IRepository<Article> articleRepository,
+        IRepository<Template> templateRepository,
         IUnitOfWork unitOfWork,
         AmazonBedrockRuntimeClient bedrockClient,
-        ArticleAssistantPlugins assistantPlugins,
+        ArticleAssistantPluginsFactory pluginsFactory,
         IOptions<BedrockSettings> bedrockSettings,
         ILogger<ArticleChatService> logger)
     {
         _conversationRepository = conversationRepository;
         _chatMessageRepository = chatMessageRepository;
         _articleRepository = articleRepository;
+        _templateRepository = templateRepository;
         _unitOfWork = unitOfWork;
-        _assistantPlugins = assistantPlugins;
+        _pluginsFactory = pluginsFactory;
         _logger = logger;
 
         // Construct the ChatClient with function invocation support
@@ -115,6 +118,9 @@ public class ArticleChatService : IArticleChatService
             throw new InvalidOperationException($"Article not found for conversation {conversationId}");
         }
 
+        // Create article-scoped plugins instance
+        var assistantPlugins = _pluginsFactory.Create(conversation.Article.Id);
+
         // Create the message store for persistence
         var serializedState = JsonSerializer.SerializeToElement(conversationId.ToString("N"));
         var messageStore = new EfChatMessageStore(
@@ -128,12 +134,12 @@ public class ArticleChatService : IArticleChatService
             instructions: BuildSystemMessage(conversation.Article),
             tools: [
                 AIFunctionFactory.Create(
-                    _assistantPlugins.SearchFragmentsAsync,
+                    assistantPlugins.SearchFragmentsAsync,
                     name: "search_fragments",
                     description: "Search for fragments semantically similar to a query string. Returns fragments with similarity scores."
                 ),
                 AIFunctionFactory.Create(
-                    _assistantPlugins.FindSimilarFragmentsAsync,
+                    assistantPlugins.FindSimilarFragmentsAsync,
                     name: "find_similar_to_article",
                     description: "Find fragments semantically similar to the current article content. Useful for finding related content to enhance or expand the article."
                 )
@@ -240,6 +246,112 @@ public class ArticleChatService : IArticleChatService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Cancelled conversation {ConversationId}", conversationId);
+    }
+
+    public async Task<DomainChatMessage> ProcessPlanGenerationAsync(
+        Guid conversationId,
+        CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Processing plan generation for conversation {ConversationId}", conversationId);
+
+        // Load conversation with article
+        var conversation = await _conversationRepository.Query()
+            .Include(c => c.Article)
+            .Include(c => c.CreatedBy)
+            .FirstOrDefaultAsync(c => c.Id == conversationId, cancellationToken);
+
+        if (conversation == null)
+        {
+            throw new InvalidOperationException($"Conversation {conversationId} not found");
+        }
+
+        if (conversation.Article == null)
+        {
+            throw new InvalidOperationException($"Article not found for conversation {conversationId}");
+        }
+
+        // Load the ArticleImprovementPlan template
+        var template = await _templateRepository.Query()
+            .FirstOrDefaultAsync(t => t.Type == TemplateType.ArticleImprovementPlan, cancellationToken);
+
+        if (template == null)
+        {
+            throw new InvalidOperationException("Article Improvement Plan template not found");
+        }
+
+        // Create article-scoped plugins instance
+        var assistantPlugins = _pluginsFactory.Create(conversation.Article.Id);
+        
+        // Set user ID in plugins for plan creation
+        assistantPlugins.SetCurrentUserId(conversation.CreatedByUserId);
+
+        // Build system message from template
+        var systemMessage = template.Content.Replace("{article.Title}", conversation.Article.Title);
+
+        // Create the message store for persistence
+        var serializedState = JsonSerializer.SerializeToElement(conversationId.ToString("N"));
+        var messageStore = new EfChatMessageStore(
+            _chatMessageRepository,
+            _unitOfWork,
+            serializedState);
+
+        // Create the agent with plan generation tools
+        var agent = new ChatClientAgent(
+            _chatClient,
+            instructions: systemMessage,
+            tools: [
+                AIFunctionFactory.Create(
+                    assistantPlugins.SearchFragmentsAsync,
+                    name: "search_fragments",
+                    description: "Search for fragments semantically similar to a query string. Returns fragments with similarity scores."
+                ),
+                AIFunctionFactory.Create(
+                    assistantPlugins.FindSimilarFragmentsAsync,
+                    name: "find_similar_to_article",
+                    description: "Find fragments semantically similar to the current article content. Useful for finding related content to enhance or expand the article."
+                ),
+                AIFunctionFactory.Create(
+                    assistantPlugins.GetFragmentContentAsync,
+                    name: "get_fragment_content",
+                    description: "Get the full content and details of a specific fragment by its ID. Use this to review fragments in detail before recommending them."
+                ),
+                AIFunctionFactory.Create(
+                    assistantPlugins.CreatePlanAsync,
+                    name: "create_plan",
+                    description: "Create a structured improvement plan for the article with fragment recommendations. Each recommendation should include fragmentId, similarityScore, include (bool), reasoning, and instructions."
+                )
+            ]
+        );
+
+        // Get the latest user message to process
+        var latestUserMessage = await _chatMessageRepository.Query()
+            .Where(m => m.ConversationId == conversationId && m.Role == ChatMessageRole.User)
+            .OrderByDescending(m => m.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (latestUserMessage == null)
+        {
+            throw new InvalidOperationException($"No user message found for conversation {conversationId}");
+        }
+
+        // Create or get existing thread with the message store
+        var thread = agent.GetNewThread(messageStore);
+
+        // Run the agent with the user's message
+        var result = await agent.RunAsync(
+            latestUserMessage.Content,
+            thread,
+            cancellationToken: cancellationToken);
+
+        // Return the most recently saved assistant message from the database
+        var assistantMessage = await _chatMessageRepository.Query()
+            .Where(m => m.ConversationId == conversationId && m.Role == ChatMessageRole.Assistant)
+            .OrderByDescending(m => m.CreatedAt)
+            .FirstAsync(cancellationToken);
+
+        _logger.LogInformation("Completed plan generation for conversation {ConversationId}", conversationId);
+
+        return assistantMessage;
     }
 
     private string BuildSystemMessage(Article article)

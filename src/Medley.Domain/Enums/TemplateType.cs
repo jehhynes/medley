@@ -18,6 +18,11 @@ public enum TemplateType
     /// <summary>
     /// Template for confidence scoring of extracted fragments
     /// </summary>
-    ConfidenceScoring = 3
+    ConfidenceScoring = 3,
+
+    /// <summary>
+    /// Template for article improvement plan generation
+    /// </summary>
+    ArticleImprovementPlan = 4
 }
 

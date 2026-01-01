@@ -88,5 +88,15 @@ public interface IArticleChatService
     Task CancelConversationAsync(
         Guid conversationId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Process a plan generation message (similar to chat but with plan-specific tools and template)
+    /// </summary>
+    /// <param name="conversationId">The conversation ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>The saved assistant message entity</returns>
+    Task<ChatMessage> ProcessPlanGenerationAsync(
+        Guid conversationId,
+        CancellationToken cancellationToken = default);
 }
 

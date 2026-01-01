@@ -87,4 +87,9 @@ public class Fragment : BusinessEntity
     /// </summary>
     [MaxLength(1000)]
     public string? ConfidenceComment { get; set; }
+    
+    /// <summary>
+    /// Plan fragments that reference this fragment
+    /// </summary>
+    public virtual ICollection<PlanFragment> PlanFragments { get; set; } = new List<PlanFragment>();
 }
