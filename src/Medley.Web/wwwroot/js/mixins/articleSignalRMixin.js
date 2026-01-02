@@ -1,8 +1,8 @@
 // Article SignalR Mixin - Handles real-time updates via SignalR
-(function() {
+(function () {
     const { createSignalRConnection } = window.MedleyApi;
     const MAX_QUEUE_SIZE = 100;
-    
+
     window.articleSignalRMixin = {
         methods: {
             /**
@@ -15,13 +15,13 @@
                 if (this.signalr.processing || this.signalr.updateQueue.length === 0) {
                     return;
                 }
-                
+
                 this.signalr.processing = true;
-                
+
                 // Process all queued updates
                 const queue = [...this.signalr.updateQueue];
                 this.signalr.updateQueue = [];
-                
+
                 queue.forEach(update => {
                     switch (update.type) {
                         case 'ArticleCreated':
@@ -44,7 +44,7 @@
                             break;
                     }
                 });
-                
+
                 this.signalr.processing = false;
             },
 
@@ -54,7 +54,7 @@
              */
             initializeSignalRConnection() {
                 this.signalr.connection = createSignalRConnection('/articleHub');
-                
+
                 // Create debounced processor for SignalR events
                 this.processSignalRQueueDebounced = window.MedleyUtils.debounce(() => {
                     this.processSignalRQueue();
@@ -133,17 +133,40 @@
                 });
 
                 this.signalr.connection.on('PlanGenerated', async (data) => {
-                    // Open plan tab when plan is generated
-                    if (this.articles.selectedId === data.articleId) {
-                        console.log('Plan generated:', data.planId);
-                        // Open the plan tab
-                        if (this.openPlanTab) {
-                            this.openPlanTab(data.planId);
+                    // Normalize IDs for comparison (handle both string and GUID formats)
+                    const normalizeId = (id) => id ? id.toString().toLowerCase() : null;
+                    const selectedId = normalizeId(this.articles.selectedId);
+                    const eventArticleId = normalizeId(data.articleId);
+
+                    console.log('PlanGenerated event received:', {
+                        eventArticleId,
+                        selectedId,
+                        planId: data.planId,
+                        matches: selectedId === eventArticleId
+                    });
+
+                    // Open plan tab when plan is generated for the currently selected article
+                    if (selectedId === eventArticleId) {
+                        console.log('Opening plan tab automatically for plan:', data.planId);
+                        // Open and switch to the plan tab
+                        this.openPlanTab(data.planId);
+                    } else {
+                        console.log('Plan generated for different article, not opening tab');
+                    }
+                });
+
+                this.signalr.connection.onreconnected(async (connectionId) => {
+                    console.log('SignalR reconnected. Re-joining article group.');
+                    if (this.articles.selectedId) {
+                        try {
+                            await this.signalr.connection.invoke('JoinArticle', this.articles.selectedId);
+                        } catch (err) {
+                            console.error('Error re-joining article group after reconnection:', err);
                         }
                     }
                 });
 
-                this.signalr.connection.start()
+                return this.signalr.connection.start()
                     .then(() => console.log('Connected to ArticleHub'))
                     .catch(err => console.error('SignalR connection error:', err));
             },

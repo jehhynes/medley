@@ -11,7 +11,7 @@ namespace Medley.Application.Services;
 /// <summary>
 /// Factory for creating article-scoped ArticleAssistantPlugins instances
 /// </summary>
-public class ArticleAssistantPluginsFactory
+public class ArticleChatToolsFactory
 {
     private readonly IFragmentRepository _fragmentRepository;
     private readonly IEmbeddingGenerator<string, Embedding<float>> _embeddingGenerator;
@@ -23,7 +23,7 @@ public class ArticleAssistantPluginsFactory
     private readonly IOptions<EmbeddingSettings> _embeddingSettings;
     private readonly AiCallContext _aiCallContext;
 
-    public ArticleAssistantPluginsFactory(
+    public ArticleChatToolsFactory(
         IFragmentRepository fragmentRepository,
         IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
         IRepository<Article> articleRepository,
@@ -50,11 +50,11 @@ public class ArticleAssistantPluginsFactory
     /// </summary>
     /// <param name="articleId">The article ID to scope the plugins to</param>
     /// <returns>A new ArticleAssistantPlugins instance</returns>
-    public ArticleAssistantPlugins Create(Guid articleId)
+    public ArticleChatTools Create(Guid articleId)
     {
-        var logger = _loggerFactory.CreateLogger<ArticleAssistantPlugins>();
+        var logger = _loggerFactory.CreateLogger<ArticleChatTools>();
         
-        return new ArticleAssistantPlugins(
+        return new ArticleChatTools(
             articleId,
             _fragmentRepository,
             _embeddingGenerator,

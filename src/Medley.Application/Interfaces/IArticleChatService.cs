@@ -1,5 +1,6 @@
 using Medley.Application.Models;
 using Medley.Domain.Entities;
+using Medley.Domain.Enums;
 
 namespace Medley.Application.Interfaces;
 
@@ -18,6 +19,7 @@ public interface IArticleChatService
     Task<ChatConversation> CreateConversationAsync(
         Guid articleId, 
         Guid userId, 
+        ConversationMode mode = ConversationMode.Chat,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -38,26 +40,6 @@ public interface IArticleChatService
     /// <returns>The conversation or null if not found</returns>
     Task<ChatConversation?> GetConversationAsync(
         Guid conversationId, 
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Process a chat message and return the saved assistant message
-    /// </summary>
-    /// <param name="conversationId">The conversation ID</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>The saved assistant message entity</returns>
-    Task<ChatMessage> ProcessChatMessageAsync(
-        Guid conversationId,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Process a chat message with streaming updates
-    /// </summary>
-    /// <param name="conversationId">The conversation ID</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Async enumerable of streaming updates</returns>
-    IAsyncEnumerable<ChatStreamUpdate> ProcessChatMessageStreamingAsync(
-        Guid conversationId,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -101,22 +83,23 @@ public interface IArticleChatService
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Process a plan generation message (similar to chat but with plan-specific tools and template)
+    /// Update the mode of an existing conversation
     /// </summary>
     /// <param name="conversationId">The conversation ID</param>
+    /// <param name="mode">The new mode</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>The saved assistant message entity</returns>
-    Task<ChatMessage> ProcessPlanGenerationAsync(
-        Guid conversationId,
+    Task UpdateConversationModeAsync(
+        Guid conversationId, 
+        ConversationMode mode, 
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Process a plan generation message with streaming updates
+    /// Process a conversation message with streaming updates, using the conversation's mode
     /// </summary>
     /// <param name="conversationId">The conversation ID</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Async enumerable of streaming updates</returns>
-    IAsyncEnumerable<ChatStreamUpdate> ProcessPlanGenerationStreamingAsync(
+    IAsyncEnumerable<ChatStreamUpdate> ProcessConversationStreamingAsync(
         Guid conversationId,
         CancellationToken cancellationToken = default);
 }

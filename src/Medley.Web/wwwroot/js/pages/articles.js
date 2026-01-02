@@ -50,27 +50,27 @@
                         parentPathCache: new Map(), // articleId -> [{id, title}, ...] parent chain
                         breadcrumbsCache: new Map() // articleId -> breadcrumb string
                     },
-                    
+
                     // View mode state
                     viewMode: 'tree', // 'tree' or 'list'
-                    
+
                     // Cached data for performance
                     cachedFlatList: [], // Cached flat list of all articles, sorted
-                    
+
                     // Editor state
                     editor: {
                         title: '',
                         content: '',
                         isSaving: false
                     },
-                    
-                // Content tabs state
-                contentTabs: {
-                    activeTabId: 'editor',
-                    versionData: null, // { versionId, versionNumber, createdAt, createdByName, loadingDiff, diffError, diffHtml }
-                    planData: null // { planId }
-                },
-                    
+
+                    // Content tabs state
+                    contentTabs: {
+                        activeTabId: 'editor',
+                        versionData: null, // { versionId, versionNumber, createdAt, createdByName, loadingDiff, diffError, diffHtml }
+                        planData: null // { planId }
+                    },
+
                     // Create modal state
                     createModal: {
                         visible: false,
@@ -79,7 +79,7 @@
                         parentId: null,
                         isSubmitting: false
                     },
-                    
+
                     // Edit modal state
                     editModal: {
                         visible: false,
@@ -88,7 +88,7 @@
                         typeId: null,
                         isSubmitting: false
                     },
-                    
+
                     // UI state
                     ui: {
                         loading: false,
@@ -96,7 +96,7 @@
                         sidebarMenuOpen: false,
                         activeRightTab: 'assistant'
                     },
-                    
+
                     // Version state
                     version: {
                         selected: null,
@@ -104,14 +104,14 @@
                         loadingDiff: false,
                         diffError: null
                     },
-                    
+
                     // SignalR state
                     signalr: {
                         connection: null,
                         updateQueue: [],
                         processing: false
                     },
-                    
+
                     // Drag state (for article-tree component)
                     dragState: {
                         draggingArticleId: null,
@@ -130,33 +130,33 @@
                     return this.$refs.tiptapEditor?.hasChanges || false;
                 },
                 flatArticlesList() {
-                // Return all articles from cached flat list for virtual scrolling
-                return this.cachedFlatList;
-            },
-            availableTabs() {
-                // Build array of available tabs based on state
-                const tabs = [{ id: 'editor', label: 'Editor', closeable: false, type: 'editor' }];
-                
-                if (this.contentTabs.versionData) {
-                    tabs.push({
-                        id: 'version',
-                        label: `Version ${this.contentTabs.versionData.versionNumber}`,
-                        closeable: true,
-                        type: 'version'
-                    });
+                    // Return all articles from cached flat list for virtual scrolling
+                    return this.cachedFlatList;
+                },
+                availableTabs() {
+                    // Build array of available tabs based on state
+                    const tabs = [{ id: 'editor', label: 'Editor', closeable: false, type: 'editor' }];
+
+                    if (this.contentTabs.versionData) {
+                        tabs.push({
+                            id: 'version',
+                            label: `Version ${this.contentTabs.versionData.versionNumber}`,
+                            closeable: true,
+                            type: 'version'
+                        });
+                    }
+
+                    if (this.contentTabs.planData) {
+                        tabs.push({
+                            id: 'plan',
+                            label: 'Plan',
+                            closeable: true,
+                            type: 'plan'
+                        });
+                    }
+
+                    return tabs;
                 }
-                
-                if (this.contentTabs.planData) {
-                    tabs.push({
-                        id: 'plan',
-                        label: 'Plan',
-                        closeable: true,
-                        type: 'plan'
-                    });
-                }
-                
-                return tabs;
-            }
             },
             methods: {
                 // === Article Loading & Selection ===
@@ -194,7 +194,7 @@
                 async loadArticleTypes() {
                     try {
                         this.articles.types = await api.get('/api/articles/types');
-                        
+
                         // Build icon map and type index: articleTypeId -> icon/type
                         this.articles.typeIconMap = {};
                         this.articles.typeIndexMap = {};
@@ -239,7 +239,7 @@
                     articles.forEach(article => {
                         // Store the parent path (array of parent objects with id and title)
                         this.articles.parentPathCache.set(article.id, [...path]);
-                        
+
                         // Build breadcrumb string from parent path
                         if (path.length > 0) {
                             const breadcrumb = path.map(p => p.title).join(' > ');
@@ -247,7 +247,7 @@
                         } else {
                             this.articles.breadcrumbsCache.set(article.id, null);
                         }
-                        
+
                         // Recursively process children
                         if (article.children && article.children.length > 0) {
                             this.buildParentPathCache(article.children, [...path, { id: article.id, title: article.title }]);
@@ -269,15 +269,15 @@
                         for (const article of articles) {
                             // Apply article type filter if active
                             const matchesArticleType = this.filters.articleTypeIds.length === 0 ||
-                                                       this.filters.articleTypeIds.includes(article.articleTypeId);
-                            
+                                this.filters.articleTypeIds.includes(article.articleTypeId);
+
                             // Apply status filter if active
                             const matchesStatus = this.filters.statuses.length === 0 ||
-                                                  this.filters.statuses.includes(article.status);
-                            
+                                this.filters.statuses.includes(article.status);
+
                             // Include article only if it matches both filters
                             const shouldInclude = matchesArticleType && matchesStatus;
-                            
+
                             if (shouldInclude) {
                                 const articleWithParent = {
                                     ...article,
@@ -285,7 +285,7 @@
                                 };
                                 result.push(articleWithParent);
                             }
-                            
+
                             // Always recurse into children regardless of parent inclusion
                             if (article.children && article.children.length > 0) {
                                 result = result.concat(flattenArticles(article.children, article.id));
@@ -293,14 +293,14 @@
                         }
                         return result;
                     };
-                    
+
                     // Sort alphabetically by title (case-insensitive)
                     const flattened = flattenArticles(this.articles.list);
                     this.cachedFlatList = flattened.sort((a, b) => {
                         return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
                     });
                 },
-                
+
                 rebuildFlatListCacheDebounced() {
                     // Debounced version to avoid rebuilding multiple times during rapid updates
                     if (!this._debouncedRebuildFlatListCache) {
@@ -335,14 +335,24 @@
                     try {
                         const fullArticle = await api.get(`/api/articles/${article.id}`);
 
+                        // Leave the previous article's SignalR group if we had one selected
+                        if (this.articles.selectedId && this.signalr.connection && this.signalr.connection.state === signalR.HubConnectionState.Connected) {
+                            await this.signalr.connection.invoke('LeaveArticle', this.articles.selectedId);
+                        }
+
                         this.editor.title = fullArticle.title;
                         this.editor.content = fullArticle.content || '';
                         this.articles.selected = fullArticle;
                         this.articles.selectedId = article.id;
 
+                        // Join the new article's SignalR group
+                        if (this.signalr.connection && this.signalr.connection.state === signalR.HubConnectionState.Connected) {
+                            await this.signalr.connection.invoke('JoinArticle', article.id);
+                        }
+
                         // Clear version selection when switching articles
                         this.clearVersionSelection();
-                        
+
                         // Clear all tabs when switching articles
                         this.clearAllTabs();
 
@@ -368,14 +378,14 @@
                         // Get article types from cached index for O(1) lookup
                         const aType = this.articles.typeIndexMap[a.articleTypeId];
                         const bType = this.articles.typeIndexMap[b.articleTypeId];
-                        
+
                         const aIsIndex = aType?.name.toLowerCase() === 'index';
                         const bIsIndex = bType?.name.toLowerCase() === 'index';
-                        
+
                         // Index types come first
                         if (aIsIndex && !bIsIndex) return -1;
                         if (!aIsIndex && bIsIndex) return 1;
-                        
+
                         // Then sort alphabetically by title (case-insensitive)
                         return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
                     });
@@ -384,7 +394,7 @@
                 sortArticlesRecursive(articles) {
                     // Sort current level
                     this.sortArticles(articles);
-                    
+
                     // Recursively sort children
                     articles.forEach(article => {
                         if (article.children && article.children.length > 0) {
@@ -415,7 +425,7 @@
                             return articles;
                         }
                     }
-                    
+
                     // Search in children
                     for (const article of articles) {
                         if (article.children && article.children.length > 0) {
@@ -425,7 +435,7 @@
                             }
                         }
                     }
-                    
+
                     return null;
                 },
 
@@ -475,7 +485,7 @@
                             this.sortArticles(parent.children);
                             // Expand parent to show new child
                             this.articles.expandedIds.add(parent.id);
-                            
+
                             // Update caches for new child
                             const parentPath = this.articles.parentPathCache.get(parent.id) || [];
                             const newPath = [...parentPath, { id: parent.id, title: parent.title }];
@@ -491,10 +501,10 @@
                             this.articles.breadcrumbsCache.set(article.id, null);
                         }
                     }
-                    
+
                     // Add to index
                     this.articles.index.set(article.id, article);
-                    
+
                     // Rebuild flat list cache for list view
                     this.rebuildFlatListCache();
                 },
@@ -512,7 +522,7 @@
                     const article = this.articles.index.get(articleId);
                     if (article) {
                         Object.assign(article, updates);
-                        
+
                         // If title changed, rebuild breadcrumbs for this article's descendants
                         if (updates.title !== undefined && article.children && article.children.length > 0) {
                             this.buildParentPathCache(article.children, [
@@ -520,7 +530,7 @@
                                 { id: article.id, title: article.title }
                             ]);
                         }
-                        
+
                         // If title or articleTypeId changed, re-sort the parent array
                         if (updates.title !== undefined || updates.articleTypeId !== undefined) {
                             // Find the parent array that contains this article
@@ -531,7 +541,7 @@
                             // Rebuild flat list cache since sorting changed
                             this.rebuildFlatListCache();
                         }
-                        
+
                         // If currently selected article is being updated, update editor state too
                         if (this.articles.selectedId === articleId) {
                             if (updates.title !== undefined) {
@@ -551,7 +561,7 @@
                 removeArticleFromTree(articleId) {
                     // Get the article before removing to access its children
                     const article = this.articles.index.get(articleId);
-                    
+
                     const removeFromArray = (articles) => {
                         for (let i = 0; i < articles.length; i++) {
                             if (articles[i].id === articleId) {
@@ -568,7 +578,7 @@
                     };
 
                     removeFromArray(this.articles.list);
-                    
+
                     // Remove from caches (including descendants)
                     const removeFromCaches = (art) => {
                         if (!art) return;
@@ -579,9 +589,9 @@
                             art.children.forEach(child => removeFromCaches(child));
                         }
                     };
-                    
+
                     removeFromCaches(article);
-                    
+
                     // Rebuild flat list cache
                     this.rebuildFlatListCache();
                 },
@@ -602,14 +612,14 @@
                         const response = await api.put(`/api/articles/${this.articles.selected.id}/content`, {
                             content: this.editor.content
                         });
-                        
+
                         // Log version info for debugging (silent for auto-save)
                         if (response && response.versionNumber) {
                             console.log(`Article saved - Version ${response.versionNumber} (${response.isNewVersion ? 'new' : 'updated'})`);
                         }
                     } catch (err) {
                         console.error('Error saving article:', err);
-                        
+
                         // Retry logic for auto-save (max 3 attempts with exponential backoff)
                         if (retryCount < 3) {
                             const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
@@ -617,7 +627,7 @@
                             await new Promise(resolve => setTimeout(resolve, delay));
                             return this.saveArticle(retryCount + 1);
                         }
-                        
+
                         // After 3 failed attempts, still fail silently but log it
                         console.error('Failed to save article after 3 attempts');
                     } finally {
@@ -668,7 +678,7 @@
                     this.viewMode = mode;
                     localStorage.setItem('articlesViewMode', mode);
                 },
-                
+
                 toggleViewMode() {
                     const newMode = this.viewMode === 'tree' ? 'list' : 'tree';
                     this.setViewMode(newMode);
@@ -803,12 +813,12 @@
                         }
                         newParent.children.push(movedArticle);
                         this.sortArticles(newParent.children);
-                        
+
                         // Rebuild parent path cache for the moved article and its descendants
                         const parentPath = this.articles.parentPathCache.get(newParentId) || [];
                         const newPath = [...parentPath, { id: newParent.id, title: newParent.title }];
                         this.buildParentPathCache([movedArticle], newPath);
-                        
+
                         // Expand the new parent to show the moved article
                         this.articles.expandedIds.add(newParentId);
                     } else {
@@ -819,7 +829,7 @@
                         // Rebuild caches for root
                         this.buildParentPathCache([movedArticle], []);
                     }
-                    
+
                     // Rebuild flat list cache
                     this.rebuildFlatListCache();
                 },
@@ -865,16 +875,16 @@
 
                 async loadVersionDiff() {
                     if (!this.contentTabs.versionData) return;
-                    
+
                     try {
                         const response = await api.get(
                             `/api/articles/${this.articles.selectedId}/versions/${this.contentTabs.versionData.versionId}/diff`
                         );
-                        
+
                         // Convert markdown to HTML for both versions
                         const beforeHtml = this.markdownToHtml(response.beforeContent || '');
                         const afterHtml = this.markdownToHtml(response.afterContent || '');
-                        
+
                         // Use htmlDiff to compare the HTML versions
                         this.contentTabs.versionData.diffHtml = window.HtmlDiff.htmlDiff(beforeHtml, afterHtml);
                         this.contentTabs.versionData.loadingDiff = false;
@@ -888,7 +898,7 @@
                 async loadDraftPlan(articleId) {
                     try {
                         const response = await api.get(`/api/articles/${articleId}/assistant/plans/active`);
-                        
+
                         // If a draft plan exists, open it
                         if (response && response.id) {
                             this.openPlanTab(response.id);
@@ -917,12 +927,15 @@
                     this.viewMode = savedViewMode;
                 }
 
+                // Initialize SignalR connection first and wait for it to connect (from mixin)
+                await this.initializeSignalRConnection();
+
                 // Load article types and articles simultaneously
                 await Promise.all([
                     this.loadArticleTypes(),
                     this.loadArticles()
                 ]);
-                
+
                 // Sort articles after both articles and types are loaded
                 this.sortArticlesRecursive(this.articles.list);
 
@@ -951,9 +964,6 @@
                     }
                 };
                 window.addEventListener('beforeunload', this.handleBeforeUnload);
-
-                // Initialize SignalR connection (from mixin)
-                this.initializeSignalRConnection();
             },
 
             beforeUnmount() {

@@ -136,7 +136,13 @@ Your instructions should be in markdown format and include:
 - Specific sections to add or enhance
 - Writing guidelines for applying the fragments
 
-Be thorough but selective - quality over quantity.",
+Be thorough but selective - quality over quantity.
+
+------------------
+
+Current Article Content:
+{article.Content}
+",
                     "Template for generating article improvement plans with fragment recommendations",
                     DateTimeOffset.UtcNow,
                     DateTimeOffset.UtcNow

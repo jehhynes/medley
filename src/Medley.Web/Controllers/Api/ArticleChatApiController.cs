@@ -81,24 +81,24 @@ public class ArticleChatApiController : ControllerBase
     /// Create a new conversation for an article
     /// </summary>
     [HttpPost("conversation")]
-    public async Task<IActionResult> CreateConversation(Guid articleId)
+    public async Task<IActionResult> CreateConversation(Guid articleId, [FromQuery] ConversationMode mode = ConversationMode.Chat)
     {
         var article = await _articleRepository.GetByIdAsync(articleId);
         if (article == null)
         {
             return NotFound(new { error = "Article not found" });
         }
-
+ 
         // Check if active conversation already exists
         var existingConversation = await _chatService.GetActiveConversationAsync(articleId);
         if (existingConversation != null)
         {
             return Conflict(new { error = "An active conversation already exists for this article" });
         }
-
+ 
         var userId = GetUserId();
-        var conversation = await _chatService.CreateConversationAsync(articleId, userId);
-
+        var conversation = await _chatService.CreateConversationAsync(articleId, userId, mode);
+ 
         return CreatedAtAction(
             nameof(GetActiveConversation),
             new { articleId },
@@ -106,6 +106,7 @@ public class ArticleChatApiController : ControllerBase
             {
                 id = conversation.Id,
                 state = conversation.State.ToString(),
+                mode = conversation.Mode.ToString(),
                 createdAt = conversation.CreatedAt
             });
     }
@@ -207,6 +208,12 @@ public class ArticleChatApiController : ControllerBase
         if (conversation.State != ConversationState.Active)
         {
             return BadRequest(new { error = "Conversation is not active" });
+        }
+
+        // Update mode if provided
+        if (request.Mode.HasValue)
+        {
+            conversation.Mode = request.Mode.Value;
         }
 
         var userId = GetUserId();
@@ -382,6 +389,11 @@ public class ArticleChatApiController : ControllerBase
             return BadRequest(new { error = "Conversation is not active" });
         }
 
+        if (conversation.Mode != ConversationMode.Plan)
+        {
+            return BadRequest(new { error = "This conversation is not in Plan mode" });
+        }
+
         var userId = GetUserId();
 
         // Save user message requesting plan creation
@@ -552,5 +564,5 @@ public class ArticleChatApiController : ControllerBase
     }
 }
 
-public record SendMessageRequest(string Message);
+public record SendMessageRequest(string Message, ConversationMode? Mode = null);
 

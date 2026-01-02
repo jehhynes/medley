@@ -99,7 +99,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                 // Process AI response with streaming
                 _logger.LogInformation("Requesting AI response with streaming for conversation {ConversationId}", conversation.Id);
                 
-                await foreach (var update in _chatService.ProcessChatMessageStreamingAsync(
+                await foreach (var update in _chatService.ProcessConversationStreamingAsync(
                     conversation.Id,
                     cancellationToken))
                 {
@@ -268,7 +268,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                 // Process plan generation with streaming
                 _logger.LogInformation("Generating plan with streaming for conversation {ConversationId}", conversation.Id);
                 
-                await foreach (var update in _chatService.ProcessPlanGenerationStreamingAsync(
+                await foreach (var update in _chatService.ProcessConversationStreamingAsync(
                     conversation.Id,
                     cancellationToken))
                 {
