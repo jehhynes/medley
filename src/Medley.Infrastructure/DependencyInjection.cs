@@ -21,6 +21,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Npgsql;
 using OllamaSharp;
 using OpenAI;
@@ -74,6 +75,10 @@ public static class DependencyInjection
         services.AddScoped<IEmbeddingHelper, EmbeddingHelper>();
         services.AddScoped<IArticleVersionService, ArticleVersionService>();
         services.AddScoped<FragmentExtractionService>();
+        
+        // Register AI call context for token usage tracking
+        services.AddScoped<AiCallContext>();
+        
         //services.AddScoped<IntegrationHealthCheckJob>();
         services.AddTransient<FragmentClusteringJob>();
         services.AddTransient<ArticleChatJob>();
@@ -214,7 +219,37 @@ public static class DependencyInjection
         // Register AI processing service only when AWS clients are available
         if (hasCredentials && !environment.IsTesting())
         {
-            services.AddScoped<IAiProcessingService, BedrockAiService>();
+            // Register IChatClient with token tracking middleware (shared by all services)
+            services.AddScoped<IChatClient>(sp =>
+            {
+                var bedrockClient = sp.GetRequiredService<AmazonBedrockRuntimeClient>();
+                var bedrockSettings = sp.GetRequiredService<IOptions<BedrockSettings>>();
+                
+                // Create base ChatClient from Bedrock client
+                var baseChatClient = bedrockClient.AsIChatClient(bedrockSettings.Value.ModelId);
+                
+                // Wrap with token tracking middleware
+                var aiCallContext = sp.GetRequiredService<AiCallContext>();
+                var serviceScopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
+                var middlewareLogger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Application.Middleware.TokenTrackingChatClientMiddleware>>();
+                
+                return new Application.Middleware.TokenTrackingChatClientMiddleware(
+                    baseChatClient,
+                    aiCallContext,
+                    serviceScopeFactory,
+                    middlewareLogger,
+                    bedrockSettings.Value.ModelId);
+            });
+            
+            // Register BedrockAiService (uses registered IChatClient)
+            services.AddScoped<IAiProcessingService>(sp =>
+            {
+                var chatClient = sp.GetRequiredService<IChatClient>();
+                var bedrockSettings = sp.GetRequiredService<IOptions<BedrockSettings>>();
+                var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<BedrockAiService>>();
+                
+                return new BedrockAiService(chatClient, bedrockSettings, logger);
+            });
             
             // Configure chat service
             ConfigureChatService(services, configuration);
@@ -233,7 +268,7 @@ public static class DependencyInjection
         // Register ArticleAssistantPluginsFactory (for creating article-scoped plugin instances)
         services.AddScoped<ArticleAssistantPluginsFactory>();
 
-        // Register ArticleChatService (which constructs its own IChatClient)
+        // Register ArticleChatService (uses registered IChatClient and wraps it with function invocation)
         services.AddScoped<IArticleChatService, ArticleChatService>();
     }
 
@@ -246,16 +281,37 @@ public static class DependencyInjection
         var embeddingSettings = configuration.GetSection("Embedding").Get<EmbeddingSettings>() ?? new EmbeddingSettings();
         
         // Register IEmbeddingGenerator<string, Embedding<float>> based on the configured provider
+        // Wrapped with TokenTrackingEmbeddingGenerator for usage tracking
         services.AddScoped<IEmbeddingGenerator<string, Embedding<float>>>(sp =>
         {
             var provider = embeddingSettings.Provider?.ToLowerInvariant() ?? "ollama";
             
-            return provider switch
+            var innerGenerator = provider switch
             {
                 "openai" => ConfigureOpenAIEmbedding(embeddingSettings),
                 "ollama" => ConfigureOllamaEmbedding(embeddingSettings),
                 _ => throw new InvalidOperationException($"Unsupported embedding provider: {embeddingSettings.Provider}")
             };
+            
+            // Determine model name for tracking
+            var modelName = provider switch
+            {
+                "openai" => embeddingSettings.OpenAI.Model,
+                "ollama" => embeddingSettings.Ollama.Model,
+                _ => "unknown"
+            };
+            
+            // Wrap with token tracking
+            var aiCallContext = sp.GetRequiredService<AiCallContext>();
+            var serviceScopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
+            var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<TokenTrackingEmbeddingGenerator>>();
+            
+            return new TokenTrackingEmbeddingGenerator(
+                innerGenerator,
+                aiCallContext,
+                serviceScopeFactory,
+                logger,
+                modelName);
         });
     }
 

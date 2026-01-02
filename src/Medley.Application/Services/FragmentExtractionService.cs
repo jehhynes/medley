@@ -18,6 +18,7 @@ public class FragmentExtractionService
     private readonly IRepository<Fragment> _fragmentRepository;
     private readonly IRepository<Template> _templateRepository;
     private readonly ILogger<FragmentExtractionService> _logger;
+    private readonly AiCallContext _aiCallContext;
 
     // Text chunking configuration
     private const int ChunkingThreshold = 90000; // Only chunk if content exceeds 90K characters
@@ -28,7 +29,8 @@ public class FragmentExtractionService
         IRepository<Source> sourceRepository,
         IRepository<Fragment> fragmentRepository,
         IRepository<Template> templateRepository,
-        ILogger<FragmentExtractionService> logger)
+        ILogger<FragmentExtractionService> logger,
+        AiCallContext aiCallContext)
     {
         _aiService = aiService;
         _chunkingService = chunkingService;
@@ -36,6 +38,7 @@ public class FragmentExtractionService
         _fragmentRepository = fragmentRepository;
         _templateRepository = templateRepository;
         _logger = logger;
+        _aiCallContext = aiCallContext;
     }
 
     /// <summary>
@@ -46,10 +49,12 @@ public class FragmentExtractionService
     /// <returns>Result containing fragment count and extraction message</returns>
     public async Task<FragmentExtractionResult> ExtractFragmentsAsync(Guid sourceId, CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Starting fragment extraction for source {SourceId}", sourceId);
+        using (_aiCallContext.SetContext(nameof(FragmentExtractionService), nameof(ExtractFragmentsAsync), nameof(Source), sourceId))
+        {
+            _logger.LogInformation("Starting fragment extraction for source {SourceId}", sourceId);
 
-        // Load source with content
-        var source = await _sourceRepository.Query()
+            // Load source with content
+            var source = await _sourceRepository.Query()
             .Include(s => s.Integration)
             .FirstOrDefaultAsync(s => s.Id == sourceId, cancellationToken);
 
@@ -151,35 +156,40 @@ public class FragmentExtractionService
 
         throw new InvalidOperationException("Fragment extraction failed unexpectedly");
     }
+}
 
     private async Task<(List<FragmentDto> Fragments, List<string> Messages)> ProcessSingleContentAsync(
         string content, 
         string systemPrompt,
         CancellationToken cancellationToken = default)
     {
-        var extractionResponse = await _aiService.ProcessStructuredPromptAsync<FragmentExtractionResponse>(
-            userPrompt: content,
-            systemPrompt: systemPrompt,
-            cancellationToken: cancellationToken);
-
-        var fragments = new List<FragmentDto>();
-        var messages = new List<string>();
-
-        if (extractionResponse != null)
+        // Set nested context for this operation (parent context already set in ExtractFragmentsAsync)
+        using (_aiCallContext.SetContext(nameof(FragmentExtractionService), nameof(ProcessSingleContentAsync)))
         {
-            if (!string.IsNullOrWhiteSpace(extractionResponse.Message))
+            var extractionResponse = await _aiService.ProcessStructuredPromptAsync<FragmentExtractionResponse>(
+                userPrompt: content,
+                systemPrompt: systemPrompt,
+                cancellationToken: cancellationToken);
+
+            var fragments = new List<FragmentDto>();
+            var messages = new List<string>();
+
+            if (extractionResponse != null)
             {
-                messages.Add(extractionResponse.Message.Trim());
+                if (!string.IsNullOrWhiteSpace(extractionResponse.Message))
+                {
+                    messages.Add(extractionResponse.Message.Trim());
+                }
+
+                if (extractionResponse.Fragments != null && extractionResponse.Fragments.Count > 0)
+                {
+                    fragments.AddRange(extractionResponse.Fragments);
+                    _logger.LogInformation("Extracted {Count} fragments from content", extractionResponse.Fragments.Count);
+                }
             }
 
-            if (extractionResponse.Fragments != null && extractionResponse.Fragments.Count > 0)
-            {
-                fragments.AddRange(extractionResponse.Fragments);
-                _logger.LogInformation("Extracted {Count} fragments from content", extractionResponse.Fragments.Count);
-            }
+            return (fragments, messages);
         }
-
-        return (fragments, messages);
     }
 
     private async Task<(List<FragmentDto> Fragments, List<string> Messages)> ProcessChunkedContentAsync(
@@ -205,26 +215,30 @@ public class FragmentExtractionService
 
             try
             {
-                var extractionResponse = await _aiService.ProcessStructuredPromptAsync<FragmentExtractionResponse>(
-                    userPrompt: chunk.Content,
-                    systemPrompt: systemPrompt,
-                    cancellationToken: cancellationToken);
-
-                if (extractionResponse != null)
+                // Track this specific chunk operation
+                using (_aiCallContext.SetContext(nameof(ContentChunkingService), $"Chunk{chunkNumber}", nameof(Source), source.Id))
                 {
-                    var message = !string.IsNullOrWhiteSpace(extractionResponse.Message) 
-                        ? extractionResponse.Message.Trim() 
-                        : null;
+                    var extractionResponse = await _aiService.ProcessStructuredPromptAsync<FragmentExtractionResponse>(
+                        userPrompt: chunk.Content,
+                        systemPrompt: systemPrompt,
+                        cancellationToken: cancellationToken);
 
-                    var fragments = extractionResponse.Fragments ?? new List<FragmentDto>();
-                    
-                    _logger.LogInformation("Extracted {Count} fragments from chunk {ChunkNumber}",
-                        fragments.Count, chunkNumber);
+                    if (extractionResponse != null)
+                    {
+                        var message = !string.IsNullOrWhiteSpace(extractionResponse.Message) 
+                            ? extractionResponse.Message.Trim() 
+                            : null;
 
-                    return (Fragments: fragments, Message: message, ChunkNumber: chunkNumber);
+                        var fragments = extractionResponse.Fragments ?? new List<FragmentDto>();
+                        
+                        _logger.LogInformation("Extracted {Count} fragments from chunk {ChunkNumber}",
+                            fragments.Count, chunkNumber);
+
+                        return (Fragments: fragments, Message: message, ChunkNumber: chunkNumber);
+                    }
+
+                    return (Fragments: new List<FragmentDto>(), Message: (string?)null, ChunkNumber: chunkNumber);
                 }
-
-                return (Fragments: new List<FragmentDto>(), Message: (string?)null, ChunkNumber: chunkNumber);
             }
             catch (Exception ex)
             {

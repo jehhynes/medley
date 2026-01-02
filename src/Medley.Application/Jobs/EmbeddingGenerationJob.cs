@@ -4,6 +4,7 @@ using Hangfire.Server;
 using Hangfire.Storage;
 using Medley.Application.Configuration;
 using Medley.Application.Interfaces;
+using Medley.Application.Services;
 using Medley.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
@@ -25,7 +26,8 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
     private readonly IBackgroundJobClient _backgroundJobClient;
     private readonly IEmbeddingHelper _embeddingHelper;
     private readonly EmbeddingSettings _embeddingSettings;
-    
+    private readonly AiCallContext _aiCallContext;
+
     private const int BatchSize = 100; // Process up to 100 fragments per run
 
     public EmbeddingGenerationJob(
@@ -35,13 +37,15 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
         IEmbeddingHelper embeddingHelper,
         IOptions<EmbeddingSettings> embeddingSettings,
         IUnitOfWork unitOfWork,
-        ILogger<EmbeddingGenerationJob> logger) : base(unitOfWork, logger)
+        ILogger<EmbeddingGenerationJob> logger,
+        AiCallContext aiCallContext) : base(unitOfWork, logger)
     {
         _fragmentRepository = fragmentRepository;
         _embeddingGenerator = embeddingGenerator;
         _backgroundJobClient = backgroundJobClient;
         _embeddingHelper = embeddingHelper;
         _embeddingSettings = embeddingSettings.Value;
+        _aiCallContext = aiCallContext;
     }
 
     /// <summary>
@@ -107,28 +111,32 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
                     Dimensions = _embeddingSettings.Dimensions
                 };
 
-                var embeddings = await _embeddingGenerator.GenerateAsync(textsToEmbed, options, cancellationToken: cancellationToken);
-
-                // Update fragments with their embeddings (normalized for cosine similarity)
-                var embeddingList = embeddings.ToList();
-                for (int j = 0; j < fragmentsWithoutEmbeddings.Count && j < embeddingList.Count; j++)
+                // Set AI call context for token tracking - use first fragment as representative
+                using (_aiCallContext.SetContext(nameof(EmbeddingGenerationJob), nameof(GenerateFragmentEmbeddings), nameof(Fragment), fragmentsWithoutEmbeddings.First().Id))
                 {
-                    if (cancellationToken.IsCancellationRequested)
-                        break;
+                    var embeddings = await _embeddingGenerator.GenerateAsync(textsToEmbed, options, cancellationToken: cancellationToken);
 
-                    var fragment = fragmentsWithoutEmbeddings[j];
-                    var embedding = embeddingList[j];
+                    // Update fragments with their embeddings (normalized for cosine similarity)
+                    var embeddingList = embeddings.ToList();
+                    for (int j = 0; j < fragmentsWithoutEmbeddings.Count && j < embeddingList.Count; j++)
+                    {
+                        if (cancellationToken.IsCancellationRequested)
+                            break;
 
-                    // Process embedding (conditionally normalize based on model)
-                    var processedVector = _embeddingHelper.ProcessEmbedding(embedding.Vector.ToArray(), fragment.Id);
+                        var fragment = fragmentsWithoutEmbeddings[j];
+                        var embedding = embeddingList[j];
 
-                    fragment.Embedding = new Vector(processedVector);
+                        // Process embedding (conditionally normalize based on model)
+                        var processedVector = _embeddingHelper.ProcessEmbedding(embedding.Vector.ToArray(), fragment.Id);
 
-                    await _fragmentRepository.SaveAsync(fragment);
-                    processedCount++;
+                        fragment.Embedding = new Vector(processedVector);
 
-                    _logger.LogDebug("Generated embedding for fragment {FragmentId} (Title: {Title}) with {Dimensions} dimensions",
-                        fragment.Id, fragment.Title ?? "Untitled", embedding.Vector.Length);
+                        await _fragmentRepository.SaveAsync(fragment);
+                        processedCount++;
+
+                        _logger.LogDebug("Generated embedding for fragment {FragmentId} (Title: {Title}) with {Dimensions} dimensions",
+                            fragment.Id, fragment.Title ?? "Untitled", embedding.Vector.Length);
+                    }
                 }
             }
             catch (Exception ex)
@@ -184,4 +192,3 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
         return string.Join("\n\n", parts);
     }
 }
-

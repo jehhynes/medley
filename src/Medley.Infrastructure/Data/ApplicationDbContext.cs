@@ -60,6 +60,11 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     /// Fragment recommendations within plans
     /// </summary>
     public DbSet<PlanFragment> PlanFragments { get; set; } = null!;
+    
+    /// <summary>
+    /// AI token usage tracking for cost monitoring and analytics
+    /// </summary>
+    public DbSet<AiTokenUsage> AiTokenUsages { get; set; } = null!;
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {

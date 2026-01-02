@@ -3,6 +3,7 @@ using Hangfire.MissionControl;
 using Hangfire.Server;
 using Hangfire.Storage;
 using Medley.Application.Interfaces;
+using Medley.Application.Services;
 using Medley.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -17,17 +18,20 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
     private readonly IFragmentRepository _fragmentRepository;
     private readonly IAiProcessingService _aiProcessingService;
     private readonly IBackgroundJobClient _backgroundJobClient;
+    private readonly AiCallContext _aiCallContext;
 
     public FragmentClusteringJob(
         IFragmentRepository fragmentRepository,
         IAiProcessingService aiProcessingService,
         IBackgroundJobClient backgroundJobClient,
         IUnitOfWork unitOfWork,
-        ILogger<FragmentClusteringJob> logger) : base(unitOfWork, logger)
+        ILogger<FragmentClusteringJob> logger,
+        AiCallContext aiCallContext) : base(unitOfWork, logger)
     {
         _fragmentRepository = fragmentRepository;
         _aiProcessingService = aiProcessingService;
         _backgroundJobClient = backgroundJobClient;
+        _aiCallContext = aiCallContext;
     }
 
     [DisableMultipleQueuedItemsFilter]
@@ -145,24 +149,27 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
 
     private async Task<FragmentClusteringResponse?> GenerateClusterAsync(List<Fragment> fragments, CancellationToken cancellationToken = default)
     {
-        var serializedFragments = JsonSerializer.Serialize(fragments.Select(f => new 
+        using (_aiCallContext.SetContext(nameof(FragmentClusteringJob), nameof(GenerateClusterAsync), nameof(Fragment), fragments.FirstOrDefault()?.Id ?? Guid.Empty))
         {
-            f.Title,
-            f.Summary,
-            f.Category,
-            f.Content,
-            Date = f.Source?.Date
-        }));
+            var serializedFragments = JsonSerializer.Serialize(fragments.Select(f => new 
+            {
+                f.Title,
+                f.Summary,
+                f.Category,
+                f.Content,
+                Date = f.Source?.Date
+            }));
 
-        var systemPrompt = @"You are a knowledge clustering assistant.
+            var systemPrompt = @"You are a knowledge clustering assistant.
 Combine the list of knowledge fragments provided by the user into a single, cohesive, consolidated knowledge fragment.
 Retain as much detail as possible from the original fragments but remove redundancy.
 If conflicts exist then prefer the details from the more recent fragments.";
 
-        return await _aiProcessingService.ProcessStructuredPromptAsync<FragmentClusteringResponse>(
-            userPrompt: serializedFragments,
-            systemPrompt: systemPrompt,
-            cancellationToken: cancellationToken);
+            return await _aiProcessingService.ProcessStructuredPromptAsync<FragmentClusteringResponse>(
+                userPrompt: serializedFragments,
+                systemPrompt: systemPrompt,
+                cancellationToken: cancellationToken);
+        }
     }
 }
 
