@@ -5,6 +5,10 @@ const ChatPanel = {
         articleId: {
             type: String,
             default: null
+        },
+        connection: {
+            type: Object,
+            default: null
         }
     },
     data() {
@@ -12,23 +16,25 @@ const ChatPanel = {
             conversationId: null,
             messages: [],
             newMessage: '',
-            connection: null,
-            isConnected: false,
             isAiThinking: false,
             error: null,
             isLoading: false,
             isCreatingPlan: false,
-            turnExpansionState: {} // Track which turns are expanded
+            turnExpansionState: {}, // Track which turns are expanded
+            mode: 'Chat' // Default mode
         };
     },
     computed: {
+        isConnected() {
+            return this.connection && this.connection.state === signalR.HubConnectionState.Connected;
+        },
         hasMessages() {
             return this.messages.length > 0;
         },
         canSendMessage() {
-            return this.articleId && 
-                   this.newMessage.trim() !== '' && 
-                   !this.isAiThinking;
+            return this.articleId &&
+                this.newMessage.trim() !== '' &&
+                !this.isAiThinking;
         },
         groupedMessages() {
             // Group consecutive assistant messages into "turns"
@@ -74,80 +80,50 @@ const ChatPanel = {
             immediate: true,
             async handler(newId, oldId) {
                 if (newId !== oldId) {
-                    // Leave old article group if connected
-                    if (this.connection && this.connection.state === signalR.HubConnectionState.Connected && oldId) {
-                        try {
-                            await this.connection.invoke('LeaveArticle', oldId);
-                        } catch (err) {
-                            console.error('Error leaving article group:', err);
-                        }
-                    }
-                    
                     this.reset();
-                    
+
                     if (newId) {
-                        // Join new article group if connected
-                        if (this.connection && this.connection.state === signalR.HubConnectionState.Connected) {
-                            try {
-                                await this.connection.invoke('JoinArticle', newId);
-                            } catch (err) {
-                                console.error('Error joining article group:', err);
-                            }
-                        }
                         this.loadActiveConversation();
                     }
                 }
             }
+        },
+        connection: {
+            immediate: true,
+            handler(newConn, oldConn) {
+                if (oldConn) {
+                    this.removeEventListeners(oldConn);
+                }
+                if (newConn) {
+                    this.setupEventListeners(newConn);
+                }
+            }
         }
     },
-    mounted() {
-        this.initializeSignalR();
-    },
     beforeUnmount() {
-        this.disconnectSignalR();
+        if (this.connection) {
+            this.removeEventListeners(this.connection);
+        }
     },
     methods: {
-        async initializeSignalR() {
-            try {
-                this.connection = new signalR.HubConnectionBuilder()
-                    .withUrl('/articleHub')
-                    .withAutomaticReconnect()
-                    .build();
-
-                // Set up event listeners
-                this.connection.on('ChatMessageProcessing', this.onMessageProcessing);
-                this.connection.on('ChatMessageReceived', this.onMessageReceived);
-                this.connection.on('ChatMessageStreaming', this.onMessageStreaming);
-                this.connection.on('ChatToolInvoked', this.onToolInvoked);
-                this.connection.on('ChatToolCompleted', this.onToolCompleted);
-                this.connection.on('ChatMessageComplete', this.onMessageComplete);
-                this.connection.on('ChatError', this.onChatError);
-
-                await this.connection.start();
-                this.isConnected = true;
-                console.log('SignalR connected for chat panel');
-
-                // Join article group if we have an article
-                if (this.articleId) {
-                    await this.connection.invoke('JoinArticle', this.articleId);
-                }
-            } catch (err) {
-                console.error('Error connecting to SignalR:', err);
-                this.error = 'Failed to connect to real-time service';
-            }
+        setupEventListeners(conn) {
+            conn.on('ChatMessageProcessing', this.onMessageProcessing);
+            conn.on('ChatMessageReceived', this.onMessageReceived);
+            conn.on('ChatMessageStreaming', this.onMessageStreaming);
+            conn.on('ChatToolInvoked', this.onToolInvoked);
+            conn.on('ChatToolCompleted', this.onToolCompleted);
+            conn.on('ChatMessageComplete', this.onMessageComplete);
+            conn.on('ChatError', this.onChatError);
         },
 
-        async disconnectSignalR() {
-            if (this.connection) {
-                try {
-                    if (this.articleId) {
-                        await this.connection.invoke('LeaveArticle', this.articleId);
-                    }
-                    await this.connection.stop();
-                } catch (err) {
-                    console.error('Error disconnecting SignalR:', err);
-                }
-            }
+        removeEventListeners(conn) {
+            conn.off('ChatMessageProcessing', this.onMessageProcessing);
+            conn.off('ChatMessageReceived', this.onMessageReceived);
+            conn.off('ChatMessageStreaming', this.onMessageStreaming);
+            conn.off('ChatToolInvoked', this.onToolInvoked);
+            conn.off('ChatToolCompleted', this.onToolCompleted);
+            conn.off('ChatMessageComplete', this.onMessageComplete);
+            conn.off('ChatError', this.onChatError);
         },
 
         async loadActiveConversation() {
@@ -158,7 +134,7 @@ const ChatPanel = {
 
             try {
                 const response = await fetch(`/api/articles/${this.articleId}/assistant/conversation`);
-                
+
                 if (response.status === 204) {
                     // No active conversation - that's ok
                     this.conversationId = null;
@@ -166,6 +142,7 @@ const ChatPanel = {
                 } else if (response.ok) {
                     const conversation = await response.json();
                     this.conversationId = conversation.id;
+                    this.mode = conversation.mode || 'Chat';
                     await this.loadMessages();
                 } else if (response.status === 404) {
                     // No active conversation - that's ok (backwards compatibility)
@@ -199,7 +176,7 @@ const ChatPanel = {
 
                 if (response.ok) {
                     this.messages = await response.json();
-                    
+
                     // Check if the last message is from a user (AI is likely processing)
                     if (this.messages.length > 0) {
                         const lastMessage = this.messages[this.messages.length - 1];
@@ -227,7 +204,7 @@ const ChatPanel = {
                 // Create conversation if needed
                 if (!this.conversationId) {
                     const createResponse = await fetch(
-                        `/api/articles/${this.articleId}/assistant/conversation`,
+                        `/api/articles/${this.articleId}/assistant/conversation?mode=${this.mode}`,
                         {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' }
@@ -248,7 +225,10 @@ const ChatPanel = {
                     {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ message: messageText })
+                        body: JSON.stringify({
+                            message: messageText,
+                            mode: this.mode
+                        })
                     }
                 );
 
@@ -276,7 +256,7 @@ const ChatPanel = {
             if (data.conversationId !== this.conversationId) {
                 return;
             }
-            
+
             // Add user message to list
             this.messages.push({
                 id: data.id,
@@ -294,10 +274,10 @@ const ChatPanel = {
             if (data.conversationId !== this.conversationId) {
                 return;
             }
-            
+
             // Use messageId if provided, otherwise fall back to temporary ID
             const messageId = data.messageId || 'streaming-temp';
-            
+
             // Find or create the streaming message by ID
             let streamingMsg = this.messages.find(m => m.id === messageId && m.isStreaming);
             if (!streamingMsg) {
@@ -313,7 +293,7 @@ const ChatPanel = {
                 };
                 this.messages.push(streamingMsg);
             }
-            
+
             // Append the streamed content
             streamingMsg.content += data.content;
             this.$nextTick(() => this.scrollToBottom());
@@ -324,12 +304,12 @@ const ChatPanel = {
             if (data.conversationId !== this.conversationId) {
                 return;
             }
-            
+
             console.log(`AI Agent invoked tool: ${data.toolName}`);
-            
+
             // Use messageId if provided to associate tool with message
             const messageId = data.messageId || 'streaming-temp';
-            
+
             // Find the streaming message and add tool invocation
             let streamingMsg = this.messages.find(m => m.id === messageId && m.isStreaming);
             if (!streamingMsg) {
@@ -345,19 +325,19 @@ const ChatPanel = {
                 };
                 this.messages.push(streamingMsg);
             }
-            
+
             // Add tool call to the message (pending state)
             if (!streamingMsg.toolCalls) {
                 streamingMsg.toolCalls = [];
             }
-            
+
             streamingMsg.toolCalls.push({
                 name: data.toolName,
                 callId: data.toolCallId,
                 completed: false,
                 timestamp: data.timestamp
             });
-            
+
             this.$nextTick(() => this.scrollToBottom());
         },
 
@@ -366,9 +346,9 @@ const ChatPanel = {
             if (data.conversationId !== this.conversationId) {
                 return;
             }
-            
+
             console.log(`AI Agent completed tool: ${data.toolName}`);
-            
+
             // Loop backwards through messages to find the matching tool call by callId
             // (it will almost always be in the most recent message)
             for (let i = this.messages.length - 1; i >= 0; i--) {
@@ -381,7 +361,7 @@ const ChatPanel = {
                     }
                 }
             }
-            
+
             this.$nextTick(() => this.scrollToBottom());
         },
 
@@ -390,12 +370,12 @@ const ChatPanel = {
             if (data.conversationId !== this.conversationId) {
                 return;
             }
-            
+
             // Find the streaming message by ID if it exists
-            const streamingIdx = this.messages.findIndex(m => 
+            const streamingIdx = this.messages.findIndex(m =>
                 m.isStreaming && (m.id === data.id || m.id === 'streaming-temp')
             );
-            
+
             if (streamingIdx >= 0) {
                 // Update the existing streaming message to be the final version
                 const streamingMsg = this.messages[streamingIdx];
@@ -445,6 +425,7 @@ const ChatPanel = {
             this.isAiThinking = false;
             this.error = null;
             this.turnExpansionState = {};
+            this.mode = 'Chat';
         },
 
         toggleTurnExpansion(turnId) {
@@ -459,13 +440,13 @@ const ChatPanel = {
 
             if (diffMins < 1) return 'Just now';
             if (diffMins < 60) return `${diffMins}m ago`;
-            
+
             const diffHours = Math.floor(diffMins / 60);
             if (diffHours < 24) return `${diffHours}h ago`;
-            
+
             const diffDays = Math.floor(diffHours / 24);
             if (diffDays < 7) return `${diffDays}d ago`;
-            
+
             return date.toLocaleDateString();
         },
 
@@ -497,7 +478,7 @@ const ChatPanel = {
             try {
                 // Create conversation if needed
                 if (!this.conversationId) {
-                    const response = await fetch(`/api/articles/${this.articleId}/assistant/conversation`, {
+                    const response = await fetch(`/api/articles/${this.articleId}/assistant/conversation?mode=Plan`, {
                         method: 'POST'
                     });
 
@@ -507,6 +488,7 @@ const ChatPanel = {
 
                     const conversation = await response.json();
                     this.conversationId = conversation.id;
+                    this.mode = 'Plan';
                 }
 
                 // Send plan creation request
@@ -526,7 +508,7 @@ const ChatPanel = {
                 // SignalR will notify us when it's ready
                 // Set AI thinking state to show processing
                 this.isAiThinking = true;
-                
+
                 // Scroll to bottom to show the thinking indicator
                 this.$nextTick(() => this.scrollToBottom());
             } catch (err) {
@@ -666,7 +648,33 @@ const ChatPanel = {
                 <div v-if="error" class="alert alert-danger alert-sm m-2">
                     {{ error }}
                 </div>
-
+ 
+                <div class="chat-controls px-3 py-2 border-top bg-light d-flex align-items-center justify-content-between">
+                    <div class="chat-mode-selector d-flex align-items-center">
+                        <label class="small text-muted me-2 mb-0">Mode:</label>
+                        <select v-model="mode" 
+                                :disabled="isAiThinking"
+                                class="form-select form-select-sm" 
+                                style="width: auto;">
+                            <option value="Chat">Chat</option>
+                            <option value="Plan">Plan</option>
+                        </select>
+                    </div>
+                    <button v-if="!conversationId && mode === 'Plan'"
+                            @click="createPlan"
+                            :disabled="isCreatingPlan || isAiThinking"
+                            class="btn btn-primary btn-sm">
+                        <i class="bi bi-lightbulb"></i>
+                        {{ isCreatingPlan ? 'Creating Plan...' : 'Create Plan' }}
+                    </button>
+                    <button v-if="conversationId"
+                            @click="reset"
+                            class="btn btn-link btn-sm text-danger p-0 ms-2"
+                            title="Start New Conversation">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+ 
                 <div class="chat-input-container">
                     <textarea 
                         v-model="newMessage"

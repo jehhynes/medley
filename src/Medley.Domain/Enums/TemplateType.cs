@@ -23,6 +23,11 @@ public enum TemplateType
     /// <summary>
     /// Template for article improvement plan generation
     /// </summary>
-    ArticleImprovementPlan = 4
+    ArticleImprovementPlan = 4,
+
+    /// <summary>
+    /// Template for article chat assistant
+    /// </summary>
+    ArticleChat = 5
 }
 

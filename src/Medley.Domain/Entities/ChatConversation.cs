@@ -29,6 +29,11 @@ public class ChatConversation : BaseEntity
     public ConversationState State { get; set; } = ConversationState.Active;
 
     /// <summary>
+    /// The mode of this conversation
+    /// </summary>
+    public ConversationMode Mode { get; set; } = ConversationMode.Chat;
+
+    /// <summary>
     /// When this conversation was created
     /// </summary>
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;

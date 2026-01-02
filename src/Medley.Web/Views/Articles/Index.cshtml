@@ -188,7 +188,7 @@
     </div>
     <div class="sidebar-tab-content">
         <div v-show="ui.activeRightTab === 'assistant'" class="sidebar-tab-pane">
-            <chat-panel :article-id="articles.selectedId" />
+            <chat-panel :article-id="articles.selectedId" :connection="signalr.connection" />
         </div>
         <div v-show="ui.activeRightTab === 'versions'" class="sidebar-tab-pane">
             <versions-panel 

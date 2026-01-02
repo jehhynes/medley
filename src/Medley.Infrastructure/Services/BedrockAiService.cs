@@ -17,14 +17,6 @@ public class BedrockAiService : IAiProcessingService
     private readonly ILogger<BedrockAiService> _logger;
     private readonly IChatClient _chatClient;
 
-    public BedrockAiService(
-        AmazonBedrockRuntimeClient bedrockClient,
-        IOptions<BedrockSettings> bedrockSettings,
-        ILogger<BedrockAiService> logger)
-        : this(bedrockClient.AsIChatClient(bedrockSettings.Value.ModelId), bedrockSettings, logger)
-    {
-    }
-
     /// <summary>
     /// Constructor for testing with a mock IChatClient
     /// </summary>

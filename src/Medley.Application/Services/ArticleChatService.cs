@@ -24,7 +24,7 @@ public class ArticleChatService : IArticleChatService
     private readonly IRepository<Template> _templateRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IChatClient _chatClient;
-    private readonly ArticleAssistantPluginsFactory _pluginsFactory;
+    private readonly ArticleChatToolsFactory _pluginsFactory;
     private readonly ILogger<ArticleChatService> _logger;
     private readonly AiCallContext _aiCallContext;
     
@@ -39,7 +39,7 @@ public class ArticleChatService : IArticleChatService
         IRepository<Template> templateRepository,
         IUnitOfWork unitOfWork,
         IChatClient chatClient,
-        ArticleAssistantPluginsFactory pluginsFactory,
+        ArticleChatToolsFactory pluginsFactory,
         ILogger<ArticleChatService> logger,
         AiCallContext aiCallContext)
     {
@@ -59,12 +59,14 @@ public class ArticleChatService : IArticleChatService
     public async Task<ChatConversation> CreateConversationAsync(
         Guid articleId,
         Guid userId,
+        ConversationMode mode = ConversationMode.Chat,
         CancellationToken cancellationToken = default)
     {
         var conversation = new ChatConversation
         {
             ArticleId = articleId,
             State = ConversationState.Active,
+            Mode = mode,
             CreatedByUserId = userId,
             CreatedAt = DateTimeOffset.UtcNow
         };
@@ -97,101 +99,97 @@ public class ArticleChatService : IArticleChatService
             .FirstOrDefaultAsync(c => c.Id == conversationId, cancellationToken);
     }
 
-    public async Task<DomainChatMessage> ProcessChatMessageAsync(
-        Guid conversationId,
-        CancellationToken cancellationToken = default)
-    {
-        using (_aiCallContext.SetContext(nameof(ArticleChatService), nameof(ProcessChatMessageAsync), nameof(ChatConversation), conversationId))
-        {
-            _logger.LogInformation("Processing chat message for conversation {ConversationId}", conversationId);
 
-            // Load conversation with article
-            var (conversation, article) = await LoadConversationWithArticleAsync(conversationId, false, cancellationToken);
-
-        // Create article-scoped plugins instance
-        var assistantPlugins = _pluginsFactory.Create(article.Id);
-
-        // Create the message store for persistence
-        var messageStore = CreateMessageStore(conversationId);
-
-        // Create the agent with tools
-        var tools = CreateChatTools(assistantPlugins);
-        var agent = CreateChatAgent(BuildSystemMessage(article), tools);
-
-        // Get the latest user message to process
-        var latestUserMessage = await GetLatestUserMessageAsync(conversationId, cancellationToken);
-
-        // Create or get existing thread with the message store
-        var thread = agent.GetNewThread(messageStore);
-
-        // Run the agent with the user's message
-        var result = await agent.RunAsync(
-            latestUserMessage.Content,
-            thread,
-            cancellationToken: cancellationToken);
-
-        // Return the most recently saved assistant message from the database
-        // (the message store already persisted it during RunAsync)
-        var assistantMessage = await GetLatestAssistantMessageAsync(conversationId, cancellationToken);
-
-            _logger.LogInformation("Saved assistant response for conversation {ConversationId}", conversationId);
-
-            return assistantMessage;
-        }
-    }
-
-    public async IAsyncEnumerable<ChatStreamUpdate> ProcessChatMessageStreamingAsync(
+    public async IAsyncEnumerable<ChatStreamUpdate> ProcessConversationStreamingAsync(
         Guid conversationId,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        using (_aiCallContext.SetContext(nameof(ArticleChatService), nameof(ProcessChatMessageStreamingAsync), nameof(ChatConversation), conversationId))
+        using (_aiCallContext.SetContext(nameof(ArticleChatService), nameof(ProcessConversationStreamingAsync), nameof(ChatConversation), conversationId))
         {
-            _logger.LogInformation("Processing chat message with streaming for conversation {ConversationId}", conversationId);
-
+            _logger.LogInformation("Processing conversation with streaming for conversation {ConversationId}", conversationId);
+            
             // Load conversation with article
-            var (conversation, article) = await LoadConversationWithArticleAsync(conversationId, false, cancellationToken);
-
-        // Create article-scoped plugins instance
-        var assistantPlugins = _pluginsFactory.Create(article.Id);
-
-        // Create the message store for persistence
-        var messageStore = CreateMessageStore(conversationId);
-
-        // Create the agent with tools
-        var tools = CreateChatTools(assistantPlugins);
-        var agent = CreateChatAgent(BuildSystemMessage(article), tools);
-
-        // Get the latest user message to process
-        var latestUserMessage = await GetLatestUserMessageAsync(conversationId, cancellationToken);
-
-        // Create or get existing thread with the message store
-        var thread = agent.GetNewThread(messageStore);
-
-        // Stream the agent response
-        var agentUpdates = agent.RunStreamingAsync(
-            latestUserMessage.Content,
-            thread,
-            cancellationToken: cancellationToken);
-
-        // Process and yield streaming updates
-        await foreach (var update in ProcessStreamingUpdatesAsync(
-            agentUpdates,
-            conversationId,
-            conversation.ArticleId,
-            cancellationToken))
-        {
-            yield return update;
-        }
-
-        // The message store has already persisted the assistant message during RunStreamingAsync
-        // Retrieve the most recent assistant message
-        var assistantMessage = await GetLatestAssistantMessageAsync(conversationId, cancellationToken);
-
-        _logger.LogInformation("Completed streaming for conversation {ConversationId}, message {MessageId}",
-            conversationId, assistantMessage.Id);
-
-        // Yield final complete update
-        yield return CreateCompletionUpdate(assistantMessage, conversationId, conversation.ArticleId);
+            var (conversation, article) = await LoadConversationWithArticleAsync(conversationId, true, cancellationToken);
+            
+            // Create article-scoped plugins instance
+            var assistantPlugins = _pluginsFactory.Create(article.Id);
+            
+            // Set user ID in plugins for potential plan creation
+            assistantPlugins.SetCurrentUserId(conversation.CreatedByUserId);
+            
+            // Select system prompt and tools based on mode
+            string systemMessage;
+            AIFunction[] tools;
+            
+            if (conversation.Mode == ConversationMode.Plan)
+            {
+                // Load the ArticleImprovementPlan template
+                var template = await _templateRepository.Query()
+                    .FirstOrDefaultAsync(t => t.Type == TemplateType.ArticleImprovementPlan, cancellationToken);
+                
+                if (template == null)
+                {
+                    throw new InvalidOperationException("Article Improvement Plan template not found");
+                }
+                
+                systemMessage = template.Content.Replace("{article.Title}", article.Title);
+                tools = CreateTools(assistantPlugins, conversation.Mode);
+            }
+            else
+            {
+                // Load the ArticleChat template or fall back to code-based system message
+                var template = await _templateRepository.Query()
+                    .FirstOrDefaultAsync(t => t.Type == TemplateType.ArticleChat, cancellationToken);
+                
+                if (template != null)
+                {
+                    systemMessage = template.Content.Replace("{article.Title}", article.Title)
+                                                  .Replace("{article.Content}", article.Content ?? string.Empty);
+                }
+                else
+                {
+                    throw new InvalidDataException("Article Chat template not found");
+                }
+                
+                tools = CreateTools(assistantPlugins, conversation.Mode);
+            }
+            
+            // Create the message store for persistence
+            var messageStore = CreateMessageStore(conversationId);
+            
+            // Create the agent with appropriate system message and tools
+            var agent = CreateChatAgent(systemMessage, tools);
+            
+            // Get the latest user message to process
+            var latestUserMessage = await GetLatestUserMessageAsync(conversationId, cancellationToken);
+            
+            // Create or get existing thread with the message store
+            var thread = agent.GetNewThread(messageStore);
+            
+            // Stream the agent response
+            var agentUpdates = agent.RunStreamingAsync(
+                latestUserMessage.Content,
+                thread,
+                cancellationToken: cancellationToken);
+            
+            // Process and yield streaming updates
+            await foreach (var update in ProcessStreamingUpdatesAsync(
+                agentUpdates,
+                conversationId,
+                conversation.ArticleId,
+                cancellationToken))
+            {
+                yield return update;
+            }
+            
+            // Retrieve the most recent assistant message
+            var assistantMessage = await GetLatestAssistantMessageAsync(conversationId, cancellationToken);
+            
+            _logger.LogInformation("Completed streaming for conversation {ConversationId} (Mode: {Mode}), message {MessageId}",
+                conversationId, conversation.Mode, assistantMessage.Id);
+            
+            // Yield final complete update
+            yield return CreateCompletionUpdate(assistantMessage, conversationId, conversation.ArticleId);
         }
     }
 
@@ -262,131 +260,28 @@ public class ArticleChatService : IArticleChatService
         _logger.LogInformation("Cancelled conversation {ConversationId}", conversationId);
     }
 
-    public async Task<DomainChatMessage> ProcessPlanGenerationAsync(
+    public async Task UpdateConversationModeAsync(
         Guid conversationId,
+        ConversationMode mode,
         CancellationToken cancellationToken = default)
     {
-        using (_aiCallContext.SetContext(nameof(ArticleChatService), nameof(ProcessPlanGenerationAsync), nameof(ChatConversation), conversationId))
+        var conversation = await _conversationRepository.GetByIdAsync(conversationId);
+        if (conversation == null)
         {
-            _logger.LogInformation("Processing plan generation for conversation {ConversationId}", conversationId);
-
-            // Load conversation with article
-            var (conversation, article) = await LoadConversationWithArticleAsync(conversationId, true, cancellationToken);
-
-        // Load the ArticleImprovementPlan template
-        var template = await _templateRepository.Query()
-            .FirstOrDefaultAsync(t => t.Type == TemplateType.ArticleImprovementPlan, cancellationToken);
-
-        if (template == null)
-        {
-            throw new InvalidOperationException("Article Improvement Plan template not found");
+            throw new InvalidOperationException($"Conversation {conversationId} not found");
         }
 
-        // Create article-scoped plugins instance
-        var assistantPlugins = _pluginsFactory.Create(article.Id);
-        
-        // Set user ID in plugins for plan creation
-        assistantPlugins.SetCurrentUserId(conversation.CreatedByUserId);
-
-        // Build system message from template
-        var systemMessage = template.Content.Replace("{article.Title}", article.Title);
-
-        // Create the message store for persistence
-        var messageStore = CreateMessageStore(conversationId);
-
-        // Create the agent with plan generation tools
-        var tools = CreatePlanTools(assistantPlugins);
-        var agent = CreateChatAgent(systemMessage, tools);
-
-        // Get the latest user message to process
-        var latestUserMessage = await GetLatestUserMessageAsync(conversationId, cancellationToken);
-
-        // Create or get existing thread with the message store
-        var thread = agent.GetNewThread(messageStore);
-
-        // Run the agent with the user's message
-        var result = await agent.RunAsync(
-            latestUserMessage.Content,
-            thread,
-            cancellationToken: cancellationToken);
-
-        // Return the most recently saved assistant message from the database
-        var assistantMessage = await GetLatestAssistantMessageAsync(conversationId, cancellationToken);
-
-            _logger.LogInformation("Completed plan generation for conversation {ConversationId}", conversationId);
-
-            return assistantMessage;
+        if (conversation.Mode != mode)
+        {
+            _logger.LogInformation("Updating conversation {ConversationId} mode from {OldMode} to {NewMode}",
+                conversationId, conversation.Mode, mode);
+            
+            conversation.Mode = mode;
+            await _conversationRepository.SaveAsync(conversation);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
     }
 
-    public async IAsyncEnumerable<ChatStreamUpdate> ProcessPlanGenerationStreamingAsync(
-        Guid conversationId,
-        [EnumeratorCancellation] CancellationToken cancellationToken = default)
-    {
-        using (_aiCallContext.SetContext(nameof(ArticleChatService), nameof(ProcessPlanGenerationStreamingAsync), nameof(ChatConversation), conversationId))
-        {
-            _logger.LogInformation("Processing plan generation with streaming for conversation {ConversationId}", conversationId);
-
-            // Load conversation with article
-            var (conversation, article) = await LoadConversationWithArticleAsync(conversationId, true, cancellationToken);
-
-        // Load the ArticleImprovementPlan template
-        var template = await _templateRepository.Query()
-            .FirstOrDefaultAsync(t => t.Type == TemplateType.ArticleImprovementPlan, cancellationToken);
-
-        if (template == null)
-        {
-            throw new InvalidOperationException("Article Improvement Plan template not found");
-        }
-
-        // Create article-scoped plugins instance
-        var assistantPlugins = _pluginsFactory.Create(article.Id);
-        
-        // Set user ID in plugins for plan creation
-        assistantPlugins.SetCurrentUserId(conversation.CreatedByUserId);
-
-        // Build system message from template
-        var systemMessage = template.Content.Replace("{article.Title}", article.Title);
-
-        // Create the message store for persistence
-        var messageStore = CreateMessageStore(conversationId);
-
-        // Create the agent with plan generation tools
-        var tools = CreatePlanTools(assistantPlugins);
-        var agent = CreateChatAgent(systemMessage, tools);
-
-        // Get the latest user message to process
-        var latestUserMessage = await GetLatestUserMessageAsync(conversationId, cancellationToken);
-
-        // Create or get existing thread with the message store
-        var thread = agent.GetNewThread(messageStore);
-
-        // Stream the agent response
-        var agentUpdates = agent.RunStreamingAsync(
-            latestUserMessage.Content,
-            thread,
-            cancellationToken: cancellationToken);
-
-        // Process and yield streaming updates
-        await foreach (var update in ProcessStreamingUpdatesAsync(
-            agentUpdates,
-            conversationId,
-            conversation.ArticleId,
-            cancellationToken))
-        {
-            yield return update;
-        }
-
-        // The message store has already persisted the assistant message during RunStreamingAsync
-        // Retrieve the most recent assistant message
-        var assistantMessage = await GetLatestAssistantMessageAsync(conversationId, cancellationToken);
-
-        _logger.LogInformation("Completed plan generation streaming for conversation {ConversationId}", conversationId);
-
-        // Yield final complete update
-        yield return CreateCompletionUpdate(assistantMessage, conversationId, conversation.ArticleId);
-        }
-    }
 
     #region Helper Methods
 
@@ -467,30 +362,12 @@ public class ArticleChatService : IArticleChatService
     }
 
     /// <summary>
-    /// Creates the basic chat tools (search_fragments, find_similar_to_article).
+    /// Creates the tools for the specified conversation mode.
     /// </summary>
-    private AIFunction[] CreateChatTools(ArticleAssistantPlugins plugins)
+    private AIFunction[] CreateTools(ArticleChatTools plugins, ConversationMode mode)
     {
-        return [
-            AIFunctionFactory.Create(
-                plugins.SearchFragmentsAsync,
-                name: "search_fragments",
-                description: "Search for fragments semantically similar to a query string. Returns fragments with similarity scores."
-            ),
-            AIFunctionFactory.Create(
-                plugins.FindSimilarFragmentsAsync,
-                name: "find_similar_to_article",
-                description: "Find fragments semantically similar to the current article content. Useful for finding related content to enhance or expand the article."
-            )
-        ];
-    }
-
-    /// <summary>
-    /// Creates the plan generation tools (includes chat tools plus get_fragment_content and create_plan).
-    /// </summary>
-    private AIFunction[] CreatePlanTools(ArticleAssistantPlugins plugins)
-    {
-        return [
+        var tools = new List<AIFunction>
+        {
             AIFunctionFactory.Create(
                 plugins.SearchFragmentsAsync,
                 name: "search_fragments",
@@ -505,13 +382,19 @@ public class ArticleChatService : IArticleChatService
                 plugins.GetFragmentContentAsync,
                 name: "get_fragment_content",
                 description: "Get the full content and details of a specific fragment by its ID. Use this to review fragments in detail before recommending them."
-            ),
-            AIFunctionFactory.Create(
+            )
+        };
+
+        if (mode == ConversationMode.Plan)
+        {
+            tools.Add(AIFunctionFactory.Create(
                 plugins.CreatePlanAsync,
                 name: "create_plan",
                 description: "Create a structured improvement plan for the article with fragment recommendations. Each recommendation should include fragmentId, similarityScore, include (bool), reasoning, and instructions."
-            )
-        ];
+            ));
+        }
+
+        return tools.ToArray();
     }
 
     /// <summary>
@@ -652,21 +535,4 @@ public class ArticleChatService : IArticleChatService
 
     #endregion
 
-    private string BuildSystemMessage(Article article)
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine($"You are an AI assistant helping users with the article \"{article.Title}\".");
-        sb.AppendLine();
-
-        if (!string.IsNullOrEmpty(article.Content))
-        {
-            sb.AppendLine("Current article content:");
-            sb.AppendLine(article.Content);
-            sb.AppendLine();
-        }
-
-        sb.AppendLine("Help the user improve, expand, or answer questions about this article. Be concise and helpful.");
-
-        return sb.ToString();
-    }
 }

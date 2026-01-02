@@ -92,7 +92,7 @@ public class FragmentConfidenceScoringJob : BaseHangfireJob<FragmentConfidenceSc
             var userPrompt = BuildUserPrompt(source.Content, fragmentsList);
 
             // Set AI call context for token tracking - use first fragment as representative
-            using (_aiCallContext.SetContext(nameof(FragmentConfidenceScoringJob), nameof(ExecuteAsync), nameof(Fragment), fragmentsList.FirstOrDefault()?.Id ?? Guid.Empty))
+            using (_aiCallContext.SetContext(nameof(FragmentConfidenceScoringJob), nameof(ExecuteAsync), nameof(Source), sourceId))
             {
                 var response = await _aiProcessingService.ProcessStructuredPromptAsync<ConfidenceScoringResponse>(
                     userPrompt: userPrompt,

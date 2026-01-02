@@ -14,9 +14,9 @@ using Microsoft.Extensions.Options;
 namespace Medley.Application.Services;
 
 /// <summary>
-/// Plugin providing fragment search capabilities for the article assistant
+/// Tools providing fragment search capabilities for the article assistant
 /// </summary>
-public class ArticleAssistantPlugins
+public class ArticleChatTools
 {
     private readonly Guid _articleId;
     private readonly IFragmentRepository _fragmentRepository;
@@ -25,12 +25,12 @@ public class ArticleAssistantPlugins
     private readonly IRepository<Plan> _planRepository;
     private readonly IRepository<PlanFragment> _planFragmentRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<ArticleAssistantPlugins> _logger;
+    private readonly ILogger<ArticleChatTools> _logger;
     private readonly EmbeddingSettings _embeddingSettings;
     private readonly AiCallContext _aiCallContext;
     private Guid? _currentUserId; // Set by chat service before running agent
 
-    public ArticleAssistantPlugins(
+    public ArticleChatTools(
         Guid articleId,
         IFragmentRepository fragmentRepository,
         IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
@@ -38,7 +38,7 @@ public class ArticleAssistantPlugins
         IRepository<Plan> planRepository,
         IRepository<PlanFragment> planFragmentRepository,
         IUnitOfWork unitOfWork,
-        ILogger<ArticleAssistantPlugins> logger,
+        ILogger<ArticleChatTools> logger,
         IOptions<EmbeddingSettings> embeddingSettings,
         AiCallContext aiCallContext)
     {
@@ -92,7 +92,7 @@ public class ArticleAssistantPlugins
                 Dimensions = _embeddingSettings.Dimensions
             };
             GeneratedEmbeddings<Embedding<float>> embeddingResult;
-            using (_aiCallContext.SetContext(nameof(ArticleAssistantPlugins), nameof(SearchFragmentsAsync), nameof(Article), _articleId))
+            using (_aiCallContext.SetContext(nameof(ArticleChatTools), nameof(SearchFragmentsAsync), nameof(Article), _articleId))
             {
                 embeddingResult = await _embeddingGenerator.GenerateAsync(
                     new[] { query }, 
@@ -237,7 +237,7 @@ public class ArticleAssistantPlugins
                 Dimensions = _embeddingSettings.Dimensions
             };
             GeneratedEmbeddings<Embedding<float>> embeddingResult;
-            using (_aiCallContext.SetContext(nameof(ArticleAssistantPlugins), nameof(FindSimilarFragmentsAsync), nameof(Article), _articleId))
+            using (_aiCallContext.SetContext(nameof(ArticleChatTools), nameof(FindSimilarFragmentsAsync), nameof(Article), _articleId))
             {
                 embeddingResult = await _embeddingGenerator.GenerateAsync(
                     new[] { textForEmbedding }, 

@@ -242,15 +242,17 @@ public static class DependencyInjection
             });
             
             // Register BedrockAiService (uses registered IChatClient)
-            services.AddScoped<IAiProcessingService>(sp =>
-            {
-                var chatClient = sp.GetRequiredService<IChatClient>();
-                var bedrockSettings = sp.GetRequiredService<IOptions<BedrockSettings>>();
-                var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<BedrockAiService>>();
+            //services.AddScoped<IAiProcessingService>(sp =>
+            //{
+            //    var chatClient = sp.GetRequiredService<IChatClient>();
+            //    var bedrockSettings = sp.GetRequiredService<IOptions<BedrockSettings>>();
+            //    var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<BedrockAiService>>();
                 
-                return new BedrockAiService(chatClient, bedrockSettings, logger);
-            });
-            
+            //    return new BedrockAiService(chatClient, bedrockSettings, logger);
+            //});
+
+            services.AddScoped<IAiProcessingService, BedrockAiService>();
+
             // Configure chat service
             ConfigureChatService(services, configuration);
         }
@@ -266,7 +268,7 @@ public static class DependencyInjection
         services.Configure<BedrockSettings>(configuration.GetSection("AWS:Bedrock"));
 
         // Register ArticleAssistantPluginsFactory (for creating article-scoped plugin instances)
-        services.AddScoped<ArticleAssistantPluginsFactory>();
+        services.AddScoped<ArticleChatToolsFactory>();
 
         // Register ArticleChatService (uses registered IChatClient and wraps it with function invocation)
         services.AddScoped<IArticleChatService, ArticleChatService>();
