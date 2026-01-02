@@ -4,6 +4,7 @@ using System.Linq;
 using Hangfire.Server;
 using Hangfire.Storage;
 using Medley.Application.Interfaces;
+using Medley.Application.Services;
 using Medley.Domain.Entities;
 using Medley.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -22,6 +23,7 @@ public class FragmentConfidenceScoringJob : BaseHangfireJob<FragmentConfidenceSc
     private readonly IRepository<Fragment> _fragmentRepository;
     private readonly IRepository<Source> _sourceRepository;
     private readonly IRepository<Template> _templateRepository;
+    private readonly AiCallContext _aiCallContext;
 
     public FragmentConfidenceScoringJob(
         IAiProcessingService aiProcessingService,
@@ -29,12 +31,14 @@ public class FragmentConfidenceScoringJob : BaseHangfireJob<FragmentConfidenceSc
         IRepository<Source> sourceRepository,
         IRepository<Template> templateRepository,
         IUnitOfWork unitOfWork,
-        ILogger<FragmentConfidenceScoringJob> logger) : base(unitOfWork, logger)
+        ILogger<FragmentConfidenceScoringJob> logger,
+        AiCallContext aiCallContext) : base(unitOfWork, logger)
     {
         _aiProcessingService = aiProcessingService;
         _fragmentRepository = fragmentRepository;
         _sourceRepository = sourceRepository;
         _templateRepository = templateRepository;
+        _aiCallContext = aiCallContext;
     }
 
     /// <summary>
@@ -87,48 +91,52 @@ public class FragmentConfidenceScoringJob : BaseHangfireJob<FragmentConfidenceSc
             var fragmentsList = fragmentsToScore.ToList();
             var userPrompt = BuildUserPrompt(source.Content, fragmentsList);
 
-            var response = await _aiProcessingService.ProcessStructuredPromptAsync<ConfidenceScoringResponse>(
-                userPrompt: userPrompt,
-                systemPrompt: systemPrompt,
-                cancellationToken: cancellationToken);
-
-            if (response?.Scores == null || response.Scores.Count == 0)
+            // Set AI call context for token tracking - use first fragment as representative
+            using (_aiCallContext.SetContext(nameof(FragmentConfidenceScoringJob), nameof(ExecuteAsync), nameof(Fragment), fragmentsList.FirstOrDefault()?.Id ?? Guid.Empty))
             {
-                _logger.LogWarning("Confidence scoring returned no scores for source {SourceId}", sourceId);
-                return;
-            }
-            try
-            {
-                var scoresById = response.Scores.ToDictionary(s => s.FragmentId, s => s);
-                int scoredCount = 0;
+                var response = await _aiProcessingService.ProcessStructuredPromptAsync<ConfidenceScoringResponse>(
+                    userPrompt: userPrompt,
+                    systemPrompt: systemPrompt,
+                    cancellationToken: cancellationToken);
 
-                for (int i = 0; i < fragmentsList.Count; i++)
+                if (response?.Scores == null || response.Scores.Count == 0)
                 {
-                    var fragment = fragmentsList[i];
-                    var fragmentIndex = i + 1; // 1-based index to match prompt
+                    _logger.LogWarning("Confidence scoring returned no scores for source {SourceId}", sourceId);
+                    return;
+                }
+                try
+                {
+                    var scoresById = response.Scores.ToDictionary(s => s.FragmentId, s => s);
+                    int scoredCount = 0;
 
-                    if (!scoresById.TryGetValue(fragmentIndex, out var score) || !score.Confidence.HasValue)
+                    for (int i = 0; i < fragmentsList.Count; i++)
                     {
-                        _logger.LogWarning("No confidence score returned for fragment {FragmentId} (index {Index})", fragment.Id, fragmentIndex);
-                        continue;
+                        var fragment = fragmentsList[i];
+                        var fragmentIndex = i + 1; // 1-based index to match prompt
+
+                        if (!scoresById.TryGetValue(fragmentIndex, out var score) || !score.Confidence.HasValue)
+                        {
+                            _logger.LogWarning("No confidence score returned for fragment {FragmentId} (index {Index})", fragment.Id, fragmentIndex);
+                            continue;
+                        }
+
+                        fragment.Confidence = score.Confidence.Value;
+                        fragment.ConfidenceComment = TrimConfidenceComment(score.ConfidenceComment);
+                        fragment.LastModifiedAt = DateTimeOffset.UtcNow;
+                        await _fragmentRepository.SaveAsync(fragment);
+                        scoredCount++;
+
+                        _logger.LogDebug("Updated confidence for fragment {FragmentId} (index {Index}): {Confidence}",
+                            fragment.Id, fragmentIndex, score.Confidence.Value);
                     }
 
-                    fragment.Confidence = score.Confidence.Value;
-                    fragment.ConfidenceComment = TrimConfidenceComment(score.ConfidenceComment);
-                    fragment.LastModifiedAt = DateTimeOffset.UtcNow;
-                    await _fragmentRepository.SaveAsync(fragment);
-                    scoredCount++;
-
-                    _logger.LogDebug("Updated confidence for fragment {FragmentId} (index {Index}): {Confidence}",
-                        fragment.Id, fragmentIndex, score.Confidence.Value);
+                    _logger.LogInformation("Successfully scored {ScoredCount} of {TotalCount} fragments for source {SourceId}",
+                        scoredCount, fragmentsToScore.Count, sourceId);
                 }
-
-                _logger.LogInformation("Successfully scored {ScoredCount} of {TotalCount} fragments for source {SourceId}",
-                    scoredCount, fragmentsToScore.Count, sourceId);
-            }
-            catch (Exception ex)
+            catch (Exception)
             {
                 throw;
+            }
             }
         });
     }

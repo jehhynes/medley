@@ -1,8 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
-using Amazon.BedrockRuntime;
-using Medley.Application.Configuration;
 using Medley.Application.Interfaces;
 using Medley.Application.Models;
 using Medley.Domain.Entities;
@@ -11,7 +9,6 @@ using Microsoft.Agents.AI;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using DomainChatMessage = Medley.Domain.Entities.ChatMessage;
 
 namespace Medley.Application.Services;
@@ -29,6 +26,7 @@ public class ArticleChatService : IArticleChatService
     private readonly IChatClient _chatClient;
     private readonly ArticleAssistantPluginsFactory _pluginsFactory;
     private readonly ILogger<ArticleChatService> _logger;
+    private readonly AiCallContext _aiCallContext;
     
     // Chat configuration constants
     private const int MaxTokens = 4096;
@@ -40,10 +38,10 @@ public class ArticleChatService : IArticleChatService
         IRepository<Article> articleRepository,
         IRepository<Template> templateRepository,
         IUnitOfWork unitOfWork,
-        AmazonBedrockRuntimeClient bedrockClient,
+        IChatClient chatClient,
         ArticleAssistantPluginsFactory pluginsFactory,
-        IOptions<BedrockSettings> bedrockSettings,
-        ILogger<ArticleChatService> logger)
+        ILogger<ArticleChatService> logger,
+        AiCallContext aiCallContext)
     {
         _conversationRepository = conversationRepository;
         _chatMessageRepository = chatMessageRepository;
@@ -52,10 +50,10 @@ public class ArticleChatService : IArticleChatService
         _unitOfWork = unitOfWork;
         _pluginsFactory = pluginsFactory;
         _logger = logger;
+        _aiCallContext = aiCallContext;
 
-        // Construct the ChatClient with function invocation support
-        _chatClient = bedrockClient.AsIChatClient(bedrockSettings.Value.ModelId);
-        _chatClient = new ChatClientBuilder(_chatClient).UseFunctionInvocation().Build();
+        // Wrap the provided chat client with function invocation support
+        _chatClient = new ChatClientBuilder(chatClient).UseFunctionInvocation().Build();
     }
 
     public async Task<ChatConversation> CreateConversationAsync(
@@ -103,10 +101,12 @@ public class ArticleChatService : IArticleChatService
         Guid conversationId,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Processing chat message for conversation {ConversationId}", conversationId);
+        using (_aiCallContext.SetContext(nameof(ArticleChatService), nameof(ProcessChatMessageAsync), nameof(ChatConversation), conversationId))
+        {
+            _logger.LogInformation("Processing chat message for conversation {ConversationId}", conversationId);
 
-        // Load conversation with article
-        var (conversation, article) = await LoadConversationWithArticleAsync(conversationId, false, cancellationToken);
+            // Load conversation with article
+            var (conversation, article) = await LoadConversationWithArticleAsync(conversationId, false, cancellationToken);
 
         // Create article-scoped plugins instance
         var assistantPlugins = _pluginsFactory.Create(article.Id);
@@ -134,19 +134,22 @@ public class ArticleChatService : IArticleChatService
         // (the message store already persisted it during RunAsync)
         var assistantMessage = await GetLatestAssistantMessageAsync(conversationId, cancellationToken);
 
-        _logger.LogInformation("Saved assistant response for conversation {ConversationId}", conversationId);
+            _logger.LogInformation("Saved assistant response for conversation {ConversationId}", conversationId);
 
-        return assistantMessage;
+            return assistantMessage;
+        }
     }
 
     public async IAsyncEnumerable<ChatStreamUpdate> ProcessChatMessageStreamingAsync(
         Guid conversationId,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Processing chat message with streaming for conversation {ConversationId}", conversationId);
+        using (_aiCallContext.SetContext(nameof(ArticleChatService), nameof(ProcessChatMessageStreamingAsync), nameof(ChatConversation), conversationId))
+        {
+            _logger.LogInformation("Processing chat message with streaming for conversation {ConversationId}", conversationId);
 
-        // Load conversation with article
-        var (conversation, article) = await LoadConversationWithArticleAsync(conversationId, false, cancellationToken);
+            // Load conversation with article
+            var (conversation, article) = await LoadConversationWithArticleAsync(conversationId, false, cancellationToken);
 
         // Create article-scoped plugins instance
         var assistantPlugins = _pluginsFactory.Create(article.Id);
@@ -189,6 +192,7 @@ public class ArticleChatService : IArticleChatService
 
         // Yield final complete update
         yield return CreateCompletionUpdate(assistantMessage, conversationId, conversation.ArticleId);
+        }
     }
 
     public async Task<List<DomainChatMessage>> GetConversationMessagesAsync(
@@ -262,10 +266,12 @@ public class ArticleChatService : IArticleChatService
         Guid conversationId,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Processing plan generation for conversation {ConversationId}", conversationId);
+        using (_aiCallContext.SetContext(nameof(ArticleChatService), nameof(ProcessPlanGenerationAsync), nameof(ChatConversation), conversationId))
+        {
+            _logger.LogInformation("Processing plan generation for conversation {ConversationId}", conversationId);
 
-        // Load conversation with article
-        var (conversation, article) = await LoadConversationWithArticleAsync(conversationId, true, cancellationToken);
+            // Load conversation with article
+            var (conversation, article) = await LoadConversationWithArticleAsync(conversationId, true, cancellationToken);
 
         // Load the ArticleImprovementPlan template
         var template = await _templateRepository.Query()
@@ -307,19 +313,22 @@ public class ArticleChatService : IArticleChatService
         // Return the most recently saved assistant message from the database
         var assistantMessage = await GetLatestAssistantMessageAsync(conversationId, cancellationToken);
 
-        _logger.LogInformation("Completed plan generation for conversation {ConversationId}", conversationId);
+            _logger.LogInformation("Completed plan generation for conversation {ConversationId}", conversationId);
 
-        return assistantMessage;
+            return assistantMessage;
+        }
     }
 
     public async IAsyncEnumerable<ChatStreamUpdate> ProcessPlanGenerationStreamingAsync(
         Guid conversationId,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Processing plan generation with streaming for conversation {ConversationId}", conversationId);
+        using (_aiCallContext.SetContext(nameof(ArticleChatService), nameof(ProcessPlanGenerationStreamingAsync), nameof(ChatConversation), conversationId))
+        {
+            _logger.LogInformation("Processing plan generation with streaming for conversation {ConversationId}", conversationId);
 
-        // Load conversation with article
-        var (conversation, article) = await LoadConversationWithArticleAsync(conversationId, true, cancellationToken);
+            // Load conversation with article
+            var (conversation, article) = await LoadConversationWithArticleAsync(conversationId, true, cancellationToken);
 
         // Load the ArticleImprovementPlan template
         var template = await _templateRepository.Query()
@@ -376,6 +385,7 @@ public class ArticleChatService : IArticleChatService
 
         // Yield final complete update
         yield return CreateCompletionUpdate(assistantMessage, conversationId, conversation.ArticleId);
+        }
     }
 
     #region Helper Methods

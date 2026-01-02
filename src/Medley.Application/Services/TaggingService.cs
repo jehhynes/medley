@@ -19,6 +19,7 @@ public class TaggingService : ITaggingService
     private readonly ISourceMetadataProvider _metadataProvider;
     private readonly IAiProcessingService _aiProcessingService;
     private readonly ILogger<TaggingService> _logger;
+    private readonly AiCallContext _aiCallContext;
 
     public TaggingService(
         IRepository<Source> sourceRepository,
@@ -27,7 +28,8 @@ public class TaggingService : ITaggingService
         IRepository<Organization> organizationRepository,
         ISourceMetadataProvider metadataProvider,
         IAiProcessingService aiProcessingService,
-        ILogger<TaggingService> logger)
+        ILogger<TaggingService> logger,
+        AiCallContext aiCallContext)
     {
         _sourceRepository = sourceRepository;
         _tagTypeRepository = tagTypeRepository;
@@ -36,6 +38,7 @@ public class TaggingService : ITaggingService
         _metadataProvider = metadataProvider;
         _aiProcessingService = aiProcessingService;
         _logger = logger;
+        _aiCallContext = aiCallContext;
     }
 
     public async Task<TaggingResult> GenerateTagsAsync(Guid sourceId, bool force = false, CancellationToken cancellationToken = default)
@@ -160,13 +163,16 @@ public class TaggingService : ITaggingService
 
     private async Task<SmartTagResponse?> GenerateSmartTagsAsync(Source source, string? emailDomain, List<TagType> tagTypes, CancellationToken cancellationToken = default)
     {
-        var systemPrompt = BuildSystemPrompt(tagTypes);
-        var userPrompt = BuildUserPrompt(source);
+        using (_aiCallContext.SetContext(nameof(TaggingService), nameof(GenerateSmartTagsAsync), nameof(Source), source.Id))
+        {
+            var systemPrompt = BuildSystemPrompt(tagTypes);
+            var userPrompt = BuildUserPrompt(source);
 
-        return await _aiProcessingService.ProcessStructuredPromptAsync<SmartTagResponse>(
-            userPrompt: userPrompt,
-            systemPrompt: systemPrompt,
-            cancellationToken: cancellationToken);
+            return await _aiProcessingService.ProcessStructuredPromptAsync<SmartTagResponse>(
+                userPrompt: userPrompt,
+                systemPrompt: systemPrompt,
+                cancellationToken: cancellationToken);
+        }
     }
 
     private string BuildSystemPrompt(List<TagType> tagTypes)

@@ -17,16 +17,19 @@ public class ContentChunkingService : IContentChunkingService
 {
     private readonly IAiProcessingService _aiService;
     private readonly ILogger<ContentChunkingService> _logger;
+    private readonly AiCallContext _aiCallContext;
 
     // Chunking configuration
     private const int ChunkingThreshold = 90000; // Maximum characters per chunk
 
     public ContentChunkingService(
         IAiProcessingService aiService,
-        ILogger<ContentChunkingService> logger)
+        ILogger<ContentChunkingService> logger,
+        AiCallContext aiCallContext)
     {
         _aiService = aiService;
         _logger = logger;
+        _aiCallContext = aiCallContext;
     }
 
     /// <summary>
@@ -50,7 +53,7 @@ public class ContentChunkingService : IContentChunkingService
         }
 
         _logger.LogInformation("Found {Count} speech segments in source metadata. Using segment-based chunking.", segments.Count);
-        return await GetSegmentBasedChunksAsync(segments, cancellationToken);
+        return await GetSegmentBasedChunksAsync(segments, source.Id, cancellationToken);
     }
 
     private List<SpeechSegment>? ExtractSpeechSegments(Source source)
@@ -235,6 +238,7 @@ public class ContentChunkingService : IContentChunkingService
 
     private async Task<List<ContentChunk>> GetSegmentBasedChunksAsync(
         List<SpeechSegment> segments,
+        Guid sourceId,
         CancellationToken cancellationToken = default)
     {
         // Calculate desired number of chunks
@@ -297,10 +301,13 @@ Example: If you return StartIndex values of 0, 15, 28, this means:
         SegmentChunkingResponse? chunkingResponse;
         try
         {
-            chunkingResponse = await _aiService.ProcessStructuredPromptAsync<SegmentChunkingResponse>(
-                userPrompt: segmentSummaryData,
-                systemPrompt: chunkingSystemPrompt,
-                cancellationToken: cancellationToken);
+            using (_aiCallContext.SetContext(nameof(ContentChunkingService), nameof(GetSegmentBasedChunksAsync), nameof(Source), sourceId))
+            {
+                chunkingResponse = await _aiService.ProcessStructuredPromptAsync<SegmentChunkingResponse>(
+                    userPrompt: segmentSummaryData,
+                    systemPrompt: chunkingSystemPrompt,
+                    cancellationToken: cancellationToken);
+            }
         }
         catch (Exception ex)
         {

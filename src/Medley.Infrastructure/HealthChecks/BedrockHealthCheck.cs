@@ -1,5 +1,6 @@
 using Amazon.BedrockRuntime;
 using Medley.Application.Configuration;
+using Medley.Application.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
@@ -16,13 +17,19 @@ public class BedrockHealthCheck : IHealthCheck
     private readonly BedrockSettings _bedrockSettings;
     private readonly ILogger<BedrockHealthCheck> _logger;
     private readonly IChatClient _chatClient;
+    private readonly AiCallContext _aiCallContext;
 
-    public BedrockHealthCheck(AmazonBedrockRuntimeClient bedrockClient, IOptions<BedrockSettings> bedrockSettings, ILogger<BedrockHealthCheck> logger)
+    public BedrockHealthCheck(
+        AmazonBedrockRuntimeClient bedrockClient, 
+        IOptions<BedrockSettings> bedrockSettings, 
+        ILogger<BedrockHealthCheck> logger,
+        AiCallContext aiCallContext)
     {
         _bedrockClient = bedrockClient;
         _bedrockSettings = bedrockSettings.Value;
         _logger = logger;
         _chatClient = bedrockClient.AsIChatClient(_bedrockSettings.ModelId);
+        _aiCallContext = aiCallContext;
     }
 
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
@@ -30,11 +37,15 @@ public class BedrockHealthCheck : IHealthCheck
         try
         {
             // Perform a simple test invocation to verify Bedrock connectivity using IChatClient
-            var response = await _chatClient.GetResponseAsync("Hello", new ChatOptions
+            ChatResponse response;
+            using (_aiCallContext.SetContext(nameof(BedrockHealthCheck), nameof(CheckHealthAsync), null, null))
             {
-                MaxOutputTokens = 10,
-                Temperature = 0.1f
-            }, cancellationToken);
+                response = await _chatClient.GetResponseAsync("Hello", new ChatOptions
+                {
+                    MaxOutputTokens = 10,
+                    Temperature = 0.1f
+                }, cancellationToken);
+            }
             
             _logger.LogDebug("Bedrock health check passed for model: {ModelId}", _bedrockSettings.ModelId);
             

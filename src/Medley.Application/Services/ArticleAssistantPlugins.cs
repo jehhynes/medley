@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Medley.Application.Configuration;
 using Medley.Application.Interfaces;
+using Medley.Application.Services;
 using Medley.Domain.Entities;
 using Medley.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -26,6 +27,7 @@ public class ArticleAssistantPlugins
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<ArticleAssistantPlugins> _logger;
     private readonly EmbeddingSettings _embeddingSettings;
+    private readonly AiCallContext _aiCallContext;
     private Guid? _currentUserId; // Set by chat service before running agent
 
     public ArticleAssistantPlugins(
@@ -37,7 +39,8 @@ public class ArticleAssistantPlugins
         IRepository<PlanFragment> planFragmentRepository,
         IUnitOfWork unitOfWork,
         ILogger<ArticleAssistantPlugins> logger,
-        IOptions<EmbeddingSettings> embeddingSettings)
+        IOptions<EmbeddingSettings> embeddingSettings,
+        AiCallContext aiCallContext)
     {
         _articleId = articleId;
         _fragmentRepository = fragmentRepository;
@@ -48,6 +51,7 @@ public class ArticleAssistantPlugins
         _unitOfWork = unitOfWork;
         _logger = logger;
         _embeddingSettings = embeddingSettings.Value;
+        _aiCallContext = aiCallContext;
     }
 
     /// <summary>
@@ -87,10 +91,14 @@ public class ArticleAssistantPlugins
             {
                 Dimensions = _embeddingSettings.Dimensions
             };
-            var embeddingResult = await _embeddingGenerator.GenerateAsync(
-                new[] { query }, 
-                embeddingGenerationOptions, 
-                cancellationToken);
+            GeneratedEmbeddings<Embedding<float>> embeddingResult;
+            using (_aiCallContext.SetContext(nameof(ArticleAssistantPlugins), nameof(SearchFragmentsAsync), nameof(Article), _articleId))
+            {
+                embeddingResult = await _embeddingGenerator.GenerateAsync(
+                    new[] { query }, 
+                    embeddingGenerationOptions, 
+                    cancellationToken);
+            }
             var embedding = embeddingResult.FirstOrDefault();
 
             if (embedding == null)
@@ -228,10 +236,14 @@ public class ArticleAssistantPlugins
             {
                 Dimensions = _embeddingSettings.Dimensions
             };
-            var embeddingResult = await _embeddingGenerator.GenerateAsync(
-                new[] { textForEmbedding }, 
-                embeddingGenerationOptions, 
-                cancellationToken);
+            GeneratedEmbeddings<Embedding<float>> embeddingResult;
+            using (_aiCallContext.SetContext(nameof(ArticleAssistantPlugins), nameof(FindSimilarFragmentsAsync), nameof(Article), _articleId))
+            {
+                embeddingResult = await _embeddingGenerator.GenerateAsync(
+                    new[] { textForEmbedding }, 
+                    embeddingGenerationOptions, 
+                    cancellationToken);
+            }
             var embedding = embeddingResult.FirstOrDefault();
 
             if (embedding == null)

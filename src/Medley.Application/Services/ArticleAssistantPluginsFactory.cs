@@ -1,5 +1,6 @@
 using Medley.Application.Configuration;
 using Medley.Application.Interfaces;
+using Medley.Application.Services;
 using Medley.Domain.Entities;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -20,6 +21,7 @@ public class ArticleAssistantPluginsFactory
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILoggerFactory _loggerFactory;
     private readonly IOptions<EmbeddingSettings> _embeddingSettings;
+    private readonly AiCallContext _aiCallContext;
 
     public ArticleAssistantPluginsFactory(
         IFragmentRepository fragmentRepository,
@@ -29,7 +31,8 @@ public class ArticleAssistantPluginsFactory
         IRepository<PlanFragment> planFragmentRepository,
         IUnitOfWork unitOfWork,
         ILoggerFactory loggerFactory,
-        IOptions<EmbeddingSettings> embeddingSettings)
+        IOptions<EmbeddingSettings> embeddingSettings,
+        AiCallContext aiCallContext)
     {
         _fragmentRepository = fragmentRepository;
         _embeddingGenerator = embeddingGenerator;
@@ -39,6 +42,7 @@ public class ArticleAssistantPluginsFactory
         _unitOfWork = unitOfWork;
         _loggerFactory = loggerFactory;
         _embeddingSettings = embeddingSettings;
+        _aiCallContext = aiCallContext;
     }
 
     /// <summary>
@@ -59,6 +63,7 @@ public class ArticleAssistantPluginsFactory
             _planFragmentRepository,
             _unitOfWork,
             logger,
-            _embeddingSettings);
+            _embeddingSettings,
+            _aiCallContext);
     }
 }

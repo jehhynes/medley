@@ -1,5 +1,6 @@
 using Medley.Application.Configuration;
 using Medley.Application.Interfaces;
+using Medley.Application.Services;
 using Medley.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,19 +20,22 @@ public class FragmentsApiController : ControllerBase
     private readonly IEmbeddingHelper _embeddingHelper;
     private readonly EmbeddingSettings _embeddingSettings;
     private readonly ILogger<FragmentsApiController> _logger;
+    private readonly AiCallContext _aiCallContext;
 
     public FragmentsApiController(
         IFragmentRepository fragmentRepository,
         IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
         IEmbeddingHelper embeddingHelper,
         IOptions<EmbeddingSettings> embeddingSettings,
-        ILogger<FragmentsApiController> logger)
+        ILogger<FragmentsApiController> logger,
+        AiCallContext aiCallContext)
     {
         _fragmentRepository = fragmentRepository;
         _embeddingGenerator = embeddingGenerator;
         _embeddingHelper = embeddingHelper;
         _embeddingSettings = embeddingSettings.Value;
         _logger = logger;
+        _aiCallContext = aiCallContext;
     }
 
     /// <summary>
@@ -147,10 +151,21 @@ public class FragmentsApiController : ControllerBase
             {
                 Dimensions = _embeddingSettings.Dimensions
             };
-            var embedding = await _embeddingGenerator.GenerateVectorAsync(query, options);
+            GeneratedEmbeddings<Embedding<float>> embeddingResult;
+            using (_aiCallContext.SetContext(nameof(FragmentsApiController), nameof(Search), null, null))
+            {
+                embeddingResult = await _embeddingGenerator.GenerateAsync(new[] { query }, options);
+            }
+            
+            var embedding = embeddingResult.FirstOrDefault();
+            if (embedding == null)
+            {
+                _logger.LogWarning("Failed to generate embedding for search query: {Query}", query);
+                return StatusCode(500, new { message = "Failed to generate embedding for search query." });
+            }
             
             // Process embedding (conditionally normalize based on model)
-            var processedVector = _embeddingHelper.ProcessEmbedding(embedding.ToArray());
+            var processedVector = _embeddingHelper.ProcessEmbedding(embedding.Vector.ToArray());
             
             // Find similar fragments using vector similarity
             var similarFragments = await _fragmentRepository.FindSimilarAsync(
