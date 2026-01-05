@@ -1,7 +1,6 @@
 using Hangfire;
 using Hangfire.MissionControl;
 using Hangfire.Server;
-using Medley.Application.Constants;
 using Medley.Application.Hubs;
 using Medley.Application.Interfaces;
 using Medley.Domain.Entities;
@@ -143,7 +142,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                                 }, cancellationToken);
                             break;
 
-                        case Models.StreamUpdateType.Complete:
+                        case Models.StreamUpdateType.MessageComplete:
                             // Send final complete message
                             _logger.LogInformation("Chat message processed successfully for conversation {ConversationId}, response saved with ID {MessageId}",
                                 conversation.Id, update.MessageId);
@@ -155,9 +154,19 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                                     conversationId = conversation.Id.ToString(),
                                     role = "assistant",
                                     content = update.Content,
-                                    userName = ChatConstants.AssistantDisplayName,
+                                    userName = (string?)null,
                                     createdAt = update.Timestamp,
                                     articleId = conversation.ArticleId.ToString()
+                                }, cancellationToken);
+                            break;
+
+                        case Models.StreamUpdateType.TurnComplete:
+                            // Send turn complete signal
+                            await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
+                                .SendAsync("ChatTurnComplete", new
+                                {
+                                    conversationId = conversation.Id.ToString(),
+                                    timestamp = update.Timestamp
                                 }, cancellationToken);
                             break;
                     }
@@ -312,7 +321,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                                 }, cancellationToken);
                             break;
 
-                        case Models.StreamUpdateType.Complete:
+                        case Models.StreamUpdateType.MessageComplete:
                             // Send final complete message
                             _logger.LogInformation("Plan generation processed successfully for conversation {ConversationId}", conversation.Id);
 
@@ -323,9 +332,19 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                                     conversationId = conversation.Id.ToString(),
                                     role = "assistant",
                                     content = update.Content,
-                                    userName = ChatConstants.AssistantDisplayName,
+                                    userName = (string?)null,
                                     createdAt = update.Timestamp,
                                     articleId = conversation.ArticleId.ToString()
+                                }, cancellationToken);
+                            break;
+
+                        case Models.StreamUpdateType.TurnComplete:
+                            // Send turn complete signal
+                            await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
+                                .SendAsync("ChatTurnComplete", new
+                                {
+                                    conversationId = conversation.Id.ToString(),
+                                    timestamp = update.Timestamp
                                 }, cancellationToken);
                             break;
                     }
