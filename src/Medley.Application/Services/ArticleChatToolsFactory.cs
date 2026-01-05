@@ -49,13 +49,15 @@ public class ArticleChatToolsFactory
     /// Creates a new ArticleAssistantPlugins instance scoped to a specific article
     /// </summary>
     /// <param name="articleId">The article ID to scope the plugins to</param>
+    /// <param name="userId">The user ID of the current user</param>
     /// <returns>A new ArticleAssistantPlugins instance</returns>
-    public ArticleChatTools Create(Guid articleId)
+    public ArticleChatTools Create(Guid articleId, Guid userId)
     {
         var logger = _loggerFactory.CreateLogger<ArticleChatTools>();
         
         return new ArticleChatTools(
             articleId,
+            userId,
             _fragmentRepository,
             _embeddingGenerator,
             _articleRepository,

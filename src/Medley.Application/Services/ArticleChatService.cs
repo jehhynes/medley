@@ -24,7 +24,7 @@ public class ArticleChatService : IArticleChatService
     private readonly IRepository<Template> _templateRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IChatClient _chatClient;
-    private readonly ArticleChatToolsFactory _pluginsFactory;
+    private readonly ArticleChatToolsFactory _toolsFactory;
     private readonly ILogger<ArticleChatService> _logger;
     private readonly AiCallContext _aiCallContext;
     
@@ -48,7 +48,7 @@ public class ArticleChatService : IArticleChatService
         _articleRepository = articleRepository;
         _templateRepository = templateRepository;
         _unitOfWork = unitOfWork;
-        _pluginsFactory = pluginsFactory;
+        _toolsFactory = pluginsFactory;
         _logger = logger;
         _aiCallContext = aiCallContext;
 
@@ -111,15 +111,15 @@ public class ArticleChatService : IArticleChatService
             // Load conversation with article
             var (conversation, article) = await LoadConversationWithArticleAsync(conversationId, true, cancellationToken);
             
-            // Create article-scoped plugins instance
-            var assistantPlugins = _pluginsFactory.Create(article.Id);
+            // Get the latest user message to process
+            var latestUserMessage = await GetLatestUserMessageAsync(conversationId, cancellationToken);
             
-            // Set user ID in plugins for potential plan creation
-            assistantPlugins.SetCurrentUserId(conversation.CreatedByUserId);
+            // Create article-scoped plugins instance
+            var tools = _toolsFactory.Create(article.Id, latestUserMessage.User!.Id);
             
             // Select system prompt and tools based on mode
             string systemMessage;
-            AIFunction[] tools;
+            AIFunction[] aiFunctions;
             
             if (conversation.Mode == ConversationMode.Plan)
             {
@@ -133,7 +133,7 @@ public class ArticleChatService : IArticleChatService
                 }
                 
                 systemMessage = template.Content.Replace("{article.Title}", article.Title);
-                tools = CreateTools(assistantPlugins, conversation.Mode);
+                aiFunctions = CreateFunctions(tools, conversation.Mode);
             }
             else
             {
@@ -151,17 +151,16 @@ public class ArticleChatService : IArticleChatService
                     throw new InvalidDataException("Article Chat template not found");
                 }
                 
-                tools = CreateTools(assistantPlugins, conversation.Mode);
+                aiFunctions = CreateFunctions(tools, conversation.Mode);
             }
             
             // Create the message store for persistence
             var messageStore = CreateMessageStore(conversationId);
             
             // Create the agent with appropriate system message and tools
-            var agent = CreateChatAgent(systemMessage, tools);
+            var agent = CreateChatAgent(systemMessage, aiFunctions);
             
-            // Get the latest user message to process
-            var latestUserMessage = await GetLatestUserMessageAsync(conversationId, cancellationToken);
+
             
             // Create or get existing thread with the message store
             var thread = agent.GetNewThread(messageStore);
@@ -189,8 +188,15 @@ public class ArticleChatService : IArticleChatService
                 conversationId, conversation.Mode, assistantMessage.Id);
             
             // Yield final complete update
-            yield return CreateCompletionUpdate(assistantMessage, conversationId, conversation.ArticleId);
-            
+            yield return new ChatStreamUpdate
+            {
+                Type = StreamUpdateType.MessageComplete,
+                MessageId = assistantMessage.Id,
+                ConversationId = conversationId,
+                ArticleId = conversation.ArticleId,
+                Content = assistantMessage.Content
+            };
+
             // Yield turn complete update
             yield return new ChatStreamUpdate
             {
@@ -373,7 +379,7 @@ public class ArticleChatService : IArticleChatService
     /// <summary>
     /// Creates the tools for the specified conversation mode.
     /// </summary>
-    private AIFunction[] CreateTools(ArticleChatTools plugins, ConversationMode mode)
+    private AIFunction[] CreateFunctions(ArticleChatTools plugins, ConversationMode mode)
     {
         var tools = new List<AIFunction>
         {
@@ -522,24 +528,6 @@ public class ArticleChatService : IArticleChatService
 
             lastMessageId = currentMessageId;
         }
-    }
-
-    /// <summary>
-    /// Creates a completion update for the end of a streaming response.
-    /// </summary>
-    private ChatStreamUpdate CreateCompletionUpdate(
-        DomainChatMessage assistantMessage,
-        Guid conversationId,
-        Guid articleId)
-    {
-        return new ChatStreamUpdate
-        {
-            Type = StreamUpdateType.MessageComplete,
-            MessageId = assistantMessage.Id,
-            ConversationId = conversationId,
-            ArticleId = articleId,
-            Content = assistantMessage.Content
-        };
     }
 
     #endregion
