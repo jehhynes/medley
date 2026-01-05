@@ -155,6 +155,31 @@
                     }
                 });
 
+                this.signalr.connection.on('ChatTurnStarted', (data) => {
+                    // Update turn status on the article directly
+                    const article = this.articles.index.get(this.articles.selectedId);
+                    if (article) {
+                        // Ensure currentConversation object exists
+                        if (!article.currentConversation) {
+                            // Can't assign to property of null, so create the object
+                            // We need to use Vue.set or re-assign to trigger reactivity if needed, 
+                            // but since articles is reactive, deep assignment works in Vue 3/Proxy
+                            article.currentConversation = { id: data.conversationId, isRunning: true };
+                        } else {
+                            article.currentConversation.isRunning = true;
+                            article.currentConversation.id = data.conversationId;
+                        }
+                    }
+                });
+
+                this.signalr.connection.on('ChatTurnComplete', (data) => {
+                    // Update turn status on the article directly
+                    const article = this.articles.index.get(this.articles.selectedId);
+                    if (article && article.currentConversation) {
+                        article.currentConversation.isRunning = false;
+                    }
+                });
+
                 this.signalr.connection.onreconnected(async (connectionId) => {
                     console.log('SignalR reconnected. Re-joining article group.');
                     if (this.articles.selectedId) {

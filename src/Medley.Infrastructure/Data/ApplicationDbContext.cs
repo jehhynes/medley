@@ -80,5 +80,18 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
         base.OnModelCreating(builder);
 
         //builder.HasPostgresExtension("vector");
+        
+        // Configure circular relationship between Article and ChatConversation
+        builder.Entity<Article>()
+            .HasOne(a => a.CurrentConversation)
+            .WithOne()
+            .HasForeignKey<Article>(a => a.CurrentConversationId)
+            .OnDelete(DeleteBehavior.SetNull); // When conversation is deleted, set Article.CurrentConversationId to null (not cascade)
+            
+        builder.Entity<ChatConversation>()
+            .HasOne(c => c.Article)
+            .WithMany(a => a.ChatConversations)
+            .HasForeignKey(c => c.ArticleId)
+            .OnDelete(DeleteBehavior.Cascade); // When article is deleted, delete all conversations
     }
 }

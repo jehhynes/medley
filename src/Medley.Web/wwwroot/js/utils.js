@@ -150,7 +150,7 @@
 
     const getStatusIcon = (status) => {
         const iconMap = {
-            'Draft': 'bi-pencil',
+            'Draft': 'bi-pencil-fill',
             'Review': 'bi-eye',
             'Approved': 'bi-check-circle',
             'Archived': 'bi-archive'
@@ -239,6 +239,35 @@
         return items.find(i => i && i.id === id) || null;
     };
 
+    /**
+     * Check if article should show processing spinner
+     * Priority: Always show if conversation is processing
+     * @param {Object} article - Article to check
+     * @returns {boolean} True if should show spinner
+     */
+    const showProcessingSpinner = (article) => {
+        return article.currentConversation && 
+               article.currentConversation.isRunning === true;
+    };
+
+    /**
+     * Check if article should show user turn indicator
+     * Only show if conversation is active (not processing) and article status is not Approved or Archived
+     * @param {Object} article - Article to check
+     * @returns {boolean} True if should show user turn indicator
+     */
+    const showUserTurnIndicator = (article) => {
+        if (!article.currentConversation || 
+            article.currentConversation.state !== 'Active' ||
+            article.currentConversation.isRunning === true) {
+            return false;
+        }
+        
+        // Only show if status is not Approved or Archived
+        const status = article.status?.toLowerCase();
+        return status !== 'approved' && status !== 'archived';
+    };
+
     // Export utilities
     window.MedleyUtils = {
         formatDate,
@@ -256,6 +285,8 @@
         initializeMarkdownRenderer,
         showToast,
         findInTree,
-        findInList
+        findInList,
+        showProcessingSpinner,
+        showUserTurnIndicator
     };
 })();

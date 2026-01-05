@@ -79,6 +79,7 @@ public class ArticlesApiController : ControllerBase
             var allArticles = await _articleRepository.Query()
                 .Include(a => a.ChildArticles)
                 .Include(a => a.ArticleType)
+                .Include(a => a.CurrentConversation)
                 .ToListAsync();
 
             // Apply filters to get matching articles
@@ -127,6 +128,7 @@ public class ArticlesApiController : ControllerBase
             articles = await _articleRepository.Query()
                 .Include(a => a.ChildArticles)
                 .Include(a => a.ArticleType)
+                .Include(a => a.CurrentConversation)
                 .ToListAsync();
         }
 
@@ -144,6 +146,7 @@ public class ArticlesApiController : ControllerBase
             .Include(a => a.ChildArticles)
             .Include(a => a.ParentArticle)
             .Include(a => a.Fragments)
+            .Include(a => a.CurrentConversation)
             .FirstOrDefaultAsync(a => a.Id == id);
 
         if (article == null)
@@ -162,7 +165,13 @@ public class ArticlesApiController : ControllerBase
             article.ParentArticleId,
             ParentTitle = article.ParentArticle?.Title,
             ChildrenCount = article.ChildArticles.Count,
-            FragmentsCount = article.Fragments.Count
+            FragmentsCount = article.Fragments.Count,
+            CurrentConversation = article.CurrentConversation != null ? new 
+            { 
+                id = article.CurrentConversation.Id,
+                isRunning = article.CurrentConversation.IsRunning,
+                state = article.CurrentConversation.State.ToString()
+            } : null
         });
     }
 
@@ -534,6 +543,12 @@ public class ArticlesApiController : ControllerBase
                 a.Status,
                 a.CreatedAt,
                 articleTypeId = a.ArticleTypeId,
+                currentConversation = a.CurrentConversation != null ? new 
+                { 
+                    id = a.CurrentConversation.Id,
+                    isRunning = a.CurrentConversation.IsRunning,
+                    state = a.CurrentConversation.State.ToString()
+                } : null,
                 children = BuildTree(allArticles, a.Id)
             })
             .ToList<object>();

@@ -28,7 +28,9 @@ const ArticleTree = {
         <i :class="['tree-item-icon'].concat(getIconClass(getArticleIcon(article)).split(' '))"></i>
         <span class="tree-item-label">{{ article.title }}</span>
         <div class="status-actions">
-          <i :class="'bi ' + getStatusIcon(article.status) + ' ' + getStatusColorClass(article.status)" class="status-icon" :title="article.status"></i>
+          <i v-if="showProcessingSpinner(article)" class="fad fa-spinner-third fa-spin status-icon text-info" title="AI Processing"></i>
+          <i v-else-if="showUserTurnIndicator(article)" class="fas fa-circle-pause status-icon text-success" :class="getStatusColorClass('Draft')" title="Waiting for user"></i>
+          <i v-else :class="'bi ' + getStatusIcon(article.status) + ' ' + getStatusColorClass(article.status)" class="status-icon" :title="article.status"></i>
           <div class="dropdown actions-container">
             <button 
               class="actions-btn"
@@ -234,6 +236,12 @@ const ArticleTree = {
         moveArticle(sourceId, targetId) {
             // Propagate the event up the tree
             this.$emit('move-article', sourceId, targetId);
+        },
+        showProcessingSpinner(article) {
+            return window.MedleyUtils.showProcessingSpinner(article);
+        },
+        showUserTurnIndicator(article) {
+            return window.MedleyUtils.showUserTurnIndicator(article);
         }
     }
 };
