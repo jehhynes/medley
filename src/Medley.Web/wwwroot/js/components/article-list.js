@@ -27,7 +27,9 @@ const ArticleList = {
           </div>
         </div>
         <div class="status-actions">
-          <i :class="'bi ' + getStatusIcon(article.status) + ' ' + getStatusColorClass(article.status)" class="status-icon" :title="article.status"></i>
+          <i v-if="showProcessingSpinner(article)" class="fad fa-spinner-third fa-spin status-icon text-info" title="AI Processing"></i>
+          <i v-else-if="showUserTurnIndicator(article)" class="fas fa-circle-pause status-icon text-success" :class="getStatusColorClass('Draft')" title="Waiting for user"></i>
+          <i v-else :class="'bi ' + getStatusIcon(article.status) + ' ' + getStatusColorClass(article.status)" class="status-icon" :title="article.status"></i>
           <div class="dropdown actions-container">
             <button 
               class="actions-btn"
@@ -113,6 +115,12 @@ const ArticleList = {
         getBreadcrumbs(article) {
             // Use pre-computed breadcrumbs from cache for O(1) lookup
             return this.breadcrumbsCache.get(article.id) || null;
+        },
+        showProcessingSpinner(article) {
+            return window.MedleyUtils.showProcessingSpinner(article);
+        },
+        showUserTurnIndicator(article) {
+            return window.MedleyUtils.showUserTurnIndicator(article);
         }
     }
 };

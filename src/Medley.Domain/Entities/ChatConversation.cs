@@ -34,6 +34,11 @@ public class ChatConversation : BaseEntity
     public ConversationMode Mode { get; set; } = ConversationMode.Chat;
 
     /// <summary>
+    /// Indicates if the conversation is currently running (AI is processing)
+    /// </summary>
+    public bool IsRunning { get; set; } = false;
+
+    /// <summary>
     /// When this conversation was created
     /// </summary>
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;

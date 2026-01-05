@@ -21,6 +21,7 @@ namespace Medley.Web.Controllers.Api;
 public class ArticleChatApiController : ControllerBase
 {
     private readonly IArticleChatService _chatService;
+    private readonly IRepository<ChatConversation> _conversationRepository;
     private readonly IRepository<Article> _articleRepository;
     private readonly IRepository<Domain.Entities.ChatMessage> _chatMessageRepository;
     private readonly IRepository<Plan> _planRepository;
@@ -31,6 +32,7 @@ public class ArticleChatApiController : ControllerBase
 
     public ArticleChatApiController(
         IArticleChatService chatService,
+        IRepository<ChatConversation> conversationRepository,
         IRepository<Article> articleRepository,
         IRepository<Domain.Entities.ChatMessage> chatMessageRepository,
         IRepository<Plan> planRepository,
@@ -40,6 +42,7 @@ public class ArticleChatApiController : ControllerBase
         ILogger<ArticleChatApiController> logger)
     {
         _chatService = chatService;
+        _conversationRepository = conversationRepository;
         _articleRepository = articleRepository;
         _chatMessageRepository = chatMessageRepository;
         _planRepository = planRepository;
@@ -72,6 +75,7 @@ public class ArticleChatApiController : ControllerBase
             id = conversation.Id,
             state = conversation.State.ToString(),
             mode = conversation.Mode.ToString(),
+            isRunning = conversation.IsRunning,
             createdAt = conversation.CreatedAt,
             createdBy = conversation.CreatedByUserId
         });
@@ -228,6 +232,18 @@ public class ArticleChatApiController : ControllerBase
             CreatedAt = DateTimeOffset.UtcNow
         };
 
+        // Update IsRunning status immediately for UI responsiveness
+        conversation.IsRunning = true;
+        
+        // Update article's current conversation reference
+        var article = await _articleRepository.GetByIdAsync(articleId);
+        if (article != null)
+        {
+            article.CurrentConversationId = conversationId;
+            await _articleRepository.SaveAsync(article);
+        }
+        
+        await _conversationRepository.SaveAsync(conversation);
         await _chatMessageRepository.SaveAsync(userMessage);
 
         // Get user's full name for broadcast

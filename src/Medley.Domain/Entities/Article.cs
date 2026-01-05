@@ -47,6 +47,17 @@ public class Article : BusinessEntity
     [ForeignKey(nameof(ArticleTypeId))]
     public virtual ArticleType? ArticleType { get; set; }
 
+    /// <summary>
+    /// ID of the currently running conversation (if any)
+    /// </summary>
+    public Guid? CurrentConversationId { get; set; }
+
+    /// <summary>
+    /// Navigation property to the current conversation
+    /// </summary>
+    [ForeignKey(nameof(CurrentConversationId))]
+    public virtual ChatConversation? CurrentConversation { get; set; }
+
     
     /// <summary>
     /// Navigation property to child articles

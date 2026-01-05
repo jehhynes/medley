@@ -92,6 +92,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                     {
                         conversationId = conversation.Id.ToString(),
                         messageId = userMessageId.ToString(),
+                        isRunning = true,
                         timestamp = DateTimeOffset.UtcNow
                     }, cancellationToken);
 
@@ -166,6 +167,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                                 .SendAsync("ChatTurnComplete", new
                                 {
                                     conversationId = conversation.Id.ToString(),
+                                    isRunning = false,
                                     timestamp = update.Timestamp
                                 }, cancellationToken);
                             break;
@@ -195,6 +197,8 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                             }, cancellationToken);
                     }
                 }
+
+                conversation.IsRunning = false;
             });
         }
         catch (Exception ex)
