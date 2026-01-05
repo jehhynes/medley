@@ -71,6 +71,7 @@ public class ArticleChatApiController : ControllerBase
         {
             id = conversation.Id,
             state = conversation.State.ToString(),
+            mode = conversation.Mode.ToString(),
             createdAt = conversation.CreatedAt,
             createdBy = conversation.CreatedByUserId
         });
@@ -371,82 +372,7 @@ public class ArticleChatApiController : ControllerBase
         });
     }
 
-    /// <summary>
-    /// Create a plan for improving the article (sends plan generation message through chat)
-    /// </summary>
-    [HttpPost("conversations/{conversationId}/create-plan")]
-    public async Task<IActionResult> CreatePlan(Guid articleId, Guid conversationId)
-    {
-        var conversation = await _chatService.GetConversationAsync(conversationId);
-        if (conversation == null || conversation.ArticleId != articleId)
-        {
-            return NotFound(new { error = "Conversation not found" });
-        }
 
-        if (conversation.State != ConversationState.Active)
-        {
-            return BadRequest(new { error = "Conversation is not active" });
-        }
-
-        if (conversation.Mode != ConversationMode.Plan)
-        {
-            return BadRequest(new { error = "This conversation is not in Plan mode" });
-        }
-
-        var userId = GetUserId();
-
-        // Save user message requesting plan creation
-        var userMessage = new Domain.Entities.ChatMessage
-        {
-            ConversationId = conversationId,
-            UserId = userId,
-            Role = ChatMessageRole.User,
-            Content = "Create a plan for improving this article",
-            CreatedAt = DateTimeOffset.UtcNow
-        };
-
-        await _chatMessageRepository.SaveAsync(userMessage);
-
-        // Get user's full name for broadcast
-        var user = await _userRepository.GetByIdAsync(userId);
-        var userName = user?.FullName ?? "User";
-
-        // Register SignalR notification
-        RegisterSignalRNotification(
-            $"Article_{articleId}",
-            "ChatMessageReceived",
-            new
-            {
-                id = userMessage.Id.ToString(),
-                conversationId = conversationId.ToString(),
-                role = "user",
-                content = userMessage.Content,
-                userName = userName,
-                createdAt = userMessage.CreatedAt,
-                articleId = articleId.ToString()
-            });
-
-        // Enqueue plan generation job
-        var messageId = userMessage.Id;
-        HttpContext.RegisterPostCommitAction(async () =>
-        {
-            try
-            {
-                _backgroundJobClient.Enqueue<ArticleChatJob>(
-                    job => job.ProcessPlanGenerationAsync(messageId, conversationId, CancellationToken.None));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to enqueue plan generation job for message {MessageId}", messageId);
-            }
-        });
-
-        return Accepted(new
-        {
-            conversationId = conversationId.ToString(),
-            messageId = messageId.ToString()
-        });
-    }
 
     /// <summary>
     /// Get the active plan for an article

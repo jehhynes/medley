@@ -28,10 +28,11 @@ public class ArticleChatTools
     private readonly ILogger<ArticleChatTools> _logger;
     private readonly EmbeddingSettings _embeddingSettings;
     private readonly AiCallContext _aiCallContext;
-    private Guid? _currentUserId; // Set by chat service before running agent
+    private readonly Guid _currentUserId;
 
     public ArticleChatTools(
         Guid articleId,
+        Guid userId,
         IFragmentRepository fragmentRepository,
         IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
         IRepository<Article> articleRepository,
@@ -43,6 +44,7 @@ public class ArticleChatTools
         AiCallContext aiCallContext)
     {
         _articleId = articleId;
+        _currentUserId = userId;
         _fragmentRepository = fragmentRepository;
         _embeddingGenerator = embeddingGenerator;
         _articleRepository = articleRepository;
@@ -54,13 +56,7 @@ public class ArticleChatTools
         _aiCallContext = aiCallContext;
     }
 
-    /// <summary>
-    /// Set the current user ID for plan creation
-    /// </summary>
-    public virtual void SetCurrentUserId(Guid userId)
-    {
-        _currentUserId = userId;
-    }
+
 
     /// <summary>
     /// Search for fragments semantically similar to a query string
@@ -438,14 +434,7 @@ public class ArticleChatTools
             _logger.LogInformation("Creating plan for article: {ArticleId} with {Count} recommendations", 
                 _articleId, recommendations.Length);
 
-            if (!_currentUserId.HasValue)
-            {
-                return JsonSerializer.Serialize(new
-                {
-                    success = false,
-                    error = "User ID not set for plan creation"
-                });
-            }
+
 
             // Archive any existing draft plans for this article
             var existingPlans = await _planRepository.Query()
@@ -464,7 +453,7 @@ public class ArticleChatTools
                 ArticleId = _articleId,
                 Instructions = instructions,
                 Status = PlanStatus.Draft,
-                CreatedByUserId = _currentUserId.Value,
+                CreatedByUserId = _currentUserId,
                 CreatedAt = DateTimeOffset.UtcNow
             };
 

@@ -16,10 +16,10 @@ const ChatPanel = {
             conversationId: null,
             messages: [],
             newMessage: '',
-            isAiThinking: false,
+            isAiTurn: false,
             error: null,
             isLoading: false,
-            isCreatingPlan: false,
+
             expandedMessages: {}, // Track expanded state of intermediate/tool messages
             mode: 'Chat' // Default mode
         };
@@ -34,7 +34,7 @@ const ChatPanel = {
         canSendMessage() {
             return this.articleId &&
                 this.newMessage.trim() !== '' &&
-                !this.isAiThinking;
+                !this.isAiTurn;
         }
     },
     watch: {
@@ -74,7 +74,7 @@ const ChatPanel = {
     },
     methods: {
         setupEventListeners(conn) {
-            conn.on('ChatMessageProcessing', this.onMessageProcessing);
+            conn.on('ChatTurnStarted', this.onTurnStarted);
             conn.on('ChatMessageReceived', this.onMessageReceived);
             conn.on('ChatMessageStreaming', this.onMessageStreaming);
             conn.on('ChatToolInvoked', this.onToolInvoked);
@@ -85,7 +85,7 @@ const ChatPanel = {
         },
 
         removeEventListeners(conn) {
-            conn.off('ChatMessageProcessing', this.onMessageProcessing);
+            conn.off('ChatTurnStarted', this.onTurnStarted);
             conn.off('ChatMessageReceived', this.onMessageReceived);
             conn.off('ChatMessageStreaming', this.onMessageStreaming);
             conn.off('ChatToolInvoked', this.onToolInvoked);
@@ -150,7 +150,7 @@ const ChatPanel = {
                     if (this.messages.length > 0) {
                         const lastMessage = this.messages[this.messages.length - 1];
                         if (lastMessage.role === 'user') {
-                            this.isAiThinking = true;
+                            this.isAiTurn = true;
                         }
                     }
                 } else {
@@ -206,7 +206,7 @@ const ChatPanel = {
                 }
 
                 // Set AI thinking state
-                this.isAiThinking = true;
+                this.isAiTurn = true;
                 this.$nextTick(() => this.scrollToBottom());
 
             } catch (err) {
@@ -215,8 +215,12 @@ const ChatPanel = {
             }
         },
 
-        onMessageProcessing(data) {
-            this.isAiThinking = true;
+        onTurnStarted(data) {
+            if (data.conversationId !== this.conversationId) {
+                return;
+            }
+
+            this.isAiTurn = true;
             this.$nextTick(() => this.scrollToBottom());
         },
 
@@ -225,7 +229,7 @@ const ChatPanel = {
             if (data.conversationId !== this.conversationId) {
                 return;
             }
-
+            
             // Add user message to list
             this.messages.push({
                 id: data.id,
@@ -380,13 +384,17 @@ const ChatPanel = {
             }
 
             console.log('Turn complete');
-            this.isAiThinking = false;
+            this.isAiTurn = false;
         },
 
         onChatError(data) {
+            if (data.conversationId !== this.conversationId) {
+                return;
+            }
+
             console.error('Chat error:', data);
             this.error = data.error || 'An error occurred';
-            this.isAiThinking = false;
+            this.isAiTurn = false;
         },
 
         scrollToBottom() {
@@ -400,7 +408,7 @@ const ChatPanel = {
             this.conversationId = null;
             this.messages = [];
             this.newMessage = '';
-            this.isAiThinking = false;
+            this.isAiTurn = false;
             this.error = null;
             this.expandedMessages = {};
             this.mode = 'Chat';
@@ -450,53 +458,16 @@ const ChatPanel = {
         },
 
         async createPlan() {
-            if (!this.articleId || this.isCreatingPlan || this.isAiThinking) return;
+            if (!this.articleId || this.isAiTurn) return;
 
-            this.isCreatingPlan = true;
-            this.error = null;
+            // Switch to Plan mode
+            this.mode = 'Plan';
 
-            try {
-                // Create conversation if needed
-                if (!this.conversationId) {
-                    const response = await fetch(`/api/articles/${this.articleId}/assistant/conversation?mode=Plan`, {
-                        method: 'POST'
-                    });
+            // Set the command message
+            this.newMessage = 'Create a plan for improving this article';
 
-                    if (!response.ok) {
-                        throw new Error('Failed to create conversation');
-                    }
-
-                    const conversation = await response.json();
-                    this.conversationId = conversation.id;
-                    this.mode = 'Plan';
-                }
-
-                // Send plan creation request
-                const response = await fetch(
-                    `/api/articles/${this.articleId}/assistant/conversations/${this.conversationId}/create-plan`,
-                    {
-                        method: 'POST'
-                    }
-                );
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Failed to create plan');
-                }
-
-                // The plan generation will happen in the background
-                // SignalR will notify us when it's ready
-                // Set AI thinking state to show processing
-                this.isAiThinking = true;
-
-                // Scroll to bottom to show the thinking indicator
-                this.$nextTick(() => this.scrollToBottom());
-            } catch (err) {
-                console.error('Error creating plan:', err);
-                this.error = err.message;
-            } finally {
-                this.isCreatingPlan = false;
-            }
+            // Send it using the standard chat flow
+            await this.sendMessage();
         },
 
         adjustTextareaHeight() {
@@ -522,16 +493,16 @@ const ChatPanel = {
 
             <template v-else>
                 <div class="chat-messages" ref="messagesContainer">
-                    <div v-if="!hasMessages && !isAiThinking" class="empty-state" v-cloak>
+                    <div v-if="!hasMessages && !isAiTurn" class="empty-state" v-cloak>
                         <i class="bi bi-chat-dots empty-state-icon"></i>
                         <p class="empty-state-text">Start a conversation with the AI assistant</p>
                         <p class="empty-state-hint">Ask questions or request improvements to your article</p>
                         <button 
                             @click="createPlan"
-                            :disabled="isCreatingPlan || isAiThinking"
+                            :disabled="isAiTurn"
                             class="btn btn-primary mt-3">
                             <i class="bi bi-lightbulb"></i>
-                            {{ isCreatingPlan ? 'Creating Plan...' : 'Create a Plan' }}
+                            Create a Plan
                         </button>
                     </div>
 
@@ -613,7 +584,7 @@ const ChatPanel = {
                         </div>
                     </template>
 
-                    <div v-if="isAiThinking" class="chat-message chat-message-assistant thinking">
+                    <div v-if="isAiTurn" class="chat-message chat-message-assistant thinking">
                         <div class="chat-message-body">
                             <span class="typing-indicator">
                                 <span></span>
@@ -631,7 +602,7 @@ const ChatPanel = {
                             v-model="newMessage"
                             @input="adjustTextareaHeight"
                             @keydown.enter.exact.prevent="sendMessage"
-                            :disabled="!articleId || isAiThinking"
+                            :disabled="!articleId || isAiTurn"
                             class="form-control chat-input"
                             placeholder="Ask the AI assistant..."
                             rows="1"></textarea>
@@ -639,7 +610,7 @@ const ChatPanel = {
                         <div class="chat-input-footer">
                             <div class="chat-mode-selector">
                                 <select v-model="mode" 
-                                        :disabled="isAiThinking"
+                                        :disabled="isAiTurn"
                                         class="form-select form-select-sm mode-select">
                                     <option value="Chat">Chat</option>
                                     <option value="Plan">Plan</option>

@@ -88,7 +88,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
 
                 // Notify UI that processing has started
                 await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
-                    .SendAsync("ChatMessageProcessing", new
+                    .SendAsync("ChatTurnStarted", new
                     {
                         conversationId = conversation.Id.ToString(),
                         messageId = userMessageId.ToString(),
@@ -171,6 +171,30 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                             break;
                     }
                 }
+
+                // Get the created plan and send PlanGenerated event
+                if (conversation.Mode == ConversationMode.Plan)
+                {
+                    var plan = await _planRepository.Query()
+                        .Where(p => p.ArticleId == conversation.ArticleId && p.Status == PlanStatus.Draft)
+                        .OrderByDescending(p => p.CreatedAt)
+                        .FirstOrDefaultAsync(cancellationToken);
+
+                    if (plan != null)
+                    {
+                        _logger.LogInformation("Sending PlanGenerated event for plan {PlanId}, article {ArticleId}",
+                            plan.Id, conversation.ArticleId);
+
+                        await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
+                            .SendAsync("PlanGenerated", new
+                            {
+                                articleId = conversation.ArticleId.ToString(),
+                                planId = plan.Id.ToString(),
+                                conversationId = conversation.Id.ToString(),
+                                timestamp = DateTimeOffset.UtcNow
+                            }, cancellationToken);
+                    }
+                }
             });
         }
         catch (Exception ex)
@@ -220,164 +244,6 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
         }
     }
 
-    /// <summary>
-    /// Process plan generation message and send notification when plan is created
-    /// </summary>
-    [Queue("ui")]
-    [DisableMultipleQueuedItemsFilter]
-    [Mission]
-    public async Task ProcessPlanGenerationAsync(
-        Guid userMessageId,
-        Guid conversationId,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Processing plan generation for message {MessageId}, conversation {ConversationId}", 
-            userMessageId, conversationId);
 
-        try
-        {
-            await ExecuteWithTransactionAsync(async () =>
-            {
-                // Load the user message
-                var userMessage = await _chatMessageRepository.Query()
-                    .Include(m => m.Conversation)
-                        .ThenInclude(c => c.Article)
-                    .FirstOrDefaultAsync(m => m.Id == userMessageId, cancellationToken);
-
-                if (userMessage == null)
-                {
-                    _logger.LogWarning("User message {MessageId} not found", userMessageId);
-                    return;
-                }
-
-                var conversation = userMessage.Conversation;
-                if (conversation == null)
-                {
-                    _logger.LogWarning("Conversation not found for message {MessageId}", userMessageId);
-                    return;
-                }
-
-                var article = conversation.Article;
-                if (article == null)
-                {
-                    _logger.LogWarning("Article not found for conversation {ConversationId}", conversation.Id);
-                    await SendErrorNotification(conversation.Id, "Article not found", cancellationToken);
-                    return;
-                }
-
-                // Notify UI that processing has started
-                await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
-                    .SendAsync("ChatMessageProcessing", new
-                    {
-                        conversationId = conversation.Id.ToString(),
-                        messageId = userMessageId.ToString(),
-                        timestamp = DateTimeOffset.UtcNow
-                    }, cancellationToken);
-
-                // Process plan generation with streaming
-                _logger.LogInformation("Generating plan with streaming for conversation {ConversationId}", conversation.Id);
-                
-                await foreach (var update in _chatService.ProcessConversationStreamingAsync(
-                    conversation.Id,
-                    cancellationToken))
-                {
-                    switch (update.Type)
-                    {
-                        case Models.StreamUpdateType.TextDelta:
-                            // Send incremental text updates
-                            await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
-                                .SendAsync("ChatMessageStreaming", new
-                                {
-                                    conversationId = update.ConversationId.ToString(),
-                                    messageId = update.MessageId?.ToString(),
-                                    content = update.Content,
-                                    timestamp = update.Timestamp
-                                }, cancellationToken);
-                            break;
-
-                        case Models.StreamUpdateType.ToolCall:
-                            // Notify about tool invocations
-                            await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
-                                .SendAsync("ChatToolInvoked", new
-                                {
-                                    conversationId = update.ConversationId.ToString(),
-                                    messageId = update.MessageId?.ToString(),
-                                    toolName = update.ToolName,
-                                    toolCallId = update.ToolCallId,
-                                    timestamp = update.Timestamp
-                                }, cancellationToken);
-                            break;
-
-                        case Models.StreamUpdateType.ToolResult:
-                            // Notify about tool results
-                            await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
-                                .SendAsync("ChatToolCompleted", new
-                                {
-                                    conversationId = update.ConversationId.ToString(),
-                                    messageId = update.MessageId?.ToString(),
-                                    toolName = update.ToolName,
-                                    toolCallId = update.ToolCallId,
-                                    timestamp = update.Timestamp
-                                }, cancellationToken);
-                            break;
-
-                        case Models.StreamUpdateType.MessageComplete:
-                            // Send final complete message
-                            _logger.LogInformation("Plan generation processed successfully for conversation {ConversationId}", conversation.Id);
-
-                            await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
-                                .SendAsync("ChatMessageComplete", new
-                                {
-                                    id = update.MessageId.ToString(),
-                                    conversationId = conversation.Id.ToString(),
-                                    role = "assistant",
-                                    content = update.Content,
-                                    userName = (string?)null,
-                                    createdAt = update.Timestamp,
-                                    articleId = conversation.ArticleId.ToString()
-                                }, cancellationToken);
-                            break;
-
-                        case Models.StreamUpdateType.TurnComplete:
-                            // Send turn complete signal
-                            await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
-                                .SendAsync("ChatTurnComplete", new
-                                {
-                                    conversationId = conversation.Id.ToString(),
-                                    timestamp = update.Timestamp
-                                }, cancellationToken);
-                            break;
-                    }
-                }
-
-                // Get the created plan and send PlanGenerated event
-                var plan = await _planRepository.Query()
-                    .Where(p => p.ArticleId == conversation.ArticleId && p.Status == PlanStatus.Draft)
-                    .OrderByDescending(p => p.CreatedAt)
-                    .FirstOrDefaultAsync(cancellationToken);
-
-                if (plan != null)
-                {
-                    _logger.LogInformation("Sending PlanGenerated event for plan {PlanId}, article {ArticleId}", 
-                        plan.Id, conversation.ArticleId);
-
-                    await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
-                        .SendAsync("PlanGenerated", new
-                        {
-                            articleId = conversation.ArticleId.ToString(),
-                            planId = plan.Id.ToString(),
-                            conversationId = conversation.Id.ToString(),
-                            timestamp = DateTimeOffset.UtcNow
-                        }, cancellationToken);
-                }
-            });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing plan generation for message {MessageId}", userMessageId);
-            await SendErrorNotification(conversationId, ex.Message, cancellationToken);
-            throw; // Re-throw for Hangfire retry logic
-        }
-    }
 }
 
