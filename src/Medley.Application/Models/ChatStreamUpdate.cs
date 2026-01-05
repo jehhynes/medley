@@ -67,12 +67,12 @@ public enum StreamUpdateType
     ToolResult,
 
     /// <summary>
-    /// Agent is thinking/processing (optional, for future use)
+    /// The entire message from the AI model is complete
     /// </summary>
-    Thinking,
+    MessageComplete,
 
     /// <summary>
-    /// Final message has been saved to the database
+    /// The entire turn/response sequence is complete (e.g. including tool calls and final answer)
     /// </summary>
-    Complete
+    TurnComplete
 }

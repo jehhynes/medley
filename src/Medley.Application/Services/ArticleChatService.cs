@@ -190,6 +190,15 @@ public class ArticleChatService : IArticleChatService
             
             // Yield final complete update
             yield return CreateCompletionUpdate(assistantMessage, conversationId, conversation.ArticleId);
+            
+            // Yield turn complete update
+            yield return new ChatStreamUpdate
+            {
+                Type = StreamUpdateType.TurnComplete,
+                ConversationId = conversationId,
+                ArticleId = conversation.ArticleId,
+                MessageId = assistantMessage.Id
+            };
         }
     }
 
@@ -425,21 +434,35 @@ public class ArticleChatService : IArticleChatService
 
         await foreach (var update in agentUpdates.WithCancellation(cancellationToken))
         {
+            // Parse message ID if available
+            Guid? currentMessageId = null;
+            if (!string.IsNullOrEmpty(update.MessageId) && Guid.TryParse(update.MessageId, out var parsedId))
+            {
+                currentMessageId = parsedId;
+            }
+            else
+            {
+                currentMessageId = lastMessageId;
+            }
+
+            // Detect Message ID change (Transition)
+            if (lastMessageId != null && currentMessageId != null && currentMessageId != lastMessageId)
+            {
+                yield return new ChatStreamUpdate
+                {
+                    Type = StreamUpdateType.MessageComplete,
+                    MessageId = lastMessageId,
+                    ConversationId = conversationId,
+                    ArticleId = articleId,
+                    Content = accumulatedText.ToString()
+                };
+
+                accumulatedText.Clear();
+            }
+
             // Extract tool calls and results from update.Contents
             if (update.Contents != null && update.Contents.Count > 0)
             {
-                // Parse message ID if available
-                Guid? messageId = null;
-                if (!string.IsNullOrEmpty(update.MessageId) && Guid.TryParse(update.MessageId, out var parsedId))
-                {
-                    messageId = parsedId;
-                    lastMessageId = messageId;
-                }
-                else
-                {
-                    messageId = lastMessageId;
-                }
-
                 // Extract function calls
                 var functionCalls = update.Contents.OfType<FunctionCallContent>().ToList();
                 foreach (var call in functionCalls)
@@ -457,7 +480,7 @@ public class ArticleChatService : IArticleChatService
                         ToolCallId = call.CallId,
                         ConversationId = conversationId,
                         ArticleId = articleId,
-                        MessageId = messageId
+                        MessageId = currentMessageId
                     };
                 }
 
@@ -477,7 +500,7 @@ public class ArticleChatService : IArticleChatService
                         ToolCallId = result.CallId,
                         ConversationId = conversationId,
                         ArticleId = articleId,
-                        MessageId = messageId
+                        MessageId = currentMessageId
                     };
                 }
             }
@@ -487,31 +510,17 @@ public class ArticleChatService : IArticleChatService
             {
                 accumulatedText.Append(update.Text);
                 
-                // Use update.MessageId if available (parse from string), otherwise fall back to last used message ID
-                Guid? messageId = null;
-                if (!string.IsNullOrEmpty(update.MessageId) && Guid.TryParse(update.MessageId, out var parsedId))
-                {
-                    messageId = parsedId;
-                }
-                else
-                {
-                    messageId = lastMessageId;
-                }
-                
-                if (messageId.HasValue)
-                {
-                    lastMessageId = messageId;
-                }
-                
                 yield return new ChatStreamUpdate
                 {
                     Type = StreamUpdateType.TextDelta,
                     Content = update.Text,
                     ConversationId = conversationId,
                     ArticleId = articleId,
-                    MessageId = messageId
+                    MessageId = currentMessageId
                 };
             }
+
+            lastMessageId = currentMessageId;
         }
     }
 
@@ -525,7 +534,7 @@ public class ArticleChatService : IArticleChatService
     {
         return new ChatStreamUpdate
         {
-            Type = StreamUpdateType.Complete,
+            Type = StreamUpdateType.MessageComplete,
             MessageId = assistantMessage.Id,
             ConversationId = conversationId,
             ArticleId = articleId,

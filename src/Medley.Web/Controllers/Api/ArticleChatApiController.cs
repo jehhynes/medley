@@ -1,5 +1,4 @@
 using Hangfire;
-using Medley.Application.Constants;
 using Medley.Application.Hubs;
 using Medley.Application.Interfaces;
 using Medley.Application.Jobs;
@@ -176,7 +175,7 @@ public class ArticleChatApiController : ControllerBase
                     id = item.Message.Id,
                     role = item.Message.Role.ToString().ToLower(),
                     content = item.Message.Content,
-                    userName = item.Message.User?.FullName ?? (item.Message.Role == ChatMessageRole.Assistant ? ChatConstants.AssistantDisplayName : "Unknown"),
+                    userName = item.Message.User?.FullName,
                     createdAt = item.Message.CreatedAt,
                     toolCalls = toolCalls ?? new List<object>()
                 };
