@@ -40,7 +40,6 @@
             flex-shrink: 0;
             margin: 0 2.5rem;
             padding-top: 1rem;
-            border-bottom: 1px solid var(--bs-border-color);
         }
         
         /* Tab content container - takes remaining space and scrolls */
@@ -319,60 +318,11 @@
 </div>
 
 <!-- Fragment Detail Modal -->
-<div v-if="selectedFragment" class="modal fade show" id="fragmentModal" tabindex="-1" aria-labelledby="fragmentModalLabel" style="display: block;" @@click.self="closeFragmentModal">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="fragmentModalLabel">
-                    {{ selectedFragment.title || 'Untitled Fragment' }}
-                </h5>
-                <button type="button" class="btn-close" @@click="closeFragmentModal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <span v-if="selectedFragment.category" class="badge bg-secondary me-2">
-                        <i :class="getIconClass(getFragmentCategoryIcon(selectedFragment.category))" class="me-1"></i>{{ selectedFragment.category }}
-                    </span>
-                    <span 
-                        v-if="selectedFragment.confidence !== null && selectedFragment.confidence !== undefined && selectedFragment.confidenceComment" 
-                        class="badge bg-light text-dark"
-                        @@click="toggleConfidenceComment"
-                        style="cursor: pointer;"
-                        :title="showConfidenceComment ? 'Hide confidence note' : 'Show confidence note'">
-                        <i 
-                            :class="'fa-duotone ' + getConfidenceIcon(selectedFragment.confidence)" 
-                            :style="{ color: getConfidenceColor(selectedFragment.confidence) }"
-                            class="me-1"
-                        ></i>
-                        Confidence: {{ getConfidenceLabel(selectedFragment.confidence) }}
-                        <i :class="showConfidenceComment ? 'bi bi-chevron-up ms-1' : 'bi bi-chevron-down ms-1'"></i>
-                    </span>
-                    <span 
-                        v-else-if="selectedFragment.confidence !== null && selectedFragment.confidence !== undefined" 
-                        class="badge bg-light text-dark">
-                        <i 
-                            :class="'fa-duotone ' + getConfidenceIcon(selectedFragment.confidence)" 
-                            :style="{ color: getConfidenceColor(selectedFragment.confidence) }"
-                            class="me-1"
-                        ></i>
-                        Confidence: {{ getConfidenceLabel(selectedFragment.confidence) }}
-                    </span>
-                </div>
-                <div v-if="selectedFragment.confidenceComment && showConfidenceComment" class="alert alert-info mb-3">
-                    <div class="d-flex align-items-start">
-                        <i class="bi bi-info-circle me-2 mt-1"></i>
-                        <div>
-                            <strong>Confidence Note:</strong>
-                            <div class="mt-1">{{ selectedFragment.confidenceComment }}</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="markdown-container" v-html="renderedMarkdown"></div>
-            </div>
-        </div>
-    </div>
-</div>
-<div v-if="selectedFragment" class="modal-backdrop fade show"></div>
+<fragment-modal
+    :fragment="selectedFragment"
+    :visible="!!selectedFragment"
+    @@close="closeFragmentModal"
+/>
 
 @section Scripts {
     <script src="~/lib/marked/marked.min.js" asp-append-version="true"></script>
@@ -380,7 +330,8 @@
     <script src="~/js/app.js" asp-append-version="true"></script>
     <script src="~/js/utils.js" asp-append-version="true"></script>
     <script src="~/js/url-utils.js" asp-append-version="true"></script>
-    <script src="~/js/mixins/infinite-ssroll.js" asp-append-version="true"></script>
+    <script src="~/js/mixins/infinite-scroll.js" asp-append-version="true"></script>
+    <script src="~/js/components/fragment-modal.js" asp-append-version="true"></script>
     <script src="~/js/components/source-list.js" asp-append-version="true"></script>
     <script src="~/js/pages/sources.js" asp-append-version="true"></script>
 }

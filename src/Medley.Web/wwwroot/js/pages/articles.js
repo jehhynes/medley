@@ -897,7 +897,7 @@
 
                 async loadDraftPlan(articleId) {
                     try {
-                        const response = await api.get(`/api/articles/${articleId}/assistant/plans/active`);
+                        const response = await api.get(`/api/articles/${articleId}/plans/active`);
 
                         // If a draft plan exists, open it
                         if (response && response.id) {

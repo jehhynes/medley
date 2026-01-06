@@ -29,14 +29,16 @@
 }
 
 [data-bs-theme="light"] {
-    .content-tabs-container .nav-tabs {
+    .nav-tabs {
         --bs-nav-tabs-link-active-color: var(--bs-gray-900);
     }
 }
 
 [data-bs-theme="dark"] {
-    .content-tabs-container .nav-tabs {
-        --bs-nav-tabs-link-active-color: #fff;
+    .nav-tabs {
+        --bs-nav-tabs-link-active-color: var(--bs-gray-400);
+        --bs-nav-tabs-link-active-border-color: #7b7f82 #7b7f82 transparent;
+        --bs-nav-tabs-border-color: #7b7f82;
     }
 }
 

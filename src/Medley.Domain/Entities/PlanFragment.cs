@@ -51,7 +51,7 @@ public class PlanFragment : BaseEntity
     public required string Reasoning { get; set; }
 
     /// <summary>
-    /// Combined instructions for where to place and how to use this fragment
+    /// Instructions for how to use this fragment
     /// </summary>
     [MaxLength(2000)]
     public required string Instructions { get; set; }
