@@ -24,6 +24,14 @@ public class UserEditViewModel
     [Display(Name = "Locked Out")]
     public bool IsLockedOut { get; set; }
 
+    [Display(Name = "Initials")]
+    [StringLength(3, ErrorMessage = "Initials cannot exceed 3 characters")]
+    public string? Initials { get; set; }
+
+    [Display(Name = "Avatar Color")]
+    [RegularExpression("^#[0-9A-Fa-f]{6}$", ErrorMessage = "Color must be a valid hex color (e.g., #FF5733)")]
+    public string? Color { get; set; }
+
     public List<string> AvailableRoles { get; set; } = new();
     public List<string> UserRoles { get; set; } = new();
 }

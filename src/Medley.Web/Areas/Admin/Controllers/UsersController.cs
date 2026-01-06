@@ -167,6 +167,8 @@ public class UsersController : Controller
             IsActive = user.IsActive,
             EmailConfirmed = user.EmailConfirmed,
             IsLockedOut = await _userManager.IsLockedOutAsync(user),
+            Initials = user.Initials,
+            Color = user.Color,
             AvailableRoles = allRoles,
             UserRoles = userRoles.ToList()
         };
@@ -199,6 +201,8 @@ public class UsersController : Controller
         // Update user properties
         user.IsActive = model.IsActive;
         user.EmailConfirmed = model.EmailConfirmed;
+        user.Initials = model.Initials;
+        user.Color = model.Color;
         user.LastModifiedAt = DateTimeOffset.UtcNow;
 
         var updateResult = await _userManager.UpdateAsync(user);
