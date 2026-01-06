@@ -174,7 +174,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
     }
 
     [Fact]
-    public async Task FindSimilarAsync_WithThreshold_ShouldFilterByDistance()
+    public async Task FindSimilarAsync_WithMinSimilarity_ShouldFilterBySimilarityScore()
     {
         // Arrange
         var queryEmbedding = CreateTestEmbedding(1.0f, 0.0f);
@@ -210,10 +210,10 @@ public class FragmentRepositoryTests : DatabaseTestBase
         await _dbContext.Fragments.AddRangeAsync(fragments);
         await _dbContext.SaveChangesAsync();
 
-        // Act - Find similar with threshold that filters out very different embeddings
-        // Cosine distance ranges from 0 (identical) to 2 (opposite)
-        // The similar embedding should have distance < 0.5, different should be ~1.4
-        var results = await _repository.FindSimilarAsync(queryEmbedding, 10, 0.5);
+        // Act - Find similar with minimum similarity threshold
+        // Similarity score ranges from 0 (opposite) to 1 (identical)
+        // The similar embedding should have similarity > 0.75, different should be ~0.3
+        var results = await _repository.FindSimilarAsync(queryEmbedding, 10, 0.75);
         var resultList = results.ToList();
 
         // Assert - Should only return the similar fragment, not the different one
