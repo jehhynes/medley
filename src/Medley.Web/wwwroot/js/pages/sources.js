@@ -3,6 +3,7 @@
     const { createApp } = Vue;
     const { api, createSignalRConnection } = window.MedleyApi;
     const {
+        getArticleTypes,
         formatDate,
         getIconClass,
         getFragmentCategoryIcon,
@@ -40,7 +41,6 @@
                 loadingFragments: false,
                 fragmentsError: null,
                 markdownRenderer: null,
-                articleTypes: [],
                 tagging: false,
                 detachPopState: null,
                 activeTagFilter: null
@@ -326,18 +326,7 @@
                 // Fragment modal handles its own Escape key
             },
 
-            async loadArticleTypes() {
-                try {
-                    this.articleTypes = await api.get('/api/articles/types');
-                } catch (err) {
-                    console.error('Error loading article types:', err);
-                }
-            },
-
-            getFragmentCategoryIcon(category) {
-                return getFragmentCategoryIcon(category, this.articleTypes);
-            },
-
+            getFragmentCategoryIcon,
             getIconClass,
             getSourceTypeIcon,
             getConfidenceIcon,
@@ -349,7 +338,9 @@
         async mounted() {
             this.markdownRenderer = initializeMarkdownRenderer();
 
-            await this.loadArticleTypes();
+            // Preload article types for icon display
+            getArticleTypes();
+            
             await this.loadSources();
 
             // Setup infinite scroll

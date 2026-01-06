@@ -1,5 +1,45 @@
 // Shared utility functions for Medley Vue apps
 (function () {
+    // Global article types cache
+    let articleTypes = [];
+    let articleTypesLoaded = false;
+    let articleTypesPromise = null;
+
+    /**
+     * Get article types (loads from API on first call and caches)
+     * @returns {Promise<Array>} Article types array
+     */
+    const getArticleTypes = async () => {
+        if (articleTypesLoaded) {
+            return articleTypes;
+        }
+
+        // If already loading, return the existing promise
+        if (articleTypesPromise) {
+            return articleTypesPromise;
+        }
+
+        articleTypesPromise = (async () => {
+            try {
+                const response = await fetch('/api/articles/types');
+                if (!response.ok) {
+                    throw new Error('Failed to load article types');
+                }
+                articleTypes = await response.json();
+                articleTypesLoaded = true;
+                return articleTypes;
+            } catch (err) {
+                console.error('Error loading article types:', err);
+                articleTypes = [];
+                return articleTypes;
+            } finally {
+                articleTypesPromise = null;
+            }
+        })();
+
+        return articleTypesPromise;
+    };
+
     /**
      * Formats a date string into a readable date (no time)
      * @param {string} dateString - ISO date string
@@ -77,7 +117,7 @@
         return str.replace(/[^a-zA-Z]/g, '').toLowerCase();
     };
 
-    const getFragmentCategoryIcon = (category, articleTypes) => {
+    const getFragmentCategoryIcon = (category) => {
         if (!category) {
             return 'bi-file-text';
         }
@@ -92,6 +132,7 @@
             return hardcodedIcons[normalizedCategory];
         }
 
+        // Use cached types (will be empty array if not loaded yet)
         if (Array.isArray(articleTypes) && articleTypes.length > 0) {
             const matchingType = articleTypes.find(
                 at => at.name && normalizeText(at.name) === normalizedCategory
@@ -270,6 +311,7 @@
 
     // Export utilities
     window.MedleyUtils = {
+        getArticleTypes,
         formatDate,
         getStatusBadgeClass,
         getStatusIcon,

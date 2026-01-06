@@ -237,7 +237,8 @@ const PlanViewer = {
     },
 
     mounted() {
-        // Fragment modal handles its own keyboard events
+        // Preload article types for icon display
+        window.MedleyUtils.getArticleTypes();
     },
 
     beforeUnmount() {

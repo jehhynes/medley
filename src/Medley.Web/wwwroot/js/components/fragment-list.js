@@ -37,10 +37,6 @@ const FragmentList = {
         selectedId: {
             type: String,
             default: null
-        },
-        articleTypes: {
-            type: Array,
-            default: () => []
         }
     },
     methods: {
@@ -56,7 +52,7 @@ const FragmentList = {
             return window.MedleyUtils.getSourceTypeIcon(type);
         },
         getFragmentCategoryIcon(category) {
-            return window.MedleyUtils.getFragmentCategoryIcon(category, this.articleTypes);
+            return window.MedleyUtils.getFragmentCategoryIcon(category);
         },
         getIconClass(icon) {
             return window.MedleyUtils.getIconClass(icon);
