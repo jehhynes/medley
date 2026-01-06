@@ -29,6 +29,44 @@
                 <input asp-for="FullName" class="form-control" readonly />
             </div>
 
+            <div class="mb-3 form-group-overlap">
+                <label asp-for="Initials" class="form-label"></label>
+                <input asp-for="Initials" class="form-control" maxlength="3" placeholder="e.g., JD" />
+                <span asp-validation-for="Initials" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Color" class="form-label"></label>
+                <input type="hidden" asp-for="Color" id="selectedColor" />
+                <div class="color-palette">
+                    @{
+                        var colors = new[] {
+                            "#E53935", // Red
+                            "#8E24AA", // Purple
+                            "#1E88E5", // Blue
+                            "#00897B", // Teal
+                            "#43A047", // Green
+                            "#C0CA33", // Lime
+                            "#FDD835", // Yellow
+                            "#FF6F00", // Orange
+                            "#6D4C41", // Brown
+                            "#546E7A"  // Blue Grey
+                        };
+                        foreach (var color in colors)
+                        {
+                            <button type="button" 
+                                    class="color-option @(Model.Color == color ? "selected" : "")" 
+                                    data-color="@color" 
+                                    style="background-color: @color;"
+                                    title="@color">
+                            </button>
+                        }
+                    }
+                </div>
+                <span asp-validation-for="Color" class="text-danger"></span>
+                <small class="form-text text-muted">Choose a color for the user's avatar</small>
+            </div>
+
             <div class="mb-2 form-check">
                 <input asp-for="IsActive" class="form-check-input" id="@Html.IdFor(m => m.IsActive)" />
                 <label asp-for="IsActive" class="form-check-label" for="@Html.IdFor(m => m.IsActive)"></label>
@@ -68,4 +106,55 @@
 
 @section Scripts {
     @await Html.PartialAsync("_ValidationScriptsPartial")
+    
+    <style>
+        .color-palette {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            max-width: 250px;
+        }
+        
+        .color-option {
+            width: 40px;
+            height: 40px;
+            border: 3px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 0;
+        }
+        
+        .color-option:hover {
+            transform: scale(1.1);
+            border-color: #666;
+        }
+        
+        .color-option.selected {
+            border-color: #000;
+            box-shadow: 0 0 0 2px #fff, 0 0 0 4px #000;
+        }
+    </style>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const colorOptions = document.querySelectorAll('.color-option');
+            const hiddenInput = document.getElementById('selectedColor');
+            
+            colorOptions.forEach(option => {
+                option.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Remove selected class from all options
+                    colorOptions.forEach(opt => opt.classList.remove('selected'));
+                    
+                    // Add selected class to clicked option
+                    this.classList.add('selected');
+                    
+                    // Update hidden input value
+                    hiddenInput.value = this.getAttribute('data-color');
+                });
+            });
+        });
+    </script>
 }
