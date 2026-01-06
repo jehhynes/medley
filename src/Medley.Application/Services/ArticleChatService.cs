@@ -28,10 +28,6 @@ public class ArticleChatService : IArticleChatService
     private readonly ILogger<ArticleChatService> _logger;
     private readonly AiCallContext _aiCallContext;
     
-    // Chat configuration constants
-    private const int MaxTokens = 4096;
-    private const double Temperature = 0.1;
-
     public ArticleChatService(
         IRepository<ChatConversation> conversationRepository,
         IRepository<DomainChatMessage> chatMessageRepository,
@@ -383,30 +379,14 @@ public class ArticleChatService : IArticleChatService
     {
         var tools = new List<AIFunction>
         {
-            AIFunctionFactory.Create(
-                plugins.SearchFragmentsAsync,
-                name: "search_fragments",
-                description: "Search for fragments semantically similar to a query string. Returns fragments with similarity scores."
-            ),
-            AIFunctionFactory.Create(
-                plugins.FindSimilarFragmentsAsync,
-                name: "find_similar_to_article",
-                description: "Find fragments semantically similar to the current article content. Useful for finding related content to enhance or expand the article."
-            ),
-            AIFunctionFactory.Create(
-                plugins.GetFragmentContentAsync,
-                name: "get_fragment_content",
-                description: "Get the full content and details of a specific fragment by its ID. Use this to review fragments in detail before recommending them."
-            )
+            AIFunctionFactory.Create(plugins.SearchFragmentsAsync),
+            AIFunctionFactory.Create(plugins.FindSimilarFragmentsAsync),
+            AIFunctionFactory.Create(plugins.GetFragmentContentAsync)
         };
 
         if (mode == ConversationMode.Plan)
         {
-            tools.Add(AIFunctionFactory.Create(
-                plugins.CreatePlanAsync,
-                name: "create_plan",
-                description: "Create a structured improvement plan for the article with fragment recommendations. Each recommendation should include fragmentId, similarityScore, include (bool), reasoning, and instructions."
-            ));
+            tools.Add(AIFunctionFactory.Create(plugins.CreatePlanAsync));
         }
 
         return tools.ToArray();

@@ -22,30 +22,72 @@
 }
 
 .alert {
-  color: $white;
   border: none;
+  border-left: .5rem solid;
+  border-radius: $border-radius;
 
   a,
   .alert-link {
-    color: $white;
     text-decoration: underline;
   }
 
   @each $color, $value in $theme-colors {
     &-#{$color} {
-      @if $enable-gradients {
-        background: $value linear-gradient(180deg, mix($body-bg, $value, 15%), $value) repeat-x;
-      } @else {
-        background-color: $value;
+      border-left-color: $value;
+      background-color: rgba($value, 0.08);
+      color: darken($value, 10%);
+
+      a,
+      .alert-link {
+        color: darken($value, 15%);
       }
     }
   }
 
   &-light {
-    &,
+    border-left-color: $gray-400;
+    background-color: rgba($gray-400, 0.08);
+    color: $body-color;
+
     a,
     .alert-link {
       color: $body-color;
+    }
+  }
+
+  &-dark {
+    border-left-color: $dark;
+    background-color: rgba($dark, 0.08);
+    color: $dark;
+
+    a,
+    .alert-link {
+      color: darken($dark, 10%);
+    }
+  }
+
+  // Dark theme adjustments
+  [data-bs-theme="dark"] & {
+    @each $color, $value in $theme-colors {
+      &-#{$color} {
+        background-color: rgba($value, 0.15);
+        color: lighten($value, 20%);
+
+        a,
+        .alert-link {
+          color: lighten($value, 25%);
+        }
+      }
+    }
+
+    &-light {
+      background-color: rgba($gray-400, 0.15);
+      color: $gray-300;
+    }
+
+    &-dark {
+      background-color: rgba($white, 0.15);
+      color: $white;
     }
   }
 }

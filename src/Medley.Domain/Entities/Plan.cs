@@ -68,6 +68,33 @@ public class Plan : BaseEntity
     public DateTimeOffset? AppliedAt { get; set; }
 
     /// <summary>
+    /// Version number of this plan (per article)
+    /// </summary>
+    public int Version { get; set; } = 1;
+
+    /// <summary>
+    /// Reference to the parent plan this was derived from (if modified)
+    /// </summary>
+    public Guid? ParentPlanId { get; set; }
+
+    /// <summary>
+    /// Navigation property to the parent plan
+    /// </summary>
+    [ForeignKey(nameof(ParentPlanId))]
+    [DeleteBehavior(DeleteBehavior.Restrict)]
+    public virtual Plan? ParentPlan { get; set; }
+
+    /// <summary>
+    /// AI-generated summary of changes from parent plan
+    /// </summary>
+    public string? ChangesSummary { get; set; }
+
+    /// <summary>
+    /// Child plans derived from this plan
+    /// </summary>
+    public virtual ICollection<Plan> ChildPlans { get; set; } = new List<Plan>();
+
+    /// <summary>
     /// Fragment recommendations for this plan
     /// </summary>
     public virtual ICollection<PlanFragment> PlanFragments { get; set; } = new List<PlanFragment>();
