@@ -501,7 +501,7 @@ const ChatPanel = {
                             @click="createPlan"
                             :disabled="isAiTurn"
                             class="btn btn-primary mt-3">
-                            <i class="bi bi-lightbulb"></i>
+                            <i class="far fa-magnifying-glass-play"></i>
                             Create a Plan
                         </button>
                     </div>

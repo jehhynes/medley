@@ -3,6 +3,7 @@
     list-style: none;
     padding: 0;
     margin: 0;
+
     .tree-item {
         display: block;
         margin: 0;
@@ -31,14 +32,15 @@
             &.drag-over {
                 border: 2px solid var(--bs-primary);
                 background-color: rgba(var(--bs-primary-rgb), 0.1);
-                
+
                 &.active {
                     background-color: rgba(var(--bs-primary-rgb), 0.8);
                 }
             }
 
             // Prevent pointer events on child elements during drag to avoid flickering
-            .tree-item-icon, .tree-item-label {
+            .tree-item-icon,
+            .tree-item-label {
                 pointer-events: none;
             }
         }
@@ -93,4 +95,3 @@
         margin: 0;
     }
 }
-

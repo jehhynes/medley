@@ -28,9 +28,11 @@ const ArticleTree = {
         <i :class="['tree-item-icon'].concat(getIconClass(getArticleIcon(article)).split(' '))"></i>
         <span class="tree-item-label">{{ article.title }}</span>
         <div class="status-actions">
-          <i v-if="showProcessingSpinner(article)" class="fad fa-spinner-third fa-spin status-icon text-info" title="AI Processing"></i>
-          <i v-else-if="showUserTurnIndicator(article)" class="fas fa-circle-pause status-icon text-success" :class="getStatusColorClass('Draft')" title="Waiting for user"></i>
-          <i v-else :class="'bi ' + getStatusIcon(article.status) + ' ' + getStatusColorClass(article.status)" class="status-icon" :title="article.status"></i>
+          <div class="status-icon-wrapper">
+            <i :class="getStatusIcon(article.status) + ' ' + getStatusColorClass(article.status)" class="status-icon" :title="article.status"></i>
+            <i v-if="showProcessingSpinner(article)" class="fad fa-spinner-third fa-spin status-overlay-spinner text-info" title="AI Processing"></i>
+            <span v-if="showUserTurnIndicator(article)" class="status-overlay-badge bg-success" title="Waiting for user"></span>
+          </div>
           <div class="dropdown actions-container">
             <button 
               class="actions-btn"
@@ -154,7 +156,7 @@ const ArticleTree = {
             this.dragState.draggingArticleId = article.id;
             event.dataTransfer.effectAllowed = 'move';
             event.dataTransfer.setData('text/plain', article.id);
-            
+
             // Add a semi-transparent drag image
             const dragImage = event.target.cloneNode(true);
             dragImage.style.opacity = '0.5';
@@ -171,16 +173,16 @@ const ArticleTree = {
             if (article.id === this.dragState.draggingArticleId) {
                 return;
             }
-            
+
             // Only allow dropping on Index type articles
             if (!this.isIndexType(article)) {
                 return;
             }
-            
+
             event.preventDefault();
             event.stopPropagation();
             event.dataTransfer.dropEffect = 'move';
-            
+
             // Set drag over state
             if (this.dragState.dragOverId !== article.id) {
                 this.dragState.dragOverId = article.id;
@@ -193,7 +195,7 @@ const ArticleTree = {
             const rect = event.currentTarget.getBoundingClientRect();
             const x = event.clientX;
             const y = event.clientY;
-            
+
             // Check if the mouse is still within the bounds of the element
             if (x < rect.left || x >= rect.right || y < rect.top || y >= rect.bottom) {
                 if (this.dragState.dragOverId === article.id) {
@@ -212,25 +214,25 @@ const ArticleTree = {
         handleDrop(event, targetArticle) {
             event.preventDefault();
             event.stopPropagation();
-            
+
             // Clear drag state
             this.dragState.dragOverId = null;
             this.dragCounter = 0;
-            
+
             if (!this.dragState.draggingArticleId || this.dragState.draggingArticleId === targetArticle.id) {
                 this.dragState.draggingArticleId = null;
                 return;
             }
-            
+
             // Only allow dropping on Index type articles
             if (!this.isIndexType(targetArticle)) {
                 this.dragState.draggingArticleId = null;
                 return;
             }
-            
+
             // Emit the move event to parent
             this.$emit('move-article', this.dragState.draggingArticleId, targetArticle.id);
-            
+
             this.dragState.draggingArticleId = null;
         },
         moveArticle(sourceId, targetId) {

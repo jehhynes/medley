@@ -77,9 +77,35 @@
     padding-right: 0.5rem;
     min-width: 2rem; // Reserve space so layout doesn't shift
 
-    .status-icon {
-        font-size: 1rem;
-        display: block; // Visible by default
+    .status-icon-wrapper {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.25rem;
+        height: 1.25rem;
+
+        .status-icon {
+            font-size: 1rem;
+        }
+
+        .status-overlay-spinner {
+            position: absolute;
+            font-size: 1.5rem;
+            pointer-events: none;
+        }
+
+        .status-overlay-badge {
+            position: absolute;
+            top: -.25rem;
+            right: -.25rem;
+            width: .7rem;
+            height: .7rem;
+            border-radius: 50%;
+            border: 1px solid var(--bs-body-bg);
+            z-index: 1;
+            pointer-events: none;
+        }
     }
 
     .actions-container {
@@ -119,7 +145,7 @@
 .tree-item-content:hover,
 .article-list-row:hover {
     .status-actions {
-        .status-icon {
+        .status-icon-wrapper {
             display: none;
         }
 
@@ -129,18 +155,7 @@
     }
 }
 
-// Show actions on hover, hide status icon
-.article-list-row:hover {
-    .status-actions {
-        .status-icon {
-            display: none;
-        }
 
-        .actions-container {
-            display: flex;
-        }
-    }
-}
 
 // White action button when parent is active
 .tree-item-content.active,
