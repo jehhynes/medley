@@ -16,6 +16,14 @@ let TiptapEditor = null;
             <div class="tiptap-editor">
                 <div class="tiptap-toolbar" v-if="editor">
                     <div class="tiptap-toolbar-left">
+                    <!-- Custom buttons slot -->
+                    <slot name="toolbar-prepend"></slot>
+                    
+                    <!-- Debug: Show formatting state -->
+                    <!-- {{ showFormatting ? 'Formatting ON' : 'Formatting OFF' }} -->
+                    
+                    <!-- Formatting buttons (only show if showFormatting is true) -->
+                    <div v-if="showFormatting" class="tiptap-formatting-buttons">
                     <div class="tiptap-dropdown">
                         <button 
                             type="button"
@@ -222,6 +230,9 @@ let TiptapEditor = null;
                         </div>
                     </div>
                     <div class="tiptap-toolbar-divider"></div>
+                    </div>
+                    
+                    <!-- Undo/Redo always visible -->
                     <button 
                         type="button"
                         @click="undo" 
@@ -275,6 +286,10 @@ let TiptapEditor = null;
                     default: false
                 },
                 showSaveButton: {
+                    type: Boolean,
+                    default: true
+                },
+                showFormatting: {
                     type: Boolean,
                     default: true
                 }
@@ -550,6 +565,8 @@ let TiptapEditor = null;
                 }
             },
             mounted() {
+                console.log('TiptapEditor showFormatting prop:', this.showFormatting);
+                
                 // Close dropdowns when clicking outside
                 this.handleClickOutside = (event) => {
                     const toolbar = this.$el.querySelector('.tiptap-toolbar');
@@ -574,7 +591,10 @@ let TiptapEditor = null;
                 this.editor = new Editor({
                     element: this.$refs.editorElement,
                     extensions: [
-                        StarterKit,
+                        StarterKit.configure({
+                            // Exclude link from StarterKit since we're adding it separately with custom config
+                            link: false
+                        }),
                         Markdown,
                         TableKit,
                         Link.configure({

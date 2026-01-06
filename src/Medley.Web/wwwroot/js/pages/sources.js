@@ -23,7 +23,8 @@
     const app = createApp({
         mixins: [window.infiniteScrollMixin],
         components: {
-            'source-list': SourceList
+            'source-list': SourceList,
+            'fragment-modal': FragmentModal
         },
         data() {
             return {
@@ -41,7 +42,6 @@
                 markdownRenderer: null,
                 articleTypes: [],
                 tagging: false,
-                showConfidenceComment: false,
                 detachPopState: null,
                 activeTagFilter: null
             };
@@ -56,17 +56,6 @@
                 } catch (e) {
                     console.error('Failed to parse metadata JSON:', e);
                     return null;
-                }
-            },
-            renderedMarkdown() {
-                if (!this.selectedFragment || !this.selectedFragment.content || !this.markdownRenderer) {
-                    return '';
-                }
-                try {
-                    return this.markdownRenderer.parse(this.selectedFragment.content, { breaks: true, gfm: true });
-                } catch (e) {
-                    console.error('Failed to render markdown:', e);
-                    return this.selectedFragment.content;
                 }
             },
             sortedTags() {
@@ -327,22 +316,14 @@
 
             selectFragment(fragment) {
                 this.selectedFragment = fragment;
-                this.showConfidenceComment = false;
             },
 
             closeFragmentModal() {
                 this.selectedFragment = null;
-                this.showConfidenceComment = false;
-            },
-
-            toggleConfidenceComment() {
-                this.showConfidenceComment = !this.showConfidenceComment;
             },
 
             handleKeydown(event) {
-                if (event.key === 'Escape' && this.selectedFragment) {
-                    this.closeFragmentModal();
-                }
+                // Fragment modal handles its own Escape key
             },
 
             async loadArticleTypes() {
@@ -425,8 +406,6 @@
                 console.error('SignalR connection error:', err);
             }
 
-            window.addEventListener('keydown', this.handleKeydown);
-
             this.detachPopState = setupPopStateHandler(async () => {
                 const sourceId = getUrlParam('id');
                 if (sourceId) {
@@ -443,7 +422,6 @@
         },
 
         beforeUnmount() {
-            window.removeEventListener('keydown', this.handleKeydown);
             if (this.signalRConnection) {
                 this.signalRConnection.stop();
             }

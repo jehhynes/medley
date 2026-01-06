@@ -22,6 +22,12 @@
     flex: 1;
 }
 
+.tiptap-formatting-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
 .tiptap-toolbar-right {
     display: flex;
     align-items: center;
