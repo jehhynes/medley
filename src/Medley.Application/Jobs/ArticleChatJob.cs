@@ -1,6 +1,7 @@
 using Hangfire;
 using Hangfire.MissionControl;
 using Hangfire.Server;
+using Medley.Application.Helpers;
 using Medley.Application.Hubs;
 using Medley.Application.Interfaces;
 using Medley.Domain.Entities;
@@ -14,7 +15,6 @@ namespace Medley.Application.Jobs;
 /// <summary>
 /// Background job for processing AI chat messages asynchronously
 /// </summary>
-[MissionLauncher]
 public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
 {
     private readonly IArticleChatService _chatService;
@@ -47,7 +47,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
     /// <param name="cancellationToken">Cancellation token</param>
     [Queue("ui")]
     [DisableMultipleQueuedItemsFilter]
-    [Mission]
+    [AutomaticRetry(Attempts = 0)]
     public async Task ProcessChatMessageAsync(
         Guid userMessageId,
         PerformContext context,
@@ -126,6 +126,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                                     messageId = update.MessageId?.ToString(),
                                     toolName = update.ToolName,
                                     toolCallId = update.ToolCallId,
+                                    toolMessage = update.ToolMessage,
                                     timestamp = update.Timestamp
                                 }, cancellationToken);
                             break;
@@ -247,7 +248,6 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
             _logger.LogError(ex, "Failed to send error notification for conversation {ConversationId}", conversationId);
         }
     }
-
 
 }
 

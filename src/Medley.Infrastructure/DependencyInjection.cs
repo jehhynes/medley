@@ -8,6 +8,7 @@ using Hangfire.RecurringJobCleanUpManager;
 using Medley.Application;
 using Medley.Application.Configuration;
 using Medley.Application.Enums;
+using Medley.Application.Helpers;
 using Medley.Application.Integrations.Interfaces;
 using Medley.Application.Integrations.Services;
 using Medley.Application.Interfaces;
@@ -269,6 +270,9 @@ public static class DependencyInjection
 
         // Register ArticleAssistantPluginsFactory (for creating article-scoped plugin instances)
         services.AddScoped<ArticleChatToolsFactory>();
+
+        // Register ToolMessageExtractor (for extracting display-friendly tool messages)
+        services.AddScoped<ToolMessageExtractor>();
 
         // Register ArticleChatService (uses registered IChatClient and wraps it with function invocation)
         services.AddScoped<IArticleChatService, ArticleChatService>();
