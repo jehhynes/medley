@@ -307,6 +307,7 @@ const ChatPanel = {
             streamingMsg.toolCalls.push({
                 name: data.toolName,
                 callId: data.toolCallId,
+                message: data.toolMessage,
                 completed: false,
                 timestamp: data.timestamp
             });
@@ -450,11 +451,46 @@ const ChatPanel = {
 
         formatToolName(toolName) {
             if (!toolName) return '';
-            // Convert snake_case to Title Case
-            return toolName
-                .split('_')
-                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            
+            // First, split on underscores
+            let words = toolName.split('_');
+            
+            // Then split each word on uppercase letters (PascalCase/camelCase)
+            words = words.flatMap(word => {
+                // Insert space before uppercase letters and split
+                return word.replace(/([A-Z])/g, ' $1').trim().split(/\s+/);
+            });
+            
+            // Capitalize first letter of each word
+            return words
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
                 .join(' ');
+        },
+
+        getToolDisplayText(tool) {
+            if (!tool) return '';
+            
+            const baseName = this.formatToolName(tool.name);
+            
+            // Use the server-provided message if available
+            if (tool.message) {
+                return `${baseName}: "${tool.message}"`;
+            }
+            
+            return baseName;
+        },
+
+        getToolIcon(toolName) {
+            if (!toolName) return 'bi-gear';
+            
+            const lowerName = toolName.toLowerCase();
+            if (lowerName.includes('search') || lowerName.includes('findsimilar')) {
+                return 'bi-search';
+            }
+            if (lowerName.includes('fragment') || lowerName.includes('content')) {
+                return 'bi-puzzle';
+            }
+            return 'bi-gear';
         },
 
         async createPlan() {
@@ -541,14 +577,14 @@ const ChatPanel = {
                                                      v-html="renderMarkdown(msg.content)"></div>
                                                 
                                                 <div class="chat-message-tools mt-2">
-                                                    <span v-for="(tool, idx) in msg.toolCalls" 
+                                                    <div v-for="(tool, idx) in msg.toolCalls" 
                                                          :key="idx" 
-                                                         class="badge me-1"
-                                                         :class="tool.completed ? 'bg-success' : 'bg-secondary'">
-                                                        <i v-if="tool.completed" class="bi bi-check-circle me-1"></i>
-                                                        <span v-else class="spinner-border spinner-border-xs me-1" role="status"></span>
-                                                        {{ formatToolName(tool.name) }}
-                                                    </span>
+                                                         class="tool-call-item text-muted">
+                                                        <i class="bi me-2" :class="getToolIcon(tool.name)" :title="formatToolName(tool.name)"></i>
+                                                        <span class="tool-call-text">{{ tool.message || formatToolName(tool.name) }}</span>
+                                                        <i v-if="tool.completed" class="bi bi-check-circle ms-2 text-success"></i>
+                                                        <span v-else class="spinner-border spinner-border-xs ms-2" role="status"></span>
+                                                    </div>
                                                 </div>
                                             </div>
                                             
@@ -570,14 +606,14 @@ const ChatPanel = {
                                     <!-- Always show tools for active or non-collapsed messages -->
                                     <div v-if="msg.toolCalls && msg.toolCalls.length > 0" 
                                          class="chat-message-tools mt-2">
-                                        <span v-for="(tool, idx) in msg.toolCalls" 
+                                        <div v-for="(tool, idx) in msg.toolCalls" 
                                              :key="idx" 
-                                             class="badge me-1"
-                                             :class="tool.completed ? 'bg-success' : 'bg-secondary'">
-                                            <i v-if="tool.completed" class="bi bi-check-circle me-1"></i>
-                                            <span v-else class="spinner-border spinner-border-xs me-1" role="status"></span>
-                                            {{ formatToolName(tool.name) }}
-                                        </span>
+                                             class="tool-call-item text-muted">
+                                            <i class="bi me-2" :class="getToolIcon(tool.name)" :title="formatToolName(tool.name)"></i>
+                                            <span class="tool-call-text">{{ tool.message || formatToolName(tool.name) }}</span>
+                                            <i v-if="tool.completed" class="bi bi-check-circle ms-2 text-success"></i>
+                                            <span v-else class="spinner-border spinner-border-xs ms-2" role="status"></span>
+                                        </div>
                                     </div>
                                 </template>
                             </div>

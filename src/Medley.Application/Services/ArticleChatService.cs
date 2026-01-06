@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
+using Medley.Application.Helpers;
 using Medley.Application.Interfaces;
 using Medley.Application.Models;
 using Medley.Domain.Entities;
@@ -22,31 +23,37 @@ public class ArticleChatService : IArticleChatService
     private readonly IRepository<DomainChatMessage> _chatMessageRepository;
     private readonly IRepository<Article> _articleRepository;
     private readonly IRepository<Template> _templateRepository;
+    private readonly IRepository<Fragment> _fragmentRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IChatClient _chatClient;
     private readonly ArticleChatToolsFactory _toolsFactory;
     private readonly ILogger<ArticleChatService> _logger;
     private readonly AiCallContext _aiCallContext;
+    private readonly ToolMessageExtractor _toolMessageExtractor;
     
     public ArticleChatService(
         IRepository<ChatConversation> conversationRepository,
         IRepository<DomainChatMessage> chatMessageRepository,
         IRepository<Article> articleRepository,
         IRepository<Template> templateRepository,
+        IRepository<Fragment> fragmentRepository,
         IUnitOfWork unitOfWork,
         IChatClient chatClient,
         ArticleChatToolsFactory pluginsFactory,
         ILogger<ArticleChatService> logger,
-        AiCallContext aiCallContext)
+        AiCallContext aiCallContext,
+        ToolMessageExtractor toolMessageExtractor)
     {
         _conversationRepository = conversationRepository;
         _chatMessageRepository = chatMessageRepository;
         _articleRepository = articleRepository;
         _templateRepository = templateRepository;
+        _fragmentRepository = fragmentRepository;
         _unitOfWork = unitOfWork;
         _toolsFactory = pluginsFactory;
         _logger = logger;
         _aiCallContext = aiCallContext;
+        _toolMessageExtractor = toolMessageExtractor;
 
         // Wrap the provided chat client with function invocation support
         _chatClient = new ChatClientBuilder(chatClient).UseFunctionInvocation().Build();
@@ -464,6 +471,7 @@ public class ArticleChatService : IArticleChatService
                         Type = StreamUpdateType.ToolCall,
                         ToolName = call.Name,
                         ToolCallId = call.CallId,
+                        ToolMessage = await _toolMessageExtractor.ExtractToolMessageAsync(call.Name, call.Arguments),
                         ConversationId = conversationId,
                         ArticleId = articleId,
                         MessageId = currentMessageId

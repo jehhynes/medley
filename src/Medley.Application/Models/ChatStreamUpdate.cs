@@ -36,6 +36,11 @@ public class ChatStreamUpdate
     public string? ToolCallId { get; init; }
 
     /// <summary>
+    /// Tool message (extracted relevant argument) for ToolCall updates
+    /// </summary>
+    public string? ToolMessage { get; init; }
+
+    /// <summary>
     /// Message ID for Complete updates (after database save)
     /// </summary>
     public Guid? MessageId { get; init; }

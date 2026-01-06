@@ -406,8 +406,7 @@ public class ArticleChatTools
                         id = fragment.Source.Id,
                         name = fragment.Source.Name,
                         type = fragment.Source.Type.ToString(),
-                        date = fragment.Source.Date,
-                        externalId = fragment.Source.ExternalId
+                        date = fragment.Source.Date
                     } : null
                 }
             };

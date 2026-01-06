@@ -1,4 +1,5 @@
 using Hangfire;
+using Medley.Application.Helpers;
 using Medley.Application.Hubs;
 using Medley.Application.Interfaces;
 using Medley.Application.Jobs;
@@ -29,6 +30,7 @@ public class ArticleChatApiController : ControllerBase
     private readonly IBackgroundJobClient _backgroundJobClient;
     private readonly IHubContext<ArticleHub> _hubContext;
     private readonly ILogger<ArticleChatApiController> _logger;
+    private readonly ToolMessageExtractor _toolMessageExtractor;
 
     public ArticleChatApiController(
         IArticleChatService chatService,
@@ -39,7 +41,8 @@ public class ArticleChatApiController : ControllerBase
         IRepository<User> userRepository,
         IBackgroundJobClient backgroundJobClient,
         IHubContext<ArticleHub> hubContext,
-        ILogger<ArticleChatApiController> logger)
+        ILogger<ArticleChatApiController> logger,
+        ToolMessageExtractor toolMessageExtractor)
     {
         _chatService = chatService;
         _conversationRepository = conversationRepository;
@@ -50,6 +53,7 @@ public class ArticleChatApiController : ControllerBase
         _backgroundJobClient = backgroundJobClient;
         _hubContext = hubContext;
         _logger = logger;
+        _toolMessageExtractor = toolMessageExtractor;
     }
 
     /// <summary>
@@ -152,39 +156,40 @@ public class ArticleChatApiController : ControllerBase
         }
 
         // Third: build final result with completion status (exclude Tool messages)
-        var results = deserializedMessages
-            .Where(item => item.Message.Role != ChatMessageRole.Tool) // Filter out Tool messages
-            .Select(item =>
+        var results = new List<object>();
+        foreach (var item in deserializedMessages.Where(item => item.Message.Role != ChatMessageRole.Tool))
+        {
+            List<object>? toolCalls = null;
+            
+            if (item.AiMessage?.Contents != null)
             {
-                List<object>? toolCalls = null;
-                
-                if (item.AiMessage?.Contents != null)
+                var calls = new List<object>();
+                foreach (var fc in item.AiMessage.Contents.OfType<FunctionCallContent>())
                 {
-                    var calls = item.AiMessage.Contents
-                        .OfType<FunctionCallContent>()
-                        .Select(fc => new {
-                            name = fc.Name,
-                            callId = fc.CallId,
-                            completed = !string.IsNullOrEmpty(fc.CallId) && completedCallIds.Contains(fc.CallId)
-                        } as object)
-                        .ToList();
-                    
-                    if (calls.Any())
-                    {
-                        toolCalls = calls;
-                    }
+                    calls.Add(new {
+                        name = fc.Name,
+                        callId = fc.CallId,
+                        message = await _toolMessageExtractor.ExtractToolMessageAsync(fc.Name, fc.Arguments),
+                        completed = !string.IsNullOrEmpty(fc.CallId) && completedCallIds.Contains(fc.CallId)
+                    });
                 }
-
-                return new
+                
+                if (calls.Any())
                 {
-                    id = item.Message.Id,
-                    role = item.Message.Role.ToString().ToLower(),
-                    content = item.Message.Content,
-                    userName = item.Message.User?.FullName,
-                    createdAt = item.Message.CreatedAt,
-                    toolCalls = toolCalls ?? new List<object>()
-                };
-            }).ToList();
+                    toolCalls = calls;
+                }
+            }
+
+            results.Add(new
+            {
+                id = item.Message.Id,
+                role = item.Message.Role.ToString().ToLower(),
+                content = item.Message.Content,
+                userName = item.Message.User?.FullName,
+                createdAt = item.Message.CreatedAt,
+                toolCalls = toolCalls ?? new List<object>()
+            });
+        }
 
         return Ok(results);
     }
