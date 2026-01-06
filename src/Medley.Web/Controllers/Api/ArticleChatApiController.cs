@@ -235,11 +235,37 @@ public class ArticleChatApiController : ControllerBase
         // Update IsRunning status immediately for UI responsiveness
         conversation.IsRunning = true;
         
-        // Update article's current conversation reference
+        // Update article's current conversation reference and auto-assign if in Plan mode
         var article = await _articleRepository.GetByIdAsync(articleId);
         if (article != null)
         {
             article.CurrentConversationId = conversationId;
+            
+            // Auto-assign to current user if in Plan mode
+            if (conversation.Mode == ConversationMode.Plan && article.AssignedUserId != userId)
+            {
+                article.AssignedUserId = userId;
+                
+                // Load user data for SignalR notification
+                var assignedUser = await _userRepository.GetByIdAsync(userId);
+                
+                // Register assignment notification
+                var assignmentNotification = new
+                {
+                    ArticleId = articleId.ToString(),
+                    UserId = assignedUser?.Id.ToString(),
+                    UserName = assignedUser?.FullName,
+                    UserInitials = assignedUser?.Initials,
+                    UserColor = assignedUser?.Color,
+                    Timestamp = DateTimeOffset.UtcNow
+                };
+                
+                HttpContext.RegisterPostCommitAction(async () =>
+                {
+                    await _hubContext.Clients.All.SendAsync("ArticleAssignmentChanged", assignmentNotification);
+                });
+            }
+            
             await _articleRepository.SaveAsync(article);
         }
         

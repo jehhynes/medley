@@ -20,6 +20,7 @@ public class ArticlesApiController : ControllerBase
 {
     private readonly IRepository<Article> _articleRepository;
     private readonly IRepository<ArticleType> _articleTypeRepository;
+    private readonly IRepository<User> _userRepository;
     private readonly IHubContext<ArticleHub> _hubContext;
     private readonly IArticleVersionService _versionService;
     private readonly IUnitOfWork _unitOfWork;
@@ -27,12 +28,14 @@ public class ArticlesApiController : ControllerBase
     public ArticlesApiController(
         IRepository<Article> articleRepository,
         IRepository<ArticleType> articleTypeRepository,
+        IRepository<User> userRepository,
         IHubContext<ArticleHub> hubContext,
         IArticleVersionService versionService,
         IUnitOfWork unitOfWork)
     {
         _articleRepository = articleRepository;
         _articleTypeRepository = articleTypeRepository;
+        _userRepository = userRepository;
         _hubContext = hubContext;
         _versionService = versionService;
         _unitOfWork = unitOfWork;
@@ -80,6 +83,7 @@ public class ArticlesApiController : ControllerBase
                 .Include(a => a.ChildArticles)
                 .Include(a => a.ArticleType)
                 .Include(a => a.CurrentConversation)
+                .Include(a => a.AssignedUser)
                 .ToListAsync();
 
             // Apply filters to get matching articles
@@ -129,6 +133,7 @@ public class ArticlesApiController : ControllerBase
                 .Include(a => a.ChildArticles)
                 .Include(a => a.ArticleType)
                 .Include(a => a.CurrentConversation)
+                .Include(a => a.AssignedUser)
                 .ToListAsync();
         }
 
@@ -334,11 +339,15 @@ public class ArticlesApiController : ControllerBase
             article.Content = request.Content;
         }
 
+        // Auto-assign to current user
+        var userId = GetCurrentUserId();
+        var assignmentChanged = await AssignArticleToUserAsync(article, userId);
+
         await _articleRepository.SaveAsync(article);
 
         // Capture version after saving article
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        var capturedVersion = Guid.TryParse(userId, out var userGuid)
+        var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var capturedVersion = Guid.TryParse(userIdStr, out var userGuid)
             ? await _versionService.CaptureVersionAsync(id, article.Content, oldContent, userGuid)
             : await _versionService.CaptureVersionAsync(id, article.Content, oldContent, null);
 
@@ -372,6 +381,12 @@ public class ArticlesApiController : ControllerBase
             {
                 await _hubContext.Clients.All.SendAsync("ArticleUpdated", notification);
             });
+        }
+
+        // Send assignment notification if changed
+        if (assignmentChanged)
+        {
+            await SendAssignmentNotificationAsync(article);
         }
 
         return Ok(new
@@ -549,6 +564,13 @@ public class ArticlesApiController : ControllerBase
                     isRunning = a.CurrentConversation.IsRunning,
                     state = a.CurrentConversation.State.ToString()
                 } : null,
+                assignedUser = a.AssignedUser != null ? new
+                {
+                    id = a.AssignedUser.Id,
+                    fullName = a.AssignedUser.FullName,
+                    initials = a.AssignedUser.Initials,
+                    color = a.AssignedUser.Color
+                } : null,
                 children = BuildTree(allArticles, a.Id)
             })
             .ToList<object>();
@@ -679,6 +701,58 @@ public class ArticlesApiController : ControllerBase
             afterContent = comparison.AfterContent,
             versionNumber = comparison.VersionNumber,
             previousVersionNumber = comparison.PreviousVersionNumber
+        });
+    }
+
+    /// <summary>
+    /// Get current user ID from claims
+    /// </summary>
+    private Guid GetCurrentUserId()
+    {
+        var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        return Guid.TryParse(userIdStr, out var userId) ? userId : Guid.Empty;
+    }
+
+    /// <summary>
+    /// Assign article to user if not already assigned
+    /// </summary>
+    /// <returns>True if assignment changed, false otherwise</returns>
+    private async Task<bool> AssignArticleToUserAsync(Article article, Guid userId)
+    {
+        if (userId == Guid.Empty || article.AssignedUserId == userId)
+        {
+            return false;
+        }
+
+        article.AssignedUserId = userId;
+        
+        // Load user data if not already loaded
+        if (article.AssignedUser == null || article.AssignedUser.Id != userId)
+        {
+            article.AssignedUser = await _userRepository.GetByIdAsync(userId);
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Send SignalR notification for assignment change
+    /// </summary>
+    private async Task SendAssignmentNotificationAsync(Article article)
+    {
+        var notification = new
+        {
+            ArticleId = article.Id.ToString(),
+            UserId = article.AssignedUser?.Id.ToString(),
+            UserName = article.AssignedUser?.FullName,
+            UserInitials = article.AssignedUser?.Initials,
+            UserColor = article.AssignedUser?.Color,
+            Timestamp = DateTimeOffset.UtcNow
+        };
+
+        HttpContext.RegisterPostCommitAction(async () =>
+        {
+            await _hubContext.Clients.All.SendAsync("ArticleAssignmentChanged", notification);
         });
     }
 }

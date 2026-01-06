@@ -90,6 +90,22 @@ public class ArticleHub : Hub
     }
 
     /// <summary>
+    /// Notify all connected clients that an article's assigned user changed
+    /// </summary>
+    public async Task NotifyArticleAssignmentChanged(string articleId, string? userId, string? userName, string? userInitials, string? userColor)
+    {
+        await Clients.All.SendAsync("ArticleAssignmentChanged", new
+        {
+            ArticleId = articleId,
+            UserId = userId,
+            UserName = userName,
+            UserInitials = userInitials,
+            UserColor = userColor,
+            Timestamp = DateTimeOffset.UtcNow
+        });
+    }
+
+    /// <summary>
     /// Override OnConnectedAsync to handle connection
     /// </summary>
     public override async Task OnConnectedAsync()

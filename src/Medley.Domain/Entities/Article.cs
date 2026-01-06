@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Medley.Domain.Enums;
+using Microsoft.EntityFrameworkCore;
 
 namespace Medley.Domain.Entities;
 
@@ -57,6 +58,18 @@ public class Article : BusinessEntity
     /// </summary>
     [ForeignKey(nameof(CurrentConversationId))]
     public virtual ChatConversation? CurrentConversation { get; set; }
+
+    /// <summary>
+    /// User currently assigned to this article
+    /// </summary>
+    public Guid? AssignedUserId { get; set; }
+
+    /// <summary>
+    /// Navigation property to the assigned user
+    /// </summary>
+    [ForeignKey(nameof(AssignedUserId))]
+    [DeleteBehavior(DeleteBehavior.SetNull)]
+    public virtual User? AssignedUser { get; set; }
 
     
     /// <summary>

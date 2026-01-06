@@ -30,6 +30,9 @@
                         case 'ArticleUpdated':
                             this.updateArticleInTree(update.articleId, update.updates);
                             break;
+                        case 'ArticleAssignmentChanged':
+                            this.updateArticleInTree(update.articleId, update.updates);
+                            break;
                         case 'ArticleDeleted':
                             this.removeArticleFromTree(update.articleId);
                             if (this.articles.selectedId === update.articleId) {
@@ -91,6 +94,27 @@
                         updates: {
                             title: data.title,
                             articleTypeId: data.articleTypeId
+                        }
+                    });
+                    this.processSignalRQueueDebounced();
+                });
+
+                this.signalr.connection.on('ArticleAssignmentChanged', async (data) => {
+                    // Queue the assignment update with size limit
+                    if (this.signalr.updateQueue.length >= MAX_QUEUE_SIZE) {
+                        console.warn('SignalR update queue full, dropping oldest updates');
+                        this.signalr.updateQueue.shift();
+                    }
+                    this.signalr.updateQueue.push({
+                        type: 'ArticleAssignmentChanged',
+                        articleId: data.articleId,
+                        updates: {
+                            assignedUser: data.userId ? {
+                                id: data.userId,
+                                fullName: data.userName,
+                                initials: data.userInitials,
+                                color: data.userColor
+                            } : null
                         }
                     });
                     this.processSignalRQueueDebounced();

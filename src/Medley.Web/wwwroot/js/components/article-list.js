@@ -27,6 +27,12 @@ const ArticleList = {
           </div>
         </div>
         <div class="status-actions">
+          <span v-if="article.assignedUser" 
+                class="user-badge" 
+                :style="{ backgroundColor: article.assignedUser.color || '#6c757d' }"
+                :title="article.assignedUser.fullName || 'Assigned User'">
+            {{ article.assignedUser.initials || '?' }}
+          </span>
           <div class="status-icon-wrapper">
             <i :class="getStatusIcon(article.status) + ' ' + getStatusColorClass(article.status)" class="status-icon" :title="article.status"></i>
             <i v-if="showProcessingSpinner(article)" class="fad fa-spinner-third fa-spin status-overlay-spinner text-info" title="AI Processing"></i>
