@@ -249,6 +249,9 @@ let TiptapEditor = null;
                         title="Redo">
                         <i class="bi bi-arrow-clockwise"></i>
                     </button>
+                    
+                    <!-- Custom buttons slot after undo/redo -->
+                    <slot name="toolbar-append"></slot>
                     </div>
                     <div class="tiptap-toolbar-right">
                         <!-- Show auto-save indicator when auto-save is enabled -->

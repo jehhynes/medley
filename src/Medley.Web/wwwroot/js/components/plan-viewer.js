@@ -52,6 +52,19 @@ const PlanViewer = {
                 }
             },
             immediate: true
+        },
+        'plan.fragments': {
+            handler() {
+                // Auto-expand textareas when fragments change
+                this.$nextTick(() => {
+                    const textareas = this.$el?.querySelectorAll('textarea');
+                    textareas?.forEach(textarea => {
+                        textarea.style.height = 'auto';
+                        textarea.style.height = textarea.scrollHeight + 'px';
+                    });
+                });
+            },
+            deep: true
         }
     },
     methods: {
@@ -73,6 +86,15 @@ const PlanViewer = {
 
                 this.plan = await response.json();
                 this.planInstructions = this.plan.instructions || '';
+                
+                // Auto-expand textareas after plan loads
+                this.$nextTick(() => {
+                    const textareas = this.$el?.querySelectorAll('textarea');
+                    textareas?.forEach(textarea => {
+                        textarea.style.height = 'auto';
+                        textarea.style.height = textarea.scrollHeight + 'px';
+                    });
+                });
             } catch (err) {
                 console.error('Error loading plan:', err);
                 this.error = err.message;
@@ -233,12 +255,27 @@ const PlanViewer = {
 
         handleKeydown(event) {
             // Fragment modal handles its own Escape key
+        },
+
+        autoExpandTextarea(event) {
+            const textarea = event.target;
+            textarea.style.height = 'auto';
+            textarea.style.height = textarea.scrollHeight + 'px';
         }
     },
 
     mounted() {
         // Preload article types for icon display
         window.MedleyUtils.getArticleTypes();
+        
+        // Auto-expand all textareas on mount
+        this.$nextTick(() => {
+            const textareas = this.$el.querySelectorAll('textarea');
+            textareas.forEach(textarea => {
+                textarea.style.height = 'auto';
+                textarea.style.height = textarea.scrollHeight + 'px';
+            });
+        });
     },
 
     beforeUnmount() {
@@ -271,149 +308,180 @@ const PlanViewer = {
                     <template #toolbar-prepend>
                         <button 
                             type="button"
-                            class="btn btn-success btn-sm me-2"
+                            class="tiptap-toolbar-btn"
                             @click="acceptPlan"
                             title="Accept Plan">
                             <i class="bi bi-check-lg"></i>
-                            Accept
                         </button>
                         <button 
                             type="button"
-                            class="btn btn-danger btn-sm me-2"
+                            class="tiptap-toolbar-btn"
                             @click="rejectPlan"
                             title="Reject Plan">
                             <i class="bi bi-x-lg"></i>
-                            Reject
                         </button>
                         <div class="tiptap-toolbar-divider"></div>
-                        <span class="text-muted small me-2">Created {{ formatDate(plan.createdAt) }}</span>
-                        <span v-if="plan.createdBy" class="text-muted small">by {{ plan.createdBy.name }}</span>
+                    </template>
+                    <template #toolbar-append>
                         <div class="tiptap-toolbar-divider"></div>
+                        <span class="text-muted small me-2 align-self-center">Created {{ formatDate(plan.createdAt) }}</span>
+                        <span v-if="plan.createdBy" class="text-muted small align-self-center">by {{ plan.createdBy.name }}</span>
                     </template>
                 </component>
                 <div v-else class="alert alert-info">Loading editor...</div>
 
                 <!-- Fragments Section -->
                 <div class="plan-fragments-container">
-                    <!-- Included Fragments Table -->
-                    <div class="mb-4">
-                        <div class="d-flex justify-content-between align-items-center mb-3 p-2 " style="background-color: var(--bs-border-color);">
+                    <!-- Included Fragments -->
+                    <div>
+                        <div class="d-flex justify-content-between align-items-center p-2 " style="background-color: var(--bs-border-color);">
                             <h5 class="mb-0 text-center flex-grow-1">Included Fragments</h5>
-                            <span class="badge bg-secondary">{{ includedFragments.length }}</span>
+                            <span class="badge bg-success">{{ includedFragments.length }}</span>
                         </div>
                         <div v-if="includedFragments.length === 0" class="text-muted text-center py-3 border rounded">
                             No fragments included in this plan
                         </div>
-                        <table v-else class="table table-hover">
-                            <tbody>
-                                <tr 
-                                    v-for="pf in includedFragments" 
-                                    :key="pf.fragmentId"
-                                    class="fragment-item"
-                                    style="cursor: pointer;"
-                                    @click="selectFragment(pf)">
-                                    <td class="align-middle">
-                                        <i class="list-item-icon" :class="getIconClass(getFragmentCategoryIcon(pf.fragment.category))" style="font-size: 1.5rem;"></i>
-                                    </td>
-                                    <td>
-                                        <div class="fw-semibold mb-1">{{ pf.fragment.title || 'Untitled Fragment' }}</div>
-                                        <div v-if="pf.fragment.summary" class="text-muted small mb-1">{{ pf.fragment.summary }}</div>
-                                        
-                                        <!-- Instructions (editable) -->
-                                        <div @click.stop>
-                                            <textarea 
-                                                class="form-control form-control-sm"
-                                                v-model="pf.instructions"
-                                                @change="updateFragmentInstructions(pf)"
-                                                rows="2"
-                                                placeholder="How to use this fragment..."></textarea>
-                                        </div>
-                                    </td>
-                                    <td class="align-top text-end">
-                                        <div class="d-flex flex-column align-items-end gap-2">
-                                            <div>
-                                                <span class="badge me-2" :class="getSimilarityClass(pf.similarityScore)">
-                                                    {{ getSimilarityPercent(pf.similarityScore) }}%
-                                                </span>
-                                                <span v-if="pf.fragment.confidence !== null && pf.fragment.confidence !== undefined">
-                                                    <i 
-                                                        :class="'fa-duotone ' + getConfidenceIcon(pf.fragment.confidence)" 
-                                                        :style="{ color: getConfidenceColor(pf.fragment.confidence) }"
-                                                        :title="'Confidence: ' + getConfidenceLabel(pf.fragment.confidence)"
-                                                        style="font-size: 1.25rem;"
-                                                    ></i>
-                                                </span>
+                        <div v-else>
+                            <div 
+                                v-for="pf in includedFragments" 
+                                :key="pf.fragmentId"
+                                class="fragment-item border-bottom py-3 px-3"
+                                style="cursor: pointer;"
+                                @click="selectFragment(pf)">
+                                <!-- Header Row: Icon, Title, Badges -->
+                                <div class="row g-2">
+                                    <div class="col-auto" style="width: 60px; text-align: center;">
+                                        <i class="list-item-icon" :class="getIconClass(getFragmentCategoryIcon(pf.fragment.category))" style="font-size: 1.5rem;position:relative;top:-0.33rem;"></i>
+                                    </div>
+                                    <div class="col">
+                                        <div class="fw-semibold">{{ pf.fragment.title || 'Untitled Fragment' }}</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <span class="badge me-2" :class="getSimilarityClass(pf.similarityScore)">
+                                            {{ getSimilarityPercent(pf.similarityScore) }}%
+                                        </span>
+                                        <span v-if="pf.fragment.confidence !== null && pf.fragment.confidence !== undefined">
+                                            <i 
+                                                :class="'fa-duotone ' + getConfidenceIcon(pf.fragment.confidence)" 
+                                                :style="{ color: getConfidenceColor(pf.fragment.confidence) }"
+                                                :title="'Confidence: ' + getConfidenceLabel(pf.fragment.confidence)"
+                                                style="font-size: 1.25rem;"
+                                            ></i>
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Content Row: Button, Summary/Instructions -->
+                                <div class="row g-2 gy-0">
+                                    <!-- Button Column -->
+                                    <div class="col-auto pt-1" style="width: 60px; text-align: center;">
+                                        <button 
+                                            class="btn btn-sm btn-danger"
+                                            @click.stop="toggleFragmentInclude(pf)"
+                                            :disabled="savingFragments.has(pf.fragmentId)"
+                                            title="Exclude this fragment"
+                                            style="padding: 0.25rem 0.5rem;">
+                                            <span v-if="savingFragments.has(pf.fragmentId)" class="spinner-border spinner-border-sm" role="status"></span>
+                                            <i v-else class="bi bi-arrow-down"></i>
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Content Column -->
+                                    <div class="col">
+                                        <div class="row gy-0">
+                                            <!-- Summary Column -->
+                                            <div class="col-12 col-xxl-6">
+                                                <div v-if="pf.fragment.summary" class="text-muted small">{{ pf.fragment.summary }}</div>
                                             </div>
-                                            <button 
-                                                class="btn btn-sm btn-outline-danger"
-                                                @click.stop="toggleFragmentInclude(pf)"
-                                                :disabled="savingFragments.has(pf.fragmentId)"
-                                                title="Exclude this fragment">
-                                                <span v-if="savingFragments.has(pf.fragmentId)" class="spinner-border spinner-border-sm" role="status"></span>
-                                                <span v-else>Exclude</span>
-                                            </button>
+                                            
+                                            <!-- Instructions Column (moves to right on xxl+) -->
+                                            <div class="col-12 col-xxl-6" @click.stop>
+                                                <textarea 
+                                                    class="form-control form-control-sm"
+                                                    v-model="pf.instructions"
+                                                    @change="updateFragmentInstructions(pf)"
+                                                    @input="autoExpandTextarea($event)"
+                                                    placeholder="How to use this fragment..."
+                                                    style="min-height: 100%; resize: vertical; overflow: hidden;"></textarea>
+                                            </div>
                                         </div>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Excluded Fragments Table -->
+                    <!-- Excluded Fragments -->
                     <div>
-                        <div class="d-flex justify-content-between align-items-center mb-3 p-2 " style="background-color: var(--bs-border-color);">
+                        <div class="d-flex justify-content-between align-items-center p-2 " style="background-color: var(--bs-border-color);">
                             <h5 class="mb-0 text-center flex-grow-1">Excluded Fragments</h5>
-                            <span class="badge bg-secondary">{{ excludedFragments.length }}</span>
+                            <span class="badge bg-danger">{{ excludedFragments.length }}</span>
                         </div>
                         <div v-if="excludedFragments.length === 0" class="text-muted text-center py-3 border rounded">
                             No fragments excluded from this plan
                         </div>
-                        <table v-else class="table table-hover">
-                            <tbody>
-                                <tr 
-                                    v-for="pf in excludedFragments" 
-                                    :key="pf.fragmentId"
-                                    class="fragment-item"
-                                    style="cursor: pointer;"
-                                    @click="selectFragment(pf)">
-                                    <td class="align-middle">
-                                        <i class="list-item-icon" :class="getIconClass(getFragmentCategoryIcon(pf.fragment.category))" style="font-size: 1.5rem;"></i>
-                                    </td>
-                                    <td>
-                                        <div class="fw-semibold mb-1">{{ pf.fragment.title || 'Untitled Fragment' }}</div>
-                                        <div v-if="pf.fragment.summary" class="text-muted small mb-1">{{ pf.fragment.summary }}</div>
-                                        
-                                        <!-- Reasoning (read-only) -->
-                                        <div class="fst-italic text-muted small">{{ pf.reasoning }}</div>
-                                    </td>
-                                    <td class="align-top text-end">
-                                        <div class="d-flex flex-column align-items-end gap-2">
-                                            <div>
-                                                <span class="badge me-2" :class="getSimilarityClass(pf.similarityScore)">
-                                                    {{ getSimilarityPercent(pf.similarityScore) }}%
-                                                </span>
-                                                <span v-if="pf.fragment.confidence !== null && pf.fragment.confidence !== undefined">
-                                                    <i 
-                                                        :class="'fa-duotone ' + getConfidenceIcon(pf.fragment.confidence)" 
-                                                        :style="{ color: getConfidenceColor(pf.fragment.confidence) }"
-                                                        :title="'Confidence: ' + getConfidenceLabel(pf.fragment.confidence)"
-                                                        style="font-size: 1.25rem;"
-                                                    ></i>
-                                                </span>
+                        <div v-else>
+                            <div 
+                                v-for="pf in excludedFragments" 
+                                :key="pf.fragmentId"
+                                class="fragment-item border-bottom py-3 px-3"
+                                style="cursor: pointer;"
+                                @click="selectFragment(pf)">
+                                <!-- Header Row: Icon, Title, Badges -->
+                                <div class="row g-2">
+                                    <div class="col-auto" style="width: 60px; text-align: center;">
+                                        <i class="list-item-icon" :class="getIconClass(getFragmentCategoryIcon(pf.fragment.category))" style="font-size: 1.5rem;position:relative;top:-0.33rem;"></i>
+                                    </div>
+                                    <div class="col">
+                                        <div class="fw-semibold">{{ pf.fragment.title || 'Untitled Fragment' }}</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <span class="badge me-2" :class="getSimilarityClass(pf.similarityScore)">
+                                            {{ getSimilarityPercent(pf.similarityScore) }}%
+                                        </span>
+                                        <span v-if="pf.fragment.confidence !== null && pf.fragment.confidence !== undefined">
+                                            <i 
+                                                :class="'fa-duotone ' + getConfidenceIcon(pf.fragment.confidence)" 
+                                                :style="{ color: getConfidenceColor(pf.fragment.confidence) }"
+                                                :title="'Confidence: ' + getConfidenceLabel(pf.fragment.confidence)"
+                                                style="font-size: 1.25rem;"
+                                            ></i>
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Content Row: Button, Summary/Reasoning -->
+                                <div class="row g-2 gy-0">
+                                    <!-- Button Column -->
+                                    <div class="col-auto pt-1" style="width: 60px; text-align: center;">
+                                        <button 
+                                            class="btn btn-sm btn-success"
+                                            @click.stop="toggleFragmentInclude(pf)"
+                                            :disabled="savingFragments.has(pf.fragmentId)"
+                                            title="Include this fragment"
+                                            style="padding: 0.25rem 0.5rem;">
+                                            <span v-if="savingFragments.has(pf.fragmentId)" class="spinner-border spinner-border-sm" role="status"></span>
+                                            <i v-else class="bi bi-arrow-up"></i>
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Content Column -->
+                                    <div class="col">
+                                        <div class="row gy-0">
+                                            <!-- Summary Column -->
+                                            <div class="col-12 col-xxl-6">
+                                                <div v-if="pf.fragment.summary" class="text-muted small">{{ pf.fragment.summary }}</div>
                                             </div>
-                                            <button 
-                                                class="btn btn-sm btn-outline-success"
-                                                @click.stop="toggleFragmentInclude(pf)"
-                                                :disabled="savingFragments.has(pf.fragmentId)"
-                                                title="Include this fragment">
-                                                <span v-if="savingFragments.has(pf.fragmentId)" class="spinner-border spinner-border-sm" role="status"></span>
-                                                <span v-else>Include</span>
-                                            </button>
+                                            
+                                            <!-- Reasoning Column (moves to right on xxl+) -->
+                                            <div class="col-12 col-xxl-6">
+                                                <div class="fst-italic text-muted small">{{ pf.reasoning }}</div>
+                                            </div>
                                         </div>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </template>
