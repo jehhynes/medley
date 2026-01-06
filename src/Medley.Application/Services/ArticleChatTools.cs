@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.Text;
 using System.Text.Json;
 using Medley.Application.Configuration;
@@ -61,10 +62,11 @@ public class ArticleChatTools
     /// <summary>
     /// Search for fragments semantically similar to a query string
     /// </summary>
+    [Description("Search for fragments semantically similar to a query string. Returns fragments with similarity scores.")]
     public virtual async Task<string> SearchFragmentsAsync(
-        string query,
-        int limit = 10,
-        double? threshold = 0.7,
+        [Description("The search query text to find similar fragments")] string query,
+        [Description("Maximum number of results to return (default: 10)")] int limit = 10,
+        [Description("Minimum similarity threshold from 0.0 to 1.0 (default: 0.7)")] double? threshold = 0.7,
         CancellationToken cancellationToken = default)
     {
         try
@@ -185,9 +187,11 @@ public class ArticleChatTools
     /// <summary>
     /// Find fragments semantically similar to the current article content
     /// </summary>
+    [Description("Find fragments semantically similar to the current article content. " +
+        "Useful for finding related content to enhance or expand the article.")]
     public virtual async Task<string> FindSimilarFragmentsAsync(
-        int limit = 10,
-        double? threshold = 0.7,
+        [Description("Maximum number of results to return (default: 10)")] int limit = 10,
+        [Description("Minimum similarity threshold from 0.0 to 1.0 (default: 0.7)")] double? threshold = 0.7,
         CancellationToken cancellationToken = default)
     {
         try
@@ -362,9 +366,10 @@ public class ArticleChatTools
     /// <summary>
     /// Get full content and details for a specific fragment
     /// </summary>
-    [Description("Get the full content and details of a specific fragment by its ID")]
+    [Description("Get the full content and details of a specific fragment by its ID. " +
+        "Use this to review fragments in detail before recommending them.")]
     public virtual async Task<string> GetFragmentContentAsync(
-        Guid fragmentId,
+        [Description("The unique identifier of the fragment to retrieve")] Guid fragmentId,
         CancellationToken cancellationToken = default)
     {
         try
@@ -423,10 +428,11 @@ public class ArticleChatTools
     /// <summary>
     /// Create an article improvement plan with fragment recommendations
     /// </summary>
-    [Description("Create a structured improvement plan for an article with fragment recommendations")]
+    [Description("Create/update a structured improvement plan for the article with fragment recommendations.")]
     public virtual async Task<string> CreatePlanAsync(
-        string instructions,
-        PlanFragmentRecommendation[] recommendations,
+        [Description("Overall instructions for how to improve the article using the recommended fragments")] string instructions,
+        [Description("Array of fragment recommendations")] PlanFragmentRecommendation[] recommendations,
+        [Description("Optional summary of changes if this is a modification of an existing plan")] string? changesSummary = null,
         CancellationToken cancellationToken = default)
     {
         try
@@ -436,15 +442,35 @@ public class ArticleChatTools
 
 
 
-            // Archive any existing draft plans for this article
-            var existingPlans = await _planRepository.Query()
+            // Get existing draft plan (if any) to determine version and parent
+            var existingDraftPlan = await _planRepository.Query()
                 .Where(p => p.ArticleId == _articleId && p.Status == PlanStatus.Draft)
-                .ToListAsync(cancellationToken);
+                .OrderByDescending(p => p.Version)
+                .FirstOrDefaultAsync(cancellationToken);
 
-            foreach (var existingPlan in existingPlans)
+            int newVersion = 1;
+            Guid? parentPlanId = null;
+
+            if (existingDraftPlan != null)
             {
-                existingPlan.Status = PlanStatus.Archived;
-                await _planRepository.SaveAsync(existingPlan);
+                // This is a modification - archive the current draft
+                existingDraftPlan.Status = PlanStatus.Archived;
+                await _planRepository.SaveAsync(existingDraftPlan);
+                
+                newVersion = existingDraftPlan.Version + 1;
+                parentPlanId = existingDraftPlan.Id;
+            }
+            else
+            {
+                // Check if there are any archived plans to determine version
+                var maxVersion = await _planRepository.Query()
+                    .Where(p => p.ArticleId == _articleId)
+                    .MaxAsync(p => (int?)p.Version, cancellationToken);
+                
+                if (maxVersion.HasValue)
+                {
+                    newVersion = maxVersion.Value + 1;
+                }
             }
 
             // Create new plan
@@ -454,7 +480,10 @@ public class ArticleChatTools
                 Instructions = instructions,
                 Status = PlanStatus.Draft,
                 CreatedByUserId = _currentUserId,
-                CreatedAt = DateTimeOffset.UtcNow
+                CreatedAt = DateTimeOffset.UtcNow,
+                Version = newVersion,
+                ParentPlanId = parentPlanId,
+                ChangesSummary = changesSummary
             };
 
             await _planRepository.SaveAsync(plan);
@@ -503,9 +532,20 @@ public class ArticleChatTools
 /// </summary>
 public class PlanFragmentRecommendation
 {
+    [Description("The unique identifier of the fragment being recommended")]
     public Guid FragmentId { get; set; }
+    
+    [Description("The similarity score between the fragment and the article (0.0 to 1.0)")]
     public double SimilarityScore { get; set; }
+    
+    [Description("Whether to include this fragment in the article improvement (true) or exclude it (false)")]
     public bool Include { get; set; }
+    
+    [Description("Explanation of why this fragment should not be included in the article. Omit if Include=true")]
+    [MaxLength(200)]
     public required string Reasoning { get; set; }
+    
+    [Description("Optional instructions on how to incorporate this fragment into the article")]
+    [MaxLength(200)]
     public required string Instructions { get; set; }
 }

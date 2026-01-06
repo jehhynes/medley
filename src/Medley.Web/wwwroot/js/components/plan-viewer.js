@@ -17,12 +17,14 @@ const PlanViewer = {
     data() {
         return {
             plan: null,
+            allPlans: [],
             loading: true,
             error: null,
             isSaving: false,
             planInstructions: '',
             savingFragments: new Set(),
-            selectedFragment: null
+            selectedFragment: null,
+            isRestoringPlan: false
         };
     },
     computed: {
@@ -36,6 +38,12 @@ const PlanViewer = {
         excludedFragments() {
             if (!this.plan) return [];
             return this.plan.fragments.filter(f => !f.include);
+        },
+        isArchivedPlan() {
+            return this.plan && this.plan.status !== 'Draft';
+        },
+        canEditPlan() {
+            return this.plan && this.plan.status === 'Draft';
         }
     },
     watch: {
@@ -73,6 +81,13 @@ const PlanViewer = {
             this.error = null;
 
             try {
+                // Load all plans for version dropdown
+                const plansResponse = await fetch(`/api/articles/${this.articleId}/plans`);
+                if (plansResponse.ok) {
+                    this.allPlans = await plansResponse.json();
+                }
+
+                // Load active plan
                 const response = await fetch(`/api/articles/${this.articleId}/plans/active`);
                 
                 if (response.status === 204) {
@@ -100,6 +115,72 @@ const PlanViewer = {
                 this.error = err.message;
             } finally {
                 this.loading = false;
+            }
+        },
+
+        async loadSpecificPlan(planId) {
+            this.loading = true;
+            this.error = null;
+
+            try {
+                const response = await fetch(`/api/articles/${this.articleId}/plans/${planId}`);
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load plan');
+                }
+
+                this.plan = await response.json();
+                this.planInstructions = this.plan.instructions || '';
+                
+                // Auto-expand textareas after plan loads
+                this.$nextTick(() => {
+                    const textareas = this.$el?.querySelectorAll('textarea');
+                    textareas?.forEach(textarea => {
+                        textarea.style.height = 'auto';
+                        textarea.style.height = textarea.scrollHeight + 'px';
+                    });
+                });
+            } catch (err) {
+                console.error('Error loading plan:', err);
+                this.error = err.message;
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async onVersionChange(event) {
+            const planId = event.target.value;
+            if (planId) {
+                await this.loadSpecificPlan(planId);
+            }
+        },
+
+        async restorePlan() {
+            if (!this.plan || this.isRestoringPlan) return;
+
+            const confirmMessage = `Restore version ${this.plan.version} as the active plan? The current draft will be archived.`;
+            
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+
+            this.isRestoringPlan = true;
+            try {
+                const response = await fetch(`/api/articles/${this.articleId}/plans/${this.plan.id}/restore`, {
+                    method: 'POST'
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to restore plan');
+                }
+
+                // Reload all plans and show the restored one
+                await this.loadPlan();
+            } catch (err) {
+                console.error('Error restoring plan:', err);
+                this.error = 'Failed to restore plan: ' + err.message;
+            } finally {
+                this.isRestoringPlan = false;
             }
         },
 
@@ -303,6 +384,7 @@ const PlanViewer = {
                     :auto-save="true"
                     :show-save-button="false"
                     :show-formatting="false"
+                    :readonly="!canEditPlan"
                     @save="savePlan"
                 >
                     <template #toolbar-prepend>
@@ -310,6 +392,7 @@ const PlanViewer = {
                             type="button"
                             class="tiptap-toolbar-btn"
                             @click="acceptPlan"
+                            :disabled="!canEditPlan"
                             title="Accept Plan">
                             <i class="bi bi-check-lg"></i>
                         </button>
@@ -317,6 +400,7 @@ const PlanViewer = {
                             type="button"
                             class="tiptap-toolbar-btn"
                             @click="rejectPlan"
+                            :disabled="!canEditPlan"
                             title="Reject Plan">
                             <i class="bi bi-x-lg"></i>
                         </button>
@@ -324,8 +408,50 @@ const PlanViewer = {
                     </template>
                     <template #toolbar-append>
                         <div class="tiptap-toolbar-divider"></div>
-                        <span class="text-muted small me-2 align-self-center">Created {{ formatDate(plan.createdAt) }}</span>
-                        <span v-if="plan.createdBy" class="text-muted small align-self-center">by {{ plan.createdBy.name }}</span>
+                        
+                        <!-- Version Dropdown -->
+                        <div class="d-flex align-items-center me-2">
+                            <select 
+                                class="form-select form-select-sm"
+                                :value="plan.id"
+                                @change="onVersionChange"
+                                style="min-width: 150px;">
+                                <option 
+                                    v-for="p in allPlans" 
+                                    :key="p.id" 
+                                    :value="p.id">
+                                    v{{ p.version }} {{ p.status === 'Draft' ? '(current)' : '' }} - {{ formatDate(p.createdAt) }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Restore Button (for archived plans) -->
+                        <button 
+                            v-if="isArchivedPlan"
+                            type="button"
+                            class="btn btn-sm btn-primary me-2"
+                            @click="restorePlan"
+                            :disabled="isRestoringPlan"
+                            title="Restore this version as active">
+                            <span v-if="isRestoringPlan" class="spinner-border spinner-border-sm me-1" role="status"></span>
+                            <i v-else class="bi bi-arrow-counterclockwise me-1"></i>
+                            Restore
+                        </button>
+
+                        <span class="text-muted small align-self-center">by {{ plan.createdBy.name }}</span>
+                    </template>
+                    <template #notifications>
+                        <!-- Changes Summary (for modified plans) -->
+                        <div v-if="plan.changesSummary" class="alert alert-info mx-3 mt-3 mb-0">
+                            <strong><i class="bi bi-info-circle me-2"></i>Changes from v{{ plan.version - 1 }}:</strong>
+                            <div class="mt-2">{{ plan.changesSummary }}</div>
+                        </div>
+
+                        <!-- Archived Plan Warning -->
+                        <div v-if="isArchivedPlan" class="alert alert-warning mx-3 mt-3 mb-0">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            You are viewing an archived version of this plan. Use the "Restore" button to make it active.
+                        </div>
                     </template>
                 </component>
                 <div v-else class="alert alert-info">Loading editor...</div>
@@ -378,7 +504,7 @@ const PlanViewer = {
                                         <button 
                                             class="btn btn-sm btn-danger"
                                             @click.stop="toggleFragmentInclude(pf)"
-                                            :disabled="savingFragments.has(pf.fragmentId)"
+                                            :disabled="savingFragments.has(pf.fragmentId) || !canEditPlan"
                                             title="Exclude this fragment"
                                             style="padding: 0.25rem 0.5rem;">
                                             <span v-if="savingFragments.has(pf.fragmentId)" class="spinner-border spinner-border-sm" role="status"></span>
@@ -401,6 +527,7 @@ const PlanViewer = {
                                                     v-model="pf.instructions"
                                                     @change="updateFragmentInstructions(pf)"
                                                     @input="autoExpandTextarea($event)"
+                                                    :disabled="!canEditPlan"
                                                     placeholder="How to use this fragment..."
                                                     style="min-height: 100%; resize: vertical; overflow: hidden;"></textarea>
                                             </div>
@@ -457,7 +584,7 @@ const PlanViewer = {
                                         <button 
                                             class="btn btn-sm btn-success"
                                             @click.stop="toggleFragmentInclude(pf)"
-                                            :disabled="savingFragments.has(pf.fragmentId)"
+                                            :disabled="savingFragments.has(pf.fragmentId) || !canEditPlan"
                                             title="Include this fragment"
                                             style="padding: 0.25rem 0.5rem;">
                                             <span v-if="savingFragments.has(pf.fragmentId)" class="spinner-border spinner-border-sm" role="status"></span>

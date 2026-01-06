@@ -128,26 +128,40 @@ public sealed class EfChatMessageStore : ChatMessageStore
     public override async Task<IEnumerable<Microsoft.Extensions.AI.ChatMessage>> GetMessagesAsync(
         CancellationToken cancellationToken = default)
     {
-        // Load last 10 messages as per blog post pattern
         var messages = await _messageRepository.Query()
             .Where(m => m.ConversationId == ConversationId)
-            .OrderByDescending(m => m.CreatedAt)
-            .Take(10)
+            .OrderBy(m => m.CreatedAt)
             .ToListAsync(cancellationToken);
 
-        // Reverse to get chronological order (oldest first)
-        messages.Reverse();
+        return messages
+           .Select(msg =>
+           {
+               // Try to deserialize the serialized message first
+               if (!string.IsNullOrEmpty(msg.SerializedMessage))
+               {
+                   try
+                   {
+                       var deserializedMessage = JsonSerializer.Deserialize<ChatMessage>(msg.SerializedMessage);
+                       if (deserializedMessage != null)
+                       {
+                           return deserializedMessage;
+                       }
+                   }
+                   catch (JsonException)
+                   {
+                       // Fall through to manual creation
+                   }
+               }
 
-        var aiMessages = new List<Microsoft.Extensions.AI.ChatMessage>();
-
-        foreach (var msg in messages)
-        {
-            var role = MapMessageRoleToChatRole(msg.Role);
-            var aiMessage = new Microsoft.Extensions.AI.ChatMessage(role, msg.Content);
-            aiMessages.Add(aiMessage);
-        }
-
-        return aiMessages;
+               // Fallback: manually create ChatMessage from domain entity
+               var chatRole = MapMessageRoleToChatRole(msg.Role);
+               return new ChatMessage(chatRole, msg.Content)
+               {
+                   MessageId = msg.Id.ToString(),
+                   CreatedAt = msg.CreatedAt
+               };
+           })
+           .ToList();
     }
 
     /// <summary>

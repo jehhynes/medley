@@ -272,6 +272,8 @@ let TiptapEditor = null;
                         </button>
                     </div>
                 </div>
+                <!-- Notifications slot for alerts and messages -->
+                <slot name="notifications"></slot>
                 <div ref="editorElement" class="tiptap-content"></div>
             </div>
         `,
@@ -295,6 +297,10 @@ let TiptapEditor = null;
                 showFormatting: {
                     type: Boolean,
                     default: true
+                },
+                readonly: {
+                    type: Boolean,
+                    default: false
                 }
             },
             emits: ['update:modelValue', 'save'],
@@ -378,6 +384,13 @@ let TiptapEditor = null;
                             if (this.autoSave) {
                                 this.autoSaveState = 'saved';
                             }
+                        }
+                    }
+                },
+                readonly: {
+                    handler(newValue) {
+                        if (this.editor && !this.editor.isDestroyed) {
+                            this.editor.setEditable(!newValue);
                         }
                     }
                 }
@@ -609,6 +622,7 @@ let TiptapEditor = null;
                     ],
                     content: this.modelValue || '',
                     contentType: 'markdown',
+                    editable: !this.readonly,
                     editorProps: {
                         attributes: {
                             class: 'tiptap-editor-content markdown-container'

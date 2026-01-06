@@ -55,45 +55,99 @@ public class PlanApiController : ControllerBase
             return NoContent();
         }
 
-        return Ok(new
+        return Ok(MapPlanToDto(plan));
+    }
+
+    /// <summary>
+    /// Get all plans for an article (including archived)
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> GetAllPlans(Guid articleId)
+    {
+        var article = await _articleRepository.GetByIdAsync(articleId);
+        if (article == null)
         {
-            id = plan.Id,
-            articleId = plan.ArticleId,
-            instructions = plan.Instructions,
-            status = plan.Status.ToString(),
-            createdAt = plan.CreatedAt,
-            createdBy = new
+            return NotFound(new { error = "Article not found" });
+        }
+
+        var plans = await _planRepository.Query()
+            .Where(p => p.ArticleId == articleId)
+            .Include(p => p.CreatedBy)
+            .OrderByDescending(p => p.Version)
+            .Select(p => new
             {
-                id = plan.CreatedBy.Id,
-                name = plan.CreatedBy.FullName ?? plan.CreatedBy.Email
-            },
-            fragments = plan.PlanFragments.Select(pf => new
-            {
-                id = pf.Id,
-                fragmentId = pf.FragmentId,
-                similarityScore = pf.SimilarityScore,
-                include = pf.Include,
-                reasoning = pf.Reasoning,
-                instructions = pf.Instructions,
-                fragment = new
+                id = p.Id,
+                version = p.Version,
+                status = p.Status.ToString(),
+                createdAt = p.CreatedAt,
+                changesSummary = p.ChangesSummary,
+                createdBy = new
                 {
-                    id = pf.Fragment.Id,
-                    title = pf.Fragment.Title,
-                    summary = pf.Fragment.Summary,
-                    category = pf.Fragment.Category,
-                    content = pf.Fragment.Content,
-                    confidence = pf.Fragment.Confidence?.ToString(),
-                    confidenceComment = pf.Fragment.ConfidenceComment,
-                    source = pf.Fragment.Source != null ? new
-                    {
-                        id = pf.Fragment.Source.Id,
-                        name = pf.Fragment.Source.Name,
-                        type = pf.Fragment.Source.Type.ToString(),
-                        date = pf.Fragment.Source.Date
-                    } : null
+                    id = p.CreatedBy.Id,
+                    name = p.CreatedBy.FullName ?? p.CreatedBy.Email
                 }
-            }).ToList()
-        });
+            })
+            .ToListAsync();
+
+        return Ok(plans);
+    }
+
+    /// <summary>
+    /// Get a specific plan by ID
+    /// </summary>
+    [HttpGet("{planId}")]
+    public async Task<IActionResult> GetPlan(Guid articleId, Guid planId)
+    {
+        var plan = await _planRepository.Query()
+            .Where(p => p.Id == planId && p.ArticleId == articleId)
+            .Include(p => p.PlanFragments)
+                .ThenInclude(pf => pf.Fragment)
+                    .ThenInclude(f => f.Source)
+            .Include(p => p.CreatedBy)
+            .FirstOrDefaultAsync();
+
+        if (plan == null)
+        {
+            return NotFound(new { error = "Plan not found" });
+        }
+
+        return Ok(MapPlanToDto(plan));
+    }
+
+    /// <summary>
+    /// Restore an archived plan as the active draft
+    /// </summary>
+    [HttpPost("{planId}/restore")]
+    public async Task<IActionResult> RestorePlan(Guid articleId, Guid planId)
+    {
+        var planToRestore = await _planRepository.Query()
+            .Where(p => p.Id == planId && p.ArticleId == articleId)
+            .FirstOrDefaultAsync();
+
+        if (planToRestore == null)
+        {
+            return NotFound(new { error = "Plan not found" });
+        }
+
+        if (planToRestore.Status == PlanStatus.Draft)
+        {
+            return BadRequest(new { error = "Plan is already active" });
+        }
+
+        // Archive current draft plan (if any)
+        var currentDraft = await _planRepository.Query()
+            .Where(p => p.ArticleId == articleId && p.Status == PlanStatus.Draft)
+            .FirstOrDefaultAsync();
+
+        if (currentDraft != null)
+        {
+            currentDraft.Status = PlanStatus.Archived;
+        }
+
+        // Restore the selected plan
+        planToRestore.Status = PlanStatus.Draft;
+
+        return Ok(new { success = true, message = "Plan restored successfully" });
     }
 
     /// <summary>
@@ -195,6 +249,54 @@ public class PlanApiController : ControllerBase
         planFragment.Instructions = request.Instructions;
 
         return Ok(new { success = true });
+    }
+
+    private object MapPlanToDto(Plan plan)
+    {
+        return new
+        {
+            id = plan.Id,
+            articleId = plan.ArticleId,
+            instructions = plan.Instructions,
+            status = plan.Status.ToString(),
+            version = plan.Version,
+            changesSummary = plan.ChangesSummary,
+            createdAt = plan.CreatedAt,
+            createdBy = new
+            {
+                id = plan.CreatedBy.Id,
+                name = plan.CreatedBy.FullName ?? plan.CreatedBy.Email
+            },
+            fragments = plan.PlanFragments
+                .OrderByDescending(x => x.SimilarityScore)
+                .ThenBy(x => x.Fragment.Source?.CreatedAt)
+                .ThenBy(x => x.Fragment.CreatedAt).Select(pf => new
+                {
+                    id = pf.Id,
+                    fragmentId = pf.FragmentId,
+                    similarityScore = pf.SimilarityScore,
+                    include = pf.Include,
+                    reasoning = pf.Reasoning,
+                    instructions = pf.Instructions,
+                    fragment = new
+                    {
+                        id = pf.Fragment.Id,
+                        title = pf.Fragment.Title,
+                        summary = pf.Fragment.Summary,
+                        category = pf.Fragment.Category,
+                        content = pf.Fragment.Content,
+                        confidence = pf.Fragment.Confidence?.ToString(),
+                        confidenceComment = pf.Fragment.ConfidenceComment,
+                        source = pf.Fragment.Source != null ? new
+                        {
+                            id = pf.Fragment.Source.Id,
+                            name = pf.Fragment.Source.Name,
+                            type = pf.Fragment.Source.Type.ToString(),
+                            date = pf.Fragment.Source.Date
+                        } : null
+                    }
+                }).ToList()
+        };
     }
 }
 
