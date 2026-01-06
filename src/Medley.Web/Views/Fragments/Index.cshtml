@@ -76,7 +76,6 @@
             v-else
             :fragments="fragments"
             :selected-id="selectedFragmentId"
-            :article-types="articleTypes"
             @@select="selectFragment"
         />
         <div v-if="pagination && pagination.loadingMore" class="text-center py-3">

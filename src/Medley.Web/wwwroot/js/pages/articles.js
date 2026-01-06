@@ -3,6 +3,7 @@
     const { createApp } = Vue;
     const { api, createSignalRConnection } = window.MedleyApi;
     const {
+        getArticleTypes,
         formatDate,
         getStatusBadgeClass
     } = window.MedleyUtils;
@@ -193,7 +194,8 @@
                  */
                 async loadArticleTypes() {
                     try {
-                        this.articles.types = await api.get('/api/articles/types');
+                        // Use global article types loader
+                        this.articles.types = await getArticleTypes();
 
                         // Build icon map and type index: articleTypeId -> icon/type
                         this.articles.typeIconMap = {};

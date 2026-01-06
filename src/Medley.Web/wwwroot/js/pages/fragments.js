@@ -3,6 +3,7 @@
     const { createApp } = Vue;
     const { api } = window.MedleyApi;
     const {
+        getArticleTypes,
         formatDate,
         debounce,
         getFragmentCategoryIcon,
@@ -33,7 +34,6 @@
                 searching: false,
                 error: null,
                 searchQuery: '',
-                articleTypes: [],
                 markdownRenderer: null,
                 searchDebounced: null,
                 showConfidenceComment: false,
@@ -138,18 +138,7 @@
                 }
             },
 
-            async loadArticleTypes() {
-                try {
-                    this.articleTypes = await api.get('/api/articles/types');
-                } catch (err) {
-                    console.error('Error loading article types:', err);
-                }
-            },
-
-            getFragmentCategoryIcon(category) {
-                return getFragmentCategoryIcon(category, this.articleTypes);
-            },
-
+            getFragmentCategoryIcon,
             getIconClass,
             getConfidenceIcon,
             getConfidenceColor,
@@ -164,7 +153,9 @@
                 this.performSearch();
             }, 500);
 
-            await this.loadArticleTypes();
+            // Preload article types for icon display
+            getArticleTypes();
+            
             await this.loadFragments();
 
             // Setup infinite scroll
