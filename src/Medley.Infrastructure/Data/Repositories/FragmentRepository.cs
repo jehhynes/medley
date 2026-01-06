@@ -20,18 +20,21 @@ public class FragmentRepository : Repository<Fragment>, IFragmentRepository
     }
 
     /// <summary>
-    /// Finds fragments similar to the given embedding vector using L2 distance
+    /// Finds fragments similar to the given embedding vector using cosine distance
     /// </summary>
-    public async Task<IEnumerable<FragmentSimilarityResult>> FindSimilarAsync(float[] embedding, int limit, double? threshold = null, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<FragmentSimilarityResult>> FindSimilarAsync(float[] embedding, int limit, double? minSimilarity = null, CancellationToken cancellationToken = default)
     {
         var vector = new Vector(embedding);
 
         var query = _context.Fragments
             .Where(f => f.Embedding != null);
 
-        if (threshold.HasValue)
+        if (minSimilarity.HasValue)
         {
-            query = query.Where(f => f.Embedding!.CosineDistance(vector) <= threshold.Value);
+            // Convert similarity score (0-1) to cosine distance (0-2)
+            // similarity = 1 - (distance / 2), so distance = (1 - similarity) * 2
+            var maxDistance = (1 - minSimilarity.Value) * 2;
+            query = query.Where(f => f.Embedding!.CosineDistance(vector) <= maxDistance);
         }
 
         var results = await query

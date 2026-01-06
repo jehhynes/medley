@@ -66,13 +66,13 @@ public class ArticleChatTools
     public virtual async Task<string> SearchFragmentsAsync(
         [Description("The search query text to find similar fragments")] string query,
         [Description("Maximum number of results to return (default: 10)")] int limit = 10,
-        [Description("Minimum similarity threshold from 0.0 to 1.0 (default: 0.7)")] double? threshold = 0.7,
+        [Description("Minimum similarity threshold from 0.0 to 1.0 (default: 0.7)")] double? minSimilarity = 0.7,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            _logger.LogInformation("Searching fragments with query: {Query}, limit: {Limit}, threshold: {Threshold}", 
-                query, limit, threshold);
+            _logger.LogInformation("Searching fragments with query: {Query}, limit: {Limit}, minSimilarity: {MinSimilarity}", 
+                query, limit, minSimilarity);
 
             if (string.IsNullOrWhiteSpace(query))
             {
@@ -114,7 +114,7 @@ public class ArticleChatTools
             var results = await _fragmentRepository.FindSimilarAsync(
                 embedding.Vector.ToArray(),
                 limit,
-                threshold,
+                minSimilarity,
                 cancellationToken);
 
             var fragments = new List<object>();
@@ -191,13 +191,13 @@ public class ArticleChatTools
         "Useful for finding related content to enhance or expand the article.")]
     public virtual async Task<string> FindSimilarFragmentsAsync(
         [Description("Maximum number of results to return (default: 10)")] int limit = 10,
-        [Description("Minimum similarity threshold from 0.0 to 1.0 (default: 0.7)")] double? threshold = 0.7,
+        [Description("Minimum similarity threshold from 0.0 to 1.0 (default: 0.7)")] double? minSimilarity = 0.7,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            _logger.LogInformation("Finding similar fragments for article: {ArticleId}, limit: {Limit}, threshold: {Threshold}", 
-                _articleId, limit, threshold);
+            _logger.LogInformation("Finding similar fragments for article: {ArticleId}, limit: {Limit}, minSimilarity: {MinSimilarity}", 
+                _articleId, limit, minSimilarity);
 
             // Load the article
             var article = await _articleRepository.Query()
@@ -261,7 +261,7 @@ public class ArticleChatTools
             var results = await _fragmentRepository.FindSimilarAsync(
                 embedding.Vector.ToArray(),
                 limit,
-                threshold,
+                minSimilarity,
                 cancellationToken);
 
             var fragments = new List<object>();

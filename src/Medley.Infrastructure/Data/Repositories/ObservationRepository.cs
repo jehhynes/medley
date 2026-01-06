@@ -16,16 +16,19 @@ public class ObservationRepository : Repository<Observation>, IObservationReposi
         _context = context;
     }
 
-    public async Task<IEnumerable<ObservationSimilarityResult>> FindSimilarAsync(float[] embedding, int limit, double? threshold = null)
+    public async Task<IEnumerable<ObservationSimilarityResult>> FindSimilarAsync(float[] embedding, int limit, double? minSimilarity = null)
     {
         var vector = new Vector(embedding);
 
         var query = _context.Observations
             .Where(o => o.Embedding != null);
 
-        if (threshold.HasValue)
+        if (minSimilarity.HasValue)
         {
-            query = query.Where(o => o.Embedding!.CosineDistance(vector) <= threshold.Value);
+            // Convert similarity score (0-1) to cosine distance (0-2)
+            // similarity = 1 - (distance / 2), so distance = (1 - similarity) * 2
+            var maxDistance = (1 - minSimilarity.Value) * 2;
+            query = query.Where(o => o.Embedding!.CosineDistance(vector) <= maxDistance);
         }
 
         var results = await query

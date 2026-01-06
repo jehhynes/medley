@@ -13,8 +13,8 @@ public interface IFragmentRepository : IRepository<Fragment>
     /// </summary>
     /// <param name="embedding">The embedding vector to compare against (2000 dimensions)</param>
     /// <param name="limit">Maximum number of results to return</param>
-    /// <param name="threshold">Optional maximum cosine distance threshold (0-2, lower is more similar)</param>
+    /// <param name="minSimilarity">Optional minimum similarity score threshold (0-1, where 1 is most similar)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Collection of similar fragments with similarity scores ordered by similarity</returns>
-    Task<IEnumerable<FragmentSimilarityResult>> FindSimilarAsync(float[] embedding, int limit, double? threshold = null, CancellationToken cancellationToken = default);
+    Task<IEnumerable<FragmentSimilarityResult>> FindSimilarAsync(float[] embedding, int limit, double? minSimilarity = null, CancellationToken cancellationToken = default);
 }

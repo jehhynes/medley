@@ -66,13 +66,12 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
                 _logger.LogInformation("Processing fragment {FragmentId}", candidate.Id);
 
                 // 2) Query for similar fragments
-                var targetSimilarity = 0.85; //0 to 1 where 1 is identical
-                var maxDistance = (1 - targetSimilarity) * 2;  //0 to 2 where 0 is identical
+                var minSimilarity = 0.85; // 0 to 1 where 1 is identical
 
                 var similarResults = await _fragmentRepository.FindSimilarAsync(
                     candidate.Embedding!.ToArray(),
                     limit: 100,
-                    threshold: maxDistance,
+                    minSimilarity: minSimilarity,
                     cancellationToken);
 
                 var similarFragments = similarResults
