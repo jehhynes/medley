@@ -150,8 +150,8 @@
 
     const getStatusIcon = (status) => {
         const iconMap = {
-            'Draft': 'bi-pencil-fill',
-            'Review': 'bi-eye',
+            'Draft': 'fa fa-pen-circle',
+            'Review': 'bi-person-circle',
             'Approved': 'bi-check-circle',
             'Archived': 'bi-archive'
         };
