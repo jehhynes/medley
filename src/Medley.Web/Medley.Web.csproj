@@ -6,7 +6,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>aspnet-Medley.Web-1e2983dc-d9d0-4468-ba34-de1e3bf434d4</UserSecretsId>
   </PropertyGroup>
-
+	
+	<Target Name="NpmBuild" BeforeTargets="Build">
+		<Exec Command="npm install" />
+		<Exec Command="npm run build" />
+	</Target>
+	
   <ItemGroup>
     <InternalsVisibleTo Include="Medley.Tests.Integration" />
   </ItemGroup>
@@ -51,6 +56,10 @@
   <ItemGroup>
     <ProjectReference Include="..\Medley.Application\Medley.Application.csproj" />
     <ProjectReference Include="..\Medley.Infrastructure\Medley.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="wwwroot\js\dist\" />
   </ItemGroup>
 
 </Project>

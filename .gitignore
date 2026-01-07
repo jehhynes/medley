@@ -9,3 +9,10 @@ src/**/obj/
 /src/Medley.Collector/appsettings.Development.json
 /src/**/*.user
 /src/tests/Medley.Tests.Integration/appsettings.Development.json
+
+# Node/NPM
+/src/Medley.Web/node_modules/
+/src/Medley.Web/wwwroot/js/dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
