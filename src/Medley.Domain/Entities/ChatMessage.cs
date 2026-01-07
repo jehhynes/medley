@@ -42,7 +42,7 @@ public class ChatMessage : BaseEntity
     /// <summary>
     /// The content of the message
     /// </summary>
-    public required string Content { get; set; }
+    public required string? Text { get; set; }
 
     /// <summary>
     /// When this message was created

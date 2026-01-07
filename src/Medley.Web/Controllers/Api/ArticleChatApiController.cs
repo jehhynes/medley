@@ -142,16 +142,24 @@ public class ArticleChatApiController : ControllerBase
                 : null
         }).ToList();
 
-        // Second: collect all completed call IDs
+        // Second: collect all completed call IDs and their results
         var completedCallIds = new HashSet<string>();
+        var completedCallResults = new Dictionary<string, List<Guid>>();
         foreach (var item in deserializedMessages.Where(x => x.AiMessage?.Contents != null))
         {
-            foreach (var callId in item.AiMessage!.Contents
-                .OfType<FunctionResultContent>()
-                .Where(fr => !string.IsNullOrEmpty(fr.CallId))
-                .Select(fr => fr.CallId!))
+            foreach (var resultContent in item.AiMessage!.Contents.OfType<FunctionResultContent>())
             {
-                completedCallIds.Add(callId);
+                if (!string.IsNullOrEmpty(resultContent.CallId))
+                {
+                    completedCallIds.Add(resultContent.CallId);
+                    
+                    // Extract result IDs
+                    var resultIds = ExtractResultIdsFromFunctionResult(resultContent);
+                    if (resultIds != null && resultIds.Count > 0)
+                    {
+                        completedCallResults[resultContent.CallId] = resultIds;
+                    }
+                }
             }
         }
 
@@ -166,11 +174,19 @@ public class ArticleChatApiController : ControllerBase
                 var calls = new List<object>();
                 foreach (var fc in item.AiMessage.Contents.OfType<FunctionCallContent>())
                 {
+                    // Get result IDs if this call was completed
+                    List<Guid>? resultIds = null;
+                    if (!string.IsNullOrEmpty(fc.CallId) && completedCallResults.ContainsKey(fc.CallId))
+                    {
+                        resultIds = completedCallResults[fc.CallId];
+                    }
+                    
                     calls.Add(new {
                         name = fc.Name,
                         callId = fc.CallId,
                         message = await _toolMessageExtractor.ExtractToolMessageAsync(fc.Name, fc.Arguments),
-                        completed = !string.IsNullOrEmpty(fc.CallId) && completedCallIds.Contains(fc.CallId)
+                        completed = !string.IsNullOrEmpty(fc.CallId) && completedCallIds.Contains(fc.CallId),
+                        result = resultIds != null ? new { ids = resultIds.Select(id => id.ToString()).ToArray() } : null
                     });
                 }
                 
@@ -184,7 +200,7 @@ public class ArticleChatApiController : ControllerBase
             {
                 id = item.Message.Id,
                 role = item.Message.Role.ToString().ToLower(),
-                content = item.Message.Content,
+                text = item.Message.Text,
                 userName = item.Message.User?.FullName,
                 createdAt = item.Message.CreatedAt,
                 toolCalls = toolCalls ?? new List<object>()
@@ -233,7 +249,7 @@ public class ArticleChatApiController : ControllerBase
             ConversationId = conversationId,
             UserId = userId,
             Role = ChatMessageRole.User,
-            Content = request.Message,
+            Text = request.Message,
             CreatedAt = DateTimeOffset.UtcNow
         };
 
@@ -291,7 +307,7 @@ public class ArticleChatApiController : ControllerBase
                 id = userMessage.Id.ToString(),
                 conversationId = conversationId.ToString(),
                 role = "user",
-                content = request.Message,
+                text = request.Message,
                 userName = userName,
                 createdAt = userMessage.CreatedAt,
                 articleId = articleId.ToString()
@@ -440,6 +456,81 @@ public class ArticleChatApiController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to deserialize SerializedMessage for message {MessageId}", messageId);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Extracts result IDs from a function result content based on the function name
+    /// </summary>
+    private List<Guid>? ExtractResultIdsFromFunctionResult(FunctionResultContent resultContent)
+    {
+        if (resultContent.Result == null)
+        {
+            return null;
+        }
+
+        try
+        {
+            var resultString = resultContent.Result.ToString();
+            if (string.IsNullOrEmpty(resultString))
+            {
+                return null;
+            }
+
+            var jsonDoc = JsonDocument.Parse(resultString);
+            var root = jsonDoc.RootElement;
+
+            // Check if the result was successful
+            if (root.TryGetProperty("success", out var successProp) && 
+                successProp.ValueKind == JsonValueKind.False)
+            {
+                return null;
+            }
+
+            var ids = new List<Guid>();
+
+            // Extract IDs based on result structure
+            // For CreatePlan
+            if (root.TryGetProperty("planId", out var planIdProp) && 
+                planIdProp.ValueKind == JsonValueKind.String &&
+                Guid.TryParse(planIdProp.GetString(), out var planId))
+            {
+                ids.Add(planId);
+            }
+            // For Search/FindSimilar operations
+            else if (root.TryGetProperty("fragments", out var fragmentsProp) && 
+                     fragmentsProp.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var fragment in fragmentsProp.EnumerateArray())
+                {
+                    if (fragment.TryGetProperty("id", out var idProp) && 
+                        idProp.ValueKind == JsonValueKind.String &&
+                        Guid.TryParse(idProp.GetString(), out var fragmentId))
+                    {
+                        ids.Add(fragmentId);
+                    }
+                }
+            }
+            // For GetFragmentContent
+            else if (root.TryGetProperty("fragment", out var fragmentProp) &&
+                     fragmentProp.TryGetProperty("id", out var fragIdProp) &&
+                     fragIdProp.ValueKind == JsonValueKind.String &&
+                     Guid.TryParse(fragIdProp.GetString(), out var fragmentContentId))
+            {
+                ids.Add(fragmentContentId);
+            }
+
+            return ids.Count > 0 ? ids : null;
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogWarning(ex, "Failed to parse function result JSON");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error extracting result IDs from function result");
             return null;
         }
     }
