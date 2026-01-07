@@ -67,6 +67,18 @@
                 text-overflow: ellipsis;
             }
 
+            .tool-call-link {
+                flex: 1;
+                color: var(--bs-link-color);
+                text-decoration: none;
+                overflow: hidden;
+                text-overflow: ellipsis;
+
+                &:hover {
+                    text-decoration: underline;
+                }
+            }
+
             .bi-check-circle {
                 font-size: 0.9rem;
                 flex-shrink: 0;

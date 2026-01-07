@@ -112,7 +112,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                                 {
                                     conversationId = update.ConversationId.ToString(),
                                     messageId = update.MessageId?.ToString(),
-                                    content = update.Content,
+                                    text = update.Text,
                                     timestamp = update.Timestamp
                                 }, cancellationToken);
                             break;
@@ -140,6 +140,10 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                                     messageId = update.MessageId?.ToString(),
                                     toolName = update.ToolName,
                                     toolCallId = update.ToolCallId,
+                                    result = update.ToolResultIds != null ? new
+                                    {
+                                        ids = update.ToolResultIds.Select(id => id.ToString()).ToArray()
+                                    } : null,
                                     timestamp = update.Timestamp
                                 }, cancellationToken);
                             break;
@@ -155,7 +159,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                                     id = update.MessageId.ToString(),
                                     conversationId = conversation.Id.ToString(),
                                     role = "assistant",
-                                    content = update.Content,
+                                    text = update.Text,
                                     userName = (string?)null,
                                     createdAt = update.Timestamp,
                                     articleId = conversation.ArticleId.ToString()

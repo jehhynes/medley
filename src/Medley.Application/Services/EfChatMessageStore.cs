@@ -45,78 +45,61 @@ public sealed class EfChatMessageStore : ChatMessageStore
         IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages,
         CancellationToken cancellationToken = default)
     {
-        // Get the latest message timestamp to ensure proper ordering
-        var lastMessage = await _messageRepository.Query()
-            .Where(m => m.ConversationId == ConversationId)
+        // Get the latest user message timestamp to ensure proper ordering
+        var lastMessageCreatedAt = await _messageRepository.Query()
+            .Where(m => m.ConversationId == ConversationId && m.Role == ChatMessageRole.User)
             .OrderByDescending(m => m.CreatedAt)
+            .Select(x => (DateTimeOffset?)x.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
 
-        var lastDate = lastMessage?.CreatedAt ?? DateTimeOffset.UtcNow;
+        var lastDate = lastMessageCreatedAt ?? DateTimeOffset.UtcNow;
 
         foreach (var aiMessage in messages)
         {
-            var messageRole = MapChatRoleToMessageRole(aiMessage.Role);
-
-            // For user messages, check if one already exists (to avoid duplicates from Agent Framework)
-            DomainChatMessage? existingMessage = null;
-            if (aiMessage.Role == ChatRole.User)
+            Guid messageId;
+            // Use the message ID from the AI message if available, or generate one for tool messages
+            if (!string.IsNullOrEmpty(aiMessage.MessageId) && Guid.TryParse(aiMessage.MessageId, out var parsedMessageId))
             {
-                // Find the most recent user message without Agent Framework metadata
-                existingMessage = await _messageRepository.Query()
-                    .Where(m => m.ConversationId == ConversationId 
-                             && m.Role == ChatMessageRole.User
-                             && string.IsNullOrEmpty(m.SerializedMessage)) // Hasn't been updated by Agent Framework yet
-                    .OrderByDescending(m => m.CreatedAt)
-                    .FirstOrDefaultAsync(cancellationToken);
-            }
-
-            if (existingMessage != null)
-            {
-                // Update the existing user message with Agent Framework metadata
-                existingMessage.SerializedMessage = JsonSerializer.Serialize(aiMessage);
-                
-                await _messageRepository.SaveAsync(existingMessage);
+                messageId = parsedMessageId;
             }
             else
             {
-                // Create new message (for assistant, system, tool messages)
-                
-                // Determine the creation date with proper ordering
-                DateTimeOffset createdAt;
-                if (aiMessage.CreatedAt.HasValue && aiMessage.CreatedAt.Value > lastDate)
-                {
-                    createdAt = aiMessage.CreatedAt.Value;
-                }
-                else
-                {
-                    // Use last date + 1 ms to maintain order
-                    createdAt = lastDate.AddMilliseconds(1);
-                }
-                lastDate = createdAt;
-
-                var chatMessage = new DomainChatMessage
-                {
-                    ConversationId = ConversationId,
-                    Role = messageRole,
-                    Content = aiMessage.Text ?? string.Empty,
-                    CreatedAt = createdAt,
-                    SerializedMessage = JsonSerializer.Serialize(aiMessage),
-                    UserId = null // Assistant/system/tool messages don't have a user
-                };
-
-                // Use the message ID from the AI message if available, or generate one for tool messages
-                if (aiMessage.Role == ChatRole.Tool)
-                {
-                    // Tool call messages don't have unique IDs, so generate one
-                    chatMessage.Id = Guid.NewGuid();
-                }
-                else if (!string.IsNullOrEmpty(aiMessage.MessageId) && Guid.TryParse(aiMessage.MessageId, out var messageId))
-                {
-                    chatMessage.Id = messageId;
-                }
-
-                await _messageRepository.SaveAsync(chatMessage);
+                messageId = Guid.NewGuid();
             }
+
+            if (_messageRepository.Query().Where(x => x.Id == messageId).Any())
+            {
+                // Message with this ID already exists, skip to avoid duplicates. This is expected when streaming.
+                continue;
+            }
+
+            var messageRole = MapChatRoleToMessageRole(aiMessage.Role);
+
+            // Determine the creation date with proper ordering
+            DateTimeOffset createdAt;
+            if (aiMessage.CreatedAt.HasValue && aiMessage.CreatedAt.Value > lastDate)
+            {
+                createdAt = aiMessage.CreatedAt.Value;
+            }
+            else
+            {
+                // Use last date + 1 ms to maintain order
+                createdAt = lastDate.AddMilliseconds(1);
+            }
+            lastDate = createdAt;
+
+            var chatMessage = new DomainChatMessage
+            {
+                Id = aiMessage.Role == ChatRole.Tool ? Guid.NewGuid() : messageId, // Tool call messages don't have unique IDs, so generate one
+                ConversationId = ConversationId,
+                Role = messageRole,
+                Text = aiMessage.Text ?? string.Empty,
+                CreatedAt = createdAt,
+                SerializedMessage = JsonSerializer.Serialize(aiMessage),
+                UserId = null // Assistant/system/tool messages don't have a user
+            };
+
+            await _messageRepository.SaveAsync(chatMessage);
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -155,7 +138,7 @@ public sealed class EfChatMessageStore : ChatMessageStore
 
                // Fallback: manually create ChatMessage from domain entity
                var chatRole = MapMessageRoleToChatRole(msg.Role);
-               return new ChatMessage(chatRole, msg.Content)
+               return new ChatMessage(chatRole, msg.Text)
                {
                    MessageId = msg.Id.ToString(),
                    CreatedAt = msg.CreatedAt
@@ -169,15 +152,20 @@ public sealed class EfChatMessageStore : ChatMessageStore
     /// </summary>
     public override JsonElement Serialize(JsonSerializerOptions? jsonSerializerOptions = null)
     {
-        return JsonSerializer.SerializeToElement(ConversationId.ToString());
+        return JsonSerializer.SerializeToElement(ConversationId.ToString("N"));
     }
 
     /// <summary>
     /// Map Microsoft.Extensions.AI ChatRole to domain ChatMessageRole
     /// </summary>
-    private static ChatMessageRole MapChatRoleToMessageRole(ChatRole role)
+    public static ChatMessageRole MapChatRoleToMessageRole(ChatRole? role)
     {
-        return role.Value switch
+        if (role == null)
+        {
+            return ChatMessageRole.Assistant;
+        }
+
+        return role.Value.Value switch
         {
             "user" => ChatMessageRole.User,
             "assistant" => ChatMessageRole.Assistant,
@@ -190,7 +178,7 @@ public sealed class EfChatMessageStore : ChatMessageStore
     /// <summary>
     /// Map domain ChatMessageRole to Microsoft.Extensions.AI ChatRole
     /// </summary>
-    private static ChatRole MapMessageRoleToChatRole(ChatMessageRole messageRole)
+    public static ChatRole MapMessageRoleToChatRole(ChatMessageRole messageRole)
     {
         return messageRole switch
         {

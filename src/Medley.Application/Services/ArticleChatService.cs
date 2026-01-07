@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Medley.Application.Helpers;
 using Medley.Application.Interfaces;
 using Medley.Application.Models;
@@ -162,16 +163,14 @@ public class ArticleChatService : IArticleChatService
             
             // Create the agent with appropriate system message and tools
             var agent = CreateChatAgent(systemMessage, aiFunctions);
-            
 
-            
             // Create or get existing thread with the message store
             var thread = agent.GetNewThread(messageStore);
-            
+
             // Stream the agent response
             var agentUpdates = agent.RunStreamingAsync(
-                latestUserMessage.Content,
-                thread,
+                Enumerable.Empty<Microsoft.Extensions.AI.ChatMessage>(), //Pass in null as the user message because it's already in the thread.
+                thread: thread,
                 cancellationToken: cancellationToken);
             
             // Process and yield streaming updates
@@ -179,6 +178,7 @@ public class ArticleChatService : IArticleChatService
                 agentUpdates,
                 conversationId,
                 conversation.ArticleId,
+                latestUserMessage,
                 cancellationToken))
             {
                 yield return update;
@@ -197,7 +197,7 @@ public class ArticleChatService : IArticleChatService
                 MessageId = assistantMessage.Id,
                 ConversationId = conversationId,
                 ArticleId = conversation.ArticleId,
-                Content = assistantMessage.Content
+                Text = assistantMessage.Text
             };
 
             // Yield turn complete update
@@ -209,6 +209,188 @@ public class ArticleChatService : IArticleChatService
                 MessageId = assistantMessage.Id
             };
         }
+    }
+
+
+    /// <summary>
+    /// Processes streaming updates from the agent, yielding tool invocations and text deltas.
+    /// </summary>
+    private async IAsyncEnumerable<ChatStreamUpdate> ProcessStreamingUpdatesAsync(
+        IAsyncEnumerable<AgentRunResponseUpdate> agentUpdates,
+        Guid conversationId,
+        Guid articleId,
+        DomainChatMessage lastMessage,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var accumulatedUpdates = new List<ChatResponseUpdate>();
+
+        // Track tool names by callId for results
+        var toolCallNames = new Dictionary<string, string>();
+
+        await foreach (var update in agentUpdates.WithCancellation(cancellationToken))
+        {
+            var chatResponseUpdate = update.AsChatResponseUpdate();
+            if (chatResponseUpdate.Contents.Count == 1 && chatResponseUpdate.Contents.Single() is UsageContent)
+            {
+                continue; //Skip usage-only updates
+            }
+            else
+            {
+                accumulatedUpdates.Add(chatResponseUpdate);
+            }
+
+            // Parse message ID if available
+            Guid? messageId = null;
+            if (!string.IsNullOrEmpty(update.MessageId) && Guid.TryParse(update.MessageId, out var parsedId))
+            {
+                messageId = parsedId;
+            }
+            else
+            {
+                messageId = lastMessage.Id;
+            }
+
+            bool isFunctionResult = false;
+
+            // Extract tool calls and results from update.Contents
+            if (update.Contents != null && update.Contents.Count > 0)
+            {
+                // Extract function calls
+                foreach (var call in update.Contents.OfType<FunctionCallContent>())
+                {
+                    // Store the name for later result matching
+                    if (!string.IsNullOrEmpty(call.CallId) && !string.IsNullOrEmpty(call.Name))
+                    {
+                        toolCallNames[call.CallId] = call.Name;
+                    }
+
+                    yield return new ChatStreamUpdate
+                    {
+                        Type = StreamUpdateType.ToolCall,
+                        ToolName = call.Name,
+                        ToolCallId = call.CallId,
+                        ToolMessage = await _toolMessageExtractor.ExtractToolMessageAsync(call.Name, call.Arguments),
+                        ConversationId = conversationId,
+                        ArticleId = articleId,
+                        MessageId = messageId
+                    };
+                }
+
+                // Extract function results
+                foreach (var result in update.Contents.OfType<FunctionResultContent>())
+                {
+                    isFunctionResult = true;
+
+                    // Get the name from the stored call
+                    var toolName = !string.IsNullOrEmpty(result.CallId) && toolCallNames.ContainsKey(result.CallId)
+                        ? toolCallNames[result.CallId]
+                        : null;
+
+                    // Extract result IDs from the tool result
+                    var resultIds = ExtractResultIds(toolName, result.Result);
+
+                    yield return new ChatStreamUpdate
+                    {
+                        Type = StreamUpdateType.ToolResult,
+                        ToolName = toolName,
+                        ToolCallId = result.CallId,
+                        ToolResultIds = resultIds,
+                        ConversationId = conversationId,
+                        ArticleId = articleId,
+                        MessageId = messageId
+                    };
+                }
+            }
+
+            // Handle text content
+            if (!string.IsNullOrEmpty(update.Text))
+            {
+                yield return new ChatStreamUpdate
+                {
+                    Type = StreamUpdateType.TextDelta,
+                    Text = update.Text,
+                    ConversationId = conversationId,
+                    ArticleId = articleId,
+                    MessageId = messageId
+                };
+            }
+
+            if (chatResponseUpdate.FinishReason != null || isFunctionResult)
+            {
+                //This is the end of the message, go ahead and save it.
+                var chatResponse = accumulatedUpdates.ToChatResponse();
+
+                if (chatResponseUpdate.FinishReason != null)
+                {
+                    yield return new ChatStreamUpdate
+                    {
+                        Type = StreamUpdateType.MessageComplete,
+                        MessageId = Guid.Parse(update.MessageId!),
+                        ConversationId = conversationId,
+                        ArticleId = articleId,
+                        Text = chatResponse.Text
+                    };
+                }
+
+                bool isBalanced = true;
+                var functionCalls = chatResponse.Messages.SelectMany(x => x.Contents).OfType<FunctionCallContent>();
+                if (functionCalls.Any())
+                {
+                    var functionResults = chatResponse.Messages.SelectMany(x => x.Contents).OfType<FunctionResultContent>().Select(x => x.CallId).ToHashSet();
+                    isBalanced = functionCalls.All(x => functionResults.Contains(x.CallId));
+                }
+
+                if (isBalanced) //Wait to save function call messages until we have the result as well. Otherwise it will cause MAF errors due to inconsistent state
+                {
+                    var messages = await SaveMessages(chatResponse, accumulatedUpdates, conversationId, lastMessage);
+                    if (messages.Any())
+                        lastMessage = messages.Last();
+                    accumulatedUpdates.Clear();
+                }
+            }
+        }
+    }
+
+    private async Task<List<DomainChatMessage>> SaveMessages(ChatResponse chatResponse, List<ChatResponseUpdate> responseUpdates, Guid conversationId, DomainChatMessage lastMessage)
+    {
+        List<DomainChatMessage> result = new();
+        foreach (var aiMessage in chatResponse.Messages) //Should only be one message
+        {
+            // Determine the creation date with proper ordering
+            DateTimeOffset createdAt;
+            if (aiMessage.CreatedAt.HasValue && aiMessage.CreatedAt.Value > lastMessage.CreatedAt)
+            {
+                createdAt = aiMessage.CreatedAt.Value;
+            }
+            else
+            {
+                // Use last date + 1 ms to maintain order
+                createdAt = lastMessage.CreatedAt.AddMilliseconds(1);
+            }
+
+            var role = EfChatMessageStore.MapChatRoleToMessageRole(aiMessage.Role);
+
+            var message = new DomainChatMessage()
+            {
+                Id = /*role == ChatMessageRole.Tool ? Guid.NewGuid() :*/ Guid.Parse(aiMessage.MessageId!), //Tool messages don't have unique IDs from the chat client
+                ConversationId = conversationId,
+                Role = role,
+                Text = aiMessage.Text ?? string.Empty,
+                CreatedAt = aiMessage.CreatedAt ?? DateTimeOffset.UtcNow,
+                UserId = null, // Assistant message has no user id
+                SerializedMessage = JsonSerializer.Serialize(aiMessage)
+            };
+
+            result.Add(message);
+
+            await _chatMessageRepository.SaveAsync(message);
+
+            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.CommitTransactionAsync();
+            await _unitOfWork.BeginTransactionAsync();
+        }
+
+        return result;
     }
 
     public async Task<List<DomainChatMessage>> GetConversationMessagesAsync(
@@ -412,109 +594,87 @@ public class ArticleChatService : IArticleChatService
     }
 
     /// <summary>
-    /// Processes streaming updates from the agent, yielding tool invocations and text deltas.
+    /// Extracts result IDs from tool execution results based on tool name.
     /// </summary>
-    private async IAsyncEnumerable<ChatStreamUpdate> ProcessStreamingUpdatesAsync(
-        IAsyncEnumerable<AgentRunResponseUpdate> agentUpdates,
-        Guid conversationId,
-        Guid articleId,
-        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    private List<Guid>? ExtractResultIds(string? toolName, object? result)
     {
-        var accumulatedText = new StringBuilder();
-        Guid? lastMessageId = null;
-        // Track tool names by callId for results
-        var toolCallNames = new Dictionary<string, string>();
-
-        await foreach (var update in agentUpdates.WithCancellation(cancellationToken))
+        if (string.IsNullOrEmpty(toolName) || result == null)
         {
-            // Parse message ID if available
-            Guid? currentMessageId = null;
-            if (!string.IsNullOrEmpty(update.MessageId) && Guid.TryParse(update.MessageId, out var parsedId))
+            return null;
+        }
+
+        try
+        {
+            var resultString = result.ToString();
+            if (string.IsNullOrEmpty(resultString))
             {
-                currentMessageId = parsedId;
-            }
-            else
-            {
-                currentMessageId = lastMessageId;
+                return null;
             }
 
-            // Detect Message ID change (Transition)
-            if (lastMessageId != null && currentMessageId != null && currentMessageId != lastMessageId)
+            var jsonDoc = JsonDocument.Parse(resultString);
+            var root = jsonDoc.RootElement;
+
+            // Check if the result was successful
+            if (root.TryGetProperty("success", out var successProp) && 
+                successProp.ValueKind == JsonValueKind.False)
             {
-                yield return new ChatStreamUpdate
+                return null;
+            }
+
+            var ids = new List<Guid>();
+
+            // Extract IDs based on tool name
+            if (toolName.Contains("CreatePlan", StringComparison.OrdinalIgnoreCase))
+            {
+                // Extract planId from CreatePlan result
+                if (root.TryGetProperty("planId", out var planIdProp) && 
+                    planIdProp.ValueKind == JsonValueKind.String &&
+                    Guid.TryParse(planIdProp.GetString(), out var planId))
                 {
-                    Type = StreamUpdateType.MessageComplete,
-                    MessageId = lastMessageId,
-                    ConversationId = conversationId,
-                    ArticleId = articleId,
-                    Content = accumulatedText.ToString()
-                };
-
-                accumulatedText.Clear();
+                    ids.Add(planId);
+                }
             }
-
-            // Extract tool calls and results from update.Contents
-            if (update.Contents != null && update.Contents.Count > 0)
+            else if (toolName.Contains("Search", StringComparison.OrdinalIgnoreCase) || 
+                     toolName.Contains("FindSimilar", StringComparison.OrdinalIgnoreCase))
             {
-                // Extract function calls
-                var functionCalls = update.Contents.OfType<FunctionCallContent>().ToList();
-                foreach (var call in functionCalls)
+                // Extract fragment IDs from search results
+                if (root.TryGetProperty("fragments", out var fragmentsProp) && 
+                    fragmentsProp.ValueKind == JsonValueKind.Array)
                 {
-                    // Store the name for later result matching
-                    if (!string.IsNullOrEmpty(call.CallId) && !string.IsNullOrEmpty(call.Name))
+                    foreach (var fragment in fragmentsProp.EnumerateArray())
                     {
-                        toolCallNames[call.CallId] = call.Name;
+                        if (fragment.TryGetProperty("id", out var idProp) && 
+                            idProp.ValueKind == JsonValueKind.String &&
+                            Guid.TryParse(idProp.GetString(), out var fragmentId))
+                        {
+                            ids.Add(fragmentId);
+                        }
                     }
-
-                    yield return new ChatStreamUpdate
-                    {
-                        Type = StreamUpdateType.ToolCall,
-                        ToolName = call.Name,
-                        ToolCallId = call.CallId,
-                        ToolMessage = await _toolMessageExtractor.ExtractToolMessageAsync(call.Name, call.Arguments),
-                        ConversationId = conversationId,
-                        ArticleId = articleId,
-                        MessageId = currentMessageId
-                    };
-                }
-
-                // Extract function results
-                var functionResults = update.Contents.OfType<FunctionResultContent>().ToList();
-                foreach (var result in functionResults)
-                {
-                    // Get the name from the stored call
-                    var toolName = !string.IsNullOrEmpty(result.CallId) && toolCallNames.ContainsKey(result.CallId)
-                        ? toolCallNames[result.CallId]
-                        : null;
-
-                    yield return new ChatStreamUpdate
-                    {
-                        Type = StreamUpdateType.ToolResult,
-                        ToolName = toolName,
-                        ToolCallId = result.CallId,
-                        ConversationId = conversationId,
-                        ArticleId = articleId,
-                        MessageId = currentMessageId
-                    };
                 }
             }
-
-            // Handle text content
-            if (!string.IsNullOrEmpty(update.Text))
+            else if (toolName.Contains("GetFragmentContent", StringComparison.OrdinalIgnoreCase))
             {
-                accumulatedText.Append(update.Text);
-                
-                yield return new ChatStreamUpdate
+                // Extract fragment ID from GetFragmentContent result
+                if (root.TryGetProperty("fragment", out var fragmentProp) &&
+                    fragmentProp.TryGetProperty("id", out var idProp) &&
+                    idProp.ValueKind == JsonValueKind.String &&
+                    Guid.TryParse(idProp.GetString(), out var fragmentId))
                 {
-                    Type = StreamUpdateType.TextDelta,
-                    Content = update.Text,
-                    ConversationId = conversationId,
-                    ArticleId = articleId,
-                    MessageId = currentMessageId
-                };
+                    ids.Add(fragmentId);
+                }
             }
 
-            lastMessageId = currentMessageId;
+            return ids.Count > 0 ? ids : null;
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogWarning(ex, "Failed to parse tool result JSON for tool {ToolName}", toolName);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error extracting result IDs from tool {ToolName}", toolName);
+            return null;
         }
     }
 

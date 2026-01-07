@@ -234,7 +234,7 @@ const ChatPanel = {
             this.messages.push({
                 id: data.id,
                 role: data.role,
-                content: data.content,
+                text: data.text,
                 userName: data.userName,
                 createdAt: data.createdAt
             });
@@ -258,7 +258,7 @@ const ChatPanel = {
                 streamingMsg = {
                     id: messageId,
                     role: 'assistant',
-                    content: '',
+                    text: '',
                     isStreaming: true,
                     toolCalls: [],
                     userName: null,
@@ -267,8 +267,8 @@ const ChatPanel = {
                 this.messages.push(streamingMsg);
             }
 
-            // Append the streamed content
-            streamingMsg.content += data.content;
+            // Append the streamed text
+            streamingMsg.text += data.text;
             this.$nextTick(() => this.scrollToBottom());
         },
 
@@ -290,7 +290,7 @@ const ChatPanel = {
                 streamingMsg = {
                     id: messageId,
                     role: 'assistant',
-                    content: '',
+                    text: '',
                     isStreaming: true,
                     toolCalls: [],
                     userName: null,
@@ -331,6 +331,12 @@ const ChatPanel = {
                     const toolCall = msg.toolCalls.find(t => t.callId === data.toolCallId);
                     if (toolCall) {
                         toolCall.completed = true;
+                        // Store the result with IDs if available
+                        if (data.result && data.result.ids) {
+                            toolCall.result = {
+                                ids: data.result.ids
+                            };
+                        }
                         break; // Found and updated, stop searching
                     }
                 }
@@ -356,7 +362,7 @@ const ChatPanel = {
                 this.messages.splice(streamingIdx, 1, {
                     id: data.id,
                     role: data.role,
-                    content: data.content,
+                    text: data.text,
                     userName: data.userName,
                     createdAt: data.createdAt,
                     toolCalls: streamingMsg.toolCalls || [],
@@ -367,7 +373,7 @@ const ChatPanel = {
                 this.messages.push({
                     id: data.id,
                     role: data.role,
-                    content: data.content,
+                    text: data.text,
                     userName: data.userName,
                     createdAt: data.createdAt,
                     toolCalls: [],
@@ -439,14 +445,14 @@ const ChatPanel = {
             return date.toLocaleDateString();
         },
 
-        renderMarkdown(content) {
-            if (!content) return '';
+        renderMarkdown(text) {
+            if (!text) return '';
             // Use marked library to render markdown
             if (typeof marked !== 'undefined') {
-                return marked.parse(content);
+                return marked.parse(text);
             }
             // Fallback to plain text if marked is not available
-            return content.replace(/\n/g, '<br>');
+            return text.replace(/\n/g, '<br>');
         },
 
         formatToolName(toolName) {
@@ -490,7 +496,29 @@ const ChatPanel = {
             if (lowerName.includes('fragment') || lowerName.includes('content')) {
                 return 'bi-puzzle';
             }
+            if (lowerName.includes('createplan')) {
+                return 'bi-list-check';
+            }
             return 'bi-gear';
+        },
+
+        getPlanIdFromResult(result) {
+            if (!result) return null;
+            
+            try {
+                // Check if result has ids array
+                if (result.ids && Array.isArray(result.ids) && result.ids.length > 0) {
+                    return result.ids[0]; // Return first ID (for CreatePlan, there's only one)
+                }
+                return null;
+            } catch (e) {
+                return null;
+            }
+        },
+
+        openPlan(planId) {
+            if (!planId) return;
+            this.$emit('open-plan', planId);
         },
 
         async createPlan() {
@@ -550,7 +578,7 @@ const ChatPanel = {
                                 <span class="chat-message-author">{{ msg.userName }}</span>
                                 <span class="chat-message-time">{{ formatDate(msg.createdAt) }}</span>
                             </div>
-                            <div class="chat-message-body">{{ msg.content }}</div>
+                            <div class="chat-message-body">{{ msg.text }}</div>
                         </div>
 
                         <!-- Assistant message -->
@@ -574,14 +602,21 @@ const ChatPanel = {
                                             <!-- Collapsible content -->
                                             <div v-if="expandedMessages[msg.id]">
                                                 <div class="markdown-container"
-                                                     v-html="renderMarkdown(msg.content)"></div>
+                                                     v-html="renderMarkdown(msg.text)"></div>
                                                 
                                                 <div class="chat-message-tools mt-2">
                                                     <div v-for="(tool, idx) in msg.toolCalls" 
                                                          :key="idx" 
                                                          class="tool-call-item text-muted">
                                                         <i class="bi me-2" :class="getToolIcon(tool.name)" :title="formatToolName(tool.name)"></i>
-                                                        <span class="tool-call-text">{{ tool.message || formatToolName(tool.name) }}</span>
+                                                        <template v-if="tool.name && tool.name.toLowerCase().includes('createplan') && tool.completed && getPlanIdFromResult(tool.result)">
+                                                            <a href="#" 
+                                                               @click.prevent="openPlan(getPlanIdFromResult(tool.result))"
+                                                               class="tool-call-link">
+                                                                {{ tool.message || formatToolName(tool.name) }}
+                                                            </a>
+                                                        </template>
+                                                        <span v-else class="tool-call-text">{{ tool.message || formatToolName(tool.name) }}</span>
                                                         <i v-if="tool.completed" class="bi bi-check-circle ms-2 text-success"></i>
                                                         <span v-else class="spinner-border spinner-border-xs ms-2" role="status"></span>
                                                     </div>
@@ -591,8 +626,8 @@ const ChatPanel = {
                                             <!-- Collapsed summary -->
                                             <div v-else class="chat-message-preview" 
                                                  @click="toggleMessageExpansion(msg.id)"
-                                                 :title="msg.content">
-                                                {{ msg.content || 'Thinking...' }}
+                                                 :title="msg.text">
+                                                {{ msg.text || 'Thinking...' }}
                                             </div>
                                         </div>
                                     </div>
@@ -601,7 +636,7 @@ const ChatPanel = {
                                 <!-- Active/Final View (Full Content + Tools if any) -->
                                 <template v-else>
                                     <div class="markdown-container"
-                                         v-html="renderMarkdown(msg.content)"></div>
+                                         v-html="renderMarkdown(msg.text)"></div>
                                     
                                     <!-- Always show tools for active or non-collapsed messages -->
                                     <div v-if="msg.toolCalls && msg.toolCalls.length > 0" 
@@ -610,7 +645,14 @@ const ChatPanel = {
                                              :key="idx" 
                                              class="tool-call-item text-muted">
                                             <i class="bi me-2" :class="getToolIcon(tool.name)" :title="formatToolName(tool.name)"></i>
-                                            <span class="tool-call-text">{{ tool.message || formatToolName(tool.name) }}</span>
+                                            <template v-if="tool.name && tool.name.toLowerCase().includes('createplan') && tool.completed && getPlanIdFromResult(tool.result)">
+                                                <a href="#" 
+                                                   @click.prevent="openPlan(getPlanIdFromResult(tool.result))"
+                                                   class="tool-call-link">
+                                                    {{ tool.message || formatToolName(tool.name) }}
+                                                </a>
+                                            </template>
+                                            <span v-else class="tool-call-text">{{ tool.message || formatToolName(tool.name) }}</span>
                                             <i v-if="tool.completed" class="bi bi-check-circle ms-2 text-success"></i>
                                             <span v-else class="spinner-border spinner-border-xs ms-2" role="status"></span>
                                         </div>

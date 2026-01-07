@@ -23,7 +23,7 @@ public class ChatStreamUpdate
     /// <summary>
     /// Text content for TextDelta and Complete updates
     /// </summary>
-    public string? Content { get; init; }
+    public string? Text { get; init; }
 
     /// <summary>
     /// Tool name for ToolCall and ToolResult updates
@@ -39,6 +39,11 @@ public class ChatStreamUpdate
     /// Tool message (extracted relevant argument) for ToolCall updates
     /// </summary>
     public string? ToolMessage { get; init; }
+
+    /// <summary>
+    /// Result IDs from tool execution (e.g., plan IDs, fragment IDs)
+    /// </summary>
+    public List<Guid>? ToolResultIds { get; init; }
 
     /// <summary>
     /// Message ID for Complete updates (after database save)
