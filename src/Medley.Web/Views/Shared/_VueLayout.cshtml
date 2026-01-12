@@ -145,6 +145,15 @@
     @* Vue component templates - must be outside #app *@
     @await RenderSectionAsync("VueTemplates", required: false)
 
+    @* Set user info for Vue pages *@
+    <script>
+        window.MedleyUser = {
+            displayName: '@displayName',
+            isAuthenticated: @(User.Identity?.IsAuthenticated == true ? "true" : "false"),
+            openSidebarOnMobile: @(openSidebarOnMobile ? "true" : "false")
+        };
+    </script>
+    
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js" asp-append-version="true"></script>
     <script src="~/lib/jquery/dist/jquery.min.js" asp-append-version="true"></script>
     <script src="~/lib/signalr/dist/browser/signalr.min.js" asp-append-version="true"></script>

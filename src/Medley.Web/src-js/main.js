@@ -12,6 +12,7 @@ import FragmentList from './components/FragmentList.vue';
 import FragmentModal from './components/FragmentModal.vue';
 import PlanViewer from './components/PlanViewer.vue';
 import SourceList from './components/SourceList.vue';
+import VerticalMenu from './components/VerticalMenu.vue';
 import VersionsPanel from './components/VersionsPanel.vue';
 import VirtualScroller from './components/VirtualScroller.vue';
 
@@ -33,6 +34,7 @@ export {
   FragmentModal,
   PlanViewer,
   SourceList,
+  VerticalMenu,
   VersionsPanel,
   VirtualScroller
 };
@@ -58,6 +60,7 @@ if (typeof window !== 'undefined') {
   window.FragmentModal = FragmentModal;
   window.PlanViewer = PlanViewer;
   window.SourceList = SourceList;
+  window.VerticalMenu = VerticalMenu;
   window.VersionsPanel = VersionsPanel;
   window.VirtualScroller = VirtualScroller;
   
