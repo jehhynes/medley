@@ -12,7 +12,7 @@ export default defineConfig({
     
     // Library mode for building all components and pages as a single bundle
     lib: {
-      entry: resolve(__dirname, 'src-js/main.js'),
+      entry: resolve(__dirname, 'Vue/main.js'),
       name: 'MedleyApp',
       formats: ['iife'],
       fileName: () => 'app.js'
@@ -44,7 +44,7 @@ export default defineConfig({
   resolve: {
     alias: {
       vue: 'vue/dist/vue.esm-bundler.js',
-      '@': resolve(__dirname, 'src-js')
+      '@': resolve(__dirname, 'Vue')
     }
   },
   
