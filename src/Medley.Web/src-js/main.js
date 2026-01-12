@@ -17,6 +17,7 @@ import VirtualScroller from './components/VirtualScroller.vue';
 // Import page-level SFCs
 import AiPrompts from './pages/AiPrompts.vue';
 import Fragments from './pages/Fragments.vue';
+import Sources from './pages/Sources.vue';
 
 // Import all mixins
 import dropdownMixin from './mixins/dropdown.js';
@@ -40,7 +41,8 @@ export {
   VersionsPanel,
   VirtualScroller,
   AiPrompts,
-  Fragments
+  Fragments,
+  Sources
 };
 
 // Export all mixins for individual imports
@@ -71,6 +73,7 @@ if (typeof window !== 'undefined') {
   // Expose page-level SFCs
   window.AiPrompts = AiPrompts;
   window.Fragments = Fragments;
+  window.Sources = Sources;
   
   // Expose mixins for use in legacy page apps
   window.dropdownMixin = dropdownMixin;
