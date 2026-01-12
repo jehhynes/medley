@@ -1,201 +1,24 @@
-// AI Prompts page Vue app (extracted from Areas/Admin/Views/AiPrompts/Index.cshtml)
-// This is an intermediate step before full migration to .vue SFC
+// AI Prompts page - Entry point
+// Imports and mounts the AiPrompts Vue SFC from the compiled app bundle
 (function() {
     const { createApp } = Vue;
-    const { api } = window.MedleyApi;
 
-    // Wait for TiptapEditor to load before mounting the app
+    // Wait for dependencies to load before mounting
     function initializeApp() {
-        if (!window.TiptapEditor) {
+        if (!window.AiPrompts || !window.TiptapEditor || !window.VerticalMenu) {
             setTimeout(initializeApp, 100);
             return;
         }
 
-        const app = createApp({
-            components: {
-                'tiptap-editor': window.TiptapEditor,
-                'vertical-menu': window.VerticalMenu
-            },
-            // Template extracted from Areas/Admin/Views/AiPrompts/Index.cshtml
-            template: `
-<vertical-menu 
-    :display-name="userDisplayName"
-    :is-authenticated="userIsAuthenticated"
-    :is-open="openSidebarOnMobile"
-/>
-
-<!-- Left Sidebar (Template List) -->
-<div class="sidebar left-sidebar">
-    <div class="sidebar-header">
-        <h6 class="sidebar-title sidebar-breadcrumb-title">
-            <a href="/Admin/Settings">Settings</a>
-            <i class="bi bi-chevron-right"></i>
-            <span>AI Prompts</span>
-        </h6>
-    </div>
-    <div class="sidebar-content">
-        <div v-if="loading" class="loading-spinner">
-            <div class="spinner-border spinner-border-sm" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-        </div>
-        <div v-else-if="error" class="alert alert-danger" v-cloak>
-            {{ error }}
-        </div>
-        <ul v-else class="list-view" v-cloak>
-            <li v-for="template in templates" :key="template.id" class="list-item">
-                <a href="#" 
-                   class="list-item-content"
-                   :class="{ active: selectedTemplateId === template.id }"
-                   @click.prevent="selectTemplate(template)">
-                    <i class="list-item-icon bi bi-file-earmark-code"></i>
-                    <div class="list-item-body">
-                        <div class="list-item-title">{{ template.name }}</div>
-                        <div class="list-item-subtitle">{{ template.description || template.typeName }}</div>
-                    </div>
-                </a>
-            </li>
-        </ul>
-    </div>
-</div>
-
-<!-- Main Content -->
-<div class="main-content" :class="{ 'd-flex flex-column': selectedTemplate }" :style="selectedTemplate ? 'padding: 0;' : ''">
-    <div v-if="!selectedTemplate" class="empty-state" v-cloak>
-        <div class="empty-state-icon">
-            <i class="bi bi-file-earmark-code"></i>
-        </div>
-        <div class="empty-state-title">No Prompt Selected</div>
-        <div class="empty-state-text">Select a prompt template from the sidebar to edit it</div>
-    </div>
-
-    <template v-else v-cloak>
-        <!-- Editor -->
-        <tiptap-editor 
-            v-model="editingContent"
-            :key="selectedTemplateId"
-            :is-saving="isSaving"
-            @save="saveTemplate"
-            class="flex-grow-1"
-            placeholder="Enter the prompt template content..." />
-
-        <!-- Save indicator -->
-        <div v-if="lastSaved" class="template-save-indicator text-muted">
-            <i class="bi bi-check-circle me-1"></i>
-            Last saved: {{ formatTime(lastSaved) }}
-        </div>
-    </template>
-</div>
-            `,
-            data() {
-                return {
-                    templates: [],
-                    selectedTemplateId: null,
-                    selectedTemplate: null,
-                    loading: false,
-                    error: null,
-                    editingContent: '',
-                    isSaving: false,
-                    lastSaved: null,
-                    // User info from server
-                    userDisplayName: window.MedleyUser?.displayName || 'User',
-                    userIsAuthenticated: window.MedleyUser?.isAuthenticated || false,
-                    openSidebarOnMobile: window.MedleyUser?.openSidebarOnMobile || false
-                };
-            },
-            methods: {
-                async loadTemplates() {
-                    this.loading = true;
-                    this.error = null;
-                    try {
-                        this.templates = await api.get('/api/templates');
-                    } catch (err) {
-                        this.error = 'Failed to load templates: ' + err.message;
-                        console.error('Error loading templates:', err);
-                    } finally {
-                        this.loading = false;
-                    }
-                },
-
-                async selectTemplate(template) {
-                    try {
-                        const fullTemplate = await api.get(`/api/templates/${template.id}`);
-                        
-                        this.selectedTemplate = fullTemplate;
-                        this.selectedTemplateId = template.id;
-                        this.editingContent = fullTemplate.content || '';
-                        this.lastSaved = fullTemplate.lastModifiedAt ? new Date(fullTemplate.lastModifiedAt) : null;
-                        
-                        // Update URL
-                        const url = new URL(window.location);
-                        if (url.searchParams.get('id') !== template.id) {
-                            url.searchParams.set('id', template.id);
-                            window.history.pushState({}, '', url);
-                        }
-                    } catch (err) {
-                        console.error('Error loading template:', err);
-                        this.error = 'Failed to load template: ' + err.message;
-                    }
-                },
-
-                async saveTemplate() {
-                    if (!this.selectedTemplate || this.isSaving) return;
-
-                    this.isSaving = true;
-                    try {
-                        const updated = await api.put(`/api/templates/${this.selectedTemplate.id}`, {
-                            content: this.editingContent
-                        });
-
-                        this.selectedTemplate = updated;
-                        this.lastSaved = new Date();
-                    } catch (err) {
-                        console.error('Error saving template:', err);
-                        alert('Failed to save template: ' + err.message);
-                    } finally {
-                        this.isSaving = false;
-                    }
-                },
-
-                formatTime(date) {
-                    if (!date) return '';
-                    return new Date(date).toLocaleTimeString();
-                }
-            },
-
-            async mounted() {
-                await this.loadTemplates();
-
-                // Check URL for selected template ID
-                const urlParams = new URLSearchParams(window.location.search);
-                const templateIdFromUrl = urlParams.get('id');
-                if (templateIdFromUrl) {
-                    const template = this.templates.find(t => t.id === templateIdFromUrl);
-                    if (template) {
-                        await this.selectTemplate(template);
-                    }
-                } else if (this.templates.length > 0) {
-                    // Auto-select first template
-                    await this.selectTemplate(this.templates[0]);
-                }
-
-                // Handle browser back/forward
-                window.addEventListener('popstate', async () => {
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const templateId = urlParams.get('id');
-                    if (templateId && templateId !== this.selectedTemplateId) {
-                        const template = this.templates.find(t => t.id === templateId);
-                        if (template) {
-                            await this.selectTemplate(template);
-                        }
-                    }
-                });
-            }
-        });
-
+        const app = createApp(window.AiPrompts);
+        
+        // Register components globally for this app instance
+        app.component('tiptap-editor', window.TiptapEditor);
+        app.component('vertical-menu', window.VerticalMenu);
+        
         app.mount('#app');
     }
 
-    // Start initialization
+    // Start initialization when script loads
     initializeApp();
 })();

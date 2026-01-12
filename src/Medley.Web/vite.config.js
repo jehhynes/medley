@@ -10,12 +10,12 @@ export default defineConfig({
     outDir: 'wwwroot/js/dist',
     emptyOutDir: true,
     
-    // Library mode for building all components as a bundle
+    // Library mode for building all components and pages as a single bundle
     lib: {
       entry: resolve(__dirname, 'src-js/main.js'),
-      name: 'MedleyComponents',
+      name: 'MedleyApp',
       formats: ['iife'],
-      fileName: () => 'components.js'
+      fileName: () => 'app.js'
     },
     
     // Externalize Vue since it's already loaded globally
