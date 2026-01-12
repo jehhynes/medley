@@ -126,7 +126,7 @@
                     <i 
                       :class="'fa-duotone ' + getConfidenceIcon(pf.fragment.confidence)" 
                       :style="{ color: getConfidenceColor(pf.fragment.confidence) }"
-                      :title="'Confidence: ' + getConfidenceLabel(pf.fragment.confidence)"
+                      :title="'Confidence: ' + (pf.fragment.confidence || '')"
                       style="font-size: 1.25rem;"
                     ></i>
                   </span>
@@ -206,7 +206,7 @@
                     <i 
                       :class="'fa-duotone ' + getConfidenceIcon(pf.fragment.confidence)" 
                       :style="{ color: getConfidenceColor(pf.fragment.confidence) }"
-                      :title="'Confidence: ' + getConfidenceLabel(pf.fragment.confidence)"
+                      :title="'Confidence: ' + (pf.fragment.confidence || '')"
                       style="font-size: 1.25rem;"
                     ></i>
                   </span>
@@ -260,6 +260,13 @@
 
 <script>
 import FragmentModal from './FragmentModal.vue';
+import { 
+  getFragmentCategoryIcon, 
+  getIconClass, 
+  getConfidenceIcon, 
+  getConfidenceColor,
+  getArticleTypes 
+} from '@/utils/helpers.js';
 
 export default {
   name: 'PlanViewer',
@@ -576,25 +583,13 @@ export default {
       return 'bg-secondary';
     },
 
-    getFragmentCategoryIcon(category) {
-      return window.MedleyUtils.getFragmentCategoryIcon(category);
-    },
+    getFragmentCategoryIcon,
 
-    getIconClass(icon) {
-      return window.MedleyUtils.getIconClass(icon);
-    },
+    getIconClass,
 
-    getConfidenceIcon(confidence) {
-      return window.MedleyUtils.getConfidenceIcon(confidence);
-    },
+    getConfidenceIcon,
 
-    getConfidenceColor(confidence) {
-      return window.MedleyUtils.getConfidenceColor(confidence);
-    },
-
-    getConfidenceLabel(confidence) {
-      return window.MedleyUtils.getConfidenceLabel(confidence);
-    },
+    getConfidenceColor,
 
     handleKeydown(event) {
       // Fragment modal handles its own Escape key
@@ -609,7 +604,7 @@ export default {
 
   mounted() {
     // Preload article types for icon display
-    window.MedleyUtils.getArticleTypes();
+    getArticleTypes();
     
     // Auto-expand all textareas on mount
     this.$nextTick(() => {

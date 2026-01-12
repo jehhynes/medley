@@ -17,7 +17,7 @@
               <i 
                 :class="'fa-duotone ' + getConfidenceIcon(fragment.confidence)" 
                 :style="{ color: getConfidenceColor(fragment.confidence) }"
-                :title="'Confidence: ' + getConfidenceLabel(fragment.confidence)"
+                :title="'Confidence: ' + (fragment.confidence || '')"
               ></i>
             </span>
           </div>
@@ -28,6 +28,15 @@
 </template>
 
 <script>
+import { 
+  formatDate, 
+  getSourceTypeIcon, 
+  getFragmentCategoryIcon, 
+  getIconClass, 
+  getConfidenceIcon, 
+  getConfidenceColor
+} from '@/utils/helpers.js';
+
 export default {
   name: 'FragmentList',
   props: {
@@ -47,27 +56,13 @@ export default {
       // Collapse left sidebar on mobile after selection
       window.MedleySidebar?.collapseLeftSidebar();
     },
-    formatDate(dateString) {
-      return window.MedleyUtils.formatDate(dateString);
-    },
-    getSourceIcon(type) {
-      return window.MedleyUtils.getSourceTypeIcon(type);
-    },
-    getFragmentCategoryIcon(category) {
-      return window.MedleyUtils.getFragmentCategoryIcon(category);
-    },
-    getIconClass(icon) {
-      return window.MedleyUtils.getIconClass(icon);
-    },
-    getConfidenceIcon(confidence) {
-      return window.MedleyUtils.getConfidenceIcon(confidence);
-    },
-    getConfidenceColor(confidence) {
-      return window.MedleyUtils.getConfidenceColor(confidence);
-    },
-    getConfidenceLabel(confidence) {
-      return window.MedleyUtils.getConfidenceLabel(confidence);
-    }
+    // Expose imported utility functions to template
+    formatDate,
+    getSourceIcon: getSourceTypeIcon,
+    getFragmentCategoryIcon,
+    getIconClass,
+    getConfidenceIcon,
+    getConfidenceColor
   }
 };
 </script>

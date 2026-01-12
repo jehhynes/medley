@@ -70,6 +70,9 @@
 </template>
 
 <script>
+import { api } from '@/utils/api.js';
+import { showToast } from '@/utils/helpers.js';
+
 export default {
   name: 'AiPrompts',
   data() {
@@ -93,7 +96,7 @@ export default {
       this.loading = true;
       this.error = null;
       try {
-        this.templates = await window.MedleyApi.api.get('/api/templates');
+        this.templates = await api.get('/api/templates');
       } catch (err) {
         this.error = 'Failed to load templates: ' + err.message;
         console.error('Error loading templates:', err);
@@ -104,7 +107,7 @@ export default {
 
     async selectTemplate(template) {
       try {
-        const fullTemplate = await window.MedleyApi.api.get(`/api/templates/${template.id}`);
+        const fullTemplate = await api.get(`/api/templates/${template.id}`);
         
         this.selectedTemplate = fullTemplate;
         this.selectedTemplateId = template.id;
@@ -128,7 +131,7 @@ export default {
 
       this.isSaving = true;
       try {
-        const updated = await window.MedleyApi.api.put(`/api/templates/${this.selectedTemplate.id}`, {
+        const updated = await api.put(`/api/templates/${this.selectedTemplate.id}`, {
           content: this.editingContent
         });
 

@@ -372,6 +372,25 @@
 </template>
 
 <script>
+import { api, createSignalRConnection } from '@/utils/api.js';
+import { 
+  getStatusBadgeClass,
+  getStatusIcon,
+  getStatusColorClass,
+  formatDate,
+  copyToClipboard,
+  debounce,
+  initializeMarkdownRenderer,
+  getArticleTypes,
+  findInTree,
+  findInList,
+  showProcessingSpinner,
+  showUserTurnIndicator,
+  showToast
+} from '@/utils/helpers.js';
+import { getUrlParam, setUrlParam, setupPopStateHandler } from '@/utils/url.js';
+import { htmlDiff } from '@/utils/htmlDiff.js';
+
 import articleModalMixin from '../mixins/articleModal.js';
 import articleVersionMixin from '../mixins/articleVersion.js';
 import articleSignalRMixin from '../mixins/articleSignalR.js';
@@ -516,7 +535,7 @@ export default {
       this.ui.error = null;
       try {
         const queryString = this.buildFilterQueryString();
-        this.articles.list = await window.MedleyApi.api.get(`/api/articles/tree${queryString}`);
+        this.articles.list = await api.get(`/api/articles/tree${queryString}`);
         this.buildArticleIndex();
         this.buildParentPathCache();
         this.rebuildFlatListCache();
@@ -530,7 +549,7 @@ export default {
 
     async loadArticleTypes() {
       try {
-        this.articles.types = await window.MedleyUtils.getArticleTypes();
+        this.articles.types = await getArticleTypes();
 
         this.articles.typeIconMap = {};
         this.articles.typeIndexMap = {};
@@ -540,7 +559,7 @@ export default {
         });
       } catch (err) {
         console.error('Error loading article types:', err);
-        window.MedleyUtils.showToast('error', 'Failed to load article types');
+        showToast('error', 'Failed to load article types');
       }
     },
 
@@ -610,7 +629,7 @@ export default {
 
     rebuildFlatListCacheDebounced() {
       if (!this._debouncedRebuildFlatListCache) {
-        this._debouncedRebuildFlatListCache = window.MedleyUtils.debounce(() => {
+        this._debouncedRebuildFlatListCache = debounce(() => {
           this.rebuildFlatListCache();
         }, 100);
       }
@@ -630,7 +649,7 @@ export default {
       }
 
       try {
-        const fullArticle = await window.MedleyApi.api.get(`/api/articles/${article.id}`);
+        const fullArticle = await api.get(`/api/articles/${article.id}`);
 
         if (this.articles.selectedId && this.signalr.connection && this.signalr.connection.state === signalR.HubConnectionState.Connected) {
           await this.signalr.connection.invoke('LeaveArticle', this.articles.selectedId);
@@ -650,9 +669,9 @@ export default {
         await this.loadDraftPlan(article.id);
         this.expandParents(article.id);
 
-        const currentId = window.UrlUtils.getUrlParam('id');
+        const currentId = getUrlParam('id');
         if (currentId !== article.id) {
-          window.UrlUtils.setUrlParam('id', article.id, replaceState);
+          setUrlParam('id', article.id, replaceState);
         }
       } catch (err) {
         console.error('Error loading article:', err);
@@ -842,7 +861,7 @@ export default {
 
       this.editor.isSaving = true;
       try {
-        const response = await window.MedleyApi.api.put(`/api/articles/${this.articles.selected.id}/content`, {
+        const response = await api.put(`/api/articles/${this.articles.selected.id}/content`, {
           content: this.editor.content
         });
 
@@ -900,11 +919,11 @@ export default {
     },
 
     formatDate(date) {
-      return window.MedleyUtils.formatDate(date);
+      return formatDate(date);
     },
 
     getStatusBadgeClass(status) {
-      return window.MedleyUtils.getStatusBadgeClass(status);
+      return getStatusBadgeClass(status);
     },
 
     setViewMode(mode) {
@@ -980,7 +999,7 @@ export default {
         callback: async (confirmed) => {
           if (confirmed) {
             try {
-              await window.MedleyApi.api.put(`/api/articles/${sourceArticleId}/move`, {
+              await api.put(`/api/articles/${sourceArticleId}/move`, {
                 newParentArticleId: targetParentId
               });
             } catch (err) {
@@ -1082,14 +1101,14 @@ export default {
       if (!this.contentTabs.versionData) return;
 
       try {
-        const response = await window.MedleyApi.api.get(
+        const response = await api.get(
           `/api/articles/${this.articles.selectedId}/versions/${this.contentTabs.versionData.versionId}/diff`
         );
 
         const beforeHtml = this.markdownToHtml(response.beforeContent || '');
         const afterHtml = this.markdownToHtml(response.afterContent || '');
 
-        this.contentTabs.versionData.diffHtml = window.HtmlDiff.htmlDiff(beforeHtml, afterHtml);
+        this.contentTabs.versionData.diffHtml = htmlDiff(beforeHtml, afterHtml);
         this.contentTabs.versionData.loadingDiff = false;
       } catch (err) {
         this.contentTabs.versionData.diffError = 'Failed to load diff: ' + err.message;
@@ -1100,7 +1119,7 @@ export default {
 
     async loadDraftPlan(articleId) {
       try {
-        const response = await window.MedleyApi.api.get(`/api/articles/${articleId}/plans/active`);
+        const response = await api.get(`/api/articles/${articleId}/plans/active`);
 
         if (response && response.id) {
           this.openPlanTab(response.id);
@@ -1135,7 +1154,7 @@ export default {
 
     this.sortArticlesRecursive(this.articles.list);
 
-    const articleIdFromUrl = window.UrlUtils.getUrlParam('id');
+    const articleIdFromUrl = getUrlParam('id');
     if (articleIdFromUrl) {
       const article = this.articles.index.get(articleIdFromUrl);
       if (article) {

@@ -84,7 +84,7 @@
                   :style="{ color: getConfidenceColor(selectedFragment.confidence) }"
                   class="me-1"
                 ></i>
-                {{ getConfidenceLabel(selectedFragment.confidence) }}
+                {{ selectedFragment.confidence || '' }}
                 <i :class="showConfidenceComment ? 'bi bi-chevron-up ms-1' : 'bi bi-chevron-down ms-1'"></i>
               </span>
               <span 
@@ -95,7 +95,7 @@
                   :style="{ color: getConfidenceColor(selectedFragment.confidence) }"
                   class="me-1"
                 ></i>
-                {{ getConfidenceLabel(selectedFragment.confidence) }}
+                {{ selectedFragment.confidence || '' }}
               </span>
               <span class="ms-2">
                 <i class="bi bi-calendar3"></i>
@@ -127,6 +127,20 @@
 
 <script>
 import infiniteScrollMixin from '../mixins/infiniteScroll.js';
+import { api } from '@/utils/api.js';
+import { 
+  getFragmentCategoryIcon, 
+  getIconClass, 
+  getConfidenceIcon, 
+  getConfidenceColor, 
+  formatDate, 
+  initializeMarkdownRenderer, 
+  getArticleTypes, 
+  findInList, 
+  showToast,
+  debounce
+} from '@/utils/helpers.js';
+import { getUrlParam, setUrlParam, setupPopStateHandler } from '@/utils/url.js';
 
 export default {
   name: 'Fragments',
@@ -169,7 +183,7 @@ export default {
       this.loading = true;
       this.error = null;
       try {
-        const fragments = await window.MedleyApi.api.get(`/api/fragments?skip=0&take=${this.pagination.pageSize}`);
+        const fragments = await api.get(`/api/fragments?skip=0&take=${this.pagination.pageSize}`);
         this.fragments = fragments;
         this.updateHasMore(fragments);
       } catch (err) {
@@ -184,13 +198,13 @@ export default {
       this.selectedFragmentId = fragment.id;
       this.showConfidenceComment = false;
 
-      const currentId = window.UrlUtils.getUrlParam('id');
+      const currentId = getUrlParam('id');
       if (currentId !== fragment.id) {
-        window.UrlUtils.setUrlParam('id', fragment.id, replaceState);
+        setUrlParam('id', fragment.id, replaceState);
       }
 
       try {
-        this.selectedFragment = await window.MedleyApi.api.get(`/api/fragments/${fragment.id}`);
+        this.selectedFragment = await api.get(`/api/fragments/${fragment.id}`);
       } catch (err) {
         console.error('Error loading fragment:', err);
         this.selectedFragment = null;
@@ -214,7 +228,7 @@ export default {
         this.searching = true;
         try {
           // Load all search results at once (no pagination for semantic search)
-          const fragments = await window.MedleyApi.api.get(`/api/fragments/search?query=${encodeURIComponent(query)}&take=100`);
+          const fragments = await api.get(`/api/fragments/search?query=${encodeURIComponent(query)}&take=100`);
           this.fragments = fragments;
           // Disable infinite scroll for search results
           this.pagination.hasMore = false;
@@ -239,7 +253,7 @@ export default {
       
       const skip = this.pagination.page * this.pagination.pageSize;
       try {
-        const fragments = await window.MedleyApi.api.get(`/api/fragments?skip=${skip}&take=${this.pagination.pageSize}`);
+        const fragments = await api.get(`/api/fragments?skip=${skip}&take=${this.pagination.pageSize}`);
         this.fragments.push(...fragments);
         return fragments;
       } catch (err) {
@@ -249,70 +263,66 @@ export default {
     },
 
     getFragmentCategoryIcon(...args) {
-      return window.MedleyUtils.getFragmentCategoryIcon(...args);
+      return getFragmentCategoryIcon(...args);
     },
     
     getIconClass(...args) {
-      return window.MedleyUtils.getIconClass(...args);
+      return getIconClass(...args);
     },
     
     getConfidenceIcon(...args) {
-      return window.MedleyUtils.getConfidenceIcon(...args);
+      return getConfidenceIcon(...args);
     },
     
     getConfidenceColor(...args) {
-      return window.MedleyUtils.getConfidenceColor(...args);
-    },
-    
-    getConfidenceLabel(...args) {
-      return window.MedleyUtils.getConfidenceLabel(...args);
+      return getConfidenceColor(...args);
     },
     
     formatDate(...args) {
-      return window.MedleyUtils.formatDate(...args);
+      return formatDate(...args);
     }
   },
 
   async mounted() {
-    this.markdownRenderer = window.MedleyUtils.initializeMarkdownRenderer();
+    this.markdownRenderer = initializeMarkdownRenderer();
 
-    this.searchDebounced = window.MedleyUtils.debounce(() => {
+    this.searchDebounced = debounce(() => {
       this.performSearch();
     }, 500);
 
     // Preload article types for icon display
-    window.MedleyUtils.getArticleTypes();
+    getArticleTypes();
     
     await this.loadFragments();
 
     // Setup infinite scroll
     this.setupInfiniteScroll('.sidebar-content');
 
-    const fragmentIdFromUrl = window.UrlUtils.getUrlParam('id');
+    const fragmentIdFromUrl = getUrlParam('id');
     if (fragmentIdFromUrl) {
-      const fragment = window.MedleyUtils.findInList(this.fragments, fragmentIdFromUrl);
+      const fragment = findInList(this.fragments, fragmentIdFromUrl);
       if (fragment) {
         await this.selectFragment(fragment, true);
       } else {
         try {
-          const loadedFragment = await window.MedleyApi.api.get(`/api/fragments/${fragmentIdFromUrl}`);
+          const loadedFragment = await api.get(`/api/fragments/${fragmentIdFromUrl}`);
           this.fragments.unshift(loadedFragment);
           this.selectedFragment = loadedFragment;
           this.selectedFragmentId = fragmentIdFromUrl;
         } catch (err) {
           console.error('Error loading fragment from URL:', err);
-          window.UrlUtils.setUrlParam('id', null, true);
+          setUrlParam('id', null, true);
         }
       }
     }
 
-    this.detachPopState = window.UrlUtils.setupPopStateHandler(async () => {
-      const fragmentId = window.UrlUtils.getUrlParam('id');
+    this.detachPopState = setupPopStateHandler(async () => {
+      const fragmentId = getUrlParam('id');
       if (fragmentId) {
-        const fragment = window.MedleyUtils.findInList(this.fragments, fragmentId);
+        const fragment = findInList(this.fragments, fragmentId);
         if (fragment) {
           this.selectedFragmentId = fragment.id;
-          this.selectedFragment = await window.MedleyApi.api.get(`/api/fragments/${fragment.id}`);
+          this.selectedFragment = await api.get(`/api/fragments/${fragment.id}`);
         }
       } else {
         this.selectedFragmentId = null;

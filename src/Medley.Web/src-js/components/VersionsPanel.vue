@@ -49,6 +49,8 @@
 </template>
 
 <script>
+import { api } from '@/utils/api.js';
+
 export default {
   name: 'VersionsPanel',
   props: {
@@ -89,7 +91,7 @@ export default {
       this.error = null;
       
       try {
-        const { api } = window.MedleyApi;
+        // Using imported api
         this.versions = await api.get(`/api/articles/${this.articleId}/versions`);
       } catch (err) {
         this.error = 'Failed to load version history: ' + err.message;

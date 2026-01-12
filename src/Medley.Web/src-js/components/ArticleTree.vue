@@ -73,6 +73,13 @@
 
 <script>
 import dropdownMixin from '@/mixins/dropdown';
+import { 
+  getIconClass, 
+  getStatusIcon, 
+  getStatusColorClass, 
+  showProcessingSpinner, 
+  showUserTurnIndicator 
+} from '@/utils/helpers.js';
 
 export default {
   name: 'ArticleTree',
@@ -128,15 +135,9 @@ export default {
       }
       return 'bi-file-text';
     },
-    getIconClass(icon) {
-      return window.MedleyUtils.getIconClass(icon);
-    },
-    getStatusIcon(status) {
-      return window.MedleyUtils.getStatusIcon(status);
-    },
-    getStatusColorClass(status) {
-      return window.MedleyUtils.getStatusColorClass(status);
-    },
+    getIconClass,
+    getStatusIcon,
+    getStatusColorClass,
     createChild(parentArticleId) {
       this.$emit('create-child', parentArticleId);
     },
@@ -249,12 +250,8 @@ export default {
       // Propagate the event up the tree
       this.$emit('move-article', sourceId, targetId);
     },
-    showProcessingSpinner(article) {
-      return window.MedleyUtils.showProcessingSpinner(article);
-    },
-    showUserTurnIndicator(article) {
-      return window.MedleyUtils.showUserTurnIndicator(article);
-    }
+    showProcessingSpinner,
+    showUserTurnIndicator
   }
 };
 </script>
