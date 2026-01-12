@@ -1,151 +1,19 @@
 @using Medley.Application.Interfaces
 @inject IMedleyContext MedleyContext
 @{
-    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
-    var currentArea = ViewContext.RouteData.Values["area"]?.ToString();
-    var hasLeftSidebar = ViewData["HasLeftSidebar"] as bool? ?? false;
-    var hasRightSidebar = ViewData["HasRightSidebar"] as bool? ?? false;
-    var isSettingsArea = currentArea == "Admin" || currentArea == "Integrations";
-    
-    // Views can set OpenSidebarOnMobile to true to have the left sidebar open on initial page load (mobile only)
-    var openSidebarOnMobile = ViewData["OpenSidebarOnMobile"] as bool? ?? false;
+    Layout = "_BaseLayout";
     
     // Get current user via MedleyContext (cached for this request)
     var currentUser = await MedleyContext.GetCurrentUserAsync();
     var displayName = currentUser?.FullName ?? currentUser?.Email ?? "User";
+    var openSidebarOnMobile = ViewData["OpenSidebarOnMobile"] as bool? ?? false;
 }
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
-    <title>@ViewData["Title"] - Medley</title>
-    
-    <link rel="icon" href="~/favicon.ico">
-    
-    <!-- System theme detection -->
-    <script>
-        (function() {
-            const setTheme = () => {
-                const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                document.documentElement.setAttribute('data-bs-theme', isDark ? 'dark' : 'light');
-            };
-            
-            setTheme();
-            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', setTheme);
-        })();
-    </script>
-    
-    <link rel="stylesheet" href="~/css/bootstrap/flatly/bootstrap.min.css" asp-append-version="true">
-    <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/lib/font-awesome/css/all.min.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/dist/medley-web.css" asp-append-version="true" />
 
-    @await RenderSectionAsync("Styles", required: false)
-</head>
-<body>
-    <header class="mobile-header @(hasRightSidebar ? "d-xl-none" : "d-lg-none")">
-        <div class="mobile-header-left">
-            <button id="mobile-left-sidebar-toggle" class="btn btn-link text-body p-0 d-lg-none">
-                <i class="bi bi-layout-sidebar"></i>
-            </button>
-        </div>
-        <div class="mobile-header-center">
-            <span class="mobile-header-title">@ViewData["Title"]</span>
-        </div>
-        <div class="mobile-header-right">
-            @if (hasRightSidebar)
-            {
-                <button id="mobile-right-sidebar-toggle" class="btn btn-link text-body p-0">
-                    <i class="bi bi-layout-sidebar-reverse"></i>
-                </button>
-            }
-        </div>
-    </header>
+<!-- Vue will control everything inside this div -->
+<div id="app"></div>
 
-    <!-- Mobile sidebar backdrop -->
-    <div id="mobile-sidebar-backdrop" class="mobile-sidebar-backdrop @(openSidebarOnMobile ? "show-initial" : "")"></div>
-
-    <!-- Vue will control everything inside this div -->
-    <div class="main-page-container @(hasLeftSidebar ? "has-left-sidebar" : "") @(hasRightSidebar ? "has-right-sidebar" : "")" id="app">
-            <!-- Vertical Menu (Far Left) -->
-            <div class="vertical-menu @(openSidebarOnMobile ? "show" : "")">
-            @if (User.Identity?.IsAuthenticated == true)
-            {
-                <a asp-area="" asp-controller="Home" asp-action="Index" 
-                   class="vertical-menu-item @(currentController == "Home" ? "active" : "")" 
-                   title="Home">
-                    <i class="bi bi-house"></i>
-                    <span class="vertical-menu-item-label">Home</span>
-                </a>
-                <a asp-area="" asp-controller="Articles" asp-action="Index"
-                   class="vertical-menu-item @(currentController == "Articles" ? "active" : "")"
-                   title="Articles">
-                    <i class="bi bi-file-text"></i>
-                    <span class="vertical-menu-item-label">Articles</span>
-                </a>
-                <a asp-area="" asp-controller="Sources" asp-action="Index" 
-                   class="vertical-menu-item @(currentController == "Sources" ? "active" : "")" 
-                   title="Sources">
-                    <i class="bi bi-camera-video"></i>
-                    <span class="vertical-menu-item-label">Sources</span>
-                </a>
-                <a asp-area="" asp-controller="Fragments" asp-action="Index" 
-                   class="vertical-menu-item @(currentController == "Fragments" ? "active" : "")" 
-                   title="Fragments">
-                    <i class="bi bi-puzzle"></i>
-                    <span class="vertical-menu-item-label">Fragments</span>
-                </a>
-                <div style="flex: 1;"></div>
-                <a asp-area="Admin" asp-controller="Settings" asp-action="Index" 
-                   class="vertical-menu-item @(isSettingsArea ? "active" : "")" 
-                   title="Admin">
-                    <i class="bi bi-gear"></i>
-                    <span class="vertical-menu-item-label">Admin</span>
-                </a>
-                <div class="dropdown">
-                    <button class="vertical-menu-item" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="User">
-                        <i class="bi bi-person-circle"></i>
-                        @* <span class="vertical-menu-item-label">User</span> *@
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li><h6 class="dropdown-header">@displayName</h6></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <a asp-area="" asp-controller="Account" asp-action="ChangePassword" class="dropdown-item">
-                                <i class="bi bi-key me-2"></i>Change Password
-                            </a>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <form asp-area="" asp-controller="Auth" asp-action="Logout" method="post">
-                                <button type="submit" class="dropdown-item">
-                                    <i class="bi bi-box-arrow-right me-2"></i>Logout
-                                </button>
-                            </form>
-                        </li>
-                    </ul>
-                </div>
-            }
-            else
-            {
-                <a asp-area="" asp-controller="Auth" asp-action="Login" 
-                   class="vertical-menu-item @(currentController == "Auth" ? "active" : "")" 
-                   title="Login">
-                    <i class="bi bi-box-arrow-in-right"></i>
-                    <span class="vertical-menu-item-label">Login</span>
-                </a>
-            }
-            </div>
-
-        @RenderBody()
-    </div>
-
-    @* Vue component templates - must be outside #app *@
-    @await RenderSectionAsync("VueTemplates", required: false)
-
+@section Scripts 
+{
     @* Set user info for Vue pages *@
     <script>
         window.MedleyUser = {
@@ -155,12 +23,5 @@
         };
     </script>
     
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js" asp-append-version="true"></script>
-    <script src="~/lib/jquery/dist/jquery.min.js" asp-append-version="true"></script>
-    <script src="~/lib/signalr/dist/browser/signalr.min.js" asp-append-version="true"></script>
-    <script src="~/lib/vue/dist/vue.global.js" asp-append-version="true"></script>
-    <script src="~/js/mobile-sidebar.js" asp-append-version="true"></script>
-    
     @await RenderSectionAsync("Scripts", required: false)
-</body>
-</html>
+}

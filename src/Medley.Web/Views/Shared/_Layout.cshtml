@@ -1,27 +1,109 @@
+@using Medley.Application.Interfaces
+@inject IMedleyContext MedleyContext
 @{
-    Layout = "_VueLayout.cshtml";
+    Layout = "_BaseLayout";
+    
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+    var currentArea = ViewContext.RouteData.Values["area"]?.ToString();
+    var isSettingsArea = currentArea == "Admin" || currentArea == "Integrations";
+    var openSidebarOnMobile = ViewData["OpenSidebarOnMobile"] as bool? ?? false;
+    
+    var currentUser = await MedleyContext.GetCurrentUserAsync();
+    var displayName = currentUser?.FullName ?? currentUser?.Email ?? "User";
 
     ViewData["HasRightSidebar"] = IsSectionDefined("RightSidebar");
     ViewData["HasLeftSidebar"] = IsSectionDefined("LeftSidebar");
 }
 
-@if (IsSectionDefined("LeftSidebar"))
-{
-    <div class="sidebar left-sidebar" id="leftSidebar">
-        @RenderSection("LeftSidebar")
+<!-- Main page container with vertical menu -->
+<div class="main-page-container @(ViewData["HasLeftSidebar"] as bool? == true ? "has-left-sidebar" : "") @(ViewData["HasRightSidebar"] as bool? == true ? "has-right-sidebar" : "")">
+    <!-- Vertical Menu (Far Left) -->
+    <div class="vertical-menu @(openSidebarOnMobile ? "show" : "")">
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <a asp-area="" asp-controller="Home" asp-action="Index" 
+           class="vertical-menu-item @(currentController == "Home" ? "active" : "")" 
+           title="Home">
+            <i class="bi bi-house"></i>
+            <span class="vertical-menu-item-label">Home</span>
+        </a>
+        <a asp-area="" asp-controller="Articles" asp-action="Index"
+           class="vertical-menu-item @(currentController == "Articles" ? "active" : "")"
+           title="Articles">
+            <i class="bi bi-file-text"></i>
+            <span class="vertical-menu-item-label">Articles</span>
+        </a>
+        <a asp-area="" asp-controller="Sources" asp-action="Index" 
+           class="vertical-menu-item @(currentController == "Sources" ? "active" : "")" 
+           title="Sources">
+            <i class="bi bi-camera-video"></i>
+            <span class="vertical-menu-item-label">Sources</span>
+        </a>
+        <a asp-area="" asp-controller="Fragments" asp-action="Index" 
+           class="vertical-menu-item @(currentController == "Fragments" ? "active" : "")" 
+           title="Fragments">
+            <i class="bi bi-puzzle"></i>
+            <span class="vertical-menu-item-label">Fragments</span>
+        </a>
+        <div style="flex: 1;"></div>
+        <a asp-area="Admin" asp-controller="Settings" asp-action="Index" 
+           class="vertical-menu-item @(isSettingsArea ? "active" : "")" 
+           title="Admin">
+            <i class="bi bi-gear"></i>
+            <span class="vertical-menu-item-label">Admin</span>
+        </a>
+        <div class="dropdown">
+            <button class="vertical-menu-item" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="User">
+                <i class="bi bi-person-circle"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><h6 class="dropdown-header">@displayName</h6></li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a asp-area="" asp-controller="Account" asp-action="ChangePassword" class="dropdown-item">
+                        <i class="bi bi-key me-2"></i>Change Password
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <form asp-area="" asp-controller="Auth" asp-action="Logout" method="post">
+                        <button type="submit" class="dropdown-item">
+                            <i class="bi bi-box-arrow-right me-2"></i>Logout
+                        </button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    }
+    else
+    {
+        <a asp-area="" asp-controller="Auth" asp-action="Login" 
+           class="vertical-menu-item @(currentController == "Auth" ? "active" : "")" 
+           title="Login">
+            <i class="bi bi-box-arrow-in-right"></i>
+            <span class="vertical-menu-item-label">Login</span>
+        </a>
+    }
     </div>
-}
 
-<div class="main-content">
-    @RenderBody()
+    @if (IsSectionDefined("LeftSidebar"))
+    {
+        <div class="sidebar left-sidebar" id="leftSidebar">
+            @RenderSection("LeftSidebar")
+        </div>
+    }
+
+    <div class="main-content">
+        @RenderBody()
+    </div>
+
+    @if (IsSectionDefined("RightSidebar"))
+    {
+        <div class="sidebar right-sidebar" id="rightSidebar">
+            @RenderSection("RightSidebar")
+        </div>
+    }
 </div>
-
-@if (IsSectionDefined("RightSidebar"))
-{
-    <div class="sidebar right-sidebar" id="rightSidebar">
-        @RenderSection("RightSidebar")
-    </div>
-}
 
 @section Scripts 
 {
@@ -36,13 +118,5 @@
     @if (IsSectionDefined("Styles"))
     {
         @await RenderSectionAsync("Styles")
-    }
-}
-
-@section VueTemplates
-{
-    @if (IsSectionDefined("VueTemplates"))
-    {
-        @await RenderSectionAsync("VueTemplates")
     }
 }

@@ -8,7 +8,7 @@ public class FragmentsController : Controller
 {
     public IActionResult Index(Guid? id = null)
     {
-        return View(id);
+        return View("Spa");
     }
 }
 
