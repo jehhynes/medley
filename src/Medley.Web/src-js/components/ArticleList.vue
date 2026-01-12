@@ -54,12 +54,14 @@
 
 <script>
 import VirtualScroller from './VirtualScroller.vue';
+import dropdownMixin from '@/mixins/dropdown';
 
 export default {
   name: 'ArticleList',
   components: {
     VirtualScroller
   },
+  mixins: [dropdownMixin],
   props: {
     articles: {
       type: Array,
@@ -132,12 +134,6 @@ export default {
     },
     showUserTurnIndicator(article) {
       return window.MedleyUtils.showUserTurnIndicator(article);
-    },
-    handleDropdownClick(event, articleId) {
-      // Mixin method - will be added if needed
-      if (window.dropdownMixin && window.dropdownMixin.methods.handleDropdownClick) {
-        window.dropdownMixin.methods.handleDropdownClick.call(this, event, articleId);
-      }
     }
   }
 };

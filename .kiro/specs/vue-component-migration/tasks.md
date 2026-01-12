@@ -200,25 +200,118 @@ This plan outlines the step-by-step conversion of 9 legacy JavaScript Vue compon
     - Delete wwwroot/js/components/ directory if empty
     - _Requirements: 9.1_
 
-- [ ] 16. Final integration testing
-  - [ ] 16.1 Test all pages with converted components
+- [ ] 16. Convert mixins to ES6 modules
+  - [x] 16.1 Convert dropdown.js mixin
+    - Convert wwwroot/js/mixins/dropdown.js to src-js/mixins/dropdown.js
+    - Remove IIFE wrapper and window assignment
+    - Export mixin object as default export
+    - Preserve all methods and functionality
+    - _Requirements: 6.1, 6.2, 6.3, 6.4_
+
+  - [x] 16.2 Convert article-filter.js mixin
+    - Convert wwwroot/js/mixins/article-filter.js to src-js/mixins/article-filter.js
+    - Remove IIFE wrapper and window assignment
+    - Export mixin object as default export
+    - Preserve all methods and functionality
+    - _Requirements: 6.1, 6.2, 6.3, 6.4_
+
+  - [x] 16.3 Convert article-modal.js mixin
+    - Convert wwwroot/js/mixins/article-modal.js to src-js/mixins/article-modal.js
+    - Remove IIFE wrapper and window assignment
+    - Export mixin object as default export
+    - Preserve all methods and functionality
+    - _Requirements: 6.1, 6.2, 6.3, 6.4_
+
+  - [x] 16.4 Convert article-signalr.js mixin
+    - Convert wwwroot/js/mixins/article-signalr.js to src-js/mixins/article-signalr.js
+    - Remove IIFE wrapper and window assignment
+    - Export mixin object as default export
+    - Preserve all methods and functionality
+    - _Requirements: 6.1, 6.2, 6.3, 6.4_
+
+  - [x] 16.5 Convert article-version.js mixin
+    - Convert wwwroot/js/mixins/article-version.js to src-js/mixins/article-version.js
+    - Remove IIFE wrapper and window assignment
+    - Export mixin object as default export
+    - Preserve all methods and functionality
+    - _Requirements: 6.1, 6.2, 6.3, 6.4_
+
+  - [x] 16.6 Convert infinite-scroll.js mixin
+    - Convert wwwroot/js/mixins/infinite-scroll.js to src-js/mixins/infinite-scroll.js
+    - Remove IIFE wrapper and window assignment
+    - Export mixin object as default export
+    - Preserve all methods and functionality
+    - _Requirements: 6.1, 6.2, 6.3, 6.4_
+
+- [ ] 17. Update components to import mixins
+  - [x] 17.1 Update ArticleList.vue to import dropdown mixin
+    - Add ES6 import for dropdown mixin
+    - Add mixin to component mixins array
+    - Remove window.dropdownMixin fallback code
+    - _Requirements: 6.1, 6.4_
+
+  - [x] 17.2 Update ArticleTree.vue to import dropdown mixin
+    - Add ES6 import for dropdown mixin
+    - Add mixin to component mixins array
+    - Remove window.dropdownMixin fallback code
+    - _Requirements: 6.1, 6.4_
+
+  - [x] 17.3 Search for other components using mixins
+    - Search codebase for window.articleFilterMixin references
+    - Search codebase for window.articleModalMixin references
+    - Search codebase for window.articleSignalrMixin references
+    - Search codebase for window.articleVersionMixin references
+    - Search codebase for window.infiniteScrollMixin references
+    - Update any found components to use ES6 imports
+    - _Requirements: 6.1, 6.4_
+
+- [ ] 18. Update Razor views to remove mixin script references
+  - [x] 18.1 Search for mixin script tags in Razor views
+    - Search all .cshtml files for references to wwwroot/js/mixins/*.js
+    - Document which views reference which mixins
+    - _Requirements: 5.1, 5.3_
+
+  - [x] 18.2 Remove mixin script tags from Razor views
+    - Remove all <script> tags referencing mixin files
+    - Mixins are now bundled in components.js
+    - _Requirements: 5.1, 5.3, 5.4_
+
+- [ ] 19. Remove legacy mixin files
+  - [x] 19.1 Delete legacy mixin files
+    - Delete all .js files from wwwroot/js/mixins/
+    - Verify no references to deleted files remain
+    - _Requirements: 9.2, 9.5_
+
+  - [x] 19.2 Remove legacy mixins directory
+    - Delete wwwroot/js/mixins/ directory if empty
+    - _Requirements: 9.2_
+
+- [x] 20. Checkpoint - Build and test with mixins
+  - Run npm run build to compile all components with mixins
+  - Verify components.js includes mixin code
+  - Test components that use mixins (ArticleList, ArticleTree)
+  - Ensure all tests pass, ask the user if questions arise
+  - _Requirements: 3.2, 3.6, 6.3, 8.3_
+
+- [ ] 21. Final integration testing
+  - [ ] 21.1 Test all pages with converted components
     - Test Articles/Index page loads correctly
     - Test all components render and function properly
     - Test SignalR integration for ChatPanel
     - Test all user interactions work as expected
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 8.1, 8.2, 8.3, 8.4, 8.5_
 
-  - [ ] 16.2 Verify no console errors
+  - [ ] 21.2 Verify no console errors
     - Check browser console for errors or warnings
     - Verify all components load successfully
     - _Requirements: 8.4_
 
-  - [ ] 16.3 Test development workflow
+  - [ ] 21.3 Test development workflow
     - Run npm run dev and verify watch mode works
     - Make a change to a component and verify hot reload
     - _Requirements: 8.1, 8.2, 8.3_
 
-- [ ] 17. Final checkpoint - Ensure all tests pass
+- [ ] 22. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
@@ -226,7 +319,9 @@ This plan outlines the step-by-step conversion of 9 legacy JavaScript Vue compon
 - Tasks marked with `*` are optional and can be skipped for faster MVP
 - Each task references specific requirements for traceability
 - Components are converted in dependency order to minimize issues
+- Mixins are converted to ES6 modules and imported where needed
 - Checkpoints ensure incremental validation
 - All component templates remain unchanged (only format changes from string to SFC)
 - Component usage in Razor views remains unchanged (kebab-case still works)
 - Single bundle approach simplifies deployment and reduces HTTP requests
+- Mixins are now bundled with components instead of loaded separately

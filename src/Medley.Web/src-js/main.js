@@ -15,6 +15,14 @@ import SourceList from './components/SourceList.vue';
 import VersionsPanel from './components/VersionsPanel.vue';
 import VirtualScroller from './components/VirtualScroller.vue';
 
+// Import all mixins
+import dropdownMixin from './mixins/dropdown.js';
+import articleFilterMixin from './mixins/articleFilter.js';
+import articleModalMixin from './mixins/articleModal.js';
+import articleSignalRMixin from './mixins/articleSignalR.js';
+import articleVersionMixin from './mixins/articleVersion.js';
+import infiniteScrollMixin from './mixins/infiniteScroll.js';
+
 // Export all components for individual imports
 export {
   TiptapEditor,
@@ -29,7 +37,17 @@ export {
   VirtualScroller
 };
 
-// Make components available globally on window object
+// Export all mixins for individual imports
+export {
+  dropdownMixin,
+  articleFilterMixin,
+  articleModalMixin,
+  articleSignalRMixin,
+  articleVersionMixin,
+  infiniteScrollMixin
+};
+
+// Make components and mixins available globally on window object
 if (typeof window !== 'undefined') {
   // Expose individual components
   window.TiptapEditor = TiptapEditor;
@@ -42,4 +60,12 @@ if (typeof window !== 'undefined') {
   window.SourceList = SourceList;
   window.VersionsPanel = VersionsPanel;
   window.VirtualScroller = VirtualScroller;
+  
+  // Expose mixins for use in legacy page apps
+  window.dropdownMixin = dropdownMixin;
+  window.articleFilterMixin = articleFilterMixin;
+  window.articleModalMixin = articleModalMixin;
+  window.articleSignalRMixin = articleSignalRMixin;
+  window.articleVersionMixin = articleVersionMixin;
+  window.infiniteScrollMixin = infiniteScrollMixin;
 }
