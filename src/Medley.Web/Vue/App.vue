@@ -1,60 +1,94 @@
 <template>
   <div 
     class="main-page-container"
-    :class="{
-      'has-left-sidebar': hasLeftSidebar,
-      'has-right-sidebar': hasRightSidebar
-    }"
+    :class="containerClasses"
   >
+    <mobile-header 
+      @toggle-left-sidebar="toggleLeftSidebar"
+      @toggle-right-sidebar="toggleRightSidebar"
+    />
+    <backdrop 
+      v-if="backdropVisible"
+      :is-automatic="isAutomaticOpen"
+      @click="hideAllSidebars"
+    />
     <router-view />
   </div>
 </template>
 
 <script>
+import { watch } from 'vue'
+import { useRoute } from 'vue-router'
+import { useSidebarState } from '@/composables/useSidebarState'
+import MobileHeader from '@/components/MobileHeader.vue'
+import Backdrop from '@/components/Backdrop.vue'
+
 export default {
   name: 'App',
-  computed: {
-    hasLeftSidebar() {
-      return this.$route.meta.hasLeftSidebar ?? true;
-    },
-    hasRightSidebar() {
-      return this.$route.meta.hasRightSidebar ?? false;
-    },
-    openSidebarOnMobile() {
-      // Dashboard should never open sidebar on mobile
-      if (this.$route.name === 'dashboard') {
-        return false;
-      }
-      
-      // Open sidebar on mobile if there's no ID in the route (query or params)
-      const hasId = this.$route.params.id || this.$route.query.id;
-      return !hasId;
-    }
+  components: {
+    MobileHeader,
+    Backdrop
   },
-  watch: {
-    openSidebarOnMobile: {
-      immediate: true,
-      handler(shouldOpen) {
-        // Update the global state for mobile sidebar
-        if (window.MedleyUser) {
-          window.MedleyUser.openSidebarOnMobile = shouldOpen;
+  setup() {
+    const route = useRoute()
+    const {
+      leftSidebarVisible,
+      rightSidebarVisible,
+      backdropVisible,
+      isAutomaticOpen,
+      showLeftSidebar,
+      hideLeftSidebar,
+      toggleLeftSidebar,
+      toggleRightSidebar,
+      hideAllSidebars
+    } = useSidebarState()
+
+    // Watch route changes to manage automatic sidebar visibility
+    watch(
+      () => [route.name, route.params.id, route.query.id],
+      ([routeName, paramsId, queryId]) => {
+        // Dashboard should never open sidebar on mobile
+        if (routeName === 'dashboard') {
+          hideLeftSidebar()
+          return
         }
         
-        // Trigger mobile sidebar state update
-        this.$nextTick(() => {
-          const leftSidebar = document.querySelector('.left-sidebar');
-          const verticalMenu = document.querySelector('.vertical-menu');
-          
-          if (shouldOpen) {
-            if (leftSidebar) leftSidebar.classList.add('show');
-            if (verticalMenu) verticalMenu.classList.add('show');
-          } else {
-            if (leftSidebar) leftSidebar.classList.remove('show');
-            if (verticalMenu) verticalMenu.classList.remove('show');
-          }
-        });
+        // Check for ID in params or query
+        const hasId = paramsId || queryId
+        
+        // Show left sidebar if no ID present (mark as automatic)
+        if (!hasId) {
+          showLeftSidebar(true)
+        } else {
+          hideLeftSidebar()
+        }
+      },
+      { immediate: true }
+    )
+
+    return {
+      leftSidebarVisible,
+      rightSidebarVisible,
+      backdropVisible,
+      isAutomaticOpen,
+      toggleLeftSidebar,
+      toggleRightSidebar,
+      hideAllSidebars
+    }
+  },
+  computed: {
+    hasLeftSidebar() {
+      return this.$route.meta.hasLeftSidebar ?? true
+    },
+    hasRightSidebar() {
+      return this.$route.meta.hasRightSidebar ?? false
+    },
+    containerClasses() {
+      return {
+        'has-left-sidebar': this.hasLeftSidebar,
+        'has-right-sidebar': this.hasRightSidebar
       }
     }
   }
-};
+}
 </script>

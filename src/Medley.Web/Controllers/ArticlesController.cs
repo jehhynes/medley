@@ -8,6 +8,7 @@ public class ArticlesController : Controller
 {
     public IActionResult Index(Guid? id = null)
     {
+        ViewData["Title"] = "Articles";
         return View("Spa");
     }
 }

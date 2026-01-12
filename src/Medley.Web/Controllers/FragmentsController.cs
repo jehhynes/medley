@@ -8,6 +8,7 @@ public class FragmentsController : Controller
 {
     public IActionResult Index(Guid? id = null)
     {
+        ViewData["Title"] = "Fragments";
         return View("Spa");
     }
 }

@@ -14,8 +14,7 @@ const routes = [
     component: Dashboard,
     meta: { 
       title: 'Dashboard',
-      hasLeftSidebar: false,
-      hasRightSidebar: false
+      hasLeftSidebar: false
     }
   },
   {
@@ -23,9 +22,7 @@ const routes = [
     name: 'sources',
     component: Sources,
     meta: { 
-      title: 'Sources',
-      hasLeftSidebar: true,
-      hasRightSidebar: false
+      title: 'Sources'
     }
   },
   {
@@ -33,9 +30,7 @@ const routes = [
     name: 'fragments',
     component: Fragments,
     meta: { 
-      title: 'Fragments',
-      hasLeftSidebar: true,
-      hasRightSidebar: false
+      title: 'Fragments'
     }
   },
   {
@@ -44,7 +39,6 @@ const routes = [
     component: Articles,
     meta: { 
       title: 'Articles',
-      hasLeftSidebar: true,
       hasRightSidebar: true
     }
   },
@@ -53,9 +47,7 @@ const routes = [
     name: 'ai-prompts',
     component: AiPrompts,
     meta: { 
-      title: 'AI Prompts',
-      hasLeftSidebar: true,
-      hasRightSidebar: true
+        title: 'AI Prompts'
     }
   }
 ];

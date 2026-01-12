@@ -2,11 +2,10 @@
     <vertical-menu 
       :display-name="userDisplayName"
       :is-authenticated="userIsAuthenticated"
-      :is-open="openSidebarOnMobile"
     />
 
     <!-- Left Sidebar (List/Tree) -->
-    <div class="sidebar left-sidebar" :class="{ 'show': openSidebarOnMobile }">
+    <div class="sidebar left-sidebar" :class="{ 'show': leftSidebarVisible }">
       <div class="sidebar-header">
         <div class="d-flex align-items-center gap-2">
           <h6 class="sidebar-title mb-0 flex-grow-1">Articles</h6>
@@ -162,7 +161,7 @@
     </div>
 
     <!-- Right Sidebar -->
-    <div class="sidebar right-sidebar">
+    <div class="sidebar right-sidebar" :class="{ 'show': rightSidebarVisible }">
       <div class="sidebar-header">
         <div class="sidebar-tabs">
           <button 
@@ -395,6 +394,8 @@ import articleModalMixin from '../mixins/articleModal.js';
 import articleVersionMixin from '../mixins/articleVersion.js';
 import articleSignalRMixin from '../mixins/articleSignalR.js';
 import articleFilterMixin from '../mixins/articleFilter.js';
+import { useSidebarState } from '@/composables/useSidebarState'
+import { useRouter } from 'vue-router'
 
 export default {
   name: 'Articles',
@@ -404,6 +405,11 @@ export default {
     articleSignalRMixin,
     articleFilterMixin
   ],
+  setup() {
+    const { leftSidebarVisible, rightSidebarVisible } = useSidebarState()
+    const router = useRouter()
+    return { leftSidebarVisible, rightSidebarVisible, router }
+  },
   data() {
     return {
       // Article state
@@ -490,7 +496,6 @@ export default {
       // User info from server
       userDisplayName: window.MedleyUser?.displayName || 'User',
       userIsAuthenticated: window.MedleyUser?.isAuthenticated || false,
-      openSidebarOnMobile: window.MedleyUser?.openSidebarOnMobile || false,
     };
   },
   provide() {
@@ -669,9 +674,11 @@ export default {
         await this.loadDraftPlan(article.id);
         this.expandParents(article.id);
 
-        const currentId = getUrlParam('id');
-        if (currentId !== article.id) {
-          setUrlParam('id', article.id, replaceState);
+        // Use Vue Router to update the URL, which will trigger the App.vue watcher
+        if (replaceState) {
+          await this.router.replace({ query: { id: article.id } });
+        } else {
+          await this.router.push({ query: { id: article.id } });
         }
       } catch (err) {
         console.error('Error loading article:', err);

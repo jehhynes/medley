@@ -2,11 +2,10 @@
     <vertical-menu 
       :display-name="userDisplayName"
       :is-authenticated="userIsAuthenticated"
-      :is-open="openSidebarOnMobile"
     />
 
     <!-- Left Sidebar (List) -->
-    <div class="sidebar left-sidebar" :class="{ 'show': openSidebarOnMobile }">
+    <div class="sidebar left-sidebar" :class="{ 'show': leftSidebarVisible }">
       <div class="sidebar-header">
         <h6 class="sidebar-title">Sources</h6>
         <div v-if="activeTagFilter" class="mb-2">
@@ -249,10 +248,17 @@ import {
   showToast 
 } from '@/utils/helpers.js';
 import { getUrlParam, setUrlParam, setupPopStateHandler } from '@/utils/url.js';
+import { useSidebarState } from '@/composables/useSidebarState'
+import { useRouter } from 'vue-router'
 
 export default {
   name: 'Sources',
   mixins: [infiniteScrollMixin],
+  setup() {
+    const { leftSidebarVisible } = useSidebarState()
+    const router = useRouter()
+    return { leftSidebarVisible, router }
+  },
   data() {
     return {
       sources: [],
@@ -272,8 +278,7 @@ export default {
       activeTagFilter: null,
       // User info from server
       userDisplayName: window.MedleyUser?.displayName || 'User',
-      userIsAuthenticated: window.MedleyUser?.isAuthenticated || false,
-      openSidebarOnMobile: window.MedleyUser?.openSidebarOnMobile || false
+      userIsAuthenticated: window.MedleyUser?.isAuthenticated || false
     };
   },
   computed: {
@@ -364,9 +369,11 @@ export default {
     async selectSource(source, replaceState = false) {
       this.selectedSourceId = source.id;
 
-      const currentId = getUrlParam('id');
-      if (currentId !== source.id) {
-        setUrlParam('id', source.id, replaceState);
+      // Use Vue Router to update the URL, which will trigger the App.vue watcher
+      if (replaceState) {
+        await this.router.replace({ query: { id: source.id } });
+      } else {
+        await this.router.push({ query: { id: source.id } });
       }
 
       try {

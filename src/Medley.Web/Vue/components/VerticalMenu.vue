@@ -1,5 +1,5 @@
 <template>
-  <div class="vertical-menu" :class="{ 'show': isOpen }">
+  <div class="vertical-menu" :class="{ 'show': leftSidebarVisible }">
     <template v-if="isAuthenticated">
       <router-link to="/" 
          :class="['vertical-menu-item', { active: currentPage === 'Home' }]" 
@@ -67,6 +67,8 @@
 </template>
 
 <script>
+import { useSidebarState } from '@/composables/useSidebarState'
+
 export default {
   name: 'VerticalMenu',
   props: {
@@ -79,12 +81,11 @@ export default {
     isAuthenticated: {
       type: Boolean,
       default: false
-    },
-    // Whether to show menu on mobile initially (when no item selected)
-    isOpen: {
-      type: Boolean,
-      default: false
     }
+  },
+  setup() {
+    const { leftSidebarVisible } = useSidebarState()
+    return { leftSidebarVisible }
   },
   computed: {
     currentPage() {

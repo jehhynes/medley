@@ -2,7 +2,6 @@
   <vertical-menu 
     :display-name="userDisplayName"
     :is-authenticated="userIsAuthenticated"
-    :is-open="openSidebarOnMobile"
   />
 
   <div class="main-content">
@@ -214,8 +213,7 @@ export default {
       charts: {},
       // User info from server
       userDisplayName: window.MedleyUser?.displayName || 'User',
-      userIsAuthenticated: window.MedleyUser?.isAuthenticated || false,
-      openSidebarOnMobile: window.MedleyUser?.openSidebarOnMobile || false
+      userIsAuthenticated: window.MedleyUser?.isAuthenticated || false
     };
   },
   methods: {

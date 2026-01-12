@@ -2,11 +2,10 @@
     <vertical-menu 
       :display-name="userDisplayName"
       :is-authenticated="userIsAuthenticated"
-      :is-open="openSidebarOnMobile"
     />
 
     <!-- Left Sidebar (Template List) -->
-    <div class="sidebar left-sidebar">
+    <div class="sidebar left-sidebar" :class="{ 'show': leftSidebarVisible }">
       <div class="sidebar-header">
         <h6 class="sidebar-title sidebar-breadcrumb-title">
           <a href="/Admin/Settings">Settings</a>
@@ -72,9 +71,16 @@
 <script>
 import { api } from '@/utils/api.js';
 import { showToast } from '@/utils/helpers.js';
+import { useSidebarState } from '@/composables/useSidebarState';
+import { useRouter } from 'vue-router';
 
 export default {
   name: 'AiPrompts',
+  setup() {
+    const { leftSidebarVisible } = useSidebarState();
+    const router = useRouter();
+    return { leftSidebarVisible, router };
+  },
   data() {
     return {
       templates: [],
@@ -87,8 +93,7 @@ export default {
       lastSaved: null,
       // User info from server
       userDisplayName: window.MedleyUser?.displayName || 'User',
-      userIsAuthenticated: window.MedleyUser?.isAuthenticated || false,
-      openSidebarOnMobile: window.MedleyUser?.openSidebarOnMobile || false
+      userIsAuthenticated: window.MedleyUser?.isAuthenticated || false
     };
   },
   methods: {
@@ -114,12 +119,8 @@ export default {
         this.editingContent = fullTemplate.content || '';
         this.lastSaved = fullTemplate.lastModifiedAt ? new Date(fullTemplate.lastModifiedAt) : null;
         
-        // Update URL
-        const url = new URL(window.location);
-        if (url.searchParams.get('id') !== template.id) {
-          url.searchParams.set('id', template.id);
-          window.history.pushState({}, '', url);
-        }
+        // Use Vue Router to update the URL, which will trigger the App.vue watcher
+        await this.router.push({ query: { id: template.id } });
       } catch (err) {
         console.error('Error loading template:', err);
         this.error = 'Failed to load template: ' + err.message;

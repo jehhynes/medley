@@ -548,7 +548,6 @@ export default {
         }
     },
     mounted() {
-        console.log('TiptapEditor showFormatting prop:', this.showFormatting);
         
         this.handleClickOutside = (event) => {
             const toolbar = this.$el.querySelector('.tiptap-toolbar');
