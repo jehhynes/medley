@@ -1,8 +1,25 @@
+@using Medley.Application.Interfaces
+@inject IMedleyContext MedleyContext
 @{
-    ViewData["Title"] = "Medley";
-    Layout = "_VueLayout";
+    Layout = "_BaseLayout";
+    
+    // Get current user via MedleyContext (cached for this request)
+    var currentUser = await MedleyContext.GetCurrentUserAsync();
+    var displayName = currentUser?.FullName ?? currentUser?.Email ?? "User";
 }
 
-@section Scripts {
+<!-- Vue will control everything inside this div -->
+<div id="app"></div>
+
+@section Scripts 
+{
+    @* Set user info for Vue pages *@
+    <script>
+        window.MedleyUser = {
+            displayName: '@displayName',
+            isAuthenticated: @(User.Identity?.IsAuthenticated == true ? "true" : "false")
+        };
+    </script>
+    
     <script type="module" src="~/dist/js/main.js" asp-append-version="true"></script>
 }

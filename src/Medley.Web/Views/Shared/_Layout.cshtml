@@ -6,19 +6,44 @@
     var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
     var currentArea = ViewContext.RouteData.Values["area"]?.ToString();
     var isSettingsArea = currentArea == "Admin" || currentArea == "Integrations";
-    var openSidebarOnMobile = ViewData["OpenSidebarOnMobile"] as bool? ?? false;
     
     var currentUser = await MedleyContext.GetCurrentUserAsync();
     var displayName = currentUser?.FullName ?? currentUser?.Email ?? "User";
 
     ViewData["HasRightSidebar"] = IsSectionDefined("RightSidebar");
     ViewData["HasLeftSidebar"] = IsSectionDefined("LeftSidebar");
+    
+    var hasLeftSidebar = ViewData["HasLeftSidebar"] as bool? ?? false;
+    var hasRightSidebar = ViewData["HasRightSidebar"] as bool? ?? false;
 }
+
+<!-- Mobile header for MVC pages -->
+<header class="mobile-header @(hasRightSidebar ? "d-xl-none" : "d-lg-none")">
+    <div class="mobile-header-left">
+        <button id="mobile-left-sidebar-toggle" class="btn btn-link text-body p-0 d-lg-none">
+            <i class="bi bi-layout-sidebar"></i>
+        </button>
+    </div>
+    <div class="mobile-header-center">
+        <span class="mobile-header-title">@ViewData["Title"]</span>
+    </div>
+    <div class="mobile-header-right">
+        @if (hasRightSidebar)
+        {
+            <button id="mobile-right-sidebar-toggle" class="btn btn-link text-body p-0">
+                <i class="bi bi-layout-sidebar-reverse"></i>
+            </button>
+        }
+    </div>
+</header>
+
+<!-- Mobile sidebar backdrop -->
+<div id="mobile-sidebar-backdrop" class="mobile-sidebar-backdrop"></div>
 
 <!-- Main page container with vertical menu -->
 <div class="main-page-container @(ViewData["HasLeftSidebar"] as bool? == true ? "has-left-sidebar" : "") @(ViewData["HasRightSidebar"] as bool? == true ? "has-right-sidebar" : "")">
     <!-- Vertical Menu (Far Left) -->
-    <div class="vertical-menu @(openSidebarOnMobile ? "show" : "")">
+    <div class="vertical-menu">
     @if (User.Identity?.IsAuthenticated == true)
     {
         <a asp-area="" asp-controller="Home" asp-action="Index" 
@@ -111,6 +136,9 @@
     {
         @await RenderSectionAsync("Scripts")
     }
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js" asp-append-version="true"></script>
+    <script src="~/lib/jquery/dist/jquery.min.js" asp-append-version="true"></script>
+    <script src="~/js/mobile-sidebar.js" asp-append-version="true"></script>
 }
 
 @section Styles 

@@ -7,8 +7,9 @@ namespace Medley.Web.Areas.Admin.Controllers;
 [Authorize]
 public class AiPromptsController : Controller
 {
-    public IActionResult Index()
+    public IActionResult Index(Guid? id = null)
     {
+        ViewData["Title"] = "AI Prompts";
         return View("Spa");
     }
 }

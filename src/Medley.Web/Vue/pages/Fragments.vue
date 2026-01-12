@@ -2,11 +2,10 @@
   <vertical-menu 
     :display-name="userDisplayName"
     :is-authenticated="userIsAuthenticated"
-    :is-open="openSidebarOnMobile"
   />
 
   <!-- Left Sidebar (List) -->
-  <div class="sidebar left-sidebar" :class="{ 'show': openSidebarOnMobile }">
+  <div class="sidebar left-sidebar" :class="{ 'show': leftSidebarVisible }">
     <div class="sidebar-header">
       <h6 class="sidebar-title">Fragments</h6>
       <div class="input-group input-group-sm">
@@ -141,10 +140,17 @@ import {
   debounce
 } from '@/utils/helpers.js';
 import { getUrlParam, setUrlParam, setupPopStateHandler } from '@/utils/url.js';
+import { useSidebarState } from '@/composables/useSidebarState'
+import { useRouter } from 'vue-router'
 
 export default {
   name: 'Fragments',
   mixins: [infiniteScrollMixin],
+  setup() {
+    const { leftSidebarVisible } = useSidebarState()
+    const router = useRouter()
+    return { leftSidebarVisible, router }
+  },
   data() {
     return {
       fragments: [],
@@ -160,8 +166,7 @@ export default {
       detachPopState: null,
       // User info from server
       userDisplayName: window.MedleyUser?.displayName || 'User',
-      userIsAuthenticated: window.MedleyUser?.isAuthenticated || false,
-      openSidebarOnMobile: window.MedleyUser?.openSidebarOnMobile || false
+      userIsAuthenticated: window.MedleyUser?.isAuthenticated || false
     };
   },
   computed: {
@@ -198,9 +203,11 @@ export default {
       this.selectedFragmentId = fragment.id;
       this.showConfidenceComment = false;
 
-      const currentId = getUrlParam('id');
-      if (currentId !== fragment.id) {
-        setUrlParam('id', fragment.id, replaceState);
+      // Use Vue Router to update the URL, which will trigger the App.vue watcher
+      if (replaceState) {
+        await this.router.replace({ query: { id: fragment.id } });
+      } else {
+        await this.router.push({ query: { id: fragment.id } });
       }
 
       try {

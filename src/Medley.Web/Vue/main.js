@@ -51,6 +51,6 @@
   app.use(router);
 
   // Wait for router to be ready before mounting
-  //router.isReady().then(() => {
+  router.isReady().then(() => {
     app.mount('#app');
-//});
+  });
