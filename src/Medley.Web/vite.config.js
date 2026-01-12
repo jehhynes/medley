@@ -6,8 +6,8 @@ export default defineConfig({
   plugins: [vue()],
   
   build: {
-    // Output to wwwroot/js/dist
-    outDir: 'wwwroot/js/dist',
+    // Output to wwwroot/dist
+    outDir: 'wwwroot/dist',
     emptyOutDir: true,
     
     // Library mode for building all components and pages as a single bundle
