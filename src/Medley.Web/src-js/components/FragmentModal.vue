@@ -25,7 +25,7 @@
                   :style="{ color: getConfidenceColor(fragment.confidence) }"
                   class="me-1"
                 ></i>
-                Confidence: {{ getConfidenceLabel(fragment.confidence) }}
+                Confidence: {{ fragment.confidence || '' }}
                 <i :class="showConfidenceComment ? 'bi bi-chevron-up ms-1' : 'bi bi-chevron-down ms-1'"></i>
               </span>
               <span 
@@ -36,7 +36,7 @@
                   :style="{ color: getConfidenceColor(fragment.confidence) }"
                   class="me-1"
                 ></i>
-                Confidence: {{ getConfidenceLabel(fragment.confidence) }}
+                Confidence: {{ fragment.confidence || '' }}
               </span>
             </div>
             <div v-if="fragment.confidenceComment && showConfidenceComment" class="alert alert-info mb-3">
@@ -58,6 +58,13 @@
 </template>
 
 <script>
+import { 
+  getIconClass, 
+  getFragmentCategoryIcon, 
+  getConfidenceIcon, 
+  getConfidenceColor
+} from '@/utils/helpers.js';
+
 export default {
   name: 'FragmentModal',
   props: {
@@ -103,25 +110,11 @@ export default {
       this.showConfidenceComment = !this.showConfidenceComment;
     },
 
-    getIconClass(icon) {
-      return window.MedleyUtils.getIconClass(icon);
-    },
-
-    getFragmentCategoryIcon(category) {
-      return window.MedleyUtils.getFragmentCategoryIcon(category);
-    },
-
-    getConfidenceIcon(confidence) {
-      return window.MedleyUtils.getConfidenceIcon(confidence);
-    },
-
-    getConfidenceColor(confidence) {
-      return window.MedleyUtils.getConfidenceColor(confidence);
-    },
-
-    getConfidenceLabel(confidence) {
-      return window.MedleyUtils.getConfidenceLabel(confidence);
-    },
+    // Expose imported utility functions to template
+    getIconClass,
+    getFragmentCategoryIcon,
+    getConfidenceIcon,
+    getConfidenceColor,
 
     handleKeydown(event) {
       if (event.key === 'Escape' && this.visible) {

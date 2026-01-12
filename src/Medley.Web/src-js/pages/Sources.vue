@@ -203,7 +203,7 @@
                         <i 
                           :class="'fa-duotone ' + getConfidenceIcon(fragment.confidence)" 
                           :style="{ color: getConfidenceColor(fragment.confidence) }"
-                          :title="'Confidence: ' + getConfidenceLabel(fragment.confidence)"
+                          :title="'Confidence: ' + (fragment.confidence || '')"
                           style="font-size: 1.25rem;"
                         ></i>
                       </td>
@@ -235,6 +235,20 @@
 
 <script>
 import infiniteScrollMixin from '../mixins/infiniteScroll.js';
+import { api, createSignalRConnection } from '@/utils/api.js';
+import { 
+  getFragmentCategoryIcon, 
+  getIconClass, 
+  getSourceTypeIcon, 
+  getConfidenceIcon, 
+  getConfidenceColor, 
+  formatDate, 
+  initializeMarkdownRenderer, 
+  getArticleTypes, 
+  findInList, 
+  showToast 
+} from '@/utils/helpers.js';
+import { getUrlParam, setUrlParam, setupPopStateHandler } from '@/utils/url.js';
 
 export default {
   name: 'Sources',
@@ -313,7 +327,7 @@ export default {
         if (this.activeTagFilter) {
           url += `&tagTypeId=${this.activeTagFilter.tagTypeId}&value=${encodeURIComponent(this.activeTagFilter.value)}`;
         }
-        const sources = await window.MedleyApi.api.get(url);
+        const sources = await api.get(url);
         this.sources = sources;
         this.updateHasMore(sources);
       } catch (err) {
@@ -338,7 +352,7 @@ export default {
           url += `&tagTypeId=${this.activeTagFilter.tagTypeId}&value=${encodeURIComponent(this.activeTagFilter.value)}`;
         }
         
-        const sources = await window.MedleyApi.api.get(url);
+        const sources = await api.get(url);
         this.sources.push(...sources);
         return sources;
       } catch (err) {
@@ -350,13 +364,13 @@ export default {
     async selectSource(source, replaceState = false) {
       this.selectedSourceId = source.id;
 
-      const currentId = window.UrlUtils.getUrlParam('id');
+      const currentId = getUrlParam('id');
       if (currentId !== source.id) {
-        window.UrlUtils.setUrlParam('id', source.id, replaceState);
+        setUrlParam('id', source.id, replaceState);
       }
 
       try {
-        this.selectedSource = await window.MedleyApi.api.get(`/api/sources/${source.id}`);
+        this.selectedSource = await api.get(`/api/sources/${source.id}`);
         const sourceIndex = this.sources.findIndex(s => s.id === source.id);
         if (sourceIndex !== -1 && this.selectedSource.tags) {
           this.sources[sourceIndex].tags = this.selectedSource.tags;
@@ -376,7 +390,7 @@ export default {
           if (this.activeTagFilter) {
             url += `&tagTypeId=${this.activeTagFilter.tagTypeId}&value=${encodeURIComponent(this.activeTagFilter.value)}`;
           }
-          const sources = await window.MedleyApi.api.get(url);
+          const sources = await api.get(url);
           this.sources = sources;
           this.updateHasMore(sources);
         } catch (err) {
@@ -452,10 +466,10 @@ export default {
       }
 
       try {
-        const response = await window.MedleyApi.api.post(`/api/sources/${sourceId}/extract-fragments`);
+        const response = await api.post(`/api/sources/${sourceId}/extract-fragments`);
 
         if (!response.success) {
-          window.MedleyUtils.showToast('error', response.message || 'Failed to start fragment extraction');
+          showToast('error', response.message || 'Failed to start fragment extraction');
           this.selectedSource.extractionStatus = 'NotStarted';
           if (sourceIndex !== -1) {
             this.sources[sourceIndex].extractionStatus = 'NotStarted';
@@ -467,9 +481,9 @@ export default {
         const isClustered = errorMessage.toLowerCase().includes('clustered');
 
         if (isClustered) {
-          window.MedleyUtils.showToast('error', 'Cannot re-extract: Some fragments have been clustered. Please uncluster them first.');
+          showToast('error', 'Cannot re-extract: Some fragments have been clustered. Please uncluster them first.');
         } else {
-          window.MedleyUtils.showToast('error', errorMessage);
+          showToast('error', errorMessage);
         }
 
         this.selectedSource.extractionStatus = 'NotStarted';
@@ -484,21 +498,21 @@ export default {
       const sourceId = this.selectedSource.id;
       this.tagging = true;
       try {
-        const result = await window.MedleyApi.api.post(`/api/sources/${sourceId}/tag?force=true`);
+        const result = await api.post(`/api/sources/${sourceId}/tag?force=true`);
         if (!result.success && result.message) {
-          window.MedleyUtils.showToast('error', result.message);
+          showToast('error', result.message);
         } else {
-          window.MedleyUtils.showToast('success', result.message || 'Tags generated');
+          showToast('success', result.message || 'Tags generated');
         }
         try {
-          const updated = await window.MedleyApi.api.get(`/api/sources/${sourceId}`);
+          const updated = await api.get(`/api/sources/${sourceId}`);
           this.selectedSource = updated;
         } catch (err) {
           console.error('Failed to reload source after tagging:', err);
         }
       } catch (err) {
         console.error('Tag generation error:', err);
-        window.MedleyUtils.showToast('error', err.message || 'Failed to generate tags. Please try again.');
+        showToast('error', err.message || 'Failed to generate tags. Please try again.');
       } finally {
         this.tagging = false;
       }
@@ -510,7 +524,7 @@ export default {
       this.loadingFragments = true;
       this.fragmentsError = null;
       try {
-        this.fragments = await window.MedleyApi.api.get(`/api/fragments/by-source/${this.selectedSource.id}`);
+        this.fragments = await api.get(`/api/fragments/by-source/${this.selectedSource.id}`);
       } catch (err) {
         this.fragmentsError = 'Failed to load fragments: ' + err.message;
         console.error('Error loading fragments:', err);
@@ -528,70 +542,66 @@ export default {
     },
 
     getFragmentCategoryIcon(category) {
-      return window.MedleyUtils.getFragmentCategoryIcon(category);
+      return getFragmentCategoryIcon(category);
     },
 
     getIconClass(icon) {
-      return window.MedleyUtils.getIconClass(icon);
+      return getIconClass(icon);
     },
 
     getSourceTypeIcon(type) {
-      return window.MedleyUtils.getSourceTypeIcon(type);
+      return getSourceTypeIcon(type);
     },
 
     getConfidenceIcon(confidence) {
-      return window.MedleyUtils.getConfidenceIcon(confidence);
+      return getConfidenceIcon(confidence);
     },
 
     getConfidenceColor(confidence) {
-      return window.MedleyUtils.getConfidenceColor(confidence);
-    },
-
-    getConfidenceLabel(confidence) {
-      return window.MedleyUtils.getConfidenceLabel(confidence);
+      return getConfidenceColor(confidence);
     },
 
     formatDate(date) {
-      return window.MedleyUtils.formatDate(date);
+      return formatDate(date);
     }
   },
 
   async mounted() {
-    this.markdownRenderer = window.MedleyUtils.initializeMarkdownRenderer();
+    this.markdownRenderer = initializeMarkdownRenderer();
 
     // Preload article types for icon display
-    window.MedleyUtils.getArticleTypes();
+    getArticleTypes();
     
     await this.loadSources();
 
     // Setup infinite scroll
     this.setupInfiniteScroll('.sidebar-content');
 
-    const sourceIdFromUrl = window.UrlUtils.getUrlParam('id');
+    const sourceIdFromUrl = getUrlParam('id');
     if (sourceIdFromUrl) {
-      const source = window.MedleyUtils.findInList(this.sources, sourceIdFromUrl);
+      const source = findInList(this.sources, sourceIdFromUrl);
       if (source) {
         await this.selectSource(source, true);
       } else {
         try {
-          const loadedSource = await window.MedleyApi.api.get(`/api/sources/${sourceIdFromUrl}`);
+          const loadedSource = await api.get(`/api/sources/${sourceIdFromUrl}`);
           this.sources.unshift(loadedSource);
           this.selectedSource = loadedSource;
           this.selectedSourceId = sourceIdFromUrl;
         } catch (err) {
           console.error('Error loading source from URL:', err);
-          window.UrlUtils.setUrlParam('id', null, true);
+          setUrlParam('id', null, true);
         }
       }
     }
 
-    this.signalRConnection = window.MedleyApi.createSignalRConnection('/adminHub');
+    this.signalRConnection = createSignalRConnection('/adminHub');
 
     this.signalRConnection.on('FragmentExtractionComplete', async (sourceId, fragmentCount, success) => {
       const sourceIndex = this.sources.findIndex(s => s.id === sourceId);
       if (sourceIndex !== -1) {
         try {
-          const updatedSource = await window.MedleyApi.api.get(`/api/sources/${sourceId}`);
+          const updatedSource = await api.get(`/api/sources/${sourceId}`);
           this.sources.splice(sourceIndex, 1, updatedSource);
         } catch (err) {
           console.error('Failed to reload source in list:', err);
@@ -600,7 +610,7 @@ export default {
 
       if (this.selectedSource && this.selectedSource.id === sourceId) {
         try {
-          const updatedSource = await window.MedleyApi.api.get(`/api/sources/${sourceId}`);
+          const updatedSource = await api.get(`/api/sources/${sourceId}`);
           this.selectedSource = updatedSource;
           if (success) {
             await this.loadFragments();
@@ -618,13 +628,13 @@ export default {
       console.error('SignalR connection error:', err);
     }
 
-    this.detachPopState = window.UrlUtils.setupPopStateHandler(async () => {
-      const sourceId = window.UrlUtils.getUrlParam('id');
+    this.detachPopState = setupPopStateHandler(async () => {
+      const sourceId = getUrlParam('id');
       if (sourceId) {
-        const source = window.MedleyUtils.findInList(this.sources, sourceId);
+        const source = findInList(this.sources, sourceId);
         if (source) {
           this.selectedSourceId = source.id;
-          this.selectedSource = await window.MedleyApi.api.get(`/api/sources/${source.id}`);
+          this.selectedSource = await api.get(`/api/sources/${source.id}`);
         }
       } else {
         this.selectedSourceId = null;

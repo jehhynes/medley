@@ -55,6 +55,13 @@
 <script>
 import VirtualScroller from './VirtualScroller.vue';
 import dropdownMixin from '@/mixins/dropdown';
+import { 
+  getIconClass, 
+  getStatusIcon, 
+  getStatusColorClass, 
+  showProcessingSpinner, 
+  showUserTurnIndicator 
+} from '@/utils/helpers.js';
 
 export default {
   name: 'ArticleList',
@@ -104,15 +111,9 @@ export default {
       }
       return 'bi-file-text';
     },
-    getIconClass(icon) {
-      return window.MedleyUtils.getIconClass(icon);
-    },
-    getStatusIcon(status) {
-      return window.MedleyUtils.getStatusIcon(status);
-    },
-    getStatusColorClass(status) {
-      return window.MedleyUtils.getStatusColorClass(status);
-    },
+    getIconClass,
+    getStatusIcon,
+    getStatusColorClass,
     createChild(parentArticleId) {
       this.$emit('create-child', parentArticleId);
     },
@@ -129,12 +130,8 @@ export default {
       // Use pre-computed breadcrumbs from cache for O(1) lookup
       return this.breadcrumbsCache.get(article.id) || null;
     },
-    showProcessingSpinner(article) {
-      return window.MedleyUtils.showProcessingSpinner(article);
-    },
-    showUserTurnIndicator(article) {
-      return window.MedleyUtils.showUserTurnIndicator(article);
-    }
+    showProcessingSpinner,
+    showUserTurnIndicator
   }
 };
 </script>

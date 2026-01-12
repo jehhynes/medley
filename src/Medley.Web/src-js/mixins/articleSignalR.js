@@ -1,3 +1,6 @@
+import { createSignalRConnection } from '@/utils/api.js';
+import { debounce } from '@/utils/helpers.js';
+
 // Article SignalR Mixin - Handles real-time updates via SignalR
 const MAX_QUEUE_SIZE = 100;
 
@@ -54,11 +57,11 @@ export default {
          * Called during component mount
          */
         initializeSignalRConnection() {
-            const { createSignalRConnection } = window.MedleyApi;
+            // Using imported createSignalRConnection
             this.signalr.connection = createSignalRConnection('/articleHub');
 
             // Create debounced processor for SignalR events
-            this.processSignalRQueueDebounced = window.MedleyUtils.debounce(() => {
+            this.processSignalRQueueDebounced = debounce(() => {
                 this.processSignalRQueue();
             }, 50);
 

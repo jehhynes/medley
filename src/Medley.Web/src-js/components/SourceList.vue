@@ -28,6 +28,11 @@
 </template>
 
 <script>
+import { 
+  formatDate, 
+  getSourceTypeIcon 
+} from '@/utils/helpers.js';
+
 export default {
   name: 'SourceList',
   props: {
@@ -47,12 +52,9 @@ export default {
       // Collapse left sidebar on mobile after selection
       window.MedleySidebar?.collapseLeftSidebar();
     },
-    formatDate(dateString) {
-      return window.MedleyUtils.formatDate(dateString);
-    },
-    getSourceIcon(type) {
-      return window.MedleyUtils.getSourceTypeIcon(type);
-    }
+    // Expose imported utility functions to template
+    formatDate,
+    getSourceIcon: getSourceTypeIcon
   }
 };
 </script>

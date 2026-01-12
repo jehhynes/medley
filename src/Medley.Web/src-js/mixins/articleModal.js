@@ -1,3 +1,5 @@
+import { api } from '@/utils/api.js';
+
 // Article Modal Mixin - Handles create and edit article modals
 export default {
     methods: {
@@ -51,7 +53,7 @@ export default {
 
             this.createModal.isSubmitting = true;
             try {
-                const { api } = window.MedleyApi;
+                // Using imported api
                 const response = await api.post('/api/articles', {
                     title: this.createModal.title,
                     articleTypeId: this.createModal.typeId,
@@ -110,7 +112,7 @@ export default {
 
             this.editModal.isSubmitting = true;
             try {
-                const { api } = window.MedleyApi;
+                // Using imported api
                 await api.put(`/api/articles/${this.editModal.articleId}/metadata`, {
                     title: this.editModal.title,
                     articleTypeId: this.editModal.typeId

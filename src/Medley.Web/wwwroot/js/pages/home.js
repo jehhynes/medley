@@ -1,6 +1,18 @@
 // Home/Dashboard page script
 (function () {
-    const { getIconClass } = window.MedleyUtils;
+    // Duplicate getIconClass for home dashboard (not a Vue SFC)
+    const getIconClass = (icon) => {
+        if (!icon) {
+            return 'bi bi-file-text';
+        }
+        if (icon.startsWith('bi-')) {
+            return `bi ${icon}`;
+        }
+        if (icon.startsWith('fa-')) {
+            return `fas ${icon}`;
+        }
+        return 'bi bi-file-text';
+    };
 
     // Color palette - Standard Bootstrap Colors
     const colors = {
