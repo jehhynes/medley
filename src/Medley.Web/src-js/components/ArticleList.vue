@@ -1,11 +1,4 @@
-// Article List Component - Flat div view for articles with virtual scrolling
-const ArticleList = {
-  name: 'ArticleList',
-  mixins: [window.dropdownMixin],
-  components: {
-    VirtualScroller
-  },
-  template: `
+<template>
   <virtual-scroller 
     :items="articles" 
     :item-height="itemHeight"
@@ -57,7 +50,16 @@ const ArticleList = {
       </div>
     </template>
   </virtual-scroller>
-    `,
+</template>
+
+<script>
+import VirtualScroller from './VirtualScroller.vue';
+
+export default {
+  name: 'ArticleList',
+  components: {
+    VirtualScroller
+  },
   props: {
     articles: {
       type: Array,
@@ -80,6 +82,7 @@ const ArticleList = {
       default: () => new Map()
     }
   },
+  emits: ['select', 'create-child', 'edit-article'],
   data() {
     return {
       itemHeight: 52, // Height of each article row in pixels
@@ -129,7 +132,13 @@ const ArticleList = {
     },
     showUserTurnIndicator(article) {
       return window.MedleyUtils.showUserTurnIndicator(article);
+    },
+    handleDropdownClick(event, articleId) {
+      // Mixin method - will be added if needed
+      if (window.dropdownMixin && window.dropdownMixin.methods.handleDropdownClick) {
+        window.dropdownMixin.methods.handleDropdownClick.call(this, event, articleId);
+      }
     }
   }
 };
-
+</script>
