@@ -1,10 +1,8 @@
 // Main entry point for all Vue components
 // This file imports and registers all components globally
 
-// Import TiptapEditor (already converted)
+// Import all components
 import TiptapEditor from './components/TiptapEditor.vue';
-
-// Import all converted components
 import ArticleList from './components/ArticleList.vue';
 import ArticleTree from './components/ArticleTree.vue';
 import ChatPanel from './components/ChatPanel.vue';
@@ -15,6 +13,9 @@ import SourceList from './components/SourceList.vue';
 import VerticalMenu from './components/VerticalMenu.vue';
 import VersionsPanel from './components/VersionsPanel.vue';
 import VirtualScroller from './components/VirtualScroller.vue';
+
+// Import page-level SFCs
+import AiPrompts from './pages/AiPrompts.vue';
 
 // Import all mixins
 import dropdownMixin from './mixins/dropdown.js';
@@ -36,7 +37,8 @@ export {
   SourceList,
   VerticalMenu,
   VersionsPanel,
-  VirtualScroller
+  VirtualScroller,
+  AiPrompts
 };
 
 // Export all mixins for individual imports
@@ -63,6 +65,9 @@ if (typeof window !== 'undefined') {
   window.VerticalMenu = VerticalMenu;
   window.VersionsPanel = VersionsPanel;
   window.VirtualScroller = VirtualScroller;
+  
+  // Expose page-level SFCs
+  window.AiPrompts = AiPrompts;
   
   // Expose mixins for use in legacy page apps
   window.dropdownMixin = dropdownMixin;

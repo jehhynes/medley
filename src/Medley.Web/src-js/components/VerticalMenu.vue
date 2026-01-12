@@ -89,16 +89,24 @@ export default {
   computed: {
     currentPage() {
       const path = window.location.pathname.toLowerCase();
-      if (path.includes('/articles')) return 'Articles';
-      if (path.includes('/sources')) return 'Sources';
-      if (path.includes('/fragments')) return 'Fragments';
-      if (path.includes('/auth')) return 'Auth';
-      if (path === '/' || path.includes('/home')) return 'Home';
-      return '';
+      const segments = path.split('/').filter(s => s);
+      const firstSegment = segments[0] || 'home';
+      
+      switch(firstSegment) {
+        case 'articles': return 'Articles';
+        case 'sources': return 'Sources';
+        case 'fragments': return 'Fragments';
+        case 'auth': return 'Auth';
+        case 'account': return 'Account';
+        case 'home':
+        default: return 'Home';
+      }
     },
     isAdminPage() {
       const path = window.location.pathname.toLowerCase();
-      return path.includes('/admin') || path.includes('/integrations');
+      const segments = path.split('/').filter(s => s);
+      const firstSegment = segments[0] || '';
+      return firstSegment === 'admin' || firstSegment === 'integrations';
     }
   }
 };
