@@ -2,7 +2,7 @@
 
 ## Copyright Notice
 
-Copyright © 2025 Jonathan Hynes. All rights reserved.
+Copyright © 2026 Jonathan Hynes. All rights reserved.
 
 ## License Terms and Conditions
 

@@ -3,56 +3,44 @@ import vue from '@vitejs/plugin-vue';
 import { resolve } from 'path';
 
 export default defineConfig({
-  plugins: [vue()],
+    plugins: [vue({
+        template: {
+            compilerOptions: {
+                isCustomElement: (tag) => tag === 'json-viewer'
+            }
+        },
+    })],
+    
+  base: '/dist/',
   
   build: {
-    // Output to wwwroot/dist
     outDir: 'wwwroot/dist',
     emptyOutDir: true,
     
-    // Library mode for building all components and pages as a single bundle
-    lib: {
-      entry: resolve(__dirname, 'Vue/main.js'),
-      name: 'MedleyApp',
-      formats: ['iife'],
-      fileName: () => 'app.js'
-    },
-    
-    // Externalize Vue since it's already loaded globally
     rollupOptions: {
-      external: ['vue'],
+      input: {
+        main: resolve(__dirname, 'Vue/main.js')
+      },
       output: {
-        globals: {
-          vue: 'Vue'
-        },
-        // Ensure all exports are available on window
-        extend: true
+        entryFileNames: 'js/[name].js',
+        chunkFileNames: 'js/[name]-[hash].js',
+        assetFileNames: (assetInfo) => {
+          if (assetInfo.name.endsWith('.css')) {
+            return 'css/[name].[ext]';
+          }
+          return 'assets/[name]-[hash].[ext]';
+        }
       }
     },
     
-    // Generate sourcemaps for debugging
     sourcemap: true,
-    
-    // Minify in production
     minify: 'terser',
-    
-    // Optimize chunk size
     chunkSizeWarningLimit: 1000
   },
   
-  // Resolve configuration
   resolve: {
     alias: {
-      vue: 'vue/dist/vue.esm-bundler.js',
       '@': resolve(__dirname, 'Vue')
-    }
-  },
-  
-  // Development server configuration
-  server: {
-    hmr: {
-      protocol: 'ws',
-      host: 'localhost'
     }
   }
 });

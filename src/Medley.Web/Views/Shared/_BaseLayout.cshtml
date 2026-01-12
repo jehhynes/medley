@@ -1,0 +1,79 @@
+@using Medley.Application.Interfaces
+@inject IMedleyContext MedleyContext
+@{
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+    var currentArea = ViewContext.RouteData.Values["area"]?.ToString();
+    var hasLeftSidebar = ViewData["HasLeftSidebar"] as bool? ?? false;
+    var hasRightSidebar = ViewData["HasRightSidebar"] as bool? ?? false;
+    var isSettingsArea = currentArea == "Admin" || currentArea == "Integrations";
+    
+    // Views can set OpenSidebarOnMobile to true to have the left sidebar open on initial page load (mobile only)
+    var openSidebarOnMobile = ViewData["OpenSidebarOnMobile"] as bool? ?? false;
+    
+    // Get current user via MedleyContext (cached for this request)
+    var currentUser = await MedleyContext.GetCurrentUserAsync();
+    var displayName = currentUser?.FullName ?? currentUser?.Email ?? "User";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <title>@ViewData["Title"] - Medley</title>
+    
+    <link rel="icon" href="~/favicon.ico">
+    
+    <!-- System theme detection -->
+    <script>
+        (function() {
+            const setTheme = () => {
+                const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                document.documentElement.setAttribute('data-bs-theme', isDark ? 'dark' : 'light');
+            };
+            
+            setTheme();
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', setTheme);
+        })();
+    </script>
+    
+    <link rel="stylesheet" href="~/css/bootstrap/flatly/bootstrap.min.css" asp-append-version="true">
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/lib/font-awesome/css/all.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+    <header class="mobile-header @(hasRightSidebar ? "d-xl-none" : "d-lg-none")">
+        <div class="mobile-header-left">
+            <button id="mobile-left-sidebar-toggle" class="btn btn-link text-body p-0 d-lg-none">
+                <i class="bi bi-layout-sidebar"></i>
+            </button>
+        </div>
+        <div class="mobile-header-center">
+            <span class="mobile-header-title">@ViewData["Title"]</span>
+        </div>
+        <div class="mobile-header-right">
+            @if (hasRightSidebar)
+            {
+                <button id="mobile-right-sidebar-toggle" class="btn btn-link text-body p-0">
+                    <i class="bi bi-layout-sidebar-reverse"></i>
+                </button>
+            }
+        </div>
+    </header>
+
+    <!-- Mobile sidebar backdrop -->
+    <div id="mobile-sidebar-backdrop" class="mobile-sidebar-backdrop @(openSidebarOnMobile ? "show-initial" : "")"></div>
+
+    @RenderBody()
+
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js" asp-append-version="true"></script>
+    <script src="~/lib/jquery/dist/jquery.min.js" asp-append-version="true"></script>
+    <script src="~/lib/signalr/dist/browser/signalr.min.js" asp-append-version="true"></script>
+    <script src="~/js/mobile-sidebar.js" asp-append-version="true"></script>
+    
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

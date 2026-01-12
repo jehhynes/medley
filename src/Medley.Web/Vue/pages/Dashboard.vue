@@ -5,7 +5,8 @@
     :is-open="openSidebarOnMobile"
   />
 
-  <div class="dashboard-container">
+  <div class="main-content">
+    <div class="dashboard-container">
     <div class="dashboard-header">
       <h1>Medley</h1>
       <p>AI-Powered Product Intelligence Platform</p>
@@ -178,6 +179,7 @@
       </div>
     </template>
   </div>
+  </div>
 </template>
 
 <script>
@@ -234,9 +236,7 @@ export default {
       return str.replace(/[^a-zA-Z0-9]/g, '');
     },
 
-    getIconClass(icon) {
-      return getIconClass(icon);
-    },
+    getIconClass: getIconClass,
 
     initializeCharts() {
       const colors = {

@@ -1,30 +1,30 @@
 <template>
   <div class="vertical-menu" :class="{ 'show': isOpen }">
     <template v-if="isAuthenticated">
-      <a href="/" 
+      <router-link to="/" 
          :class="['vertical-menu-item', { active: currentPage === 'Home' }]" 
          title="Home">
         <i class="bi bi-house"></i>
         <span class="vertical-menu-item-label">Home</span>
-      </a>
-      <a href="/Articles"
+      </router-link>
+      <router-link to="/Articles"
          :class="['vertical-menu-item', { active: currentPage === 'Articles' }]"
          title="Articles">
         <i class="bi bi-file-text"></i>
         <span class="vertical-menu-item-label">Articles</span>
-      </a>
-      <a href="/Sources" 
+      </router-link>
+      <router-link to="/Sources" 
          :class="['vertical-menu-item', { active: currentPage === 'Sources' }]" 
          title="Sources">
         <i class="bi bi-camera-video"></i>
         <span class="vertical-menu-item-label">Sources</span>
-      </a>
-      <a href="/Fragments" 
+      </router-link>
+      <router-link to="/Fragments" 
          :class="['vertical-menu-item', { active: currentPage === 'Fragments' }]" 
          title="Fragments">
         <i class="bi bi-puzzle"></i>
         <span class="vertical-menu-item-label">Fragments</span>
-      </a>
+      </router-link>
       <div style="flex: 1;"></div>
       <a href="/Admin/Settings" 
          :class="['vertical-menu-item', { active: isAdminPage }]" 
@@ -88,7 +88,7 @@ export default {
   },
   computed: {
     currentPage() {
-      const path = window.location.pathname.toLowerCase();
+      const path = this.$route.path.toLowerCase();
       const segments = path.split('/').filter(s => s);
       const firstSegment = segments[0] || 'home';
       
@@ -103,7 +103,7 @@ export default {
       }
     },
     isAdminPage() {
-      const path = window.location.pathname.toLowerCase();
+      const path = this.$route.path.toLowerCase();
       const segments = path.split('/').filter(s => s);
       const firstSegment = segments[0] || '';
       return firstSegment === 'admin' || firstSegment === 'integrations';

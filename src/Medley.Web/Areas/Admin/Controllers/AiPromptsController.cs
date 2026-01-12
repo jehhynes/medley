@@ -9,7 +9,7 @@ public class AiPromptsController : Controller
 {
     public IActionResult Index()
     {
-        return View();
+        return View("Spa");
     }
 }
 

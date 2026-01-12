@@ -43,43 +43,10 @@
     },
     {
       "provider": "jsdelivr",
-      "library": "vue@3.4.21",
-      "destination": "wwwroot/lib/vue/",
-      "files": [
-        "dist/vue.global.js",
-        "dist/vue.global.prod.js"
-      ]
-    },
-    {
-      "provider": "jsdelivr",
-      "library": "@alenaksu/json-viewer@2.1.0",
-      "destination": "wwwroot/lib/json-viewer/",
-      "files": [
-        "dist/json-viewer.bundle.js"
-      ]
-    },
-    {
-      "provider": "jsdelivr",
-      "library": "marked@12.0.0",
-      "destination": "wwwroot/lib/marked/",
-      "files": [
-        "marked.min.js"
-      ]
-    },
-    {
-      "provider": "jsdelivr",
       "library": "bootbox@6.0.0",
       "destination": "wwwroot/lib/bootbox/",
       "files": [
         "dist/bootbox.all.min.js"
-      ]
-    },
-    {
-      "provider": "jsdelivr",
-      "library": "chart.js@4.4.0",
-      "destination": "wwwroot/lib/chart.js/",
-      "files": [
-        "dist/chart.umd.min.js"
       ]
     }
   ]
