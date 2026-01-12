@@ -1,6 +1,11 @@
 // Main entry point for all Vue components
 // This file imports and registers all components globally
 
+// Import third-party libraries
+import bootbox from 'bootbox';
+import { marked } from 'marked';
+import '@alenaksu/json-viewer';
+
 // Import all components
 import TiptapEditor from './components/TiptapEditor.vue';
 import ArticleList from './components/ArticleList.vue';
@@ -59,6 +64,10 @@ export {
 
 // Make components and mixins available globally on window object
 if (typeof window !== 'undefined') {
+  // Expose third-party libraries globally
+  window.bootbox = bootbox;
+  window.marked = marked;
+  
   // Expose individual components
   window.TiptapEditor = TiptapEditor;
   window.ArticleList = ArticleList;
