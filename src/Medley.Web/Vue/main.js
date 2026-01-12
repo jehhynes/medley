@@ -22,6 +22,7 @@ import VirtualScroller from './components/VirtualScroller.vue';
 // Import page-level SFCs
 import AiPrompts from './pages/AiPrompts.vue';
 import Articles from './pages/Articles.vue';
+import Dashboard from './pages/Dashboard.vue';
 import Fragments from './pages/Fragments.vue';
 import Sources from './pages/Sources.vue';
 
@@ -48,6 +49,7 @@ export {
   VirtualScroller,
   AiPrompts,
   Articles,
+  Dashboard,
   Fragments,
   Sources
 };
@@ -84,6 +86,7 @@ if (typeof window !== 'undefined') {
   // Expose page-level SFCs
   window.AiPrompts = AiPrompts;
   window.Articles = Articles;
+  window.Dashboard = Dashboard;
   window.Fragments = Fragments;
   window.Sources = Sources;
   
