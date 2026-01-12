@@ -6,7 +6,7 @@
   />
 
   <!-- Left Sidebar (List) -->
-  <div class="sidebar left-sidebar" :class="{ 'show': showLeftSidebarOnMobile }">
+  <div class="sidebar left-sidebar" :class="{ 'show': openSidebarOnMobile }">
     <div class="sidebar-header">
       <h6 class="sidebar-title">Fragments</h6>
       <div class="input-group input-group-sm">
@@ -147,9 +147,7 @@ export default {
       // User info from server
       userDisplayName: window.MedleyUser?.displayName || 'User',
       userIsAuthenticated: window.MedleyUser?.isAuthenticated || false,
-      openSidebarOnMobile: window.MedleyUser?.openSidebarOnMobile || false,
-      // Computed sidebar visibility (starts with server value, updates on selection)
-      showLeftSidebarOnMobile: window.MedleyUser?.openSidebarOnMobile || false
+      openSidebarOnMobile: window.MedleyUser?.openSidebarOnMobile || false
     };
   },
   computed: {
