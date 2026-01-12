@@ -1,4 +1,4 @@
-// Home/Dashboard page script (extracted from Home/Index.cshtml)
+// Home/Dashboard page script
 (function () {
     const { getIconClass } = window.MedleyUtils;
 
