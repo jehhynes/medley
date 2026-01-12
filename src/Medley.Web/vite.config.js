@@ -10,12 +10,12 @@ export default defineConfig({
     outDir: 'wwwroot/js/dist',
     emptyOutDir: true,
     
-    // Library mode for building the TipTap editor as a standalone module
+    // Library mode for building all components as a bundle
     lib: {
-      entry: resolve(__dirname, 'src-js/TiptapEditor.vue'),
-      name: 'TiptapEditor',
+      entry: resolve(__dirname, 'src-js/main.js'),
+      name: 'MedleyComponents',
       formats: ['iife'],
-      fileName: () => 'tiptap-editor.js'
+      fileName: () => 'components.js'
     },
     
     // Externalize Vue since it's already loaded globally
@@ -24,7 +24,9 @@ export default defineConfig({
       output: {
         globals: {
           vue: 'Vue'
-        }
+        },
+        // Ensure all exports are available on window
+        extend: true
       }
     },
     
@@ -32,13 +34,25 @@ export default defineConfig({
     sourcemap: true,
     
     // Minify in production
-    minify: 'terser'
+    minify: 'terser',
+    
+    // Optimize chunk size
+    chunkSizeWarningLimit: 1000
   },
   
   // Resolve configuration
   resolve: {
     alias: {
-      vue: 'vue/dist/vue.esm-bundler.js'
+      vue: 'vue/dist/vue.esm-bundler.js',
+      '@': resolve(__dirname, 'src-js')
+    }
+  },
+  
+  // Development server configuration
+  server: {
+    hmr: {
+      protocol: 'ws',
+      host: 'localhost'
     }
   }
 });

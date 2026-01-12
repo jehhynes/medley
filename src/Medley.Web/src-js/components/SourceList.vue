@@ -1,7 +1,4 @@
-// Source List Component - List view for sources
-const SourceList = {
-    name: 'SourceList',
-    template: `
+<template>
   <ul class="list-view">
     <li v-for="source in sources" :key="source.id" class="list-item">
       <a href="#" 
@@ -24,34 +21,38 @@ const SourceList = {
              class="bi bi-check-lg text-success"></i>
           <i v-else-if="source.extractionStatus === 'Failed'" 
              class="bi bi-x-square text-danger"></i>
-     
         </span>
       </a>
     </li>
   </ul>
-    `,
-    props: {
-        sources: {
-            type: Array,
-            default: () => []
-        },
-        selectedId: {
-            type: String,
-            default: null
-        }
-    },
-    methods: {
-        selectSource(source) {
-            this.$emit('select', source);
-            // Collapse left sidebar on mobile after selection
-            window.MedleySidebar?.collapseLeftSidebar();
-        },
-        formatDate(dateString) {
-            return window.MedleyUtils.formatDate(dateString);
-        },
-        getSourceIcon(type) {
-            return window.MedleyUtils.getSourceTypeIcon(type);
-        }
-    }
-};
+</template>
 
+<script>
+export default {
+  name: 'SourceList',
+  props: {
+    sources: {
+      type: Array,
+      default: () => []
+    },
+    selectedId: {
+      type: String,
+      default: null
+    }
+  },
+  emits: ['select'],
+  methods: {
+    selectSource(source) {
+      this.$emit('select', source);
+      // Collapse left sidebar on mobile after selection
+      window.MedleySidebar?.collapseLeftSidebar();
+    },
+    formatDate(dateString) {
+      return window.MedleyUtils.formatDate(dateString);
+    },
+    getSourceIcon(type) {
+      return window.MedleyUtils.getSourceTypeIcon(type);
+    }
+  }
+};
+</script>
