@@ -3,6 +3,7 @@ using System;
 using Medley.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -12,9 +13,11 @@ using Pgvector;
 namespace Medley.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260113171756_AddConversationIdToArticleVersion")]
+    partial class AddConversationIdToArticleVersion
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -325,9 +328,9 @@ namespace Medley.Infrastructure.Migrations
                     b.HasIndex("ArticleId", "CreatedAt")
                         .HasDatabaseName("ix_article_versions_article_id_created_at");
 
-                    b.HasIndex("ArticleId", "VersionNumber", "ParentVersionId", "VersionType")
+                    b.HasIndex("ArticleId", "VersionNumber")
                         .IsUnique()
-                        .HasDatabaseName("ix_article_versions_article_id_version_number_parent_version_i");
+                        .HasDatabaseName("ix_article_versions_article_id_version_number");
 
                     b.ToTable("article_versions", (string)null);
                 });

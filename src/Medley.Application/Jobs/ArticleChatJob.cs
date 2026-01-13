@@ -21,6 +21,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
     private readonly IRepository<ChatMessage> _chatMessageRepository;
     private readonly IRepository<Article> _articleRepository;
     private readonly IRepository<Plan> _planRepository;
+    private readonly IRepository<ArticleVersion> _versionRepository;
     private readonly IHubContext<ArticleHub> _hubContext;
 
     public ArticleChatJob(
@@ -28,6 +29,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
         IRepository<ChatMessage> chatMessageRepository,
         IRepository<Article> articleRepository,
         IRepository<Plan> planRepository,
+        IRepository<ArticleVersion> versionRepository,
         IHubContext<ArticleHub> hubContext,
         IUnitOfWork unitOfWork,
         ILogger<ArticleChatJob> logger) : base(unitOfWork, logger)
@@ -36,6 +38,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
         _chatMessageRepository = chatMessageRepository;
         _articleRepository = articleRepository;
         _planRepository = planRepository;
+        _versionRepository = versionRepository;
         _hubContext = hubContext;
     }
 
@@ -197,6 +200,33 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                             {
                                 articleId = conversation.ArticleId.ToString(),
                                 planId = plan.Id.ToString(),
+                                conversationId = conversation.Id.ToString(),
+                                timestamp = DateTimeOffset.UtcNow
+                            }, cancellationToken);
+                    }
+                }
+
+                // Get the created AI version and send ArticleVersionCreated event
+                if (conversation.Mode == ConversationMode.Agent)
+                {
+                    var aiVersion = await _versionRepository.Query()
+                        .Where(v => v.ArticleId == conversation.ArticleId 
+                            && v.ConversationId == conversation.Id 
+                            && v.VersionType == VersionType.AI)
+                        .OrderByDescending(v => v.CreatedAt)
+                        .FirstOrDefaultAsync(cancellationToken);
+
+                    if (aiVersion != null)
+                    {
+                        _logger.LogInformation("Sending ArticleVersionCreated event for version {VersionId}, article {ArticleId}",
+                            aiVersion.Id, conversation.ArticleId);
+
+                        await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
+                            .SendAsync("ArticleVersionCreated", new
+                            {
+                                articleId = conversation.ArticleId.ToString(),
+                                versionId = aiVersion.Id.ToString(),
+                                versionNumber = aiVersion.VersionNumber,
                                 conversationId = conversation.Id.ToString(),
                                 timestamp = DateTimeOffset.UtcNow
                             }, cancellationToken);

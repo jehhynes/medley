@@ -6,9 +6,9 @@ namespace Medley.Domain.Enums;
 public enum ConversationMode
 {
     /// <summary>
-    /// Standard chat mode for asking questions and general assistance
+    /// Agent mode for AI assistance, Q&A, and implementing plans
     /// </summary>
-    Chat = 0,
+    Agent = 0,
 
     /// <summary>
     /// Plan mode for generating article improvement plans

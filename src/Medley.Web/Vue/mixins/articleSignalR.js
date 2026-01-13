@@ -181,6 +181,38 @@ export default {
                 }
             });
 
+            this.signalr.connection.on('ArticleVersionCreated', async (data) => {
+                // Normalize IDs for comparison (handle both string and GUID formats)
+                const normalizeId = (id) => id ? id.toString().toLowerCase() : null;
+                const selectedId = normalizeId(this.articles.selectedId);
+                const eventArticleId = normalizeId(data.articleId);
+
+                console.log('ArticleVersionCreated event received:', {
+                    eventArticleId,
+                    selectedId,
+                    versionId: data.versionId,
+                    versionNumber: data.versionNumber,
+                    matches: selectedId === eventArticleId
+                });
+
+                // Open version tab when version is created for the currently selected article
+                if (selectedId === eventArticleId) {
+                    console.log('Opening version tab automatically for version:', data.versionId);
+                    // Reload the versions list in the VersionsPanel
+                    if (this.$refs.versionsPanel) {
+                        await this.$refs.versionsPanel.loadVersions();
+                    }
+                    // Open and switch to the version tab
+                    this.openVersionTab({
+                        id: data.versionId,
+                        versionNumber: data.versionNumber,
+                        createdAt: data.timestamp
+                    });
+                } else {
+                    console.log('Version created for different article, not opening tab');
+                }
+            });
+
             this.signalr.connection.on('ChatTurnStarted', (data) => {
                 // Update turn status on the article directly
                 const article = this.articles.index.get(this.articles.selectedId);

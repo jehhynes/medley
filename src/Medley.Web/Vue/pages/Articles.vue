@@ -154,7 +154,9 @@
             class="content-tab-pane">
             <plan-viewer
               :plan-id="contentTabs.planData.planId"
-              :article-id="articles.selectedId" />
+              :article-id="articles.selectedId"
+              @conversation-created="handlePlanConversationCreated"
+              @close-plan="closeContentTab('plan')" />
           </div>
         </div>
       </template>
@@ -181,10 +183,12 @@
       <div class="sidebar-tab-content">
         <div v-show="ui.activeRightTab === 'assistant'" class="sidebar-tab-pane">
           <chat-panel 
+            ref="chatPanel"
             :article-id="articles.selectedId" 
             :connection="signalr.connection"
             @open-plan="openPlanTab"
-            @open-fragment="handleOpenFragment" />
+            @open-fragment="handleOpenFragment"
+            @open-version="handleOpenVersion" />
         </div>
         <div v-show="ui.activeRightTab === 'versions'" class="sidebar-tab-pane">
           <versions-panel 
@@ -688,7 +692,9 @@ export default {
 
         this.clearVersionSelection();
         this.clearAllTabs();
+        // Load plan and AI version - load AI version last so it takes priority if both exist
         await this.loadDraftPlan(article.id);
+        await this.loadLatestAIVersion(article.id);
         this.expandParents(article.id);
 
         // Use Vue Router to update the URL, which will trigger the App.vue watcher
@@ -1156,6 +1162,21 @@ export default {
       }
     },
 
+    async loadLatestAIVersion(articleId) {
+      try {
+        const response = await api.get(`/api/articles/${articleId}/versions/ai/latest`);
+
+        if (response && response.id) {
+          this.openVersionTab(response);
+        }
+      } catch (err) {
+        if (err.response && err.response.status === 204) {
+          return;
+        }
+        console.error('Error loading latest AI version:', err);
+      }
+    },
+
     clearAllTabs() {
       this.contentTabs.versionData = null;
       this.contentTabs.planData = null;
@@ -1174,8 +1195,31 @@ export default {
       }
     },
 
+    async handleOpenVersion(versionId) {
+      if (!versionId) return;
+
+      try {
+        const version = await api.get(`/api/articles/${this.articles.selectedId}/versions/${versionId}`);
+        this.openVersionTab(version);
+      } catch (err) {
+        console.error('Error loading version:', err);
+        showToast('error', 'Failed to load version');
+      }
+    },
+
     closeFragmentModal() {
       this.selectedFragment = null;
+    },
+
+    async handlePlanConversationCreated(conversationId) {
+      // Switch to the assistant tab
+      this.setActiveRightTab('assistant');
+      
+      // Load the new conversation in the chat panel
+      await this.$nextTick();
+      if (this.$refs.chatPanel) {
+        await this.$refs.chatPanel.loadConversation(conversationId);
+      }
     }
   },
 

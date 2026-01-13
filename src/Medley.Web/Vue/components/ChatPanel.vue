@@ -12,6 +12,21 @@
     </div>
 
     <template v-else>
+      <!-- Plan Implementation Indicator -->
+      <!--<div v-if="implementingPlanId" class="alert alert-info m-3 mb-0 d-flex align-items-center">
+        <i class="bi bi-gear-fill me-2"></i>
+        <div class="flex-grow-1">
+          <strong>Implementing Plan v{{ implementingPlanVersion }}</strong>
+          <div class="small">The AI is working to implement your improvement plan.</div>
+        </div>
+        <a :href="`/articles/${articleId}/plans/${implementingPlanId}`" 
+           class="btn btn-sm btn-outline-primary"
+           target="_blank">
+          <i class="bi bi-box-arrow-up-right me-1"></i>
+          View Plan
+        </a>
+      </div>-->
+
       <div class="chat-messages" ref="messagesContainer">
         <div v-if="!hasMessages && !isAiTurn" class="empty-state" v-cloak>
           <i class="bi bi-chat-dots empty-state-icon"></i>
@@ -66,7 +81,8 @@
                           :key="idx"
                           :tool="tool"
                           @open-plan="openPlan"
-                          @open-fragment="$emit('open-fragment', $event)" />
+                          @open-fragment="$emit('open-fragment', $event)"
+                          @open-version="$emit('open-version', $event)" />
                       </div>
                     </div>
                     
@@ -93,7 +109,8 @@
                     :key="idx"
                     :tool="tool"
                     @open-plan="openPlan"
-                    @open-fragment="$emit('open-fragment', $event)" />
+                    @open-fragment="$emit('open-fragment', $event)"
+                    @open-version="$emit('open-version', $event)" />
                 </div>
               </template>
             </div>
@@ -128,7 +145,7 @@
               <select v-model="mode" 
                       :disabled="isAiTurn"
                       class="form-select form-select-sm mode-select">
-                <option value="Chat">Chat</option>
+                <option value="Agent">Agent</option>
                 <option value="Plan">Plan</option>
               </select>
             </div>
@@ -164,7 +181,7 @@ export default {
       default: null
     }
   },
-  emits: ['open-plan', 'open-fragment'],
+  emits: ['open-plan', 'open-fragment', 'open-version'],
   data() {
     return {
       conversationId: null,
@@ -175,7 +192,9 @@ export default {
       isLoading: false,
 
       expandedMessages: {}, // Track expanded state of intermediate/tool messages
-      mode: 'Chat' // Default mode
+      mode: 'Agent', // Default mode
+      implementingPlanId: null, // Plan being implemented (if any)
+      implementingPlanVersion: null // Version of the plan being implemented
     };
   },
   computed: {
@@ -199,7 +218,7 @@ export default {
           this.reset();
 
           if (newId) {
-            this.loadActiveConversation();
+            this.loadConversation();
           }
         }
       }
@@ -249,38 +268,60 @@ export default {
       conn.off('ChatError', this.onChatError);
     },
 
-    async loadActiveConversation() {
+    async loadConversation(conversationId = null) {
       if (!this.articleId) return;
 
       this.isLoading = true;
       this.error = null;
 
       try {
-        const response = await fetch(`/api/articles/${this.articleId}/assistant/conversation`);
+        // Build URL with optional conversationId route parameter
+        const url = conversationId
+          ? `/api/articles/${this.articleId}/assistant/conversation/${conversationId}`
+          : `/api/articles/${this.articleId}/assistant/conversation`;
+
+        const response = await fetch(url);
 
         if (response.status === 204) {
-          // No active conversation - that's ok
-          this.conversationId = null;
-          this.messages = [];
-        } else if (response.ok) {
-          const conversation = await response.json();
-          this.conversationId = conversation.id;
-          this.mode = conversation.mode || 'Chat';
-          await this.loadMessages();
-        } else if (response.status === 404) {
+          // No active conversation - only valid when not requesting specific conversation
+          if (!conversationId) {
+            this.conversationId = null;
+            this.messages = [];
+            return;
+          }
+          throw new Error('Conversation not found');
+        }
+
+        if (response.status === 404) {
+          // 404 - handle based on whether we're loading a specific conversation
+          if (conversationId) {
+            this.error = 'Conversation not found';
+            return;
+          }
           // No active conversation - that's ok (backwards compatibility)
           this.conversationId = null;
           this.messages = [];
-        } else {
+          return;
+        }
+
+        if (!response.ok) {
           throw new Error('Failed to load conversation');
         }
+
+        const conversation = await response.json();
+        this.conversationId = conversation.id;
+        this.mode = conversation.mode || 'Agent';
+        this.implementingPlanId = conversation.implementingPlanId || null;
+        this.implementingPlanVersion = conversation.implementingPlanVersion || null;
+
+        // Load messages for this conversation
+        await this.loadMessages();
       } catch (err) {
         console.error('Error loading conversation:', err);
-        this.error = 'Failed to load conversation';
+        this.error = err.message || 'Failed to load conversation';
       } finally {
         this.isLoading = false;
         // Scroll to bottom after loading is complete and DOM is updated
-        // Use double $nextTick to ensure v-if directives have fully rendered
         this.$nextTick(() => {
           this.$nextTick(() => {
             this.scrollToBottom();
@@ -573,7 +614,9 @@ export default {
       this.isAiTurn = false;
       this.error = null;
       this.expandedMessages = {};
-      this.mode = 'Chat';
+      this.mode = 'Agent';
+      this.implementingPlanId = null;
+      this.implementingPlanVersion = null;
     },
 
     toggleMessageExpansion(messageId) {

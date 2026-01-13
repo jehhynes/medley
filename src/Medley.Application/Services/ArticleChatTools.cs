@@ -20,11 +20,14 @@ namespace Medley.Application.Services;
 public class ArticleChatTools
 {
     private readonly Guid _articleId;
+    private readonly Guid? _implementingPlanId;
+    private readonly Guid? _conversationId;
     private readonly IFragmentRepository _fragmentRepository;
     private readonly IEmbeddingGenerator<string, Embedding<float>> _embeddingGenerator;
     private readonly IRepository<Article> _articleRepository;
     private readonly IRepository<Plan> _planRepository;
     private readonly IRepository<PlanFragment> _planFragmentRepository;
+    private readonly IArticleVersionService _articleVersionService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<ArticleChatTools> _logger;
     private readonly EmbeddingSettings _embeddingSettings;
@@ -34,11 +37,14 @@ public class ArticleChatTools
     public ArticleChatTools(
         Guid articleId,
         Guid userId,
+        Guid? implementingPlanId,
+        Guid? conversationId,
         IFragmentRepository fragmentRepository,
         IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
         IRepository<Article> articleRepository,
         IRepository<Plan> planRepository,
         IRepository<PlanFragment> planFragmentRepository,
+        IArticleVersionService articleVersionService,
         IUnitOfWork unitOfWork,
         ILogger<ArticleChatTools> logger,
         IOptions<EmbeddingSettings> embeddingSettings,
@@ -46,11 +52,14 @@ public class ArticleChatTools
     {
         _articleId = articleId;
         _currentUserId = userId;
+        _implementingPlanId = implementingPlanId;
+        _conversationId = conversationId;
         _fragmentRepository = fragmentRepository;
         _embeddingGenerator = embeddingGenerator;
         _articleRepository = articleRepository;
         _planRepository = planRepository;
         _planFragmentRepository = planFragmentRepository;
+        _articleVersionService = articleVersionService;
         _unitOfWork = unitOfWork;
         _logger = logger;
         _embeddingSettings = embeddingSettings.Value;
@@ -429,17 +438,32 @@ public class ArticleChatTools
     /// </summary>
     [Description("Create/update a structured improvement plan for the article with fragment recommendations.")]
     public virtual async Task<string> CreatePlanAsync(
-        [Description("Overall instructions for how to improve the article using the recommended fragments")] string instructions,
-        [Description("Array of fragment recommendations")] PlanFragmentRecommendation[] recommendations,
-        [Description("Optional summary of changes if this is a modification of an existing plan")] string? changesSummary = null,
+        [Description("Request containing plan instructions, fragment recommendations, and optional change summary")] CreatePlanRequest request,
         CancellationToken cancellationToken = default)
     {
         try
         {
             _logger.LogInformation("Creating plan for article: {ArticleId} with {Count} recommendations", 
-                _articleId, recommendations.Length);
+                _articleId, request.Recommendations.Length);
 
+            // Validate request
+            if (string.IsNullOrWhiteSpace(request.Instructions))
+            {
+                return JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    error = "Instructions cannot be empty"
+                });
+            }
 
+            if (request.Recommendations == null || request.Recommendations.Length == 0)
+            {
+                return JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    error = "At least one fragment recommendation is required"
+                });
+            }
 
             // Get existing draft plan (if any) to determine version and parent
             var existingDraftPlan = await _planRepository.Query()
@@ -476,19 +500,20 @@ public class ArticleChatTools
             var plan = new Plan
             {
                 ArticleId = _articleId,
-                Instructions = instructions,
+                Instructions = request.Instructions,
                 Status = PlanStatus.Draft,
                 CreatedByUserId = _currentUserId,
                 CreatedAt = DateTimeOffset.UtcNow,
                 Version = newVersion,
                 ParentPlanId = parentPlanId,
-                ChangesSummary = changesSummary
+                ChangesSummary = request.ChangesSummary,
+                ConversationId = _conversationId
             };
 
             await _planRepository.SaveAsync(plan);
 
             // Create plan fragments
-            foreach (var rec in recommendations)
+            foreach (var rec in request.Recommendations)
             {
                 var planFragment = new PlanFragment
                 {
@@ -511,7 +536,7 @@ public class ArticleChatTools
             {
                 success = true,
                 planId = plan.Id,
-                message = $"Created plan with {recommendations.Length} fragment recommendations"
+                message = $"Created plan with {request.Recommendations.Length} fragment recommendations"
             });
         }
         catch (Exception ex)
@@ -524,6 +549,127 @@ public class ArticleChatTools
             });
         }
     }
+
+    /// <summary>
+    /// Create a new AI-generated version of the article with improved content
+    /// </summary>
+    [Description("Create a new AI-generated version of the article with improved content. " +
+        "This creates a new ArticleVersion record with the improved content.")]
+    public virtual async Task<string> CreateArticleVersionAsync(
+        [Description("Request containing the improved article content and change description")] CreateArticleVersionRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogInformation("Creating AI article version for article: {ArticleId}", _articleId);
+
+            // Validate request
+            if (string.IsNullOrWhiteSpace(request.Content))
+            {
+                return JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    error = "Content cannot be empty"
+                });
+            }
+
+            if (string.IsNullOrWhiteSpace(request.ChangeMessage))
+            {
+                return JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    error = "Change message cannot be empty"
+                });
+            }
+
+            if (request.ChangeMessage.Length > 200)
+            {
+                return JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    error = "Change message cannot exceed 200 characters"
+                });
+            }
+
+            // Create AI version using the service
+            var versionDto = await _articleVersionService.CreateAiVersionAsync(
+                _articleId,
+                request.Content,
+                request.ChangeMessage,
+                _currentUserId,
+                _conversationId,
+                cancellationToken);
+            
+            // If this is implementing a plan, mark it as Applied
+            if (_implementingPlanId.HasValue)
+            {
+                var plan = await _planRepository.GetByIdAsync(_implementingPlanId.Value, cancellationToken);
+                if (plan != null)
+                {
+                    plan.Status = PlanStatus.Applied;
+                    plan.AppliedAt = DateTimeOffset.UtcNow;
+                    await _planRepository.SaveAsync(plan);
+                    _logger.LogInformation("Marked plan {PlanId} as Applied", _implementingPlanId.Value);
+                }
+            }
+            
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            return JsonSerializer.Serialize(new
+            {
+                success = true,
+                versionId = versionDto.Id,
+                versionNumber = versionDto.VersionNumber,
+                message = $"Created AI version {versionDto.VersionNumber} of the article"
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Invalid operation creating article version for article: {ArticleId}", _articleId);
+            return JsonSerializer.Serialize(new
+            {
+                success = false,
+                error = ex.Message
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating article version for article: {ArticleId}", _articleId);
+            return JsonSerializer.Serialize(new
+            {
+                success = false,
+                error = $"Error creating article version: {ex.Message}"
+            });
+        }
+    }
+}
+
+/// <summary>
+/// Request for creating an article improvement plan
+/// </summary>
+public class CreatePlanRequest
+{
+    /// <summary>
+    /// Overall instructions for how to improve the article using the recommended fragments
+    /// </summary>
+    [Description("Overall instructions for how to improve the article using the recommended fragments")]
+    [Required]
+    public required string Instructions { get; set; }
+
+    /// <summary>
+    /// Array of fragment recommendations
+    /// </summary>
+    [Description("Array of fragment recommendations")]
+    [Required]
+    [MinLength(1)]
+    public required PlanFragmentRecommendation[] Recommendations { get; set; }
+
+    /// <summary>
+    /// Optional summary of changes if this is a modification of an existing plan
+    /// </summary>
+    [Description("Optional summary of changes if this is a modification of an existing plan")]
+    [MaxLength(500)]
+    public string? ChangesSummary { get; set; }
 }
 
 /// <summary>
@@ -547,4 +693,22 @@ public class PlanFragmentRecommendation
     [Description("Optional instructions on how to incorporate this fragment into the article")]
     [MaxLength(200)]
     public required string Instructions { get; set; }
+}
+
+public class CreateArticleVersionRequest
+{
+    /// <summary>
+    /// The complete improved article content
+    /// </summary>
+    [Description("The complete improved article content")]
+    [Required]
+    public required string Content { get; set; }
+
+    /// <summary>
+    /// Description of changes made in this version
+    /// </summary>
+    [Description("Description of changes made in this version")]
+    [Required]
+    [MaxLength(200)]
+    public required string ChangeMessage { get; set; }
 }

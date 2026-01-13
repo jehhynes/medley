@@ -103,6 +103,16 @@ public class ToolDisplayExtractor
                     ids.Add(planId);
                 }
             }
+            else if (string.Equals(toolName, "CreateArticleVersion", StringComparison.OrdinalIgnoreCase))
+            {
+                // Extract versionId from CreateArticleVersion result
+                if (root.TryGetProperty("versionId", out var versionIdProp) && 
+                    versionIdProp.ValueKind == JsonValueKind.String &&
+                    Guid.TryParse(versionIdProp.GetString(), out var versionId))
+                {
+                    ids.Add(versionId);
+                }
+            }
             else if (string.Equals(toolName, "SearchFragments", StringComparison.OrdinalIgnoreCase) || 
                      string.Equals(toolName, "FindSimilarFragments", StringComparison.OrdinalIgnoreCase))
             {

@@ -324,6 +324,41 @@ const calculateOperations = (beforeTokens, afterTokens) => {
         }
         return /^\s$/.test(beforeTokens[op.startInBefore]);
     };
+    const isWhitespaceOnly = (op) => {
+        // Check if an operation only contains whitespace tokens (including newlines)
+        if (op.action === 'equal') {
+            return false; // Don't filter equal operations
+        }
+        
+        let tokens = [];
+        
+        // For delete and replace operations, check the beforeTokens
+        if (op.action === 'delete' || op.action === 'replace') {
+            if (op.endInBefore !== undefined && op.endInBefore >= op.startInBefore) {
+                tokens = beforeTokens.slice(op.startInBefore, op.endInBefore + 1);
+            }
+        }
+        
+        // For insert and replace operations, check the afterTokens
+        if (op.action === 'insert' || op.action === 'replace') {
+            if (op.endInAfter !== undefined && op.endInAfter >= op.startInAfter) {
+                const afterTokensSlice = afterTokens.slice(op.startInAfter, op.endInAfter + 1);
+                // For replace, we need ALL tokens (before and after) to be whitespace
+                // For insert, we only check the after tokens
+                if (op.action === 'replace') {
+                    tokens = tokens.concat(afterTokensSlice);
+                } else {
+                    tokens = afterTokensSlice;
+                }
+            }
+        }
+        
+        // If no tokens found, don't filter
+        if (tokens.length === 0) return false;
+        
+        // Check if all tokens are whitespace only (including newlines, tabs, etc.)
+        return tokens.every(token => /^\s+$/.test(token));
+    };
     for (j = 0; j < operations.length; j++) {
         op = operations[j];
         if (
@@ -332,6 +367,9 @@ const calculateOperations = (beforeTokens, afterTokens) => {
         ) {
             lastOp.endInBefore = op.endInBefore;
             lastOp.endInAfter = op.endInAfter;
+        } else if (isWhitespaceOnly(op)) {
+            // Skip whitespace-only operations
+            continue;
         } else {
             postProcessed.push(op);
             lastOp = op;
@@ -374,7 +412,14 @@ const wrap = (tag, content) => {
         nonTags = consecutiveWhere(position, content, isntTag);
         position += nonTags.length;
         if (nonTags.length !== 0) {
-            rendering += `<${tag}>${nonTags.join('')}</${tag}>`;
+            const joinedNonTags = nonTags.join('');
+            // Check if nonTags contains only whitespace - if so, don't wrap it
+            if (/^\s+$/.test(joinedNonTags)) {
+                // Don't wrap whitespace-only content in ins/del tags
+                rendering += joinedNonTags;
+            } else {
+                rendering += `<${tag}>${joinedNonTags}</${tag}>`;
+            }
         }
         if (position >= length) {
             whileCondition = false;
@@ -393,11 +438,21 @@ const equalAction = (op, beforeTokens) => {
 
 const insertAction = (op, _beforeTokens, afterTokens) => {
     const val = afterTokens.slice(op.startInAfter, op.endInAfter === undefined ? 9e9 : op.endInAfter + 1);
+    // Don't render insert tags if content is only whitespace
+    const joined = val.join('');
+    if (/^\s+$/.test(joined)) {
+        return '';
+    }
     return wrap('ins', val);
 };
 
 const deleteAction = (op, beforeTokens) => {
     const val = beforeTokens.slice(op.startInBefore, op.endInBefore === undefined ? 9e9 : op.endInBefore + 1);
+    // Don't render delete tags if content is only whitespace
+    const joined = val.join('');
+    if (/^\s+$/.test(joined)) {
+        return '';
+    }
     return wrap('del', val);
 };
 

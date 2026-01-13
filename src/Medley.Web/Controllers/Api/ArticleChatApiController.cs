@@ -31,6 +31,7 @@ public class ArticleChatApiController : ControllerBase
     private readonly IHubContext<ArticleHub> _hubContext;
     private readonly ILogger<ArticleChatApiController> _logger;
     private readonly ToolDisplayExtractor _toolDisplayExtractor;
+    private readonly IMedleyContext _medleyContext;
 
     public ArticleChatApiController(
         IArticleChatService chatService,
@@ -42,7 +43,8 @@ public class ArticleChatApiController : ControllerBase
         IBackgroundJobClient backgroundJobClient,
         IHubContext<ArticleHub> hubContext,
         ILogger<ArticleChatApiController> logger,
-        ToolDisplayExtractor toolDisplayExtractor)
+        ToolDisplayExtractor toolDisplayExtractor,
+        IMedleyContext medleyContext)
     {
         _chatService = chatService;
         _conversationRepository = conversationRepository;
@@ -54,24 +56,59 @@ public class ArticleChatApiController : ControllerBase
         _hubContext = hubContext;
         _logger = logger;
         _toolDisplayExtractor = toolDisplayExtractor;
+        _medleyContext = medleyContext;
     }
 
     /// <summary>
-    /// Get the active conversation for an article
+    /// Get a conversation for an article (active or by ID)
     /// </summary>
-    [HttpGet("conversation")]
-    public async Task<IActionResult> GetActiveConversation(Guid articleId)
+    [HttpGet("conversation/{conversationId?}")]
+    public async Task<IActionResult> GetConversation(Guid articleId, Guid? conversationId = null)
     {
-        var article = await _articleRepository.GetByIdAsync(articleId);
+        var article = await _articleRepository.Query()
+            .Include(a => a.CurrentConversation)
+            .FirstOrDefaultAsync(a => a.Id == articleId);
+        
         if (article == null)
         {
             return NotFound(new { error = "Article not found" });
         }
 
-        var conversation = await _chatService.GetActiveConversationAsync(articleId);
-        if (conversation == null)
+        ChatConversation? conversation;
+
+        if (conversationId.HasValue)
         {
-            return NoContent(); // No active conversation is a valid state, not an error
+            // Get specific conversation by ID
+            conversation = await _chatService.GetConversationAsync(conversationId.Value);
+            
+            if (conversation == null)
+            {
+                return NotFound(new { error = "Conversation not found" });
+            }
+
+            // Verify conversation belongs to this article
+            if (conversation.ArticleId != articleId)
+            {
+                return NotFound(new { error = "Conversation not found" });
+            }
+        }
+        else
+        {
+            // Get current active conversation from article
+            conversation = article.CurrentConversation;
+            
+            if (conversation == null)
+            {
+                return NoContent(); // No active conversation is a valid state, not an error
+            }
+        }
+
+        // Load plan info if implementing a plan
+        int? planVersion = null;
+        if (conversation.ImplementingPlanId.HasValue)
+        {
+            var plan = await _planRepository.GetByIdAsync(conversation.ImplementingPlanId.Value);
+            planVersion = plan?.Version;
         }
 
         return Ok(new
@@ -81,7 +118,9 @@ public class ArticleChatApiController : ControllerBase
             mode = conversation.Mode.ToString(),
             isRunning = conversation.IsRunning,
             createdAt = conversation.CreatedAt,
-            createdBy = conversation.CreatedByUserId
+            createdBy = conversation.CreatedByUserId,
+            implementingPlanId = conversation.ImplementingPlanId,
+            implementingPlanVersion = planVersion
         });
     }
 
@@ -89,26 +128,30 @@ public class ArticleChatApiController : ControllerBase
     /// Create a new conversation for an article
     /// </summary>
     [HttpPost("conversation")]
-    public async Task<IActionResult> CreateConversation(Guid articleId, [FromQuery] ConversationMode mode = ConversationMode.Chat)
+    public async Task<IActionResult> CreateConversation(Guid articleId, [FromQuery] ConversationMode mode = ConversationMode.Agent)
     {
         var article = await _articleRepository.GetByIdAsync(articleId);
         if (article == null)
         {
             return NotFound(new { error = "Article not found" });
         }
- 
+  
         // Check if active conversation already exists
-        var existingConversation = await _chatService.GetActiveConversationAsync(articleId);
-        if (existingConversation != null)
+        if (article.CurrentConversationId != null)
         {
             return Conflict(new { error = "An active conversation already exists for this article" });
         }
  
-        var userId = GetUserId();
-        var conversation = await _chatService.CreateConversationAsync(articleId, userId, mode);
+        var userId = _medleyContext.CurrentUserId;
+        if (!userId.HasValue)
+        {
+            return Unauthorized(new { error = "User ID not found" });
+        }
+        
+        var conversation = await _chatService.CreateConversationAsync(articleId, userId.Value, mode);
  
         return CreatedAtAction(
-            nameof(GetActiveConversation),
+            nameof(GetConversation),
             new { articleId },
             new
             {
@@ -270,13 +313,17 @@ public class ArticleChatApiController : ControllerBase
             conversation.Mode = request.Mode.Value;
         }
 
-        var userId = GetUserId();
+        var userId = _medleyContext.CurrentUserId;
+        if (!userId.HasValue)
+        {
+            return Unauthorized(new { error = "User ID not found" });
+        }
 
         // Save user message
         var userMessage = new Domain.Entities.ChatMessage
         {
             ConversationId = conversationId,
-            UserId = userId,
+            UserId = userId.Value,
             Role = ChatMessageRole.User,
             Text = request.Message,
             CreatedAt = DateTimeOffset.UtcNow
@@ -292,12 +339,12 @@ public class ArticleChatApiController : ControllerBase
             article.CurrentConversationId = conversationId;
             
             // Auto-assign to current user if in Plan mode
-            if (conversation.Mode == ConversationMode.Plan && article.AssignedUserId != userId)
+            if (conversation.Mode == ConversationMode.Plan && article.AssignedUserId != userId.Value)
             {
-                article.AssignedUserId = userId;
+                article.AssignedUserId = userId.Value;
                 
                 // Load user data for SignalR notification
-                var assignedUser = await _userRepository.GetByIdAsync(userId);
+                var assignedUser = await _userRepository.GetByIdAsync(userId.Value);
                 
                 // Register assignment notification
                 var assignmentNotification = new
@@ -323,7 +370,7 @@ public class ArticleChatApiController : ControllerBase
         await _chatMessageRepository.SaveAsync(userMessage);
 
         // Get user's full name for broadcast
-        var user = await _userRepository.GetByIdAsync(userId);
+        var user = await _userRepository.GetByIdAsync(userId.Value);
         var userName = user?.FullName ?? "User";
 
 
@@ -460,20 +507,8 @@ public class ArticleChatApiController : ControllerBase
         return Ok(new
         {
             id = conversationId,
-            state = ConversationState.Cancelled.ToString()
+            state = ConversationState.Archived.ToString()
         });
-    }
-
-
-
-    private Guid GetUserId()
-    {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
-        {
-            throw new UnauthorizedAccessException("User ID not found in claims");
-        }
-        return userId;
     }
 
     private Microsoft.Extensions.AI.ChatMessage? TryDeserializeMessage(string serializedMessage, Guid messageId)

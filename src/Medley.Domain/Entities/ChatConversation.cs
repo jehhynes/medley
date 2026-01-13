@@ -9,6 +9,7 @@ namespace Medley.Domain.Entities;
 /// </summary>
 [Index(nameof(ArticleId), nameof(State), Name = "IX_ChatConversations_ArticleId_State")]
 [Index(nameof(CreatedAt), Name = "IX_ChatConversations_CreatedAt")]
+[Index(nameof(ImplementingPlanId), Name = "IX_ChatConversations_ImplementingPlanId")]
 public class ChatConversation : BaseEntity
 {
     /// <summary>
@@ -31,7 +32,19 @@ public class ChatConversation : BaseEntity
     /// <summary>
     /// The mode of this conversation
     /// </summary>
-    public ConversationMode Mode { get; set; } = ConversationMode.Chat;
+    public ConversationMode Mode { get; set; } = ConversationMode.Agent;
+
+    /// <summary>
+    /// The plan this conversation is implementing (if applicable)
+    /// </summary>
+    public Guid? ImplementingPlanId { get; set; }
+
+    /// <summary>
+    /// Navigation property to the plan being implemented
+    /// </summary>
+    [ForeignKey(nameof(ImplementingPlanId))]
+    [DeleteBehavior(DeleteBehavior.SetNull)]
+    public virtual Plan? ImplementingPlan { get; set; }
 
     /// <summary>
     /// Indicates if the conversation is currently running (AI is processing)

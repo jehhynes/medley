@@ -4,18 +4,27 @@
       <i class="bi me-2" :class="getToolIcon(tool.name)" :title="formatToolName(tool.name)"></i>
       
       <!-- CreatePlan tool with link -->
-      <template v-if="tool.name && tool.name.toLowerCase().includes('createplan') && tool.completed && getPlanIdFromResult(tool.result)">
+      <template v-if="tool.name && tool.name.toLowerCase().includes('createplan') && tool.completed && getIdFromResult(tool.result)">
         <a href="#" 
-           @click.prevent="$emit('open-plan', getPlanIdFromResult(tool.result))"
+           @click.prevent="$emit('open-plan', getIdFromResult(tool.result))"
            class="tool-call-link">
           {{ tool.display || formatToolName(tool.name) }}
         </a>
       </template>
       
       <!-- GetFragmentContent tool with link -->
-      <template v-else-if="tool.name && tool.name.toLowerCase().includes('getfragmentcontent') && tool.completed && getFragmentIdFromResult(tool.result)">
+      <template v-else-if="tool.name && tool.name.toLowerCase().includes('getfragmentcontent') && tool.completed && getIdFromResult(tool.result)">
         <a href="#" 
-           @click.prevent="$emit('open-fragment', getFragmentIdFromResult(tool.result))"
+           @click.prevent="$emit('open-fragment', getIdFromResult(tool.result))"
+           class="tool-call-link">
+          {{ tool.display || formatToolName(tool.name) }}
+        </a>
+      </template>
+      
+      <!-- CreateArticleVersion tool with link -->
+      <template v-else-if="tool.name && tool.name.toLowerCase().includes('createarticleversion') && tool.completed && getIdFromResult(tool.result)">
+        <a href="#" 
+           @click.prevent="$emit('open-version', getIdFromResult(tool.result))"
            class="tool-call-link">
           {{ tool.display || formatToolName(tool.name) }}
         </a>
@@ -70,7 +79,7 @@ export default {
       required: true
     }
   },
-  emits: ['open-plan', 'open-fragment'],
+  emits: ['open-plan', 'open-fragment', 'open-version'],
   data() {
     return {
       isExpanded: false,
@@ -109,30 +118,19 @@ export default {
       if (lowerName.includes('createplan')) {
         return 'bi-list-check';
       }
+      if (lowerName.includes('version') || lowerName.includes('createarticleversion')) {
+        return 'bi-file-text';
+      }
       return 'bi-gear';
     },
 
-    getPlanIdFromResult(result) {
+    getIdFromResult(result) {
       if (!result) return null;
       
       try {
-        // Check if result has ids array
+        // Check if result has ids array and return first ID
         if (result.ids && Array.isArray(result.ids) && result.ids.length > 0) {
-          return result.ids[0]; // Return first ID (for CreatePlan, there's only one)
-        }
-        return null;
-      } catch (e) {
-        return null;
-      }
-    },
-
-    getFragmentIdFromResult(result) {
-      if (!result) return null;
-      
-      try {
-        // Check if result has ids array
-        if (result.ids && Array.isArray(result.ids) && result.ids.length > 0) {
-          return result.ids[0]; // Return first ID (for GetFragmentContent, there's only one)
+          return result.ids[0];
         }
         return null;
       } catch (e) {
