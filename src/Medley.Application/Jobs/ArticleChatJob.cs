@@ -126,7 +126,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                                     messageId = update.MessageId?.ToString(),
                                     toolName = update.ToolName,
                                     toolCallId = update.ToolCallId,
-                                    toolMessage = update.ToolMessage,
+                                    toolDisplay = update.ToolDisplay,
                                     timestamp = update.Timestamp
                                 }, cancellationToken);
                             break;

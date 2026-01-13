@@ -54,6 +54,14 @@ public sealed class EfChatMessageStore : ChatMessageStore
 
         var lastDate = lastMessageCreatedAt ?? DateTimeOffset.UtcNow;
 
+        // Load all existing tool messages and extract their CallIds for duplicate detection
+        var existingToolMessages = await _messageRepository.Query()
+            .Where(m => m.ConversationId == ConversationId && m.Role == ChatMessageRole.Tool)
+            .Select(m => m.SerializedMessage)
+            .ToListAsync(cancellationToken);
+
+        var existingCallIds = ExtractCallIdsFromMessages(existingToolMessages);
+
         foreach (var aiMessage in messages)
         {
             Guid messageId;
@@ -74,6 +82,23 @@ public sealed class EfChatMessageStore : ChatMessageStore
             }
 
             var messageRole = MapChatRoleToMessageRole(aiMessage.Role);
+
+            // For tool messages, check if any CallId already exists
+            if (messageRole == ChatMessageRole.Tool)
+            {
+                var callIds = ExtractCallIdsFromMessage(aiMessage);
+                if (callIds.Any(callId => existingCallIds.Contains(callId)))
+                {
+                    // This tool result already exists, skip to avoid duplicates
+                    continue;
+                }
+                
+                // Add the new CallIds to the set for subsequent messages in this batch
+                foreach (var callId in callIds)
+                {
+                    existingCallIds.Add(callId);
+                }
+            }
 
             // Determine the creation date with proper ordering
             DateTimeOffset createdAt;
@@ -188,5 +213,59 @@ public sealed class EfChatMessageStore : ChatMessageStore
             ChatMessageRole.Tool => ChatRole.Tool,
             _ => ChatRole.Assistant
         };
+    }
+
+    /// <summary>
+    /// Extract CallIds from a collection of serialized messages
+    /// </summary>
+    private static HashSet<string> ExtractCallIdsFromMessages(IEnumerable<string?> serializedMessages)
+    {
+        var callIds = new HashSet<string>(StringComparer.Ordinal);
+        
+        foreach (var serialized in serializedMessages)
+        {
+            if (string.IsNullOrEmpty(serialized))
+                continue;
+
+            try
+            {
+                var message = JsonSerializer.Deserialize<ChatMessage>(serialized);
+                if (message != null)
+                {
+                    var messageCallIds = ExtractCallIdsFromMessage(message);
+                    foreach (var callId in messageCallIds)
+                    {
+                        callIds.Add(callId);
+                    }
+                }
+            }
+            catch (JsonException)
+            {
+                // Skip messages that can't be deserialized
+            }
+        }
+
+        return callIds;
+    }
+
+    /// <summary>
+    /// Extract CallIds from a single ChatMessage
+    /// </summary>
+    private static List<string> ExtractCallIdsFromMessage(Microsoft.Extensions.AI.ChatMessage message)
+    {
+        var callIds = new List<string>();
+        
+        if (message.Contents != null)
+        {
+            foreach (var content in message.Contents.OfType<FunctionResultContent>())
+            {
+                if (!string.IsNullOrEmpty(content.CallId))
+                {
+                    callIds.Add(content.CallId);
+                }
+            }
+        }
+
+        return callIds;
     }
 }

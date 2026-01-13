@@ -213,4 +213,42 @@ public class FragmentsApiController : ControllerBase
             return StatusCode(500, new { message = "Failed to perform search. Please try again." });
         }
     }
+
+    /// <summary>
+    /// Get titles for multiple fragments by their IDs
+    /// </summary>
+    [HttpPost("titles")]
+    public async Task<IActionResult> GetTitles([FromBody] List<Guid> ids)
+    {
+        if (ids == null || ids.Count == 0)
+        {
+            return BadRequest("At least one fragment ID is required");
+        }
+
+        try
+        {
+            var fragments = await _fragmentRepository.Query()
+                .Where(f => ids.Contains(f.Id))
+                .Select(f => new
+                {
+                    f.Id,
+                    f.Title
+                })
+                .ToListAsync();
+
+            // Maintain the order of the input IDs
+            var fragmentLookup = fragments.ToDictionary(f => f.Id);
+            var orderedResults = ids
+                .Where(id => fragmentLookup.ContainsKey(id))
+                .Select(id => fragmentLookup[id])
+                .ToList();
+
+            return Ok(orderedResults);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving fragment titles");
+            return StatusCode(500, new { message = "Failed to retrieve fragment titles. Please try again." });
+        }
+    }
 }

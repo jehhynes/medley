@@ -12,9 +12,7 @@
 
     <template v-else-if="plan">
       <!-- Instructions Editor (serves as page header) -->
-      <component
-        :is="tiptapEditorComponent"
-        v-if="tiptapEditorComponent"
+      <tiptap-editor
         v-model="planInstructions"
         :is-saving="isSaving"
         :auto-save="true"
@@ -89,8 +87,7 @@
             You are viewing an archived version of this plan. Use the "Restore" button to make it active.
           </div>
         </template>
-      </component>
-      <div v-else class="alert alert-info">Loading editor...</div>
+      </tiptap-editor>
 
       <!-- Fragments Section -->
       <div class="plan-fragments-container">
@@ -107,16 +104,14 @@
             <div 
               v-for="pf in includedFragments" 
               :key="pf.fragmentId"
-              class="fragment-item border-bottom py-3 px-3"
-              style="cursor: pointer;"
-              @click="selectFragment(pf)">
+              class="fragment-item border-bottom py-3 px-3">
               <!-- Header Row: Icon, Title, Badges -->
               <div class="row g-2">
                 <div class="col-auto" style="width: 60px; text-align: center;">
                   <i class="list-item-icon" :class="getIconClass(getFragmentCategoryIcon(pf.fragment.category))" style="font-size: 1.5rem;position:relative;top:-0.33rem;"></i>
                 </div>
                 <div class="col">
-                  <div class="fw-semibold">{{ pf.fragment.title || 'Untitled Fragment' }}</div>
+                  <div class="fw-semibold fragment-title" @click="selectFragment(pf)">{{ pf.fragment.title || 'Untitled Fragment' }}</div>
                 </div>
                 <div class="col-auto">
                   <span class="badge me-2" :class="getSimilarityClass(pf.similarityScore)">
@@ -187,16 +182,14 @@
             <div 
               v-for="pf in excludedFragments" 
               :key="pf.fragmentId"
-              class="fragment-item border-bottom py-3 px-3"
-              style="cursor: pointer;"
-              @click="selectFragment(pf)">
+              class="fragment-item border-bottom py-3 px-3">
               <!-- Header Row: Icon, Title, Badges -->
               <div class="row g-2">
                 <div class="col-auto" style="width: 60px; text-align: center;">
                   <i class="list-item-icon" :class="getIconClass(getFragmentCategoryIcon(pf.fragment.category))" style="font-size: 1.5rem;position:relative;top:-0.33rem;"></i>
                 </div>
                 <div class="col">
-                  <div class="fw-semibold">{{ pf.fragment.title || 'Untitled Fragment' }}</div>
+                  <div class="fw-semibold fragment-title" @click="selectFragment(pf)">{{ pf.fragment.title || 'Untitled Fragment' }}</div>
                 </div>
                 <div class="col-auto">
                   <span class="badge me-2" :class="getSimilarityClass(pf.similarityScore)">
@@ -297,9 +290,6 @@ export default {
     };
   },
   computed: {
-    tiptapEditorComponent() {
-      return window.TiptapEditor;
-    },
     includedFragments() {
       if (!this.plan) return [];
       return this.plan.fragments.filter(f => f.include);
@@ -621,3 +611,13 @@ export default {
   }
 };
 </script>
+
+<style scoped>
+.fragment-title {
+  cursor: pointer;
+}
+
+.fragment-title:hover {
+  text-decoration: underline;
+}
+</style>

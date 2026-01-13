@@ -50,25 +50,19 @@
         flex-direction: column;
         gap: 0.5rem;
         margin: 0.75rem 0 0 0;
-        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
 
         .tool-call-item {
-            display: flex;
-            align-items: center;
+            display: block;
             font-size: 0.85rem;
             line-height: 1.4;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
 
             .tool-call-text {
-                flex: 1;
                 overflow: hidden;
                 text-overflow: ellipsis;
             }
 
             .tool-call-link {
-                flex: 1;
                 color: var(--bs-link-color);
                 text-decoration: none;
                 overflow: hidden;
@@ -81,11 +75,26 @@
 
             .bi-check-circle {
                 font-size: 0.9rem;
-                flex-shrink: 0;
             }
 
             .spinner-border-xs {
-                flex-shrink: 0;
+            }
+
+            .tool-fragments-list {
+                margin-left: 1.5rem;
+                margin-top:0.25rem;
+                padding-left: 0.5rem;
+                border-left: 2px solid var(--bs-border-color);
+            }
+
+            .fragment-link {
+                color: var(--bs-secondary-color);
+                transition: color 0.15s ease-in-out;
+
+                &:hover {
+                    color: var(--bs-link-color);
+                    text-decoration: underline!important;
+                }
             }
         }
     }
