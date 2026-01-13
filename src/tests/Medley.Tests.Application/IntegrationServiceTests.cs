@@ -113,7 +113,7 @@ public class IntegrationServiceTests
     }
 
     [Fact]
-    public async Task SaveAsync_WithValidIntegration_CallsRepositorySave()
+    public async Task AddAsync_WithValidIntegration_CallsRepositorySave()
     {
         // Arrange
         var integration = new Integration
@@ -127,7 +127,7 @@ public class IntegrationServiceTests
             .Returns(Task.CompletedTask);
 
         // Act
-        await _service.SaveAsync(integration);
+        await _service.AddAsync(integration);
 
         // Assert
         _mockRepository.Verify(r => r.AddAsync(integration), Times.Once);

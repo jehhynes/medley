@@ -138,7 +138,7 @@ public class FragmentExtractionJob : BaseHangfireJob<FragmentExtractionJob>
         if (source != null)
         {
             source.ExtractionStatus = status;
-            await _sourceRepository.AddAsync(source);
+            // Entity is already tracked, changes will be saved on SaveChangesAsync
             _logger.LogDebug("Updated extraction status for source {SourceId} to {Status}", sourceId, status);
         }
         else

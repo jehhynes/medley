@@ -66,7 +66,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
     }
 
     [Fact]
-    public async Task SaveAsync_ShouldAddNewFragment()
+    public async Task AddAsync_ShouldAddNewFragment()
     {
         // Arrange
         var integration = new Domain.Entities.Integration { Id = Guid.NewGuid(), Type = Domain.Enums.IntegrationType.Fellow };

@@ -123,7 +123,7 @@ public class FragmentConfidenceScoringJob : BaseHangfireJob<FragmentConfidenceSc
                         fragment.Confidence = score.Confidence.Value;
                         fragment.ConfidenceComment = TrimConfidenceComment(score.ConfidenceComment);
                         fragment.LastModifiedAt = DateTimeOffset.UtcNow;
-                        await _fragmentRepository.AddAsync(fragment);
+                        // Entity is already tracked, changes will be saved on SaveChangesAsync
                         scoredCount++;
 
                         _logger.LogDebug("Updated confidence for fragment {FragmentId} (index {Index}): {Confidence}",

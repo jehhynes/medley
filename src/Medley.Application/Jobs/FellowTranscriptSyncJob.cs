@@ -194,7 +194,7 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
             await ExecuteWithTransactionAsync(async () =>
             {
                 integration.InitialSyncCompleted = true;
-                await _integrationService.SaveAsync(integration);
+                // Entity is already tracked, changes will be saved on SaveChangesAsync
                 _logger.LogInformation("Initial sync completed for integration {IntegrationId}. Flag set to true.",
                     integration.Id);
             });
