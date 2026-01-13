@@ -40,7 +40,7 @@ public class RepositoryTests : DatabaseTestBase
     }
 
     [Fact]
-    public async Task SaveAsync_WithNewEntity_AddsToDatabase()
+    public async Task AddAsync_WithNewEntity_AddsToDatabase()
     {
         // Arrange - Transaction isolation handles cleanup automatically
         var userId = Guid.NewGuid();
@@ -57,7 +57,7 @@ public class RepositoryTests : DatabaseTestBase
     }
 
     [Fact]
-    public async Task SaveAsync_WithExistingEntity_UpdatesDatabase()
+    public async Task AddAsync_WithExistingEntity_UpdatesDatabase()
     {
         // Arrange - Transaction isolation handles cleanup automatically
         var userId = Guid.NewGuid();

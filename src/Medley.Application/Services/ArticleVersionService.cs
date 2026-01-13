@@ -130,7 +130,7 @@ public class ArticleVersionService : IArticleVersionService
         existingVersion.ContentDiff = diffPatch;
         existingVersion.ModifiedAt = DateTimeOffset.UtcNow;
 
-        await _versionRepository.AddAsync(existingVersion);
+        // Entity is already tracked, changes will be saved on SaveChangesAsync
 
         _logger.LogInformation(
             "Updated draft version {VersionNumber} for article {ArticleId} by user {UserId}",
@@ -309,7 +309,7 @@ public class ArticleVersionService : IArticleVersionService
             foreach (var existingVersion in existingAiVersions)
             {
                 existingVersion.IsActive = false;
-                await _versionRepository.AddAsync(existingVersion);
+                // Entity is already tracked, changes will be saved on SaveChangesAsync
             }
 
             // Calculate diff from parent User version

@@ -144,7 +144,7 @@ public class SourceImportController : Controller
             Status = ConnectionStatus.Connected
         };
 
-        await _integrationService.SaveAsync(integration);
+        await _integrationService.AddAsync(integration);
         _logger.LogInformation("Created Manual integration for imports: {IntegrationId}", integration.Id);
 
         return integration;

@@ -88,7 +88,7 @@ public class ArticleChatService : IArticleChatService
         if (article != null)
         {
             article.CurrentConversationId = conversation.Id;
-            await _articleRepository.AddAsync(article);
+            // Entity is already tracked, changes will be saved on SaveChangesAsync
         }
         
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -447,14 +447,14 @@ public class ArticleChatService : IArticleChatService
         conversation.State = ConversationState.Complete;
         conversation.CompletedAt = DateTimeOffset.UtcNow;
 
-        await _conversationRepository.AddAsync(conversation);
+        // Entity is already tracked, changes will be saved on SaveChangesAsync
         
         // Clear the article's current conversation reference if it matches this conversation
         var article = await _articleRepository.GetByIdAsync(conversation.ArticleId);
         if (article != null && article.CurrentConversationId == conversationId)
         {
             article.CurrentConversationId = null;
-            await _articleRepository.AddAsync(article);
+            // Entity is already tracked, changes will be saved on SaveChangesAsync
         }
         
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -474,14 +474,14 @@ public class ArticleChatService : IArticleChatService
 
         conversation.State = ConversationState.Archived;
 
-        await _conversationRepository.AddAsync(conversation);
+        // Entity is already tracked, changes will be saved on SaveChangesAsync
         
         // Clear the article's current conversation reference if it matches this conversation
         var article = await _articleRepository.GetByIdAsync(conversation.ArticleId);
         if (article != null && article.CurrentConversationId == conversationId)
         {
             article.CurrentConversationId = null;
-            await _articleRepository.AddAsync(article);
+            // Entity is already tracked, changes will be saved on SaveChangesAsync
         }
         
         await _unitOfWork.SaveChangesAsync(cancellationToken);

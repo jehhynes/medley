@@ -39,7 +39,7 @@ public class IntegrationService : IIntegrationService
         return _integrationRepository.Query();
     }
 
-    public async Task SaveAsync(Integration integration, CancellationToken cancellationToken = default)
+    public async Task AddAsync(Integration integration, CancellationToken cancellationToken = default)
     {
         await _integrationRepository.AddAsync(integration);
     }
@@ -58,7 +58,7 @@ public class IntegrationService : IIntegrationService
             _logger.LogWarning("No connection service found for integration type {IntegrationType}", integration.Type);
             integration.Status = ConnectionStatus.Error;
             integration.LastHealthCheckAt = DateTimeOffset.UtcNow;
-            await _integrationRepository.AddAsync(integration);
+            // Entity is already tracked, changes will be saved on SaveChangesAsync
             
             // Broadcast status update
             //await _notificationService.SendIntegrationStatusUpdateAsync(
@@ -74,7 +74,7 @@ public class IntegrationService : IIntegrationService
         integration.Status = status;
         integration.LastHealthCheckAt = DateTimeOffset.UtcNow;
         
-        await _integrationRepository.AddAsync(integration);
+        // Entity is already tracked, changes will be saved on SaveChangesAsync
         
         // Broadcast status update if status changed
         //if (previousStatus != status)

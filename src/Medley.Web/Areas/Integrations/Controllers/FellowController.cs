@@ -82,6 +82,7 @@ public class FellowController : Controller
             integration.LastModifiedAt = DateTimeOffset.UtcNow;
 
             TempData["Success"] = $"Fellow integration '{model.DisplayName}' updated successfully.";
+            // Entity is already tracked, changes will be saved on SaveChangesAsync
         }
         else
         {
@@ -97,9 +98,8 @@ public class FellowController : Controller
             };
 
             TempData["Success"] = $"Fellow integration '{model.DisplayName}' created successfully.";
+            await _integrationService.AddAsync(integration);
         }
-
-        await _integrationService.SaveAsync(integration);
         return RedirectToAction("Index", "Manage");
     }
 }
