@@ -24,6 +24,7 @@ public class ArticlesApiController : ControllerBase
     private readonly IHubContext<ArticleHub> _hubContext;
     private readonly IArticleVersionService _versionService;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IMedleyContext _medleyContext;
 
     public ArticlesApiController(
         IRepository<Article> articleRepository,
@@ -31,7 +32,8 @@ public class ArticlesApiController : ControllerBase
         IRepository<User> userRepository,
         IHubContext<ArticleHub> hubContext,
         IArticleVersionService versionService,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IMedleyContext medleyContext)
     {
         _articleRepository = articleRepository;
         _articleTypeRepository = articleTypeRepository;
@@ -39,6 +41,7 @@ public class ArticlesApiController : ControllerBase
         _hubContext = hubContext;
         _versionService = versionService;
         _unitOfWork = unitOfWork;
+        _medleyContext = medleyContext;
     }
 
     /// <summary>
@@ -340,16 +343,12 @@ public class ArticlesApiController : ControllerBase
         }
 
         // Auto-assign to current user
-        var userId = GetCurrentUserId();
-        var assignmentChanged = await AssignArticleToUserAsync(article, userId);
+        var assignmentChanged = await AssignArticleToUserAsync(article, _medleyContext.CurrentUserId!.Value);
 
         await _articleRepository.SaveAsync(article);
 
         // Capture version after saving article
-        var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        var capturedVersion = Guid.TryParse(userIdStr, out var userGuid)
-            ? await _versionService.CaptureVersionAsync(id, article.Content, oldContent, userGuid)
-            : await _versionService.CaptureVersionAsync(id, article.Content, oldContent, null);
+        var capturedVersion = await _versionService.CaptureUserVersionAsync(id, article.Content, oldContent, _medleyContext.CurrentUserId);
 
         // Register post-commit action to send SignalR notification
         var versionNotification = new
@@ -662,7 +661,7 @@ public class ArticlesApiController : ControllerBase
     }
 
     /// <summary>
-    /// Get version history for an article
+    /// Get version history for an article (User versions only)
     /// </summary>
     [HttpGet("{id}/versions")]
     public async Task<IActionResult> GetVersionHistory(Guid id)
@@ -673,8 +672,33 @@ public class ArticlesApiController : ControllerBase
             return NotFound();
         }
 
-        var versions = await _versionService.GetVersionHistoryAsync(id);
+        // Only return User versions for the version history panel
+        var versions = await _versionService.GetVersionsAsync(id, Domain.Enums.VersionType.User);
         return Ok(versions);
+    }
+
+    /// <summary>
+    /// Get a specific version by ID (User or AI)
+    /// </summary>
+    [HttpGet("{articleId}/versions/{versionId}")]
+    public async Task<IActionResult> GetVersion(Guid articleId, Guid versionId)
+    {
+        var article = await _articleRepository.GetByIdAsync(articleId);
+        if (article == null)
+        {
+            return NotFound(new { message = "Article not found" });
+        }
+
+        // Load version details - pass null to allow both User and AI versions
+        var versions = await _versionService.GetVersionsAsync(articleId, versionType: null);
+        var version = versions.FirstOrDefault(v => v.Id == versionId);
+        
+        if (version == null)
+        {
+            return NotFound(new { message = "Version not found" });
+        }
+
+        return Ok(version);
     }
 
     /// <summary>
@@ -699,18 +723,35 @@ public class ArticlesApiController : ControllerBase
         { 
             beforeContent = comparison.BeforeContent,
             afterContent = comparison.AfterContent,
-            versionNumber = comparison.VersionNumber,
-            previousVersionNumber = comparison.PreviousVersionNumber
+            versionNumber = comparison.VersionNumber
         });
     }
 
     /// <summary>
-    /// Get current user ID from claims
+    /// Get the latest active AI version for an article
     /// </summary>
-    private Guid GetCurrentUserId()
+    [HttpGet("{id}/versions/ai/latest")]
+    public async Task<IActionResult> GetLatestAIVersion(Guid id)
     {
-        var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        return Guid.TryParse(userIdStr, out var userId) ? userId : Guid.Empty;
+        var article = await _articleRepository.GetByIdAsync(id);
+        if (article == null)
+        {
+            return NotFound(new { message = "Article not found" });
+        }
+
+        // Get all AI versions for this article
+        var aiVersions = await _versionService.GetVersionsAsync(id, Domain.Enums.VersionType.AI);
+        
+        // Filter for active versions (the latest AI version should be marked as active)
+        // Since GetVersionsAsync doesn't return IsActive, we'll just return the first one (most recent)
+        var latestAiVersion = aiVersions.FirstOrDefault();
+
+        if (latestAiVersion == null)
+        {
+            return NoContent();
+        }
+
+        return Ok(latestAiVersion);
     }
 
     /// <summary>

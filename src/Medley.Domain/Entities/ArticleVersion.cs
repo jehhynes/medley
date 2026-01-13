@@ -10,9 +10,10 @@ namespace Medley.Domain.Entities;
 /// </summary>
 [Index(nameof(ArticleId))]
 [Index(nameof(ArticleId), nameof(CreatedAt))]
-[Index(nameof(ArticleId), nameof(VersionNumber), IsUnique = true)]
+[Index(nameof(ArticleId), nameof(VersionNumber), nameof(ParentVersionId), nameof(VersionType), IsUnique = true)]
 [Index(nameof(ParentVersionId))]
 [Index(nameof(VersionType))]
+[Index(nameof(ConversationId))]
 public class ArticleVersion : BaseEntity
 {
     /// <summary>
@@ -28,6 +29,18 @@ public class ArticleVersion : BaseEntity
     public virtual Article Article { get; set; } = null!;
 
     /// <summary>
+    /// The conversation that created this version (optional)
+    /// </summary>
+    public Guid? ConversationId { get; set; }
+
+    /// <summary>
+    /// Navigation property to the conversation
+    /// </summary>
+    [ForeignKey(nameof(ConversationId))]
+    [DeleteBehavior(DeleteBehavior.SetNull)]
+    public virtual ChatConversation? Conversation { get; set; }
+
+    /// <summary>
     /// Full content snapshot at this version
     /// </summary>
     public required string ContentSnapshot { get; set; }
@@ -38,7 +51,9 @@ public class ArticleVersion : BaseEntity
     public string? ContentDiff { get; set; }
 
     /// <summary>
-    /// Sequential version number for this article (1, 2, 3, ...)
+    /// Version number for this version.
+    /// For User versions: Global sequence (1, 2, 3, ...) scoped to the article.
+    /// For AI versions: Sequence scoped to the parent User version (1, 2, 3, ... per parent).
     /// </summary>
     public int VersionNumber { get; set; }
 
@@ -71,7 +86,9 @@ public class ArticleVersion : BaseEntity
     public VersionType VersionType { get; set; } = VersionType.User;
 
     /// <summary>
-    /// Parent version ID for AI draft chains (nullable for user versions)
+    /// Parent version ID. 
+    /// For User versions: Always null (User versions have no parent).
+    /// For AI versions: Always references the most recent User version at creation time.
     /// </summary>
     public Guid? ParentVersionId { get; set; }
 

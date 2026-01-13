@@ -276,6 +276,7 @@ export default {
       required: true
     }
   },
+  emits: ['conversation-created', 'close-plan'],
   data() {
     return {
       plan: null,
@@ -419,28 +420,42 @@ export default {
 
       const confirmMessage = `Restore version ${this.plan.version} as the active plan? The current draft will be archived.`;
       
-      if (!confirm(confirmMessage)) {
-        return;
-      }
+      bootbox.confirm({
+        title: 'Restore Plan',
+        message: confirmMessage,
+        buttons: {
+          confirm: {
+            label: 'Restore',
+            className: 'btn-primary'
+          },
+          cancel: {
+            label: 'Cancel',
+            className: 'btn-secondary'
+          }
+        },
+        callback: async (result) => {
+          if (result) {
+            this.isRestoringPlan = true;
+            try {
+              const response = await fetch(`/api/articles/${this.articleId}/plans/${this.plan.id}/restore`, {
+                method: 'POST'
+              });
 
-      this.isRestoringPlan = true;
-      try {
-        const response = await fetch(`/api/articles/${this.articleId}/plans/${this.plan.id}/restore`, {
-          method: 'POST'
-        });
+              if (!response.ok) {
+                throw new Error('Failed to restore plan');
+              }
 
-        if (!response.ok) {
-          throw new Error('Failed to restore plan');
+              // Reload all plans and show the restored one
+              await this.loadPlan();
+            } catch (err) {
+              console.error('Error restoring plan:', err);
+              this.error = 'Failed to restore plan: ' + err.message;
+            } finally {
+              this.isRestoringPlan = false;
+            }
+          }
         }
-
-        // Reload all plans and show the restored one
-        await this.loadPlan();
-      } catch (err) {
-        console.error('Error restoring plan:', err);
-        this.error = 'Failed to restore plan: ' + err.message;
-      } finally {
-        this.isRestoringPlan = false;
-      }
+      });
     },
 
     async savePlan() {
@@ -472,14 +487,92 @@ export default {
       }
     },
 
-    acceptPlan() {
-      // TODO: Implement accept plan logic
-      console.log('Accept plan clicked');
+    async acceptPlan() {
+      if (!this.plan || !this.canEditPlan) return;
+
+      bootbox.confirm({
+        title: 'Accept Plan',
+        message: "Accept this plan and begin AI implementation?",
+        buttons: {
+          confirm: {
+            label: 'Accept',
+            className: 'btn-success'
+          },
+          cancel: {
+            label: 'Cancel',
+            className: 'btn-secondary'
+          }
+        },
+        callback: async (result) => {
+          if (result) {
+            this.isSaving = true;
+            try {
+              const response = await fetch(`/api/articles/${this.articleId}/plans/${this.plan.id}/accept`, {
+                method: 'POST'
+              });
+
+              if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to accept plan');
+              }
+
+              const data = await response.json();
+              
+              // Emit event to load the new conversation in the chat panel
+              if (data.conversationId) {
+                this.$emit('conversation-created', data.conversationId);
+              }
+            } catch (err) {
+              console.error('Error accepting plan:', err);
+              this.error = 'Failed to accept plan: ' + err.message;
+            } finally {
+              this.isSaving = false;
+            }
+          }
+        }
+      });
     },
 
-    rejectPlan() {
-      // TODO: Implement reject plan logic
-      console.log('Reject plan clicked');
+    async rejectPlan() {
+      if (!this.plan || !this.canEditPlan) return;
+
+      bootbox.confirm({
+        title: 'Reject Plan',
+        message: "Reject this plan? It will be archived.",
+        buttons: {
+          confirm: {
+            label: 'Reject',
+            className: 'btn-danger'
+          },
+          cancel: {
+            label: 'Cancel',
+            className: 'btn-secondary'
+          }
+        },
+        callback: async (result) => {
+          if (result) {
+            this.isSaving = true;
+            try {
+              const response = await fetch(`/api/articles/${this.articleId}/plans/${this.plan.id}/reject`, {
+                method: 'POST'
+              });
+
+              if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to reject plan');
+              }
+
+              // Close the plan tab after successful rejection
+              this.$emit('close-plan');
+            } catch (err) {
+              console.error('Error rejecting plan:', err);
+              this.error = 'Failed to reject plan: ' + err.message;
+            } finally {
+              this.isSaving = false;
+            }
+          }
+        }
+      });
     },
 
     selectFragment(planFragment) {
@@ -604,10 +697,6 @@ export default {
         textarea.style.height = textarea.scrollHeight + 'px';
       });
     });
-  },
-
-  beforeUnmount() {
-    // Fragment modal handles its own cleanup
   }
 };
 </script>

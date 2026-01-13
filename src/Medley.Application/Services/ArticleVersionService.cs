@@ -1,6 +1,7 @@
 using DiffMatchPatch;
 using Medley.Application.Interfaces;
 using Medley.Domain.Entities;
+using Medley.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -27,7 +28,7 @@ public class ArticleVersionService : IArticleVersionService
         _diffMatchPatch = new diff_match_patch();
     }
 
-    public async Task<ArticleVersionDto> CaptureVersionAsync(
+    public async Task<ArticleVersionDto> CaptureUserVersionAsync(
         Guid articleId, 
         string newContent, 
         string? previousContent, 
@@ -51,7 +52,7 @@ public class ArticleVersionService : IArticleVersionService
             {
                 var lastModified = latestVersion.ModifiedAt ?? latestVersion.CreatedAt;
                 var timeSinceModified = DateTimeOffset.UtcNow - lastModified;
-                
+
                 // Update existing version if same user and within 30 minutes
                 if (latestVersion.CreatedById == userId && timeSinceModified.TotalMinutes <= 30)
                 {
@@ -92,7 +93,7 @@ public class ArticleVersionService : IArticleVersionService
             return new ArticleVersionDto
             {
                 Id = version.Id,
-                VersionNumber = version.VersionNumber,
+                VersionNumber = version.VersionNumber.ToString(),
                 CreatedBy = userId,
                 CreatedByName = createdByName,
                 CreatedByEmail = createdByEmail,
@@ -128,7 +129,7 @@ public class ArticleVersionService : IArticleVersionService
         existingVersion.ContentSnapshot = newContent;
         existingVersion.ContentDiff = diffPatch;
         existingVersion.ModifiedAt = DateTimeOffset.UtcNow;
-        
+
         await _versionRepository.SaveAsync(existingVersion);
 
         _logger.LogInformation(
@@ -168,7 +169,8 @@ public class ArticleVersionService : IArticleVersionService
             VersionNumber = nextVersion,
             CreatedById = userId,
             CreatedAt = DateTimeOffset.UtcNow,
-            ParentVersionId = parentVersion?.Id // Set parent version reference
+            VersionType = VersionType.User,
+            ParentVersionId = null // User versions have no parent
         };
 
         version.ModifiedAt = version.CreatedAt;
@@ -176,24 +178,37 @@ public class ArticleVersionService : IArticleVersionService
         await _versionRepository.SaveAsync(version);
 
         _logger.LogInformation(
-            "Created new version {VersionNumber} for article {ArticleId} by user {UserId} (parent version: {ParentVersionId})",
-            nextVersion, articleId, userId, parentVersion?.Id);
+            "Created new User version {VersionNumber} for article {ArticleId} by user {UserId}",
+            nextVersion, articleId, userId);
 
         return version;
     }
 
-    public async Task<List<ArticleVersionDto>> GetVersionHistoryAsync(
-        Guid articleId, 
+    public async Task<List<ArticleVersionDto>> GetVersionsAsync(
+        Guid articleId,
+        VersionType? versionType = null,
         CancellationToken cancellationToken = default)
     {
-        var versions = await _versionRepository.Query()
-            .Where(v => v.ArticleId == articleId)
+        var query = _versionRepository.Query()
+            .Where(v => v.ArticleId == articleId);
+
+        // Apply version type filter if specified
+        if (versionType.HasValue)
+        {
+            query = query.Where(v => v.VersionType == versionType.Value);
+        }
+
+        var versions = await query
             .Include(v => v.CreatedBy)
+            .Include(v => v.ParentVersion)
             .OrderByDescending(v => v.VersionNumber)
             .Select(v => new ArticleVersionDto
             {
                 Id = v.Id,
-                VersionNumber = v.VersionNumber,
+                // Format: "parentVersion.childVersion" for AI versions, just "version" for User versions
+                VersionNumber = v.ParentVersion != null 
+                    ? v.ParentVersion.VersionNumber.ToString() + "." + v.VersionNumber.ToString()
+                    : v.VersionNumber.ToString(),
                 CreatedBy = v.CreatedById,
                 CreatedByName = v.CreatedBy != null ? v.CreatedBy.FullName : null,
                 CreatedByEmail = v.CreatedBy != null ? v.CreatedBy.Email : null,
@@ -210,6 +225,7 @@ public class ArticleVersionService : IArticleVersionService
     {
         var version = await _versionRepository.Query()
             .Where(v => v.Id == versionId)
+            .Include(v => v.ParentVersion)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (version == null)
@@ -217,18 +233,145 @@ public class ArticleVersionService : IArticleVersionService
             return null;
         }
 
-        // Get the previous version
-        var previousVersion = await _versionRepository.Query()
-            .Where(v => v.ArticleId == version.ArticleId && v.VersionNumber == version.VersionNumber - 1)
-            .FirstOrDefaultAsync(cancellationToken);
+        ArticleVersion? previousVersion = null;
+
+        if (version.VersionType == Domain.Enums.VersionType.User)
+        {
+            // For User versions, compare with the previous User version
+            previousVersion = await _versionRepository.Query()
+                .Where(v => v.ArticleId == version.ArticleId 
+                    && v.VersionType == Domain.Enums.VersionType.User
+                    && v.VersionNumber < version.VersionNumber)
+                .OrderByDescending(v => v.VersionNumber)
+                .Include(v => v.ParentVersion)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+        else if (version.VersionType == Domain.Enums.VersionType.AI && version.ParentVersionId.HasValue)
+        {
+            // For AI versions, compare with the parent User version
+            previousVersion = await _versionRepository.Query()
+                .Where(v => v.Id == version.ParentVersionId.Value)
+                .Include(v => v.ParentVersion)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        // Format version number
+        var versionNumber = version.ParentVersion != null 
+            ? $"{version.ParentVersion.VersionNumber}.{version.VersionNumber}"
+            : version.VersionNumber.ToString();
 
         return new ArticleVersionComparisonDto
         {
             BeforeContent = previousVersion?.ContentSnapshot ?? string.Empty,
             AfterContent = version.ContentSnapshot,
-            VersionNumber = version.VersionNumber,
-            PreviousVersionNumber = previousVersion?.VersionNumber
+            VersionNumber = versionNumber
         };
+    }
+
+    public async Task<ArticleVersionDto> CreateAiVersionAsync(
+        Guid articleId,
+        string content,
+        string changeMessage,
+        Guid userId,
+        Guid? conversationId = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogInformation("Creating AI article version for article: {ArticleId}", articleId);
+
+            // Get the most recent User version - AI versions always use the most recent User version as parent
+            var mostRecentUserVersion = await _versionRepository.Query()
+                .Where(v => v.ArticleId == articleId && v.VersionType == VersionType.User)
+                .OrderByDescending(v => v.VersionNumber)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (mostRecentUserVersion == null)
+            {
+                throw new InvalidOperationException("Cannot create AI version: no User version exists. Please create a User version first.");
+            }
+
+            // VersionNumber is scoped to the parent User version
+            // Get the max version number for AI versions with the same parent and increment
+            var maxVersionNumber = await _versionRepository.Query()
+                .Where(v => v.ArticleId == articleId
+                    && v.VersionType == VersionType.AI
+                    && v.ParentVersionId == mostRecentUserVersion.Id)
+                .MaxAsync(v => (int?)v.VersionNumber, cancellationToken);
+
+            int versionNumber = (maxVersionNumber ?? 0) + 1;
+
+            // Deactivate existing AI versions
+            var existingAiVersions = await _versionRepository.Query()
+                .Where(v => v.ArticleId == articleId && v.VersionType == VersionType.AI && v.IsActive)
+                .ToListAsync(cancellationToken);
+
+            foreach (var existingVersion in existingAiVersions)
+            {
+                existingVersion.IsActive = false;
+                await _versionRepository.SaveAsync(existingVersion);
+            }
+
+            // Calculate diff from parent User version
+            string? contentDiff = null;
+            if (!string.IsNullOrEmpty(mostRecentUserVersion.ContentSnapshot))
+            {
+                var diffs = _diffMatchPatch.diff_main(mostRecentUserVersion.ContentSnapshot, content);
+                _diffMatchPatch.diff_cleanupSemantic(diffs);
+                contentDiff = _diffMatchPatch.patch_toText(_diffMatchPatch.patch_make(diffs));
+            }
+
+            // Create new AI version
+            var newVersion = new ArticleVersion
+            {
+                ArticleId = articleId,
+                ContentSnapshot = content,
+                ContentDiff = contentDiff,
+                VersionNumber = versionNumber,
+                CreatedById = userId,
+                CreatedAt = DateTimeOffset.UtcNow,
+                VersionType = VersionType.AI,
+                ParentVersionId = mostRecentUserVersion.Id,
+                ChangeMessage = changeMessage,
+                IsActive = true,
+                ConversationId = conversationId
+            };
+
+            await _versionRepository.SaveAsync(newVersion);
+
+            _logger.LogInformation("Created AI article version {VersionId} (v{VersionNumber}) for article {ArticleId}",
+                newVersion.Id, versionNumber, articleId);
+
+            // Get user details for the DTO
+            string? createdByName = null;
+            string? createdByEmail = null;
+            var user = await _versionRepository.Query()
+                .Where(v => v.Id == newVersion.Id)
+                .Select(v => new { v.CreatedBy!.FullName, v.CreatedBy.Email })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (user != null)
+            {
+                createdByName = user.FullName;
+                createdByEmail = user.Email;
+            }
+
+            return new ArticleVersionDto
+            {
+                Id = newVersion.Id,
+                VersionNumber = mostRecentUserVersion.Id + "." + newVersion.VersionNumber,
+                CreatedBy = userId,
+                CreatedByName = createdByName,
+                CreatedByEmail = createdByEmail,
+                CreatedAt = newVersion.CreatedAt,
+                IsNewVersion = true
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create AI version for article {ArticleId}", articleId);
+            throw;
+        }
     }
 }
 

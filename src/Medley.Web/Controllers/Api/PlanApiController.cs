@@ -1,9 +1,14 @@
+using Hangfire;
 using Medley.Application.Interfaces;
+using Medley.Application.Jobs;
+using Medley.Application.Services;
 using Medley.Domain.Entities;
 using Medley.Domain.Enums;
+using Medley.Web.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.AI;
 
 namespace Medley.Web.Controllers.Api;
 
@@ -15,17 +20,35 @@ public class PlanApiController : ControllerBase
     private readonly IRepository<Plan> _planRepository;
     private readonly IRepository<Article> _articleRepository;
     private readonly IRepository<PlanFragment> _planFragmentRepository;
+    private readonly IRepository<ChatConversation> _conversationRepository;
+    private readonly IRepository<Domain.Entities.ChatMessage> _messageRepository;
+    private readonly IArticleChatService _articleChatService;
+    private readonly SystemPromptBuilder _systemPromptBuilder;
+    private readonly IMedleyContext _medleyContext;
+    private readonly IBackgroundJobClient _backgroundJobClient;
     private readonly ILogger<PlanApiController> _logger;
 
     public PlanApiController(
         IRepository<Plan> planRepository,
         IRepository<Article> articleRepository,
         IRepository<PlanFragment> planFragmentRepository,
+        IRepository<ChatConversation> conversationRepository,
+        IRepository<Domain.Entities.ChatMessage> messageRepository,
+        IArticleChatService articleChatService,
+        SystemPromptBuilder systemPromptBuilder,
+        IMedleyContext medleyContext,
+        IBackgroundJobClient backgroundJobClient,
         ILogger<PlanApiController> logger)
     {
         _planRepository = planRepository;
         _articleRepository = articleRepository;
         _planFragmentRepository = planFragmentRepository;
+        _conversationRepository = conversationRepository;
+        _messageRepository = messageRepository;
+        _articleChatService = articleChatService;
+        _systemPromptBuilder = systemPromptBuilder;
+        _medleyContext = medleyContext;
+        _backgroundJobClient = backgroundJobClient;
         _logger = logger;
     }
 
@@ -249,6 +272,124 @@ public class PlanApiController : ControllerBase
         planFragment.Instructions = request.Instructions;
 
         return Ok(new { success = true });
+    }
+
+    /// <summary>
+    /// Accept a plan and begin AI implementation via conversation
+    /// </summary>
+    [HttpPost("{planId}/accept")]
+    public async Task<IActionResult> AcceptPlan(Guid articleId, Guid planId)
+    {
+        var plan = await _planRepository.Query()
+            .Where(p => p.Id == planId && p.ArticleId == articleId)
+            .FirstOrDefaultAsync();
+
+        if (plan == null)
+        {
+            return NotFound(new { error = "Plan not found" });
+        }
+
+        if (plan.Status != PlanStatus.Draft)
+        {
+            return BadRequest(new { error = "Only draft plans can be accepted" });
+        }
+
+        // Get current user ID
+        var userId = _medleyContext.CurrentUserId;
+        if (!userId.HasValue)
+        {
+            return Unauthorized();
+        }
+
+        // 1. Archive the planning conversation (if exists)
+        if (plan.ConversationId.HasValue)
+        {
+            var planningConversation = await _conversationRepository.GetByIdAsync(plan.ConversationId.Value);
+            if (planningConversation != null)
+            {
+                planningConversation.State = ConversationState.Archived;
+                await _conversationRepository.SaveAsync(planningConversation);
+            }
+        }
+
+        // 2. Create new Agent conversation for implementation
+        var agentConversation = await _articleChatService.CreateConversationAsync(
+            articleId,
+            userId.Value,
+            ConversationMode.Agent);
+
+        // 3. Link conversation to plan
+        agentConversation.ImplementingPlanId = planId;
+        await _conversationRepository.SaveAsync(agentConversation);
+
+        // 4. Set plan status to InProgress
+        plan.Status = PlanStatus.InProgress;
+        await _planRepository.SaveAsync(plan);
+
+        // 5. Create user message requesting implementation
+        var userMessage = new Domain.Entities.ChatMessage
+        {
+            ConversationId = agentConversation.Id,
+            UserId = userId.Value,
+            Role = ChatMessageRole.User,
+            Text = "Please implement the improvement plan as described.",
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        await _messageRepository.SaveAsync(userMessage);
+
+        // 6. Register post-commit actions
+        HttpContext.RegisterPostCommitAction(async () =>
+        {
+            try
+            {
+                // Enqueue existing ArticleChatJob (reuse existing pipeline)
+                var jobId = _backgroundJobClient.Enqueue<ArticleChatJob>(
+                    job => job.ProcessChatMessageAsync(
+                        userMessage.Id,
+                        null!,
+                        CancellationToken.None));
+
+                _logger.LogInformation("Enqueued chat job {JobId} for plan implementation conversation {ConversationId}", 
+                    jobId, agentConversation.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error enqueueing chat job for plan {PlanId}", planId);
+            }
+        });
+
+        return Ok(new 
+        { 
+            success = true, 
+            conversationId = agentConversation.Id,
+            message = "Plan implementation started"
+        });
+    }
+
+    /// <summary>
+    /// Reject a plan and archive it
+    /// </summary>
+    [HttpPost("{planId}/reject")]
+    public async Task<IActionResult> RejectPlan(Guid articleId, Guid planId)
+    {
+        var plan = await _planRepository.Query()
+            .Where(p => p.Id == planId && p.ArticleId == articleId)
+            .FirstOrDefaultAsync();
+
+        if (plan == null)
+        {
+            return NotFound(new { error = "Plan not found" });
+        }
+
+        if (plan.Status != PlanStatus.Draft)
+        {
+            return BadRequest(new { error = "Only draft plans can be rejected" });
+        }
+
+        // Update plan status to Archived
+        plan.Status = PlanStatus.Archived;
+
+        return Ok(new { success = true, message = "Plan rejected and archived" });
     }
 
     private object MapPlanToDto(Plan plan)

@@ -25,9 +25,11 @@ public class ArticleChatService : IArticleChatService
     private readonly IRepository<Article> _articleRepository;
     private readonly IRepository<Template> _templateRepository;
     private readonly IRepository<Fragment> _fragmentRepository;
+    private readonly IRepository<Plan> _planRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IChatClient _chatClient;
     private readonly ArticleChatToolsFactory _toolsFactory;
+    private readonly SystemPromptBuilder _systemPromptBuilder;
     private readonly ILogger<ArticleChatService> _logger;
     private readonly AiCallContext _aiCallContext;
     private readonly ToolDisplayExtractor _toolDisplayExtractor;
@@ -38,9 +40,11 @@ public class ArticleChatService : IArticleChatService
         IRepository<Article> articleRepository,
         IRepository<Template> templateRepository,
         IRepository<Fragment> fragmentRepository,
+        IRepository<Plan> planRepository,
         IUnitOfWork unitOfWork,
         IChatClient chatClient,
         ArticleChatToolsFactory pluginsFactory,
+        SystemPromptBuilder systemPromptBuilder,
         ILogger<ArticleChatService> logger,
         AiCallContext aiCallContext,
         ToolDisplayExtractor toolDisplayExtractor)
@@ -50,8 +54,10 @@ public class ArticleChatService : IArticleChatService
         _articleRepository = articleRepository;
         _templateRepository = templateRepository;
         _fragmentRepository = fragmentRepository;
+        _planRepository = planRepository;
         _unitOfWork = unitOfWork;
         _toolsFactory = pluginsFactory;
+        _systemPromptBuilder = systemPromptBuilder;
         _logger = logger;
         _aiCallContext = aiCallContext;
         _toolDisplayExtractor = toolDisplayExtractor;
@@ -63,7 +69,7 @@ public class ArticleChatService : IArticleChatService
     public async Task<ChatConversation> CreateConversationAsync(
         Guid articleId,
         Guid userId,
-        ConversationMode mode = ConversationMode.Chat,
+        ConversationMode mode = ConversationMode.Agent,
         CancellationToken cancellationToken = default)
     {
         var conversation = new ChatConversation
@@ -76,21 +82,21 @@ public class ArticleChatService : IArticleChatService
         };
 
         await _conversationRepository.SaveAsync(conversation);
+        
+        // Set the article's current conversation reference
+        var article = await _articleRepository.GetByIdAsync(articleId);
+        if (article != null)
+        {
+            article.CurrentConversationId = conversation.Id;
+            await _articleRepository.SaveAsync(article);
+        }
+        
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Created new conversation {ConversationId} for article {ArticleId} by user {UserId}",
             conversation.Id, articleId, userId);
 
         return conversation;
-    }
-
-    public async Task<ChatConversation?> GetActiveConversationAsync(
-        Guid articleId,
-        CancellationToken cancellationToken = default)
-    {
-        return await _conversationRepository.Query()
-            .Where(c => c.ArticleId == articleId && c.State == ConversationState.Active)
-            .FirstOrDefaultAsync(cancellationToken);
     }
 
     public async Task<ChatConversation?> GetConversationAsync(
@@ -119,7 +125,7 @@ public class ArticleChatService : IArticleChatService
             var latestUserMessage = await GetLatestUserMessageAsync(conversationId, cancellationToken);
             
             // Create article-scoped plugins instance
-            var tools = _toolsFactory.Create(article.Id, latestUserMessage.User!.Id);
+            var tools = _toolsFactory.Create(article.Id, latestUserMessage.User!.Id, conversation.ImplementingPlanId);
             
             // Select system prompt and tools based on mode
             string systemMessage;
@@ -129,7 +135,7 @@ public class ArticleChatService : IArticleChatService
             {
                 // Load the ArticleImprovementPlan template
                 var template = await _templateRepository.Query()
-                    .FirstOrDefaultAsync(t => t.Type == TemplateType.ArticleImprovementPlan, cancellationToken);
+                    .FirstOrDefaultAsync(t => t.Type == TemplateType.ArticlePlanCreation, cancellationToken);
                 
                 if (template == null)
                 {
@@ -139,9 +145,20 @@ public class ArticleChatService : IArticleChatService
                 systemMessage = template.Content.Replace("{article.Title}", article.Title);
                 aiFunctions = CreateFunctions(tools, conversation.Mode);
             }
+            else if (conversation.Mode == ConversationMode.Agent && conversation.ImplementingPlanId.HasValue)
+            {
+                // Agent mode implementing a plan - use SystemPromptBuilder
+                systemMessage = await _systemPromptBuilder.BuildPromptAsync(
+                    conversation.ArticleId,
+                    conversation.ImplementingPlanId,
+                    TemplateType.ArticlePlanImplementation,
+                    cancellationToken);
+                
+                aiFunctions = CreateFunctions(tools, conversation.Mode);
+            }
             else
             {
-                // Load the ArticleChat template or fall back to code-based system message
+                // Regular agent chat - load ArticleChat template
                 var template = await _templateRepository.Query()
                     .FirstOrDefaultAsync(t => t.Type == TemplateType.ArticleChat, cancellationToken);
                 
@@ -411,7 +428,7 @@ public class ArticleChatService : IArticleChatService
     {
         return await _conversationRepository.Query()
             .Where(c => c.ArticleId == articleId &&
-                       (c.State == ConversationState.Complete || c.State == ConversationState.Cancelled))
+                       (c.State == ConversationState.Complete || c.State == ConversationState.Archived))
             .Include(c => c.Messages)
             .OrderByDescending(c => c.CreatedAt)
             .ToListAsync(cancellationToken);
@@ -431,6 +448,15 @@ public class ArticleChatService : IArticleChatService
         conversation.CompletedAt = DateTimeOffset.UtcNow;
 
         await _conversationRepository.SaveAsync(conversation);
+        
+        // Clear the article's current conversation reference if it matches this conversation
+        var article = await _articleRepository.GetByIdAsync(conversation.ArticleId);
+        if (article != null && article.CurrentConversationId == conversationId)
+        {
+            article.CurrentConversationId = null;
+            await _articleRepository.SaveAsync(article);
+        }
+        
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Completed conversation {ConversationId}", conversationId);
@@ -446,9 +472,18 @@ public class ArticleChatService : IArticleChatService
             throw new InvalidOperationException($"Conversation {conversationId} not found");
         }
 
-        conversation.State = ConversationState.Cancelled;
+        conversation.State = ConversationState.Archived;
 
         await _conversationRepository.SaveAsync(conversation);
+        
+        // Clear the article's current conversation reference if it matches this conversation
+        var article = await _articleRepository.GetByIdAsync(conversation.ArticleId);
+        if (article != null && article.CurrentConversationId == conversationId)
+        {
+            article.CurrentConversationId = null;
+            await _articleRepository.SaveAsync(article);
+        }
+        
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Cancelled conversation {ConversationId}", conversationId);
@@ -570,6 +605,11 @@ public class ArticleChatService : IArticleChatService
         if (mode == ConversationMode.Plan)
         {
             tools.Add(AIFunctionFactory.Create(plugins.CreatePlanAsync));
+        }
+
+        if (mode == ConversationMode.Agent)
+        {
+            tools.Add(AIFunctionFactory.Create(plugins.CreateArticleVersionAsync));
         }
 
         return tools.ToArray();

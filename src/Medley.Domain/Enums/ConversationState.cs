@@ -16,8 +16,8 @@ public enum ConversationState
     Complete = 1,
     
     /// <summary>
-    /// Conversation was cancelled by the user
+    /// Conversation has been archived (e.g., planning conversation after plan acceptance)
     /// </summary>
-    Cancelled = 2
+    Archived = 2
 }
 

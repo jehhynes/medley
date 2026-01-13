@@ -89,6 +89,11 @@ export default {
   },
   computed: {
     currentPage() {
+      // Check if it's an admin page first - don't return 'Home' for admin pages
+      if (this.isAdminPage) {
+        return null;
+      }
+      
       const path = this.$route.path.toLowerCase();
       const segments = path.split('/').filter(s => s);
       const firstSegment = segments[0] || 'home';

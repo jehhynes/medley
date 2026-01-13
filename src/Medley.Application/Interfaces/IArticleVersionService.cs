@@ -14,15 +14,16 @@ public interface IArticleVersionService
     /// <param name="userId">The user making the change</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>The captured version information</returns>
-    Task<ArticleVersionDto> CaptureVersionAsync(Guid articleId, string newContent, string? previousContent, Guid? userId, CancellationToken cancellationToken = default);
+    Task<ArticleVersionDto> CaptureUserVersionAsync(Guid articleId, string newContent, string? previousContent, Guid? userId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get version history for an article
     /// </summary>
     /// <param name="articleId">The article ID</param>
+    /// <param name="versionType">Optional version type filter (User, AI, or null for all)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of versions ordered by version number descending</returns>
-    Task<List<ArticleVersionDto>> GetVersionHistoryAsync(Guid articleId, CancellationToken cancellationToken = default);
+    Task<List<ArticleVersionDto>> GetVersionsAsync(Guid articleId, Domain.Enums.VersionType? versionType = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get raw markdown content for version comparison
@@ -31,6 +32,24 @@ public interface IArticleVersionService
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Version comparison data with before and after markdown content</returns>
     Task<ArticleVersionComparisonDto?> GetVersionComparisonAsync(Guid versionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Create an AI-generated version of an article
+    /// </summary>
+    /// <param name="articleId">The article ID</param>
+    /// <param name="content">The AI-generated content</param>
+    /// <param name="changeMessage">Description of the changes</param>
+    /// <param name="userId">The user ID</param>
+    /// <param name="conversationId">Optional conversation ID for tracking</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>The created AI version information</returns>
+    Task<ArticleVersionDto> CreateAiVersionAsync(
+        Guid articleId, 
+        string content, 
+        string changeMessage, 
+        Guid userId, 
+        Guid? conversationId = null,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -39,7 +58,7 @@ public interface IArticleVersionService
 public class ArticleVersionDto
 {
     public Guid Id { get; set; }
-    public int VersionNumber { get; set; }
+    public string VersionNumber { get; set; } = string.Empty;
     public Guid? CreatedBy { get; set; }
     public string? CreatedByName { get; set; }
     public string? CreatedByEmail { get; set; }
@@ -54,8 +73,7 @@ public class ArticleVersionComparisonDto
 {
     public string BeforeContent { get; set; } = string.Empty;
     public string AfterContent { get; set; } = string.Empty;
-    public int VersionNumber { get; set; }
-    public int? PreviousVersionNumber { get; set; }
+    public string VersionNumber { get; set; } = string.Empty;
 }
 
 

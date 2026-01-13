@@ -1,6 +1,7 @@
 using Medley.Application.Interfaces;
 using Medley.Domain.Entities;
 using Medley.Domain.Enums;
+using Medley.Domain.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -34,20 +35,20 @@ public class TemplatesApiController : ControllerBase
     {
         var templates = await _templateRepository.Query()
             .OrderBy(t => t.Type)
-            .ThenBy(t => t.Name)
-            .Select(t => new TemplateListDto
-            {
-                Id = t.Id,
-                Name = t.Name,
-                Type = t.Type,
-                TypeName = t.Type.ToString(),
-                Description = t.Description,
-                CreatedAt = t.CreatedAt,
-                LastModifiedAt = t.LastModifiedAt
-            })
             .ToListAsync();
 
-        return Ok(templates);
+        var templateDtos = templates.Select(t => new TemplateListDto
+        {
+            Id = t.Id,
+            Name = t.Type.GetName(),
+            Type = t.Type,
+            TypeName = t.Type.ToString(),
+            Description = t.Type.GetDescription(),
+            CreatedAt = t.CreatedAt,
+            LastModifiedAt = t.LastModifiedAt
+        }).ToList();
+
+        return Ok(templateDtos);
     }
 
     /// <summary>
@@ -66,10 +67,10 @@ public class TemplatesApiController : ControllerBase
         return Ok(new TemplateDto
         {
             Id = template.Id,
-            Name = template.Name,
+            Name = template.Type.GetName(),
             Type = template.Type,
             TypeName = template.Type.ToString(),
-            Description = template.Description,
+            Description = template.Type.GetDescription(),
             Content = template.Content,
             CreatedAt = template.CreatedAt,
             LastModifiedAt = template.LastModifiedAt
@@ -91,16 +92,6 @@ public class TemplatesApiController : ControllerBase
                 return NotFound();
             }
 
-            if (request.Name != null)
-            {
-                template.Name = request.Name.Trim();
-            }
-
-            if (request.Description != null)
-            {
-                template.Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
-            }
-
             if (request.Content != null)
             {
                 template.Content = request.Content;
@@ -111,15 +102,15 @@ public class TemplatesApiController : ControllerBase
             await _templateRepository.SaveAsync(template);
             await _unitOfWork.SaveChangesAsync();
 
-            _logger.LogInformation("Updated template {TemplateId} ({TemplateName})", id, template.Name);
+            _logger.LogInformation("Updated template {TemplateId} ({TemplateName})", id, template.Type.GetName());
 
             return Ok(new TemplateDto
             {
                 Id = template.Id,
-                Name = template.Name,
+                Name = template.Type.GetName(),
                 Type = template.Type,
                 TypeName = template.Type.ToString(),
-                Description = template.Description,
+                Description = template.Type.GetDescription(),
                 Content = template.Content,
                 CreatedAt = template.CreatedAt,
                 LastModifiedAt = template.LastModifiedAt
@@ -159,8 +150,6 @@ public class TemplateDto
 
 public class UpdateTemplateRequest
 {
-    public string? Name { get; set; }
-    public string? Description { get; set; }
     public string? Content { get; set; }
 }
 

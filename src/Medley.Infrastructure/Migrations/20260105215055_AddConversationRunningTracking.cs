@@ -11,32 +11,49 @@ namespace Medley.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<bool>(
-                name: "is_running",
-                table: "chat_conversations",
-                type: "boolean",
-                nullable: false,
-                defaultValue: false);
+            // Check if is_running column exists before adding
+            migrationBuilder.Sql(@"
+                DO $$ 
+                BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                                   WHERE table_name='chat_conversations' AND column_name='is_running') THEN
+                        ALTER TABLE chat_conversations ADD COLUMN is_running boolean NOT NULL DEFAULT FALSE;
+                    END IF;
+                END $$;
+            ");
 
-            migrationBuilder.AddColumn<Guid>(
-                name: "current_conversation_id",
-                table: "articles",
-                type: "uuid",
-                nullable: true);
+            // Check if current_conversation_id column exists before adding
+            migrationBuilder.Sql(@"
+                DO $$ 
+                BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                                   WHERE table_name='articles' AND column_name='current_conversation_id') THEN
+                        ALTER TABLE articles ADD COLUMN current_conversation_id uuid;
+                    END IF;
+                END $$;
+            ");
 
-            migrationBuilder.CreateIndex(
-                name: "ix_articles_current_conversation_id",
-                table: "articles",
-                column: "current_conversation_id",
-                unique: true);
+            // Check if index exists before creating
+            migrationBuilder.Sql(@"
+                DO $$ 
+                BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'ix_articles_current_conversation_id') THEN
+                        CREATE UNIQUE INDEX ix_articles_current_conversation_id ON articles(current_conversation_id);
+                    END IF;
+                END $$;
+            ");
 
-            migrationBuilder.AddForeignKey(
-                name: "fk_articles_chat_conversations_current_conversation_id",
-                table: "articles",
-                column: "current_conversation_id",
-                principalTable: "chat_conversations",
-                principalColumn: "id",
-                onDelete: ReferentialAction.SetNull);
+            // Check if foreign key exists before creating
+            migrationBuilder.Sql(@"
+                DO $$ 
+                BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints 
+                                   WHERE constraint_name = 'fk_articles_chat_conversations_current_conversation_id') THEN
+                        ALTER TABLE articles ADD CONSTRAINT fk_articles_chat_conversations_current_conversation_id 
+                            FOREIGN KEY (current_conversation_id) REFERENCES chat_conversations(id) ON DELETE SET NULL;
+                    END IF;
+                END $$;
+            ");
         }
 
         /// <inheritdoc />

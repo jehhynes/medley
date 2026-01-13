@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using Medley.Domain.Enums;
 
 namespace Medley.Domain.Entities;
@@ -8,11 +7,9 @@ namespace Medley.Domain.Entities;
 /// </summary>
 public class Template : BusinessEntity
 {
-    [MaxLength(200)]
-    public required string Name { get; set; }
-
     /// <summary>
     /// The type of template (determines which AI workflow uses it)
+    /// Name and description are defined on the TemplateType enum
     /// </summary>
     public required TemplateType Type { get; set; }
 
@@ -20,12 +17,6 @@ public class Template : BusinessEntity
     /// The template content (markdown format)
     /// </summary>
     public required string Content { get; set; }
-
-    /// <summary>
-    /// Description of what this template does
-    /// </summary>
-    [MaxLength(500)]
-    public string? Description { get; set; }
 
     /// <summary>
     /// Date when the template was last modified

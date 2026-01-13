@@ -3,6 +3,7 @@ using System;
 using Medley.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -12,9 +13,11 @@ using Pgvector;
 namespace Medley.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260113144850_AddArticlePlanImplementationTemplate")]
+    partial class AddArticlePlanImplementationTemplate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -272,10 +275,6 @@ namespace Medley.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("content_snapshot");
 
-                    b.Property<Guid?>("ConversationId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("conversation_id");
-
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -310,9 +309,6 @@ namespace Medley.Infrastructure.Migrations
                     b.HasIndex("ArticleId")
                         .HasDatabaseName("ix_article_versions_article_id");
 
-                    b.HasIndex("ConversationId")
-                        .HasDatabaseName("ix_article_versions_conversation_id");
-
                     b.HasIndex("CreatedById")
                         .HasDatabaseName("ix_article_versions_created_by");
 
@@ -325,9 +321,9 @@ namespace Medley.Infrastructure.Migrations
                     b.HasIndex("ArticleId", "CreatedAt")
                         .HasDatabaseName("ix_article_versions_article_id_created_at");
 
-                    b.HasIndex("ArticleId", "VersionNumber", "ParentVersionId", "VersionType")
+                    b.HasIndex("ArticleId", "VersionNumber")
                         .IsUnique()
-                        .HasDatabaseName("ix_article_versions_article_id_version_number_parent_version_i");
+                        .HasDatabaseName("ix_article_versions_article_id_version_number");
 
                     b.ToTable("article_versions", (string)null);
                 });
@@ -355,10 +351,6 @@ namespace Medley.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("created_by_user_id");
 
-                    b.Property<Guid?>("ImplementingPlanId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("implementing_plan_id");
-
                     b.Property<bool>("IsRunning")
                         .HasColumnType("boolean")
                         .HasColumnName("is_running");
@@ -382,9 +374,6 @@ namespace Medley.Infrastructure.Migrations
 
                     b.HasIndex(new[] { "CreatedAt" }, "IX_ChatConversations_CreatedAt")
                         .HasDatabaseName("ix_chat_conversations_created_at");
-
-                    b.HasIndex(new[] { "ImplementingPlanId" }, "IX_ChatConversations_ImplementingPlanId")
-                        .HasDatabaseName("ix_chat_conversations_implementing_plan_id");
 
                     b.ToTable("chat_conversations", (string)null);
                 });
@@ -1073,9 +1062,20 @@ namespace Medley.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
                     b.Property<DateTimeOffset?>("LastModifiedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_modified_at");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
 
                     b.Property<int>("Type")
                         .HasColumnType("integer")
@@ -1505,12 +1505,6 @@ namespace Medley.Infrastructure.Migrations
                         .IsRequired()
                         .HasConstraintName("fk_article_versions_articles_article_id");
 
-                    b.HasOne("Medley.Domain.Entities.ChatConversation", "Conversation")
-                        .WithMany()
-                        .HasForeignKey("ConversationId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_article_versions_chat_conversations_conversation_id");
-
                     b.HasOne("Medley.Domain.Entities.User", "CreatedBy")
                         .WithMany()
                         .HasForeignKey("CreatedById")
@@ -1524,8 +1518,6 @@ namespace Medley.Infrastructure.Migrations
                         .HasConstraintName("fk_article_versions_article_versions_parent_version_id");
 
                     b.Navigation("Article");
-
-                    b.Navigation("Conversation");
 
                     b.Navigation("CreatedBy");
 
@@ -1548,17 +1540,9 @@ namespace Medley.Infrastructure.Migrations
                         .IsRequired()
                         .HasConstraintName("fk_chat_conversations_users_created_by_user_id");
 
-                    b.HasOne("Medley.Domain.Entities.Plan", "ImplementingPlan")
-                        .WithMany()
-                        .HasForeignKey("ImplementingPlanId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_chat_conversations_plans_implementing_plan_id");
-
                     b.Navigation("Article");
 
                     b.Navigation("CreatedBy");
-
-                    b.Navigation("ImplementingPlan");
                 });
 
             modelBuilder.Entity("Medley.Domain.Entities.ChatMessage", b =>

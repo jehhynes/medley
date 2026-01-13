@@ -19,17 +19,7 @@ public interface IArticleChatService
     Task<ChatConversation> CreateConversationAsync(
         Guid articleId, 
         Guid userId, 
-        ConversationMode mode = ConversationMode.Chat,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Get the active conversation for an article
-    /// </summary>
-    /// <param name="articleId">The article ID</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Active conversation or null if none exists</returns>
-    Task<ChatConversation?> GetActiveConversationAsync(
-        Guid articleId, 
+        ConversationMode mode = ConversationMode.Agent,
         CancellationToken cancellationToken = default);
 
     /// <summary>

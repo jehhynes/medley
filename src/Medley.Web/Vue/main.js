@@ -7,7 +7,6 @@
   const { default: router } = await import('./router');
 
   // Import third-party libraries
-  const { default: bootbox } = await import('bootbox');
   const { marked } = await import('marked');
 
   // Import all components
@@ -24,7 +23,6 @@
   const { default: VirtualScroller } = await import('./components/VirtualScroller.vue');
 
   // Make libraries available globally (for backward compatibility)
-  window.bootbox = bootbox;
   window.marked = marked;
 
   // Import json-viewer asynchronously (web component, doesn't need to block)
