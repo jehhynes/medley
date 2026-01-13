@@ -30,7 +30,7 @@ public class ArticleChatApiController : ControllerBase
     private readonly IBackgroundJobClient _backgroundJobClient;
     private readonly IHubContext<ArticleHub> _hubContext;
     private readonly ILogger<ArticleChatApiController> _logger;
-    private readonly ToolMessageExtractor _toolMessageExtractor;
+    private readonly ToolDisplayExtractor _toolDisplayExtractor;
 
     public ArticleChatApiController(
         IArticleChatService chatService,
@@ -42,7 +42,7 @@ public class ArticleChatApiController : ControllerBase
         IBackgroundJobClient backgroundJobClient,
         IHubContext<ArticleHub> hubContext,
         ILogger<ArticleChatApiController> logger,
-        ToolMessageExtractor toolMessageExtractor)
+        ToolDisplayExtractor toolDisplayExtractor)
     {
         _chatService = chatService;
         _conversationRepository = conversationRepository;
@@ -53,7 +53,7 @@ public class ArticleChatApiController : ControllerBase
         _backgroundJobClient = backgroundJobClient;
         _hubContext = hubContext;
         _logger = logger;
-        _toolMessageExtractor = toolMessageExtractor;
+        _toolDisplayExtractor = toolDisplayExtractor;
     }
 
     /// <summary>
@@ -142,9 +142,25 @@ public class ArticleChatApiController : ControllerBase
                 : null
         }).ToList();
 
-        // Second: collect all completed call IDs and their results
+        // Second: collect tool call names and completed call IDs with their results and error status
+        var toolCallNames = new Dictionary<string, string>(); // Map callId -> toolName
         var completedCallIds = new HashSet<string>();
         var completedCallResults = new Dictionary<string, List<Guid>>();
+        var erroredCallIds = new HashSet<string>(); // Track which calls resulted in errors
+        
+        // First pass: collect all tool call names by call ID from all messages
+        foreach (var item in deserializedMessages.Where(x => x.AiMessage?.Contents != null))
+        {
+            foreach (var callContent in item.AiMessage!.Contents.OfType<FunctionCallContent>())
+            {
+                if (!string.IsNullOrEmpty(callContent.CallId) && !string.IsNullOrEmpty(callContent.Name))
+                {
+                    toolCallNames[callContent.CallId] = callContent.Name;
+                }
+            }
+        }
+        
+        // Second pass: process results with tool names from all messages
         foreach (var item in deserializedMessages.Where(x => x.AiMessage?.Contents != null))
         {
             foreach (var resultContent in item.AiMessage!.Contents.OfType<FunctionResultContent>())
@@ -153,8 +169,19 @@ public class ArticleChatApiController : ControllerBase
                 {
                     completedCallIds.Add(resultContent.CallId);
                     
-                    // Extract result IDs
-                    var resultIds = ExtractResultIdsFromFunctionResult(resultContent);
+                    // Check if this result is an error
+                    if (_toolDisplayExtractor.IsErrorResult(resultContent))
+                    {
+                        erroredCallIds.Add(resultContent.CallId);
+                    }
+                    
+                    // Get the tool name for this call ID
+                    var toolName = toolCallNames.ContainsKey(resultContent.CallId) 
+                        ? toolCallNames[resultContent.CallId] 
+                        : null;
+                    
+                    // Extract result IDs using the shared helper with tool name
+                    var resultIds = _toolDisplayExtractor.ExtractResultIds(toolName, resultContent);
                     if (resultIds != null && resultIds.Count > 0)
                     {
                         completedCallResults[resultContent.CallId] = resultIds;
@@ -175,17 +202,19 @@ public class ArticleChatApiController : ControllerBase
                 foreach (var fc in item.AiMessage.Contents.OfType<FunctionCallContent>())
                 {
                     // Get result IDs if this call was completed
-                    List<Guid>? resultIds = null;
-                    if (!string.IsNullOrEmpty(fc.CallId) && completedCallResults.ContainsKey(fc.CallId))
-                    {
-                        resultIds = completedCallResults[fc.CallId];
-                    }
+                    List<Guid>? resultIds = !string.IsNullOrEmpty(fc.CallId) && completedCallResults.ContainsKey(fc.CallId)
+                        ? completedCallResults[fc.CallId]
+                        : null;
+                    
+                    // Check if this call resulted in an error
+                    var isError = !string.IsNullOrEmpty(fc.CallId) && erroredCallIds.Contains(fc.CallId);
                     
                     calls.Add(new {
                         name = fc.Name,
                         callId = fc.CallId,
-                        message = await _toolMessageExtractor.ExtractToolMessageAsync(fc.Name, fc.Arguments),
+                        display = await _toolDisplayExtractor.ExtractToolDisplayAsync(fc.Name, fc.Arguments),
                         completed = !string.IsNullOrEmpty(fc.CallId) && completedCallIds.Contains(fc.CallId),
+                        isError = isError,
                         result = resultIds != null ? new { ids = resultIds.Select(id => id.ToString()).ToArray() } : null
                     });
                 }
@@ -456,81 +485,6 @@ public class ArticleChatApiController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to deserialize SerializedMessage for message {MessageId}", messageId);
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// Extracts result IDs from a function result content based on the function name
-    /// </summary>
-    private List<Guid>? ExtractResultIdsFromFunctionResult(FunctionResultContent resultContent)
-    {
-        if (resultContent.Result == null)
-        {
-            return null;
-        }
-
-        try
-        {
-            var resultString = resultContent.Result.ToString();
-            if (string.IsNullOrEmpty(resultString))
-            {
-                return null;
-            }
-
-            var jsonDoc = JsonDocument.Parse(resultString);
-            var root = jsonDoc.RootElement;
-
-            // Check if the result was successful
-            if (root.TryGetProperty("success", out var successProp) && 
-                successProp.ValueKind == JsonValueKind.False)
-            {
-                return null;
-            }
-
-            var ids = new List<Guid>();
-
-            // Extract IDs based on result structure
-            // For CreatePlan
-            if (root.TryGetProperty("planId", out var planIdProp) && 
-                planIdProp.ValueKind == JsonValueKind.String &&
-                Guid.TryParse(planIdProp.GetString(), out var planId))
-            {
-                ids.Add(planId);
-            }
-            // For Search/FindSimilar operations
-            else if (root.TryGetProperty("fragments", out var fragmentsProp) && 
-                     fragmentsProp.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var fragment in fragmentsProp.EnumerateArray())
-                {
-                    if (fragment.TryGetProperty("id", out var idProp) && 
-                        idProp.ValueKind == JsonValueKind.String &&
-                        Guid.TryParse(idProp.GetString(), out var fragmentId))
-                    {
-                        ids.Add(fragmentId);
-                    }
-                }
-            }
-            // For GetFragmentContent
-            else if (root.TryGetProperty("fragment", out var fragmentProp) &&
-                     fragmentProp.TryGetProperty("id", out var fragIdProp) &&
-                     fragIdProp.ValueKind == JsonValueKind.String &&
-                     Guid.TryParse(fragIdProp.GetString(), out var fragmentContentId))
-            {
-                ids.Add(fragmentContentId);
-            }
-
-            return ids.Count > 0 ? ids : null;
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogWarning(ex, "Failed to parse function result JSON");
-            return null;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Error extracting result IDs from function result");
             return null;
         }
     }

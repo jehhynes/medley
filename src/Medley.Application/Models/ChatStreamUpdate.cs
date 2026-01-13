@@ -36,14 +36,19 @@ public class ChatStreamUpdate
     public string? ToolCallId { get; init; }
 
     /// <summary>
-    /// Tool message (extracted relevant argument) for ToolCall updates
+    /// Tool display text (extracted relevant argument) for ToolCall updates
     /// </summary>
-    public string? ToolMessage { get; init; }
+    public string? ToolDisplay { get; init; }
 
     /// <summary>
     /// Result IDs from tool execution (e.g., plan IDs, fragment IDs)
     /// </summary>
     public List<Guid>? ToolResultIds { get; init; }
+
+    /// <summary>
+    /// Indicates if a tool call resulted in an error
+    /// </summary>
+    public bool? IsError { get; init; }
 
     /// <summary>
     /// Message ID for Complete updates (after database save)

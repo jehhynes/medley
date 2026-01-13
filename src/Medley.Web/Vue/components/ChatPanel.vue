@@ -58,24 +58,15 @@
                     <!-- Collapsible content -->
                     <div v-if="expandedMessages[msg.id]">
                       <div class="markdown-container"
-                           v-html="renderMarkdown(msg.text)"></div>
+                           v-html="renderMarkdown(msg.text) || 'Thinking...'"></div>
                       
                       <div class="chat-message-tools mt-2">
-                        <div v-for="(tool, idx) in msg.toolCalls" 
-                             :key="idx" 
-                             class="tool-call-item text-muted">
-                          <i class="bi me-2" :class="getToolIcon(tool.name)" :title="formatToolName(tool.name)"></i>
-                          <template v-if="tool.name && tool.name.toLowerCase().includes('createplan') && tool.completed && getPlanIdFromResult(tool.result)">
-                            <a href="#" 
-                               @click.prevent="openPlan(getPlanIdFromResult(tool.result))"
-                               class="tool-call-link">
-                              {{ tool.message || formatToolName(tool.name) }}
-                            </a>
-                          </template>
-                          <span v-else class="tool-call-text">{{ tool.message || formatToolName(tool.name) }}</span>
-                          <i v-if="tool.completed" class="bi bi-check-circle ms-2 text-success"></i>
-                          <span v-else class="spinner-border spinner-border-xs ms-2" role="status"></span>
-                        </div>
+                        <tool-call-item
+                          v-for="(tool, idx) in msg.toolCalls"
+                          :key="idx"
+                          :tool="tool"
+                          @open-plan="openPlan"
+                          @open-fragment="$emit('open-fragment', $event)" />
                       </div>
                     </div>
                     
@@ -97,21 +88,12 @@
                 <!-- Always show tools for active or non-collapsed messages -->
                 <div v-if="msg.toolCalls && msg.toolCalls.length > 0" 
                      class="chat-message-tools mt-2">
-                  <div v-for="(tool, idx) in msg.toolCalls" 
-                       :key="idx" 
-                       class="tool-call-item text-muted">
-                    <i class="bi me-2" :class="getToolIcon(tool.name)" :title="formatToolName(tool.name)"></i>
-                    <template v-if="tool.name && tool.name.toLowerCase().includes('createplan') && tool.completed && getPlanIdFromResult(tool.result)">
-                      <a href="#" 
-                         @click.prevent="openPlan(getPlanIdFromResult(tool.result))"
-                         class="tool-call-link">
-                        {{ tool.message || formatToolName(tool.name) }}
-                      </a>
-                    </template>
-                    <span v-else class="tool-call-text">{{ tool.message || formatToolName(tool.name) }}</span>
-                    <i v-if="tool.completed" class="bi bi-check-circle ms-2 text-success"></i>
-                    <span v-else class="spinner-border spinner-border-xs ms-2" role="status"></span>
-                  </div>
+                  <tool-call-item
+                    v-for="(tool, idx) in msg.toolCalls"
+                    :key="idx"
+                    :tool="tool"
+                    @open-plan="openPlan"
+                    @open-fragment="$emit('open-fragment', $event)" />
                 </div>
               </template>
             </div>
@@ -165,8 +147,13 @@
 </template>
 
 <script>
+import ToolCallItem from './ToolCallItem.vue';
+
 export default {
   name: 'ChatPanel',
+  components: {
+    ToolCallItem
+  },
   props: {
     articleId: {
       type: String,
@@ -177,7 +164,7 @@ export default {
       default: null
     }
   },
-  emits: ['open-plan'],
+  emits: ['open-plan', 'open-fragment'],
   data() {
     return {
       conversationId: null,
@@ -474,7 +461,7 @@ export default {
       streamingMsg.toolCalls.push({
         name: data.toolName,
         callId: data.toolCallId,
-        message: data.toolMessage,
+        display: data.toolDisplay,
         completed: false,
         timestamp: data.timestamp
       });
@@ -498,6 +485,7 @@ export default {
           const toolCall = msg.toolCalls.find(t => t.callId === data.toolCallId);
           if (toolCall) {
             toolCall.completed = true;
+            toolCall.isError = data.isError || false;
             // Store the result with IDs if available
             if (data.result && data.result.ids) {
               toolCall.result = {
@@ -618,67 +606,6 @@ export default {
       }
       // Fallback to plain text if marked is not available
       return text.replace(/\n/g, '<br>');
-    },
-
-    formatToolName(toolName) {
-      if (!toolName) return '';
-      
-      // First, split on underscores
-      let words = toolName.split('_');
-      
-      // Then split each word on uppercase letters (PascalCase/camelCase)
-      words = words.flatMap(word => {
-        // Insert space before uppercase letters and split
-        return word.replace(/([A-Z])/g, ' $1').trim().split(/\s+/);
-      });
-      
-      // Capitalize first letter of each word
-      return words
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-        .join(' ');
-    },
-
-    getToolDisplayText(tool) {
-      if (!tool) return '';
-      
-      const baseName = this.formatToolName(tool.name);
-      
-      // Use the server-provided message if available
-      if (tool.message) {
-        return `${baseName}: "${tool.message}"`;
-      }
-      
-      return baseName;
-    },
-
-    getToolIcon(toolName) {
-      if (!toolName) return 'bi-gear';
-      
-      const lowerName = toolName.toLowerCase();
-      if (lowerName.includes('search') || lowerName.includes('findsimilar')) {
-        return 'bi-search';
-      }
-      if (lowerName.includes('fragment') || lowerName.includes('content')) {
-        return 'bi-puzzle';
-      }
-      if (lowerName.includes('createplan')) {
-        return 'bi-list-check';
-      }
-      return 'bi-gear';
-    },
-
-    getPlanIdFromResult(result) {
-      if (!result) return null;
-      
-      try {
-        // Check if result has ids array
-        if (result.ids && Array.isArray(result.ids) && result.ids.length > 0) {
-          return result.ids[0]; // Return first ID (for CreatePlan, there's only one)
-        }
-        return null;
-      } catch (e) {
-        return null;
-      }
     },
 
     openPlan(planId) {

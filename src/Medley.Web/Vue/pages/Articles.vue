@@ -180,7 +180,11 @@
       </div>
       <div class="sidebar-tab-content">
         <div v-show="ui.activeRightTab === 'assistant'" class="sidebar-tab-pane">
-          <chat-panel :article-id="articles.selectedId" :connection="signalr.connection" />
+          <chat-panel 
+            :article-id="articles.selectedId" 
+            :connection="signalr.connection"
+            @open-plan="openPlanTab"
+            @open-fragment="handleOpenFragment" />
         </div>
         <div v-show="ui.activeRightTab === 'versions'" class="sidebar-tab-pane">
           <versions-panel 
@@ -368,6 +372,12 @@
         </div>
       </div>
     </div>
+
+    <!-- Fragment Modal -->
+    <fragment-modal
+      :fragment="selectedFragment"
+      :visible="!!selectedFragment"
+      @close="closeFragmentModal" />
 </template>
 
 <script>
@@ -390,6 +400,7 @@ import {
 import { getUrlParam, setUrlParam, setupPopStateHandler } from '@/utils/url.js';
 import { htmlDiff } from '@/utils/htmlDiff.js';
 
+import FragmentModal from '../components/FragmentModal.vue';
 import articleModalMixin from '../mixins/articleModal.js';
 import articleVersionMixin from '../mixins/articleVersion.js';
 import articleSignalRMixin from '../mixins/articleSignalR.js';
@@ -399,6 +410,9 @@ import { useRouter } from 'vue-router'
 
 export default {
   name: 'Articles',
+  components: {
+    FragmentModal
+  },
   mixins: [
     articleModalMixin,
     articleVersionMixin,
@@ -496,6 +510,9 @@ export default {
       // User info from server
       userDisplayName: window.MedleyUser?.displayName || 'User',
       userIsAuthenticated: window.MedleyUser?.isAuthenticated || false,
+
+      // Fragment modal state
+      selectedFragment: null
     };
   },
   provide() {
@@ -1143,6 +1160,22 @@ export default {
       this.contentTabs.versionData = null;
       this.contentTabs.planData = null;
       this.contentTabs.activeTabId = 'editor';
+    },
+
+    async handleOpenFragment(fragmentId) {
+      if (!fragmentId) return;
+
+      try {
+        const fragment = await api.get(`/api/fragments/${fragmentId}`);
+        this.selectedFragment = fragment;
+      } catch (err) {
+        console.error('Error loading fragment:', err);
+        showToast('error', 'Failed to load fragment');
+      }
+    },
+
+    closeFragmentModal() {
+      this.selectedFragment = null;
     }
   },
 

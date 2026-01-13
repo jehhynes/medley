@@ -30,7 +30,7 @@ public class ArticleChatService : IArticleChatService
     private readonly ArticleChatToolsFactory _toolsFactory;
     private readonly ILogger<ArticleChatService> _logger;
     private readonly AiCallContext _aiCallContext;
-    private readonly ToolMessageExtractor _toolMessageExtractor;
+    private readonly ToolDisplayExtractor _toolDisplayExtractor;
     
     public ArticleChatService(
         IRepository<ChatConversation> conversationRepository,
@@ -43,7 +43,7 @@ public class ArticleChatService : IArticleChatService
         ArticleChatToolsFactory pluginsFactory,
         ILogger<ArticleChatService> logger,
         AiCallContext aiCallContext,
-        ToolMessageExtractor toolMessageExtractor)
+        ToolDisplayExtractor toolDisplayExtractor)
     {
         _conversationRepository = conversationRepository;
         _chatMessageRepository = chatMessageRepository;
@@ -54,7 +54,7 @@ public class ArticleChatService : IArticleChatService
         _toolsFactory = pluginsFactory;
         _logger = logger;
         _aiCallContext = aiCallContext;
-        _toolMessageExtractor = toolMessageExtractor;
+        _toolDisplayExtractor = toolDisplayExtractor;
 
         // Wrap the provided chat client with function invocation support
         _chatClient = new ChatClientBuilder(chatClient).UseFunctionInvocation().Build();
@@ -190,16 +190,6 @@ public class ArticleChatService : IArticleChatService
             _logger.LogInformation("Completed streaming for conversation {ConversationId} (Mode: {Mode}), message {MessageId}",
                 conversationId, conversation.Mode, assistantMessage.Id);
             
-            // Yield final complete update
-            yield return new ChatStreamUpdate
-            {
-                Type = StreamUpdateType.MessageComplete,
-                MessageId = assistantMessage.Id,
-                ConversationId = conversationId,
-                ArticleId = conversation.ArticleId,
-                Text = assistantMessage.Text
-            };
-
             // Yield turn complete update
             yield return new ChatStreamUpdate
             {
@@ -269,7 +259,7 @@ public class ArticleChatService : IArticleChatService
                         Type = StreamUpdateType.ToolCall,
                         ToolName = call.Name,
                         ToolCallId = call.CallId,
-                        ToolMessage = await _toolMessageExtractor.ExtractToolMessageAsync(call.Name, call.Arguments),
+                        ToolDisplay = await _toolDisplayExtractor.ExtractToolDisplayAsync(call.Name, call.Arguments),
                         ConversationId = conversationId,
                         ArticleId = articleId,
                         MessageId = messageId
@@ -286,8 +276,11 @@ public class ArticleChatService : IArticleChatService
                         ? toolCallNames[result.CallId]
                         : null;
 
+                    // Check if this is an error result
+                    var isError = _toolDisplayExtractor.IsErrorResult(result);
+
                     // Extract result IDs from the tool result
-                    var resultIds = ExtractResultIds(toolName, result.Result);
+                    var resultIds = _toolDisplayExtractor.ExtractResultIds(toolName, result);
 
                     yield return new ChatStreamUpdate
                     {
@@ -295,6 +288,7 @@ public class ArticleChatService : IArticleChatService
                         ToolName = toolName,
                         ToolCallId = result.CallId,
                         ToolResultIds = resultIds,
+                        IsError = isError,
                         ConversationId = conversationId,
                         ArticleId = articleId,
                         MessageId = messageId
@@ -372,7 +366,7 @@ public class ArticleChatService : IArticleChatService
 
             var message = new DomainChatMessage()
             {
-                Id = /*role == ChatMessageRole.Tool ? Guid.NewGuid() :*/ Guid.Parse(aiMessage.MessageId!), //Tool messages don't have unique IDs from the chat client
+                Id = role == ChatMessageRole.Tool ? Guid.NewGuid() : Guid.Parse(aiMessage.MessageId!), //Tool messages don't have unique IDs from the chat client
                 ConversationId = conversationId,
                 Role = role,
                 Text = aiMessage.Text ?? string.Empty,
@@ -591,91 +585,6 @@ public class ArticleChatService : IArticleChatService
             instructions: systemMessage,
             tools: tools
         );
-    }
-
-    /// <summary>
-    /// Extracts result IDs from tool execution results based on tool name.
-    /// </summary>
-    private List<Guid>? ExtractResultIds(string? toolName, object? result)
-    {
-        if (string.IsNullOrEmpty(toolName) || result == null)
-        {
-            return null;
-        }
-
-        try
-        {
-            var resultString = result.ToString();
-            if (string.IsNullOrEmpty(resultString))
-            {
-                return null;
-            }
-
-            var jsonDoc = JsonDocument.Parse(resultString);
-            var root = jsonDoc.RootElement;
-
-            // Check if the result was successful
-            if (root.TryGetProperty("success", out var successProp) && 
-                successProp.ValueKind == JsonValueKind.False)
-            {
-                return null;
-            }
-
-            var ids = new List<Guid>();
-
-            // Extract IDs based on tool name
-            if (toolName.Contains("CreatePlan", StringComparison.OrdinalIgnoreCase))
-            {
-                // Extract planId from CreatePlan result
-                if (root.TryGetProperty("planId", out var planIdProp) && 
-                    planIdProp.ValueKind == JsonValueKind.String &&
-                    Guid.TryParse(planIdProp.GetString(), out var planId))
-                {
-                    ids.Add(planId);
-                }
-            }
-            else if (toolName.Contains("Search", StringComparison.OrdinalIgnoreCase) || 
-                     toolName.Contains("FindSimilar", StringComparison.OrdinalIgnoreCase))
-            {
-                // Extract fragment IDs from search results
-                if (root.TryGetProperty("fragments", out var fragmentsProp) && 
-                    fragmentsProp.ValueKind == JsonValueKind.Array)
-                {
-                    foreach (var fragment in fragmentsProp.EnumerateArray())
-                    {
-                        if (fragment.TryGetProperty("id", out var idProp) && 
-                            idProp.ValueKind == JsonValueKind.String &&
-                            Guid.TryParse(idProp.GetString(), out var fragmentId))
-                        {
-                            ids.Add(fragmentId);
-                        }
-                    }
-                }
-            }
-            else if (toolName.Contains("GetFragmentContent", StringComparison.OrdinalIgnoreCase))
-            {
-                // Extract fragment ID from GetFragmentContent result
-                if (root.TryGetProperty("fragment", out var fragmentProp) &&
-                    fragmentProp.TryGetProperty("id", out var idProp) &&
-                    idProp.ValueKind == JsonValueKind.String &&
-                    Guid.TryParse(idProp.GetString(), out var fragmentId))
-                {
-                    ids.Add(fragmentId);
-                }
-            }
-
-            return ids.Count > 0 ? ids : null;
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogWarning(ex, "Failed to parse tool result JSON for tool {ToolName}", toolName);
-            return null;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Error extracting result IDs from tool {ToolName}", toolName);
-            return null;
-        }
     }
 
     #endregion

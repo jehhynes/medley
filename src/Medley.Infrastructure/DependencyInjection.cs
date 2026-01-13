@@ -271,8 +271,8 @@ public static class DependencyInjection
         // Register ArticleAssistantPluginsFactory (for creating article-scoped plugin instances)
         services.AddScoped<ArticleChatToolsFactory>();
 
-        // Register ToolMessageExtractor (for extracting display-friendly tool messages)
-        services.AddScoped<ToolMessageExtractor>();
+        // Register ToolDisplayExtractor (for extracting display-friendly tool text)
+        services.AddScoped<ToolDisplayExtractor>();
 
         // Register ArticleChatService (uses registered IChatClient and wraps it with function invocation)
         services.AddScoped<IArticleChatService, ArticleChatService>();
