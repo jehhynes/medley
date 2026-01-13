@@ -300,7 +300,7 @@ public class FragmentExtractionService
                     LastModifiedAt = DateTimeOffset.UtcNow,
                 };
 
-                await _fragmentRepository.SaveAsync(fragment);
+                await _fragmentRepository.AddAsync(fragment);
                 fragmentCount++;
 
                 _logger.LogDebug("Created fragment: {Title}", fragment.Title);
@@ -321,7 +321,7 @@ public class FragmentExtractionService
             source.ExtractionMessage = combinedMessage.Length > 2000 
                 ? combinedMessage.Substring(0, 2000) 
                 : combinedMessage;
-            await _sourceRepository.SaveAsync(source);
+            await _sourceRepository.AddAsync(source);
             _logger.LogDebug("Saved extraction message to source {SourceId}", source.Id);
         }
 

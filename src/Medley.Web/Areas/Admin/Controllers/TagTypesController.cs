@@ -52,7 +52,7 @@ public class TagTypesController : Controller
             return View(model);
         }
 
-        await _tagTypeRepository.SaveAsync(model);
+        await _tagTypeRepository.AddAsync(model);
 
         // Handle allowed values (one per line)
         var values = ParseAllowedValues(allowedValues);
@@ -64,7 +64,7 @@ public class TagTypesController : Controller
                 TagTypeId = model.Id,
                 Value = value
             };
-            await _tagOptionRepository.SaveAsync(option);
+            await _tagOptionRepository.AddAsync(option);
         }
 
         await _unitOfWork.SaveChangesAsync();
@@ -129,11 +129,11 @@ public class TagTypesController : Controller
                     TagTypeId = existing.Id,
                     Value = value
                 };
-                await _tagOptionRepository.SaveAsync(option);
+                await _tagOptionRepository.AddAsync(option);
             }
         }
 
-        await _tagTypeRepository.SaveAsync(existing);
+        await _tagTypeRepository.AddAsync(existing);
         await _unitOfWork.SaveChangesAsync();
 
         TempData["SuccessMessage"] = "Tag type updated";

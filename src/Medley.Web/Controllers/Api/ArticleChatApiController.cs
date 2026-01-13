@@ -363,11 +363,11 @@ public class ArticleChatApiController : ControllerBase
                 });
             }
             
-            await _articleRepository.SaveAsync(article);
+            await _articleRepository.AddAsync(article);
         }
         
-        await _conversationRepository.SaveAsync(conversation);
-        await _chatMessageRepository.SaveAsync(userMessage);
+        await _conversationRepository.AddAsync(conversation);
+        await _chatMessageRepository.AddAsync(userMessage);
 
         // Get user's full name for broadcast
         var user = await _userRepository.GetByIdAsync(userId.Value);

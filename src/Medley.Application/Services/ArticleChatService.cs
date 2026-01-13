@@ -81,14 +81,14 @@ public class ArticleChatService : IArticleChatService
             CreatedAt = DateTimeOffset.UtcNow
         };
 
-        await _conversationRepository.SaveAsync(conversation);
+        await _conversationRepository.AddAsync(conversation);
         
         // Set the article's current conversation reference
         var article = await _articleRepository.GetByIdAsync(articleId);
         if (article != null)
         {
             article.CurrentConversationId = conversation.Id;
-            await _articleRepository.SaveAsync(article);
+            await _articleRepository.AddAsync(article);
         }
         
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -394,7 +394,7 @@ public class ArticleChatService : IArticleChatService
 
             result.Add(message);
 
-            await _chatMessageRepository.SaveAsync(message);
+            await _chatMessageRepository.AddAsync(message);
 
             await _unitOfWork.SaveChangesAsync();
             await _unitOfWork.CommitTransactionAsync();
@@ -447,14 +447,14 @@ public class ArticleChatService : IArticleChatService
         conversation.State = ConversationState.Complete;
         conversation.CompletedAt = DateTimeOffset.UtcNow;
 
-        await _conversationRepository.SaveAsync(conversation);
+        await _conversationRepository.AddAsync(conversation);
         
         // Clear the article's current conversation reference if it matches this conversation
         var article = await _articleRepository.GetByIdAsync(conversation.ArticleId);
         if (article != null && article.CurrentConversationId == conversationId)
         {
             article.CurrentConversationId = null;
-            await _articleRepository.SaveAsync(article);
+            await _articleRepository.AddAsync(article);
         }
         
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -474,14 +474,14 @@ public class ArticleChatService : IArticleChatService
 
         conversation.State = ConversationState.Archived;
 
-        await _conversationRepository.SaveAsync(conversation);
+        await _conversationRepository.AddAsync(conversation);
         
         // Clear the article's current conversation reference if it matches this conversation
         var article = await _articleRepository.GetByIdAsync(conversation.ArticleId);
         if (article != null && article.CurrentConversationId == conversationId)
         {
             article.CurrentConversationId = null;
-            await _articleRepository.SaveAsync(article);
+            await _articleRepository.AddAsync(article);
         }
         
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -506,7 +506,7 @@ public class ArticleChatService : IArticleChatService
                 conversationId, conversation.Mode, mode);
             
             conversation.Mode = mode;
-            await _conversationRepository.SaveAsync(conversation);
+            await _conversationRepository.AddAsync(conversation);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
     }

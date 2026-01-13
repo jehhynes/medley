@@ -125,7 +125,7 @@ public class TaggingService : ITaggingService
         }
 
         source.TagsGenerated = DateTimeOffset.UtcNow;
-        await _sourceRepository.SaveAsync(source);
+        await _sourceRepository.AddAsync(source);
 
         return new TaggingResult
         {
@@ -323,7 +323,7 @@ public class TaggingService : ITaggingService
                 existingTag.TagOption = matchedOption;
                 existingTag.TagType = tagType;
 
-                await _tagRepository.SaveAsync(existingTag);
+                await _tagRepository.AddAsync(existingTag);
             }
             else
             {
@@ -338,7 +338,7 @@ public class TaggingService : ITaggingService
                     Value = valueToStore
                 };
 
-                await _tagRepository.SaveAsync(newTag);
+                await _tagRepository.AddAsync(newTag);
                 source.Tags.Add(newTag);
             }
         }

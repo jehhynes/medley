@@ -279,7 +279,7 @@ public class KnowledgeBuilderImportService : IKnowledgeBuilderImportService
                 {
                     Name = kbArticle.Type
                 };
-                await _articleTypeRepository.SaveAsync(articleType);
+                await _articleTypeRepository.AddAsync(articleType);
                 articleTypeCache[kbArticle.Type] = articleType;
                 _logger.LogInformation("Created new ArticleType: {Type}", kbArticle.Type);
             }
@@ -305,7 +305,7 @@ public class KnowledgeBuilderImportService : IKnowledgeBuilderImportService
             Status = Domain.Enums.ArticleStatus.Draft
         };
 
-        await _articleRepository.SaveAsync(article);
+        await _articleRepository.AddAsync(article);
         imported++;
 
         _logger.LogDebug("Imported article: {Title} (ID: {Id})", article.Title, article.Id);

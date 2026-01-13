@@ -131,7 +131,7 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
 
                         fragment.Embedding = new Vector(processedVector);
 
-                        await _fragmentRepository.SaveAsync(fragment);
+                        await _fragmentRepository.AddAsync(fragment);
                         processedCount++;
 
                         _logger.LogDebug("Generated embedding for fragment {FragmentId} (Title: {Title}) with {Dimensions} dimensions",

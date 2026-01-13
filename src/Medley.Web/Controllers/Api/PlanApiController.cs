@@ -308,7 +308,7 @@ public class PlanApiController : ControllerBase
             if (planningConversation != null)
             {
                 planningConversation.State = ConversationState.Archived;
-                await _conversationRepository.SaveAsync(planningConversation);
+                await _conversationRepository.AddAsync(planningConversation);
             }
         }
 
@@ -320,11 +320,11 @@ public class PlanApiController : ControllerBase
 
         // 3. Link conversation to plan
         agentConversation.ImplementingPlanId = planId;
-        await _conversationRepository.SaveAsync(agentConversation);
+        await _conversationRepository.AddAsync(agentConversation);
 
         // 4. Set plan status to InProgress
         plan.Status = PlanStatus.InProgress;
-        await _planRepository.SaveAsync(plan);
+        await _planRepository.AddAsync(plan);
 
         // 5. Create user message requesting implementation
         var userMessage = new Domain.Entities.ChatMessage
@@ -335,7 +335,7 @@ public class PlanApiController : ControllerBase
             Text = "Please implement the improvement plan as described.",
             CreatedAt = DateTimeOffset.UtcNow
         };
-        await _messageRepository.SaveAsync(userMessage);
+        await _messageRepository.AddAsync(userMessage);
 
         // 6. Register post-commit actions
         HttpContext.RegisterPostCommitAction(async () =>
