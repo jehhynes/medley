@@ -41,7 +41,7 @@ public class IntegrationService : IIntegrationService
 
     public async Task SaveAsync(Integration integration, CancellationToken cancellationToken = default)
     {
-        await _integrationRepository.SaveAsync(integration);
+        await _integrationRepository.AddAsync(integration);
     }
 
     public async Task DeleteAsync(Integration integration, CancellationToken cancellationToken = default)
@@ -58,7 +58,7 @@ public class IntegrationService : IIntegrationService
             _logger.LogWarning("No connection service found for integration type {IntegrationType}", integration.Type);
             integration.Status = ConnectionStatus.Error;
             integration.LastHealthCheckAt = DateTimeOffset.UtcNow;
-            await _integrationRepository.SaveAsync(integration);
+            await _integrationRepository.AddAsync(integration);
             
             // Broadcast status update
             //await _notificationService.SendIntegrationStatusUpdateAsync(
@@ -74,7 +74,7 @@ public class IntegrationService : IIntegrationService
         integration.Status = status;
         integration.LastHealthCheckAt = DateTimeOffset.UtcNow;
         
-        await _integrationRepository.SaveAsync(integration);
+        await _integrationRepository.AddAsync(integration);
         
         // Broadcast status update if status changed
         //if (previousStatus != status)

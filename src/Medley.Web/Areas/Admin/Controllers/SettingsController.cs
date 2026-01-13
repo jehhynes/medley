@@ -43,7 +43,7 @@ public class SettingsController : Controller
                 EmailDomain = null,
                 EnableSmartTagging = false
             };
-            await _organizationRepository.SaveAsync(organization);
+            await _organizationRepository.AddAsync(organization);
             await _unitOfWork.SaveChangesAsync();
             _logger.LogInformation("Created default organization");
         }
@@ -76,7 +76,7 @@ public class SettingsController : Controller
             organization.EmailDomain = normalizedDomain;
             organization.EnableSmartTagging = enableSmartTagging;
             
-            await _organizationRepository.SaveAsync(organization);
+            await _organizationRepository.AddAsync(organization);
             await _unitOfWork.SaveChangesAsync();
 
             _logger.LogInformation("Updated organization settings for {OrganizationId}", organizationId);

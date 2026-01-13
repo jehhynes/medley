@@ -478,7 +478,7 @@ public class ArticleChatTools
             {
                 // This is a modification - archive the current draft
                 existingDraftPlan.Status = PlanStatus.Archived;
-                await _planRepository.SaveAsync(existingDraftPlan);
+                await _planRepository.AddAsync(existingDraftPlan);
                 
                 newVersion = existingDraftPlan.Version + 1;
                 parentPlanId = existingDraftPlan.Id;
@@ -510,7 +510,7 @@ public class ArticleChatTools
                 ConversationId = _conversationId
             };
 
-            await _planRepository.SaveAsync(plan);
+            await _planRepository.AddAsync(plan);
 
             // Create plan fragments
             foreach (var rec in request.Recommendations)
@@ -525,7 +525,7 @@ public class ArticleChatTools
                     Instructions = rec.Instructions
                 };
 
-                await _planFragmentRepository.SaveAsync(planFragment);
+                await _planFragmentRepository.AddAsync(planFragment);
             }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -608,7 +608,7 @@ public class ArticleChatTools
                 {
                     plan.Status = PlanStatus.Applied;
                     plan.AppliedAt = DateTimeOffset.UtcNow;
-                    await _planRepository.SaveAsync(plan);
+                    await _planRepository.AddAsync(plan);
                     _logger.LogInformation("Marked plan {PlanId} as Applied", _implementingPlanId.Value);
                 }
             }

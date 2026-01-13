@@ -114,7 +114,7 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
                     CreatedAt = DateTimeOffset.UtcNow
                 };
 
-                await _fragmentRepository.SaveAsync(cluster);
+                await _fragmentRepository.AddAsync(cluster);
                 createdClusterId = cluster.Id;
 
                 // Update participants

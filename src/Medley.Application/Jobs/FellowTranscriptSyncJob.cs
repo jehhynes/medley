@@ -267,7 +267,7 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
                     Integration = integration
                 };
 
-                await _sourceRepository.SaveAsync(source);
+                await _sourceRepository.AddAsync(source);
                 pageCreated++;
                 createdSourceIds.Add(source.Id);
 

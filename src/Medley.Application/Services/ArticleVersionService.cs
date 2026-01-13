@@ -130,7 +130,7 @@ public class ArticleVersionService : IArticleVersionService
         existingVersion.ContentDiff = diffPatch;
         existingVersion.ModifiedAt = DateTimeOffset.UtcNow;
 
-        await _versionRepository.SaveAsync(existingVersion);
+        await _versionRepository.AddAsync(existingVersion);
 
         _logger.LogInformation(
             "Updated draft version {VersionNumber} for article {ArticleId} by user {UserId}",
@@ -175,7 +175,7 @@ public class ArticleVersionService : IArticleVersionService
 
         version.ModifiedAt = version.CreatedAt;
 
-        await _versionRepository.SaveAsync(version);
+        await _versionRepository.AddAsync(version);
 
         _logger.LogInformation(
             "Created new User version {VersionNumber} for article {ArticleId} by user {UserId}",
@@ -309,7 +309,7 @@ public class ArticleVersionService : IArticleVersionService
             foreach (var existingVersion in existingAiVersions)
             {
                 existingVersion.IsActive = false;
-                await _versionRepository.SaveAsync(existingVersion);
+                await _versionRepository.AddAsync(existingVersion);
             }
 
             // Calculate diff from parent User version
@@ -337,7 +337,7 @@ public class ArticleVersionService : IArticleVersionService
                 ConversationId = conversationId
             };
 
-            await _versionRepository.SaveAsync(newVersion);
+            await _versionRepository.AddAsync(newVersion);
 
             _logger.LogInformation("Created AI article version {VersionId} (v{VersionNumber}) for article {ArticleId}",
                 newVersion.Id, versionNumber, articleId);

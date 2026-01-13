@@ -226,7 +226,7 @@ public class ArticlesApiController : ControllerBase
             Content = $"# {request.Title}\n\n"
         };
 
-        await _articleRepository.SaveAsync(article);
+        await _articleRepository.AddAsync(article);
 
         // Register post-commit action to send SignalR notification
         var notification = new
@@ -289,7 +289,7 @@ public class ArticlesApiController : ControllerBase
             article.ArticleTypeId = request.ArticleTypeId.Value;
         }
 
-        await _articleRepository.SaveAsync(article);
+        await _articleRepository.AddAsync(article);
 
         // Register post-commit action to send SignalR notification
         var notification = new
@@ -345,7 +345,7 @@ public class ArticlesApiController : ControllerBase
         // Auto-assign to current user
         var assignmentChanged = await AssignArticleToUserAsync(article, _medleyContext.CurrentUserId!.Value);
 
-        await _articleRepository.SaveAsync(article);
+        await _articleRepository.AddAsync(article);
 
         // Capture version after saving article
         var capturedVersion = await _versionService.CaptureUserVersionAsync(id, article.Content, oldContent, _medleyContext.CurrentUserId);
@@ -469,7 +469,7 @@ public class ArticlesApiController : ControllerBase
 
         // Update the parent
         article.ParentArticleId = request.NewParentArticleId.Value;
-        await _articleRepository.SaveAsync(article);
+        await _articleRepository.AddAsync(article);
 
         // Register post-commit action to send SignalR notification
         var notification = new

@@ -124,7 +124,7 @@ public sealed class EfChatMessageStore : ChatMessageStore
                 UserId = null // Assistant/system/tool messages don't have a user
             };
 
-            await _messageRepository.SaveAsync(chatMessage);
+            await _messageRepository.AddAsync(chatMessage);
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);

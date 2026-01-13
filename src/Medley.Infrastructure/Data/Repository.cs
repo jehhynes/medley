@@ -28,7 +28,7 @@ public class Repository<T> : IRepository<T> where T : class
         return _dbSet.AsQueryable();
     }
 
-    public virtual Task SaveAsync(T entity)
+    public virtual Task AddAsync(T entity)
     {
         var entry = _context.Entry(entity);
         if (entry.State == EntityState.Detached)

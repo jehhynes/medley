@@ -99,7 +99,7 @@ public class TemplatesApiController : ControllerBase
 
             template.LastModifiedAt = DateTimeOffset.UtcNow;
 
-            await _templateRepository.SaveAsync(template);
+            await _templateRepository.AddAsync(template);
             await _unitOfWork.SaveChangesAsync();
 
             _logger.LogInformation("Updated template {TemplateId} ({TemplateName})", id, template.Type.GetName());

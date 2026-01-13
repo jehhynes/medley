@@ -47,7 +47,7 @@ public class ArticleTypesController : Controller
             return View(model);
         }
 
-        await _articleTypeRepository.SaveAsync(model);
+        await _articleTypeRepository.AddAsync(model);
         await _unitOfWork.SaveChangesAsync();
         
         TempData["SuccessMessage"] = "Article type created";
@@ -85,7 +85,7 @@ public class ArticleTypesController : Controller
         existing.Name = model.Name;
         existing.Icon = model.Icon;
 
-        await _articleTypeRepository.SaveAsync(existing);
+        await _articleTypeRepository.AddAsync(existing);
         await _unitOfWork.SaveChangesAsync();
 
         TempData["SuccessMessage"] = "Article type updated";

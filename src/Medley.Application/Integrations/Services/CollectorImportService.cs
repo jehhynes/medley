@@ -90,7 +90,7 @@ public class CollectorImportService : ICollectorImportService
             Integration = integration
         };
 
-        await _sourceRepository.SaveAsync(source);
+        await _sourceRepository.AddAsync(source);
         await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Created source for Google Drive video {VideoId} ({Name})",
@@ -155,7 +155,7 @@ public class CollectorImportService : ICollectorImportService
             Integration = integration
         };
 
-        await _sourceRepository.SaveAsync(source);
+        await _sourceRepository.AddAsync(source);
         await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Created source for Fellow recording {RecordingId} ({Title})",
