@@ -17,6 +17,7 @@ using Medley.Application.Services;
 using Medley.Infrastructure.Data;
 using Medley.Infrastructure.Data.Repositories;
 using Medley.Infrastructure.Services;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
@@ -54,6 +55,11 @@ public static class DependencyInjection
                 .UseNpgsql(dataSource, o => o.UseVector())
                 .UseSnakeCaseNamingConvention();
         });
+
+        // Configure Data Protection to persist keys to database
+        services.AddDataProtection()
+            .PersistKeysToDbContext<ApplicationDbContext>()
+            .SetApplicationName("Medley");
 
         // Register repositories and unit of work
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));

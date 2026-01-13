@@ -1,5 +1,6 @@
 using Medley.Domain.Entities;
 using Medley.Infrastructure.Data.Translators;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -10,7 +11,7 @@ namespace Medley.Infrastructure.Data;
 /// <summary>
 /// Application database context for Entity Framework Core
 /// </summary>
-public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, Guid>
+public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, Guid>, IDataProtectionKeyContext
 {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)
@@ -65,6 +66,11 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     /// AI token usage tracking for cost monitoring and analytics
     /// </summary>
     public DbSet<AiTokenUsage> AiTokenUsages { get; set; } = null!;
+    
+    /// <summary>
+    /// Data Protection keys for persisting encryption keys across deployments
+    /// </summary>
+    public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = null!;
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
