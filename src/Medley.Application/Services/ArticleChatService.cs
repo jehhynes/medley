@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Medley.Application.Configuration;
 using Medley.Application.Helpers;
 using Medley.Application.Interfaces;
 using Medley.Application.Models;
@@ -10,6 +11,7 @@ using Medley.Domain.Enums;
 using Microsoft.Agents.AI;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using DomainChatMessage = Medley.Domain.Entities.ChatMessage;
 
@@ -33,6 +35,7 @@ public class ArticleChatService : IArticleChatService
     private readonly ILogger<ArticleChatService> _logger;
     private readonly AiCallContext _aiCallContext;
     private readonly ToolDisplayExtractor _toolDisplayExtractor;
+    private readonly IConfiguration _configuration;
     
     public ArticleChatService(
         IRepository<ChatConversation> conversationRepository,
@@ -47,7 +50,8 @@ public class ArticleChatService : IArticleChatService
         SystemPromptBuilder systemPromptBuilder,
         ILogger<ArticleChatService> logger,
         AiCallContext aiCallContext,
-        ToolDisplayExtractor toolDisplayExtractor)
+        ToolDisplayExtractor toolDisplayExtractor,
+        IConfiguration configuration)
     {
         _conversationRepository = conversationRepository;
         _chatMessageRepository = chatMessageRepository;
@@ -61,6 +65,7 @@ public class ArticleChatService : IArticleChatService
         _logger = logger;
         _aiCallContext = aiCallContext;
         _toolDisplayExtractor = toolDisplayExtractor;
+        _configuration = configuration;
 
         // Wrap the provided chat client with function invocation support
         _chatClient = new ChatClientBuilder(chatClient).UseFunctionInvocation().Build();
@@ -610,6 +615,14 @@ public class ArticleChatService : IArticleChatService
         if (mode == ConversationMode.Agent)
         {
             tools.Add(AIFunctionFactory.Create(plugins.CreateArticleVersionAsync));
+        }
+
+        // Add Cursor tools if enabled
+        var cursorSettings = _configuration.GetSection("Cursor").Get<CursorSettings>();
+        if (cursorSettings?.Enabled == true)
+        {
+            tools.Add(AIFunctionFactory.Create(plugins.ReviewArticleWithCursorAsync));
+            tools.Add(AIFunctionFactory.Create(plugins.AskQuestionWithCursorAsync));
         }
 
         return tools.ToArray();

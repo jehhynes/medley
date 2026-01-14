@@ -33,6 +33,8 @@ public class ArticleChatTools
     private readonly EmbeddingSettings _embeddingSettings;
     private readonly AiCallContext _aiCallContext;
     private readonly Guid _currentUserId;
+    private readonly ICursorService? _cursorService;
+    private readonly IOptions<CursorSettings>? _cursorSettings;
 
     public ArticleChatTools(
         Guid articleId,
@@ -48,7 +50,9 @@ public class ArticleChatTools
         IUnitOfWork unitOfWork,
         ILogger<ArticleChatTools> logger,
         IOptions<EmbeddingSettings> embeddingSettings,
-        AiCallContext aiCallContext)
+        AiCallContext aiCallContext,
+        ICursorService? cursorService = null,
+        IOptions<CursorSettings>? cursorSettings = null)
     {
         _articleId = articleId;
         _currentUserId = userId;
@@ -64,6 +68,8 @@ public class ArticleChatTools
         _logger = logger;
         _embeddingSettings = embeddingSettings.Value;
         _aiCallContext = aiCallContext;
+        _cursorService = cursorService;
+        _cursorSettings = cursorSettings;
     }
 
 
@@ -639,6 +645,180 @@ public class ArticleChatTools
             {
                 success = false,
                 error = $"Error creating article version: {ex.Message}"
+            });
+        }
+    }
+
+    /// <summary>
+    /// Review and improve article content using Cursor Agent
+    /// </summary>
+    [Description("Ask Cursor Agent to improve the article. The Agent has access to the application source code and is the authority on existing functionality. Creates a new article version and returns a summary of changes.")]
+    public virtual async Task<string> ReviewArticleWithCursorAsync(
+        [Description("Instructions for how to improve the article")] string instructions,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogInformation("Starting Cursor review for article: {ArticleId}", _articleId);
+
+            // Check if Cursor is enabled
+            if (_cursorSettings?.Value?.Enabled != true)
+            {
+                return JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    error = "Cursor integration is not enabled"
+                });
+            }
+
+            if (_cursorService == null)
+            {
+                return JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    error = "Cursor service is not available"
+                });
+            }
+
+            // Load article
+            var article = await _articleRepository.Query()
+                .Where(a => a.Id == _articleId)
+                .FirstOrDefaultAsync(cancellationToken);
+            
+            if (article == null)
+            {
+                _logger.LogWarning("Article not found: {ArticleId}", _articleId);
+                return JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    error = "Article not found"
+                });
+            }
+
+            // Call CursorService to review the article
+            var result = await _cursorService.ReviewArticleAsync(
+                article.Content ?? string.Empty,
+                instructions,
+                cancellationToken);
+
+            if (!result.Success)
+            {
+                _logger.LogError("Cursor review failed: {Error}", result.Error);
+                return JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    error = result.Error
+                });
+            }
+
+            // Create new article version with improved content
+            var changeMessage = result.ChangesSummary.Length > 200 
+                ? result.ChangesSummary.Substring(0, 200)
+                : result.ChangesSummary;
+
+            var versionDto = await _articleVersionService.CreateAiVersionAsync(
+                _articleId,
+                result.ImprovedContent,
+                changeMessage,
+                _currentUserId,
+                _conversationId,
+                cancellationToken);
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("Created version {VersionNumber} for article {ArticleId} with Cursor improvements", 
+                versionDto.VersionNumber, _articleId);
+
+            return JsonSerializer.Serialize(new
+            {
+                success = true,
+                versionId = versionDto.Id,
+                versionNumber = versionDto.VersionNumber,
+                improvedContent = result.ImprovedContent,
+                changesSummary = result.ChangesSummary,
+                message = $"Created version {versionDto.VersionNumber} with Cursor improvements"
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during Cursor review for article: {ArticleId}", _articleId);
+            return JsonSerializer.Serialize(new
+            {
+                success = false,
+                error = $"Error during Cursor review: {ex.Message}"
+            });
+        }
+    }
+
+    /// <summary>
+    /// Ask Cursor Agent a question without modifying the article
+    /// </summary>
+    [Description("Ask Cursor Agent a question. The Agent has access to the application source code and is the authority on existing functionality. Use for questions about application features.")]
+    public virtual async Task<string> AskQuestionWithCursorAsync(
+        [Description("The question to ask the Cursor Agent")] string question,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogInformation("Asking Cursor question for article: {ArticleId}", _articleId);
+
+            // Check if Cursor is enabled
+            if (_cursorSettings?.Value?.Enabled != true)
+            {
+                return JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    error = "Cursor integration is not enabled"
+                });
+            }
+
+            if (_cursorService == null)
+            {
+                return JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    error = "Cursor service is not available"
+                });
+            }
+
+            if (string.IsNullOrWhiteSpace(question))
+            {
+                return JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    error = "Question cannot be empty"
+                });
+            }
+
+            // Call CursorService to ask the question
+            var result = await _cursorService.AskQuestionAsync(question, cancellationToken);
+
+            if (!result.Success)
+            {
+                _logger.LogError("Cursor question failed: {Error}", result.Error);
+                return JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    error = result.Error
+                });
+            }
+
+            _logger.LogInformation("Cursor question completed successfully for article {ArticleId}", _articleId);
+
+            return JsonSerializer.Serialize(new
+            {
+                success = true,
+                response = result.Response,
+                question = question
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during Cursor question for article: {ArticleId}", _articleId);
+            return JsonSerializer.Serialize(new
+            {
+                success = false,
+                error = $"Error asking Cursor question: {ex.Message}"
             });
         }
     }
