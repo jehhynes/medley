@@ -359,7 +359,7 @@ public class ArticleVersionService : IArticleVersionService
             return new ArticleVersionDto
             {
                 Id = newVersion.Id,
-                VersionNumber = mostRecentUserVersion.Id + "." + newVersion.VersionNumber,
+                VersionNumber = mostRecentUserVersion.VersionNumber + "." + newVersion.VersionNumber,
                 CreatedBy = userId,
                 CreatedByName = createdByName,
                 CreatedByEmail = createdByEmail,

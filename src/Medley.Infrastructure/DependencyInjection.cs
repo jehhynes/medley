@@ -274,6 +274,10 @@ public static class DependencyInjection
         // Bind Bedrock settings for chat service
         services.Configure<BedrockSettings>(configuration.GetSection("AWS:Bedrock"));
 
+        // Register Cursor settings and service
+        services.Configure<CursorSettings>(configuration.GetSection("Cursor"));
+        services.AddScoped<ICursorService, CursorService>();
+
         // Register ArticleAssistantPluginsFactory (for creating article-scoped plugin instances)
         services.AddScoped<ArticleChatToolsFactory>();
 

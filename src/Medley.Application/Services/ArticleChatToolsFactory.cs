@@ -23,6 +23,8 @@ public class ArticleChatToolsFactory
     private readonly ILoggerFactory _loggerFactory;
     private readonly IOptions<EmbeddingSettings> _embeddingSettings;
     private readonly AiCallContext _aiCallContext;
+    private readonly ICursorService? _cursorService;
+    private readonly IOptions<CursorSettings>? _cursorSettings;
 
     public ArticleChatToolsFactory(
         IFragmentRepository fragmentRepository,
@@ -34,7 +36,9 @@ public class ArticleChatToolsFactory
         IUnitOfWork unitOfWork,
         ILoggerFactory loggerFactory,
         IOptions<EmbeddingSettings> embeddingSettings,
-        AiCallContext aiCallContext)
+        AiCallContext aiCallContext,
+        ICursorService? cursorService = null,
+        IOptions<CursorSettings>? cursorSettings = null)
     {
         _fragmentRepository = fragmentRepository;
         _embeddingGenerator = embeddingGenerator;
@@ -46,6 +50,8 @@ public class ArticleChatToolsFactory
         _loggerFactory = loggerFactory;
         _embeddingSettings = embeddingSettings;
         _aiCallContext = aiCallContext;
+        _cursorService = cursorService;
+        _cursorSettings = cursorSettings;
     }
 
     /// <summary>
@@ -74,6 +80,8 @@ public class ArticleChatToolsFactory
             _unitOfWork,
             logger,
             _embeddingSettings,
-            _aiCallContext);
+            _aiCallContext,
+            _cursorService,
+            _cursorSettings);
     }
 }
