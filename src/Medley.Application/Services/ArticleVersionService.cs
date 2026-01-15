@@ -76,30 +76,13 @@ public class ArticleVersionService : IArticleVersionService
                 version = await CreateNewVersionAsync(articleId, newContent, latestVersion, userId, cancellationToken);
             }
 
-            // Get user details for the DTO
-            string? createdByName = null;
-            string? createdByEmail = null;
-            if (userId.HasValue)
-            {
-                var user = await _versionRepository.Query()
-                    .Where(v => v.Id == version.Id)
-                    .Select(v => new { v.CreatedBy!.FullName, v.CreatedBy.Email })
-                    .FirstOrDefaultAsync(cancellationToken);
-                
-                if (user != null)
-                {
-                    createdByName = user.FullName;
-                    createdByEmail = user.Email;
-                }
-            }
-
             return new ArticleVersionDto
             {
                 Id = version.Id,
                 VersionNumber = version.VersionNumber.ToString(),
                 CreatedBy = userId,
-                CreatedByName = createdByName,
-                CreatedByEmail = createdByEmail,
+                CreatedByName = version.CreatedBy?.FullName,
+                CreatedByEmail = version.CreatedBy?.Email,
                 CreatedAt = version.CreatedAt,
                 IsNewVersion = isNewVersion,
                 VersionType = version.VersionType.ToString(),
@@ -382,27 +365,13 @@ public class ArticleVersionService : IArticleVersionService
             _logger.LogInformation("Created AI article version {VersionId} (v{VersionNumber}) for article {ArticleId}",
                 newVersion.Id, versionNumber, articleId);
 
-            // Get user details for the DTO
-            string? createdByName = null;
-            string? createdByEmail = null;
-            var user = await _versionRepository.Query()
-                .Where(v => v.Id == newVersion.Id)
-                .Select(v => new { v.CreatedBy!.FullName, v.CreatedBy.Email })
-                .FirstOrDefaultAsync(cancellationToken);
-
-            if (user != null)
-            {
-                createdByName = user.FullName;
-                createdByEmail = user.Email;
-            }
-
             return new ArticleVersionDto
             {
                 Id = newVersion.Id,
                 VersionNumber = mostRecentUserVersion.VersionNumber + "." + newVersion.VersionNumber,
                 CreatedBy = userId,
-                CreatedByName = createdByName,
-                CreatedByEmail = createdByEmail,
+                CreatedByName = newVersion.CreatedBy?.FullName,
+                CreatedByEmail = newVersion.CreatedBy?.Email,
                 CreatedAt = newVersion.CreatedAt,
                 IsNewVersion = true,
                 VersionType = newVersion.VersionType.ToString(),

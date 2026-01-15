@@ -59,7 +59,7 @@ public class FellowRecordingImportModel
     public string? Id { get; set; }
     
     [JsonPropertyName("title")]
-    public string? Title { get; set; }
+    public required string Title { get; set; }
     
     [JsonPropertyName("created_at")]
     public DateTime? CreatedAt { get; set; }

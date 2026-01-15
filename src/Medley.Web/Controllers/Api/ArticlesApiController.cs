@@ -318,6 +318,12 @@ public class ArticlesApiController : ControllerBase
     [HttpPut("{id}/content")]
     public async Task<IActionResult> UpdateContent(Guid id, [FromBody] UpdateArticleContentRequest request)
     {
+        var user = await _medleyContext.GetCurrentUserAsync();
+        if (user == null)
+        {
+            return Unauthorized();
+        }
+
         var article = await _articleRepository.GetByIdAsync(id);
         if (article == null)
         {
@@ -347,7 +353,7 @@ public class ArticlesApiController : ControllerBase
         }
 
         // Auto-assign to current user
-        var assignmentChanged = await AssignArticleToUserAsync(article, _medleyContext.CurrentUserId!.Value);
+        var assignmentChanged = await AssignArticleToUserAsync(article, user.Id);
 
         // Entity is already tracked, changes will be saved on SaveChangesAsync
 

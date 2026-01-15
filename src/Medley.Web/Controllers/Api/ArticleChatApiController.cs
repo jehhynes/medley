@@ -399,11 +399,7 @@ public class ArticleChatApiController : ControllerBase
         {
             try
             {
-                var jobId = _backgroundJobClient.Enqueue<ArticleChatJob>(
-                    job => job.ProcessChatMessageAsync(
-                        messageId,
-                        null!,
-                        CancellationToken.None));
+                var jobId = _backgroundJobClient.Enqueue<ArticleChatJob>(job => job.ProcessChatMessageAsync(messageId, default!, default));
 
                 _logger.LogInformation("Enqueued chat job {JobId} for conversation {ConversationId}", jobId, capturedConversationId);
             }
