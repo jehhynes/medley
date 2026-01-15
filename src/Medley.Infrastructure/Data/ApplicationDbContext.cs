@@ -75,7 +75,7 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         base.OnConfiguring(optionsBuilder);
-        
+
         optionsBuilder.ReplaceService<IMethodCallTranslatorProvider, CustomNpgsqlMethodCallTranslatorProvider>();
 
         //optionsBuilder.UseNpgsql("connString", o => o.UseVector());
@@ -86,14 +86,14 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
         base.OnModelCreating(builder);
 
         //builder.HasPostgresExtension("vector");
-        
+
         // Configure circular relationship between Article and ChatConversation
         builder.Entity<Article>()
             .HasOne(a => a.CurrentConversation)
             .WithOne()
             .HasForeignKey<Article>(a => a.CurrentConversationId)
             .OnDelete(DeleteBehavior.SetNull); // When conversation is deleted, set Article.CurrentConversationId to null (not cascade)
-            
+
         builder.Entity<ChatConversation>()
             .HasOne(c => c.Article)
             .WithMany(a => a.ChatConversations)

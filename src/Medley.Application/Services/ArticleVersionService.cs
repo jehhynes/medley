@@ -101,7 +101,10 @@ public class ArticleVersionService : IArticleVersionService
                 CreatedByName = createdByName,
                 CreatedByEmail = createdByEmail,
                 CreatedAt = version.CreatedAt,
-                IsNewVersion = isNewVersion
+                IsNewVersion = isNewVersion,
+                VersionType = version.VersionType.ToString(),
+                IsActive = version.IsActive,
+                ChangeMessage = version.ChangeMessage
             };
         }
         catch (Exception ex)
@@ -214,10 +217,18 @@ public class ArticleVersionService : IArticleVersionService
             query = query.Where(v => v.VersionType == versionType.Value);
         }
 
-        var versions = await query
+        var allVersions = await query
             .Include(v => v.CreatedBy)
             .Include(v => v.ParentVersion)
-            .OrderByDescending(v => v.VersionNumber)
+            .ToListAsync(cancellationToken);
+
+        // Sort versions hierarchically:
+        // 1. Group by base version number (User versions by their own number, AI versions by parent's number)
+        // 2. Within each group, AI versions first (ordered by version number descending), then User version
+        var sortedVersions = allVersions
+            .OrderByDescending(v => v.ParentVersion?.VersionNumber ?? v.VersionNumber) // Primary: base version number (8, 7, 6, etc.)
+            .ThenBy(v => v.ParentVersion == null ? 1 : 0) // Secondary: AI versions (0) before User version (1)
+            .ThenByDescending(v => v.VersionNumber) // Tertiary: AI versions ordered 8.3, 8.2, 8.1
             .Select(v => new ArticleVersionDto
             {
                 Id = v.Id,
@@ -228,11 +239,14 @@ public class ArticleVersionService : IArticleVersionService
                 CreatedBy = v.CreatedById,
                 CreatedByName = v.CreatedBy != null ? v.CreatedBy.FullName : null,
                 CreatedByEmail = v.CreatedBy != null ? v.CreatedBy.Email : null,
-                CreatedAt = v.CreatedAt
+                CreatedAt = v.CreatedAt,
+                VersionType = v.VersionType.ToString(),
+                IsActive = v.IsActive,
+                ChangeMessage = v.ChangeMessage
             })
-            .ToListAsync(cancellationToken);
+            .ToList();
 
-        return versions;
+        return sortedVersions;
     }
 
     public async Task<ArticleVersionComparisonDto?> GetVersionComparisonAsync(
@@ -390,12 +404,123 @@ public class ArticleVersionService : IArticleVersionService
                 CreatedByName = createdByName,
                 CreatedByEmail = createdByEmail,
                 CreatedAt = newVersion.CreatedAt,
-                IsNewVersion = true
+                IsNewVersion = true,
+                VersionType = newVersion.VersionType.ToString(),
+                IsActive = newVersion.IsActive,
+                ChangeMessage = newVersion.ChangeMessage
             };
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to create AI version for article {ArticleId}", articleId);
+            throw;
+        }
+    }
+
+    public async Task<ArticleVersionDto> AcceptAiVersionAsync(
+        Guid versionId, 
+        User user, 
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // Load the AI version
+            var aiVersion = await _versionRepository.Query()
+                .Where(v => v.Id == versionId)
+                .Include(v => v.Article)
+                .Include(v => v.ParentVersion)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (aiVersion == null)
+            {
+                throw new InvalidOperationException($"Version {versionId} not found");
+            }
+
+            if (aiVersion.VersionType != VersionType.AI)
+            {
+                throw new InvalidOperationException($"Version {versionId} is not an AI version");
+            }
+
+            // Get the latest User version for this article
+            var latestUserVersion = await _versionRepository.Query()
+                .Where(v => v.Article.Id == aiVersion.Article.Id && v.VersionType == VersionType.User)
+                .OrderByDescending(v => v.VersionNumber)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            // Determine the content to save (the AI version's content)
+            string newContent = aiVersion.ContentSnapshot;
+            string? previousContent = latestUserVersion?.ContentSnapshot;
+
+            // Create a new User version with the AI content
+            // This will be chained off the latest User version
+            var newUserVersion = await CreateNewVersionAsync(
+                aiVersion.Article.Id, 
+                newContent, 
+                latestUserVersion, 
+                user.Id, 
+                cancellationToken);
+
+            // Mark the AI version as inactive (accepted)
+            aiVersion.IsActive = false;
+
+            // Update the article's content to match the accepted AI version
+            var article = aiVersion.Article;
+            article.Content = newContent;
+
+            _logger.LogInformation(
+                "Accepted AI version {AiVersionId} for article {ArticleId}, created new User version {UserVersionId}",
+                versionId, article.Id, newUserVersion.Id);
+
+            return new ArticleVersionDto
+            {
+                Id = newUserVersion.Id,
+                VersionNumber = newUserVersion.VersionNumber.ToString(),
+                CreatedBy = user.Id,
+                CreatedByName = user.FullName,
+                CreatedByEmail = user.Email,
+                CreatedAt = newUserVersion.CreatedAt,
+                IsNewVersion = true,
+                VersionType = newUserVersion.VersionType.ToString(),
+                IsActive = newUserVersion.IsActive,
+                ChangeMessage = newUserVersion.ChangeMessage
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to accept AI version {VersionId}", versionId);
+            throw;
+        }
+    }
+
+    public async Task RejectAiVersionAsync(
+        Guid versionId, 
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // Load the AI version
+            var aiVersion = await _versionRepository.Query()
+                .Where(v => v.Id == versionId)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (aiVersion == null)
+            {
+                throw new InvalidOperationException($"Version {versionId} not found");
+            }
+
+            if (aiVersion.VersionType != VersionType.AI)
+            {
+                throw new InvalidOperationException($"Version {versionId} is not an AI version");
+            }
+
+            // Mark the AI version as inactive (rejected)
+            aiVersion.IsActive = false;
+
+            _logger.LogInformation("Rejected AI version {VersionId}", versionId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to reject AI version {VersionId}", versionId);
             throw;
         }
     }

@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Medley.Web.Controllers.Api;
 
@@ -25,6 +26,7 @@ public class ArticlesApiController : ControllerBase
     private readonly IArticleVersionService _versionService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMedleyContext _medleyContext;
+    private readonly ILogger<ArticlesApiController> _logger;
 
     public ArticlesApiController(
         IRepository<Article> articleRepository,
@@ -33,7 +35,8 @@ public class ArticlesApiController : ControllerBase
         IHubContext<ArticleHub> hubContext,
         IArticleVersionService versionService,
         IUnitOfWork unitOfWork,
-        IMedleyContext medleyContext)
+        IMedleyContext medleyContext,
+        ILogger<ArticlesApiController> logger)
     {
         _articleRepository = articleRepository;
         _articleTypeRepository = articleTypeRepository;
@@ -42,6 +45,7 @@ public class ArticlesApiController : ControllerBase
         _versionService = versionService;
         _unitOfWork = unitOfWork;
         _medleyContext = medleyContext;
+        _logger = logger;
     }
 
     /// <summary>
@@ -115,7 +119,7 @@ public class ArticlesApiController : ControllerBase
             foreach (var article in matchingArticlesList)
             {
                 articlesToInclude.Add(article.Id);
-                
+
                 // Walk up the parent chain
                 var currentParentId = article.ParentArticleId;
                 while (currentParentId.HasValue)
@@ -661,7 +665,7 @@ public class ArticlesApiController : ControllerBase
     }
 
     /// <summary>
-    /// Get version history for an article (User versions only)
+    /// Get version history for an article (all versions - User and AI)
     /// </summary>
     [HttpGet("{id}/versions")]
     public async Task<IActionResult> GetVersionHistory(Guid id)
@@ -672,8 +676,8 @@ public class ArticlesApiController : ControllerBase
             return NotFound();
         }
 
-        // Only return User versions for the version history panel
-        var versions = await _versionService.GetVersionsAsync(id, Domain.Enums.VersionType.User);
+        // Return all versions (User and AI) - let the client filter as needed
+        var versions = await _versionService.GetVersionsAsync(id, versionType: null);
         return Ok(versions);
     }
 
@@ -743,8 +747,7 @@ public class ArticlesApiController : ControllerBase
         var aiVersions = await _versionService.GetVersionsAsync(id, Domain.Enums.VersionType.AI);
         
         // Filter for active versions (the latest AI version should be marked as active)
-        // Since GetVersionsAsync doesn't return IsActive, we'll just return the first one (most recent)
-        var latestAiVersion = aiVersions.FirstOrDefault();
+        var latestAiVersion = aiVersions.FirstOrDefault(v => v.IsActive);
 
         if (latestAiVersion == null)
         {
@@ -752,6 +755,95 @@ public class ArticlesApiController : ControllerBase
         }
 
         return Ok(latestAiVersion);
+    }
+
+    /// <summary>
+    /// Accept an AI version by creating a new User version with the AI content
+    /// </summary>
+    [HttpPost("{articleId}/versions/{versionId}/accept")]
+    public async Task<IActionResult> AcceptAiVersion(Guid articleId, Guid versionId)
+    {
+        var article = await _articleRepository.GetByIdAsync(articleId);
+        if (article == null)
+        {
+            return NotFound(new { message = "Article not found" });
+        }
+
+        var currentUser = await _medleyContext.GetCurrentUserAsync();
+        if (currentUser == null)
+        {
+            return Unauthorized(new { message = "User not authenticated" });
+        }
+
+        try
+        {
+            var newVersion = await _versionService.AcceptAiVersionAsync(versionId, currentUser);
+
+            // Register post-commit action to send SignalR notification
+            var versionNotification = new
+            {
+                ArticleId = articleId,
+                VersionId = newVersion.Id,
+                VersionNumber = newVersion.VersionNumber,
+                CreatedAt = newVersion.CreatedAt,
+                Timestamp = DateTimeOffset.UtcNow
+            };
+            
+            HttpContext.RegisterPostCommitAction(async () =>
+            {
+                await _hubContext.Clients.All.SendAsync("VersionCreated", versionNotification);
+            });
+
+            return Ok(new
+            {
+                success = true,
+                versionId = newVersion.Id,
+                versionNumber = newVersion.VersionNumber,
+                message = "AI version accepted successfully"
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error accepting AI version {VersionId} for article {ArticleId}", versionId, articleId);
+            return StatusCode(500, new { message = "An error occurred while accepting the version" });
+        }
+    }
+
+    /// <summary>
+    /// Reject an AI version by marking it as inactive
+    /// </summary>
+    [HttpPost("{articleId}/versions/{versionId}/reject")]
+    public async Task<IActionResult> RejectAiVersion(Guid articleId, Guid versionId)
+    {
+        var article = await _articleRepository.GetByIdAsync(articleId);
+        if (article == null)
+        {
+            return NotFound(new { message = "Article not found" });
+        }
+
+        try
+        {
+            await _versionService.RejectAiVersionAsync(versionId);
+
+            return Ok(new
+            {
+                success = true,
+                message = "AI version rejected successfully"
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error rejecting AI version {VersionId} for article {ArticleId}", versionId, articleId);
+            return StatusCode(500, new { message = "An error occurred while rejecting the version" });
+        }
     }
 
     /// <summary>
