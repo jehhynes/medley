@@ -109,7 +109,7 @@ public class ArticlesApiController : ControllerBase
 
             if (articleTypeIds != null && articleTypeIds.Length > 0)
             {
-                matchingArticles = matchingArticles.Where(a => a.ArticleType != null && articleTypeIds.Contains(a.ArticleType.Id));
+                matchingArticles = matchingArticles.Where(a => a.ArticleTypeId.HasValue && articleTypeIds.Contains(a.ArticleTypeId.Value));
             }
 
             var matchingArticlesList = matchingArticles.ToList();
@@ -121,11 +121,12 @@ public class ArticlesApiController : ControllerBase
                 articlesToInclude.Add(article.Id);
 
                 // Walk up the parent chain
-                var currentParent = article.ParentArticle;
-                while (currentParent != null)
+                var currentParentId = article.ParentArticleId;
+                while (currentParentId.HasValue)
                 {
-                    articlesToInclude.Add(currentParent.Id);
-                    currentParent = allArticles.FirstOrDefault(a => a.Id == currentParent.Id)?.ParentArticle;
+                    articlesToInclude.Add(currentParentId.Value);
+                    var parent = allArticles.FirstOrDefault(a => a.Id == currentParentId.Value);
+                    currentParentId = parent?.ParentArticleId;
                 }
             }
 
@@ -173,7 +174,7 @@ public class ArticlesApiController : ControllerBase
             article.Status,
             article.PublishedAt,
             article.CreatedAt,
-            ParentArticleId = article.ParentArticle?.Id,
+            ParentArticleId = article.ParentArticleId,
             ParentTitle = article.ParentArticle?.Title,
             ChildrenCount = article.ChildArticles.Count,
             FragmentsCount = article.Fragments.Count,
@@ -524,7 +525,7 @@ public class ArticlesApiController : ControllerBase
         {
             var parent = await _articleRepository.Query()
                 .Where(a => a.Id == currentParentId)
-                .Select(a => new { ParentArticleId = a.ParentArticle != null ? (Guid?)a.ParentArticle.Id : null })
+                .Select(a => new { a.ParentArticleId })
                 .FirstOrDefaultAsync();
 
             if (parent == null || !parent.ParentArticleId.HasValue)
@@ -558,7 +559,7 @@ public class ArticlesApiController : ControllerBase
     private List<object> BuildTree(List<Article> allArticles, Guid? parentId)
     {
         return allArticles
-            .Where(a => a.ParentArticle?.Id == parentId)
+            .Where(a => a.ParentArticleId == parentId)
             .OrderBy(a => a.ArticleType?.Name?.Equals("Index", StringComparison.OrdinalIgnoreCase) == true ? 0 : 1)
             .ThenBy(a => a.Title)
             .Select(a => new
@@ -567,7 +568,7 @@ public class ArticlesApiController : ControllerBase
                 a.Title,
                 a.Status,
                 a.CreatedAt,
-                articleTypeId = a.ArticleType?.Id,
+                articleTypeId = a.ArticleTypeId,
                 currentConversation = a.CurrentConversation != null ? new 
                 { 
                     id = a.CurrentConversation.Id,

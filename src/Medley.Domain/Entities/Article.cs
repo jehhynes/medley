@@ -30,7 +30,7 @@ public class Article : BusinessEntity
     /// <summary>
     /// Parent article ID for nested/hierarchical articles (null for root-level articles)
     /// </summary>
-    public Guid? ParentArticleId { protected get; set; }
+    public Guid? ParentArticleId { get; set; }
 
     /// <summary>
     /// Navigation property to parent article
@@ -41,7 +41,7 @@ public class Article : BusinessEntity
     /// <summary>
     /// Foreign key to ArticleType
     /// </summary>
-    protected Guid? ArticleTypeId { get; set; }
+    public Guid? ArticleTypeId { get; set; }
 
     /// <summary>
     /// Navigation property to ArticleType
