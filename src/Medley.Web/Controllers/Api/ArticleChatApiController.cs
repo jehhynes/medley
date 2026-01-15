@@ -87,7 +87,7 @@ public class ArticleChatApiController : ControllerBase
             }
 
             // Verify conversation belongs to this article
-            if (conversation.ArticleId != articleId)
+            if (conversation.Article?.Id != articleId)
             {
                 return NotFound(new { error = "Conversation not found" });
             }
@@ -103,14 +103,6 @@ public class ArticleChatApiController : ControllerBase
             }
         }
 
-        // Load plan info if implementing a plan
-        int? planVersion = null;
-        if (conversation.ImplementingPlanId.HasValue)
-        {
-            var plan = await _planRepository.GetByIdAsync(conversation.ImplementingPlanId.Value);
-            planVersion = plan?.Version;
-        }
-
         return Ok(new
         {
             id = conversation.Id,
@@ -118,9 +110,9 @@ public class ArticleChatApiController : ControllerBase
             mode = conversation.Mode.ToString(),
             isRunning = conversation.IsRunning,
             createdAt = conversation.CreatedAt,
-            createdBy = conversation.CreatedByUserId,
-            implementingPlanId = conversation.ImplementingPlanId,
-            implementingPlanVersion = planVersion
+            createdBy = conversation.CreatedBy.Id,
+            implementingPlanId = conversation.ImplementingPlan?.Id,
+            implementingPlanVersion = conversation.ImplementingPlan?.Version
         });
     }
 
@@ -137,18 +129,18 @@ public class ArticleChatApiController : ControllerBase
         }
   
         // Check if active conversation already exists
-        if (article.CurrentConversationId != null)
+        if (article.CurrentConversation != null)
         {
             return Conflict(new { error = "An active conversation already exists for this article" });
         }
  
-        var userId = _medleyContext.CurrentUserId;
-        if (!userId.HasValue)
+        var user = await _medleyContext.GetCurrentUserAsync();
+        if (user == null)
         {
-            return Unauthorized(new { error = "User ID not found" });
+            return Unauthorized(new { error = "User not found" });
         }
         
-        var conversation = await _chatService.CreateConversationAsync(articleId, userId.Value, mode);
+        var conversation = await _chatService.CreateConversationAsync(articleId, user.Id, mode);
  
         return CreatedAtAction(
             nameof(GetConversation),
@@ -169,7 +161,7 @@ public class ArticleChatApiController : ControllerBase
     public async Task<IActionResult> GetMessages(Guid articleId, Guid conversationId, [FromQuery] int? limit = null)
     {
         var conversation = await _chatService.GetConversationAsync(conversationId);
-        if (conversation == null || conversation.ArticleId != articleId)
+        if (conversation == null || conversation.Article?.Id != articleId)
         {
             return NotFound(new { error = "Conversation not found" });
         }
@@ -297,7 +289,7 @@ public class ArticleChatApiController : ControllerBase
         }
 
         var conversation = await _chatService.GetConversationAsync(conversationId);
-        if (conversation == null || conversation.ArticleId != articleId)
+        if (conversation == null || conversation.Article?.Id != articleId)
         {
             return NotFound(new { error = "Conversation not found" });
         }
@@ -313,17 +305,17 @@ public class ArticleChatApiController : ControllerBase
             conversation.Mode = request.Mode.Value;
         }
 
-        var userId = _medleyContext.CurrentUserId;
-        if (!userId.HasValue)
+        var user = await _medleyContext.GetCurrentUserAsync();
+        if (user == null)
         {
-            return Unauthorized(new { error = "User ID not found" });
+            return Unauthorized(new { error = "User not found" });
         }
 
         // Save user message
         var userMessage = new Domain.Entities.ChatMessage
         {
             Conversation = conversation,
-            UserId = userId.Value,
+            User = user,
             Role = ChatMessageRole.User,
             Text = request.Message,
             CreatedAt = DateTimeOffset.UtcNow
@@ -336,24 +328,21 @@ public class ArticleChatApiController : ControllerBase
         var article = await _articleRepository.GetByIdAsync(articleId);
         if (article != null)
         {
-            article.CurrentConversationId = conversationId;
+            article.CurrentConversation = conversation;
             
             // Auto-assign to current user if in Plan mode
-            if (conversation.Mode == ConversationMode.Plan && article.AssignedUserId != userId.Value)
+            if (conversation.Mode == ConversationMode.Plan && article.AssignedUser?.Id != user.Id)
             {
-                article.AssignedUserId = userId.Value;
-                
-                // Load user data for SignalR notification
-                var assignedUser = await _userRepository.GetByIdAsync(userId.Value);
+                article.AssignedUser = user;
                 
                 // Register assignment notification
                 var assignmentNotification = new
                 {
                     ArticleId = articleId.ToString(),
-                    UserId = assignedUser?.Id.ToString(),
-                    UserName = assignedUser?.FullName,
-                    UserInitials = assignedUser?.Initials,
-                    UserColor = assignedUser?.Color,
+                    UserId = user.Id.ToString(),
+                    UserName = user.FullName,
+                    UserInitials = user.Initials,
+                    UserColor = user.Color,
                     Timestamp = DateTimeOffset.UtcNow
                 };
                 
@@ -369,8 +358,7 @@ public class ArticleChatApiController : ControllerBase
         await _conversationRepository.AddAsync(conversation);
         await _chatMessageRepository.AddAsync(userMessage);
 
-        // Get user's full name for broadcast
-        var user = await _userRepository.GetByIdAsync(userId.Value);
+        // Get user's full name for broadcast (user already loaded above)
         var userName = user?.FullName ?? "User";
 
 
@@ -447,7 +435,7 @@ public class ArticleChatApiController : ControllerBase
     public async Task<IActionResult> CompleteConversation(Guid articleId, Guid conversationId)
     {
         var conversation = await _chatService.GetConversationAsync(conversationId);
-        if (conversation == null || conversation.ArticleId != articleId)
+        if (conversation == null || conversation.Article?.Id != articleId)
         {
             return NotFound(new { error = "Conversation not found" });
         }
@@ -482,7 +470,7 @@ public class ArticleChatApiController : ControllerBase
     public async Task<IActionResult> CancelConversation(Guid articleId, Guid conversationId)
     {
         var conversation = await _chatService.GetConversationAsync(conversationId);
-        if (conversation == null || conversation.ArticleId != articleId)
+        if (conversation == null || conversation.Article?.Id != articleId)
         {
             return NotFound(new { error = "Conversation not found" });
         }

@@ -13,7 +13,7 @@ public class PlanFragment : BaseEntity
     /// <summary>
     /// The plan this recommendation belongs to
     /// </summary>
-    public Guid PlanId { get; set; }
+    protected Guid PlanId { get; set; }
 
     /// <summary>
     /// Navigation property to the plan
@@ -25,7 +25,7 @@ public class PlanFragment : BaseEntity
     /// <summary>
     /// The fragment being recommended
     /// </summary>
-    public Guid FragmentId { get; set; }
+    protected Guid FragmentId { get; set; }
 
     /// <summary>
     /// Navigation property to the fragment

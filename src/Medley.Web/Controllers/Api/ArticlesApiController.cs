@@ -109,7 +109,7 @@ public class ArticlesApiController : ControllerBase
 
             if (articleTypeIds != null && articleTypeIds.Length > 0)
             {
-                matchingArticles = matchingArticles.Where(a => a.ArticleTypeId.HasValue && articleTypeIds.Contains(a.ArticleTypeId.Value));
+                matchingArticles = matchingArticles.Where(a => a.ArticleType != null && articleTypeIds.Contains(a.ArticleType.Id));
             }
 
             var matchingArticlesList = matchingArticles.ToList();
@@ -121,12 +121,11 @@ public class ArticlesApiController : ControllerBase
                 articlesToInclude.Add(article.Id);
 
                 // Walk up the parent chain
-                var currentParentId = article.ParentArticleId;
-                while (currentParentId.HasValue)
+                var currentParent = article.ParentArticle;
+                while (currentParent != null)
                 {
-                    articlesToInclude.Add(currentParentId.Value);
-                    var parent = allArticles.FirstOrDefault(a => a.Id == currentParentId.Value);
-                    currentParentId = parent?.ParentArticleId;
+                    articlesToInclude.Add(currentParent.Id);
+                    currentParent = allArticles.FirstOrDefault(a => a.Id == currentParent.Id)?.ParentArticle;
                 }
             }
 
@@ -174,7 +173,7 @@ public class ArticlesApiController : ControllerBase
             article.Status,
             article.PublishedAt,
             article.CreatedAt,
-            article.ParentArticleId,
+            ParentArticleId = article.ParentArticle?.Id,
             ParentTitle = article.ParentArticle?.Title,
             ChildrenCount = article.ChildArticles.Count,
             FragmentsCount = article.Fragments.Count,
@@ -194,7 +193,7 @@ public class ArticlesApiController : ControllerBase
     public async Task<IActionResult> GetChildren(Guid id)
     {
         var children = await _articleRepository.Query()
-            .Where(a => a.ParentArticleId == id)
+            .Where(a => a.ParentArticle!.Id == id)
             .OrderBy(a => a.Title)
             .Select(a => new
             {
@@ -237,8 +236,8 @@ public class ArticlesApiController : ControllerBase
         {
             ArticleId = article.Id,
             Title = article.Title,
-            ParentArticleId = article.ParentArticleId,
-            ArticleTypeId = article.ArticleTypeId,
+            ParentArticleId = article.ParentArticle?.Id,
+            ArticleTypeId = article.ArticleType?.Id,
             Timestamp = DateTimeOffset.UtcNow
         };
         
@@ -252,8 +251,8 @@ public class ArticlesApiController : ControllerBase
             id = article.Id.ToString(),
             article.Title,
             article.Status,
-            article.ParentArticleId,
-            articleTypeId = article.ArticleTypeId,
+            ParentArticleId = article.ParentArticle?.Id,
+            articleTypeId = article.ArticleType?.Id,
             article.CreatedAt,
             children = new List<object>()
         });
@@ -290,7 +289,8 @@ public class ArticlesApiController : ControllerBase
         }
         if (request.ArticleTypeId.HasValue)
         {
-            article.ArticleTypeId = request.ArticleTypeId.Value;
+            var articleType = await _articleTypeRepository.GetByIdAsync(request.ArticleTypeId.Value);
+            article.ArticleType = articleType;
         }
 
         // Entity is already tracked, changes will be saved on SaveChangesAsync
@@ -300,7 +300,7 @@ public class ArticlesApiController : ControllerBase
         {
             ArticleId = article.Id,
             Title = article.Title,
-            ArticleTypeId = article.ArticleTypeId,
+            ArticleTypeId = article.ArticleType?.Id,
             Timestamp = DateTimeOffset.UtcNow
         };
         
@@ -358,7 +358,8 @@ public class ArticlesApiController : ControllerBase
         // Entity is already tracked, changes will be saved on SaveChangesAsync
 
         // Capture version after saving article
-        var capturedVersion = await _versionService.CaptureUserVersionAsync(id, article.Content, oldContent, _medleyContext.CurrentUserId);
+        var currentUser = await _medleyContext.GetCurrentUserAsync();
+        var capturedVersion = await _versionService.CaptureUserVersionAsync(id, article.Content, oldContent, currentUser?.Id);
 
         // Register post-commit action to send SignalR notification
         var versionNotification = new
@@ -382,7 +383,7 @@ public class ArticlesApiController : ControllerBase
             {
                 ArticleId = article.Id,
                 Title = article.Title,
-                ArticleTypeId = article.ArticleTypeId,
+                ArticleTypeId = article.ArticleType?.Id,
                 Timestamp = DateTimeOffset.UtcNow
             };
             
@@ -447,7 +448,7 @@ public class ArticlesApiController : ControllerBase
         }
 
         // Check if moving to the same parent (no-op)
-        if (article.ParentArticleId == request.NewParentArticleId.Value)
+        if (article.ParentArticle?.Id == request.NewParentArticleId.Value)
         {
             return Ok(new { message = "Article is already under this parent" });
         }
@@ -475,10 +476,10 @@ public class ArticlesApiController : ControllerBase
         }
 
         // Store old parent ID for SignalR notification
-        var oldParentId = article.ParentArticleId;
+        var oldParentId = article.ParentArticle?.Id;
 
         // Update the parent
-        article.ParentArticleId = request.NewParentArticleId.Value;
+        article.ParentArticle = newParent;
         // Entity is already tracked, changes will be saved on SaveChangesAsync
 
         // Register post-commit action to send SignalR notification
@@ -523,7 +524,7 @@ public class ArticlesApiController : ControllerBase
         {
             var parent = await _articleRepository.Query()
                 .Where(a => a.Id == currentParentId)
-                .Select(a => new { a.ParentArticleId })
+                .Select(a => new { ParentArticleId = a.ParentArticle != null ? (Guid?)a.ParentArticle.Id : null })
                 .FirstOrDefaultAsync();
 
             if (parent == null || !parent.ParentArticleId.HasValue)
@@ -557,7 +558,7 @@ public class ArticlesApiController : ControllerBase
     private List<object> BuildTree(List<Article> allArticles, Guid? parentId)
     {
         return allArticles
-            .Where(a => a.ParentArticleId == parentId)
+            .Where(a => a.ParentArticle?.Id == parentId)
             .OrderBy(a => a.ArticleType?.Name?.Equals("Index", StringComparison.OrdinalIgnoreCase) == true ? 0 : 1)
             .ThenBy(a => a.Title)
             .Select(a => new
@@ -566,7 +567,7 @@ public class ArticlesApiController : ControllerBase
                 a.Title,
                 a.Status,
                 a.CreatedAt,
-                articleTypeId = a.ArticleTypeId,
+                articleTypeId = a.ArticleType?.Id,
                 currentConversation = a.CurrentConversation != null ? new 
                 { 
                     id = a.CurrentConversation.Id,
@@ -856,20 +857,14 @@ public class ArticlesApiController : ControllerBase
     /// Assign article to user if not already assigned
     /// </summary>
     /// <returns>True if assignment changed, false otherwise</returns>
-    private async Task<bool> AssignArticleToUserAsync(Article article, Guid userId)
+    private async Task<bool> AssignArticleToUserAsync(Article article, User user)
     {
-        if (userId == Guid.Empty || article.AssignedUserId == userId)
+        if (article.AssignedUser == user)
         {
             return false;
         }
 
-        article.AssignedUserId = userId;
-        
-        // Load user data if not already loaded
-        if (article.AssignedUser == null || article.AssignedUser.Id != userId)
-        {
-            article.AssignedUser = await _userRepository.GetByIdAsync(userId);
-        }
+        article.AssignedUser = user;
 
         return true;
     }

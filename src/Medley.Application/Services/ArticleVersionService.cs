@@ -15,6 +15,7 @@ public class ArticleVersionService : IArticleVersionService
     private readonly IRepository<ArticleVersion> _versionRepository;
     private readonly IRepository<Article> _articleRepository;
     private readonly IRepository<User> _userRepository;
+    private readonly IRepository<ChatConversation> _conversationRepository;
     private readonly ILogger<ArticleVersionService> _logger;
     private readonly diff_match_patch _diffMatchPatch;
 
@@ -22,11 +23,13 @@ public class ArticleVersionService : IArticleVersionService
         IRepository<ArticleVersion> versionRepository,
         IRepository<Article> articleRepository,
         IRepository<User> userRepository,
+        IRepository<ChatConversation> conversationRepository,
         ILogger<ArticleVersionService> logger)
     {
         _versionRepository = versionRepository;
         _articleRepository = articleRepository;
         _userRepository = userRepository;
+        _conversationRepository = conversationRepository;
         _logger = logger;
         _diffMatchPatch = new diff_match_patch();
     }
@@ -42,7 +45,7 @@ public class ArticleVersionService : IArticleVersionService
         {
             // Get the latest version with parent version loaded
             var latestVersion = await _versionRepository.Query()
-                .Where(v => v.ArticleId == articleId)
+                .Where(v => v.Article.Id == articleId)
                 .Include(v => v.ParentVersion)
                 .OrderByDescending(v => v.VersionNumber)
                 .FirstOrDefaultAsync(cancellationToken);
@@ -57,7 +60,7 @@ public class ArticleVersionService : IArticleVersionService
                 var timeSinceModified = DateTimeOffset.UtcNow - lastModified;
 
                 // Update existing version if same user and within 30 minutes
-                if (latestVersion.CreatedById == userId && timeSinceModified.TotalMinutes <= 30)
+                if (latestVersion.CreatedBy?.Id == userId && timeSinceModified.TotalMinutes <= 30)
                 {
                     // Update existing version (draft mode)
                     isNewVersion = false;
@@ -123,7 +126,7 @@ public class ArticleVersionService : IArticleVersionService
 
         _logger.LogInformation(
             "Updated draft version {VersionNumber} for article {ArticleId} by user {UserId}",
-            existingVersion.VersionNumber, existingVersion.ArticleId, existingVersion.CreatedById);
+            existingVersion.VersionNumber, existingVersion.Article?.Id, existingVersion.CreatedBy?.Id);
 
         return existingVersion;
     }
@@ -172,7 +175,7 @@ public class ArticleVersionService : IArticleVersionService
             CreatedBy = user,
             CreatedAt = DateTimeOffset.UtcNow,
             VersionType = VersionType.User,
-            ParentVersionId = null // User versions have no parent
+            ParentVersion = null // User versions have no parent
         };
 
         version.ModifiedAt = version.CreatedAt;
@@ -192,7 +195,7 @@ public class ArticleVersionService : IArticleVersionService
         CancellationToken cancellationToken = default)
     {
         var query = _versionRepository.Query()
-            .Where(v => v.ArticleId == articleId);
+            .Where(v => v.Article.Id == articleId);
 
         // Apply version type filter if specified
         if (versionType.HasValue)
@@ -219,7 +222,7 @@ public class ArticleVersionService : IArticleVersionService
                 VersionNumber = v.ParentVersion != null 
                     ? v.ParentVersion.VersionNumber.ToString() + "." + v.VersionNumber.ToString()
                     : v.VersionNumber.ToString(),
-                CreatedBy = v.CreatedById,
+                CreatedBy = v.CreatedBy != null ? v.CreatedBy.Id : (Guid?)null,
                 CreatedByName = v.CreatedBy != null ? v.CreatedBy.FullName : null,
                 CreatedByEmail = v.CreatedBy != null ? v.CreatedBy.Email : null,
                 CreatedAt = v.CreatedAt,
@@ -252,18 +255,18 @@ public class ArticleVersionService : IArticleVersionService
         {
             // For User versions, compare with the previous User version
             previousVersion = await _versionRepository.Query()
-                .Where(v => v.ArticleId == version.ArticleId 
+                .Where(v => v.Article == version.Article 
                     && v.VersionType == Domain.Enums.VersionType.User
                     && v.VersionNumber < version.VersionNumber)
                 .OrderByDescending(v => v.VersionNumber)
                 .Include(v => v.ParentVersion)
                 .FirstOrDefaultAsync(cancellationToken);
         }
-        else if (version.VersionType == Domain.Enums.VersionType.AI && version.ParentVersionId.HasValue)
+        else if (version.VersionType == Domain.Enums.VersionType.AI && version.ParentVersion != null)
         {
             // For AI versions, compare with the parent User version
             previousVersion = await _versionRepository.Query()
-                .Where(v => v.Id == version.ParentVersionId.Value)
+                .Where(v => v.Id == version.ParentVersion.Id)
                 .Include(v => v.ParentVersion)
                 .FirstOrDefaultAsync(cancellationToken);
         }
@@ -295,7 +298,7 @@ public class ArticleVersionService : IArticleVersionService
 
             // Get the most recent User version - AI versions always use the most recent User version as parent
             var mostRecentUserVersion = await _versionRepository.Query()
-                .Where(v => v.ArticleId == articleId && v.VersionType == VersionType.User)
+                .Where(v => v.Article.Id == articleId && v.VersionType == VersionType.User)
                 .OrderByDescending(v => v.VersionNumber)
                 .FirstOrDefaultAsync(cancellationToken);
 
@@ -307,16 +310,16 @@ public class ArticleVersionService : IArticleVersionService
             // VersionNumber is scoped to the parent User version
             // Get the max version number for AI versions with the same parent and increment
             var maxVersionNumber = await _versionRepository.Query()
-                .Where(v => v.ArticleId == articleId
+                .Where(v => v.Article.Id == articleId
                     && v.VersionType == VersionType.AI
-                    && v.ParentVersionId == mostRecentUserVersion.Id)
+                    && v.ParentVersion == mostRecentUserVersion)
                 .MaxAsync(v => (int?)v.VersionNumber, cancellationToken);
 
             int versionNumber = (maxVersionNumber ?? 0) + 1;
 
             // Deactivate existing AI versions
             var existingAiVersions = await _versionRepository.Query()
-                .Where(v => v.ArticleId == articleId && v.VersionType == VersionType.AI && v.IsActive)
+                .Where(v => v.Article.Id == articleId && v.VersionType == VersionType.AI && v.IsActive)
                 .ToListAsync(cancellationToken);
 
             foreach (var existingVersion in existingAiVersions)
@@ -344,6 +347,13 @@ public class ArticleVersionService : IArticleVersionService
             // Load user for navigation property
             var createdByUser = await _userRepository.GetByIdAsync(userId);
 
+            // Load conversation if provided
+            ChatConversation? conversation = null;
+            if (conversationId.HasValue)
+            {
+                conversation = await _conversationRepository.GetByIdAsync(conversationId.Value, cancellationToken);
+            }
+
             // Create new AI version
             var newVersion = new ArticleVersion
             {
@@ -354,10 +364,10 @@ public class ArticleVersionService : IArticleVersionService
                 CreatedBy = createdByUser,
                 CreatedAt = DateTimeOffset.UtcNow,
                 VersionType = VersionType.AI,
-                ParentVersionId = mostRecentUserVersion.Id,
+                ParentVersion = mostRecentUserVersion,
                 ChangeMessage = changeMessage,
                 IsActive = true,
-                ConversationId = conversationId
+                Conversation = conversation
             };
 
             await _versionRepository.AddAsync(newVersion);

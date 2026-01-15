@@ -101,13 +101,13 @@ public class TaggingService : ITaggingService
         if (source.IsInternal == null)
         {
             var tagsWithScopeUpdate = source.Tags
-                .Where(t => t.TagType != null && t.TagType.ScopeUpdateMode != ScopeUpdateMode.None)
+                .Where(t => t.TagType.ScopeUpdateMode != ScopeUpdateMode.None)
                 .ToList();
 
             if (tagsWithScopeUpdate.Any())
             {
                 // Check for MarkExternalIfUnknown first (takes precedence if multiple)
-                var hasExternalTag = tagsWithScopeUpdate.Any(t => t.TagType!.ScopeUpdateMode == ScopeUpdateMode.MarkExternalIfUnknown);
+                var hasExternalTag = tagsWithScopeUpdate.Any(t => t.TagType.ScopeUpdateMode == ScopeUpdateMode.MarkExternalIfUnknown);
                 if (hasExternalTag)
                 {
                     source.IsInternal = false;
@@ -115,7 +115,7 @@ public class TaggingService : ITaggingService
                 else
                 {
                     // Check for MarkInternalIfUnknown
-                    var hasInternalTag = tagsWithScopeUpdate.Any(t => t.TagType!.ScopeUpdateMode == ScopeUpdateMode.MarkInternalIfUnknown);
+                    var hasInternalTag = tagsWithScopeUpdate.Any(t => t.TagType.ScopeUpdateMode == ScopeUpdateMode.MarkInternalIfUnknown);
                     if (hasInternalTag)
                     {
                         source.IsInternal = true;
@@ -225,7 +225,7 @@ public class TaggingService : ITaggingService
             sb.AppendLine("## Existing Tags");
             foreach (var tag in existingTags)
             {
-                sb.AppendLine($"- {tag.TagType?.Name ?? tag.TagTypeId.ToString()}: {tag.Value}");
+                sb.AppendLine($"- {tag.TagType.Name}: {tag.Value}");
             }
             sb.AppendLine();
         }
@@ -314,12 +314,11 @@ public class TaggingService : ITaggingService
                 valueToStore = valueToStore.Substring(0, 200);
             }
 
-            var existingTag = source.Tags.FirstOrDefault(t => t.TagTypeId == tagType.Id);
+            var existingTag = source.Tags.FirstOrDefault(t => t.TagType == tagType);
 
             if (existingTag != null)
             {
                 existingTag.Value = valueToStore;
-                existingTag.TagOptionId = matchedOption?.Id;
                 existingTag.TagOption = matchedOption;
                 existingTag.TagType = tagType;
 
@@ -329,11 +328,8 @@ public class TaggingService : ITaggingService
             {
                 var newTag = new Tag
                 {
-                    SourceId = source.Id,
                     Source = source,
-                    TagTypeId = tagType.Id,
                     TagType = tagType,
-                    TagOptionId = matchedOption?.Id,
                     TagOption = matchedOption,
                     Value = valueToStore
                 };

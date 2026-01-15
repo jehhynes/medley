@@ -19,6 +19,7 @@ public class ArticleChatToolsFactory
     private readonly IRepository<Plan> _planRepository;
     private readonly IRepository<PlanFragment> _planFragmentRepository;
     private readonly IRepository<User> _userRepository;
+    private readonly IRepository<ChatConversation> _conversationRepository;
     private readonly IArticleVersionService _articleVersionService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILoggerFactory _loggerFactory;
@@ -34,6 +35,7 @@ public class ArticleChatToolsFactory
         IRepository<Plan> planRepository,
         IRepository<PlanFragment> planFragmentRepository,
         IRepository<User> userRepository,
+        IRepository<ChatConversation> conversationRepository,
         IArticleVersionService articleVersionService,
         IUnitOfWork unitOfWork,
         ILoggerFactory loggerFactory,
@@ -48,6 +50,7 @@ public class ArticleChatToolsFactory
         _planRepository = planRepository;
         _planFragmentRepository = planFragmentRepository;
         _userRepository = userRepository;
+        _conversationRepository = conversationRepository;
         _articleVersionService = articleVersionService;
         _unitOfWork = unitOfWork;
         _loggerFactory = loggerFactory;
@@ -80,6 +83,7 @@ public class ArticleChatToolsFactory
             _planRepository,
             _planFragmentRepository,
             _userRepository,
+            _conversationRepository,
             _articleVersionService,
             _unitOfWork,
             logger,

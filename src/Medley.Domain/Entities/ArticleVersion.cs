@@ -19,7 +19,7 @@ public class ArticleVersion : BaseEntity
     /// <summary>
     /// The article this version belongs to
     /// </summary>
-    public Guid ArticleId { get; set; }
+    protected Guid ArticleId { get; set; }
 
     /// <summary>
     /// Navigation property to the article
@@ -31,7 +31,7 @@ public class ArticleVersion : BaseEntity
     /// <summary>
     /// The conversation that created this version (optional)
     /// </summary>
-    public Guid? ConversationId { get; set; }
+    protected Guid? ConversationId { get; set; }
 
     /// <summary>
     /// Navigation property to the conversation
@@ -61,7 +61,7 @@ public class ArticleVersion : BaseEntity
     /// User ID who created this version
     /// </summary>
     [Column("created_by")]
-    public Guid? CreatedById { get; set; }
+    protected Guid? CreatedById { get; set; }
 
     /// <summary>
     /// Navigation property to the user who created this version
@@ -90,7 +90,7 @@ public class ArticleVersion : BaseEntity
     /// For User versions: Always null (User versions have no parent).
     /// For AI versions: Always references the most recent User version at creation time.
     /// </summary>
-    public Guid? ParentVersionId { get; set; }
+    protected Guid? ParentVersionId { get; set; }
 
     /// <summary>
     /// Navigation property to parent version

@@ -43,7 +43,7 @@ public class Fragment : BusinessEntity
     /// <summary>
     /// The ID of the originating source
     /// </summary>
-    public Guid? SourceId { get; set; }
+    protected Guid? SourceId { get; set; }
 
     /// <summary>
     /// Navigation to the originating Source
@@ -64,7 +64,7 @@ public class Fragment : BusinessEntity
     /// <summary>
     /// The ID of the cluster fragment this fragment belongs to
     /// </summary>
-    public Guid? ClusteredIntoId { get; set; }
+    protected Guid? ClusteredIntoId { get; set; }
 
     /// <summary>
     /// Navigation to the cluster fragment

@@ -14,7 +14,7 @@ public class Plan : BaseEntity
     /// <summary>
     /// The article this plan is for
     /// </summary>
-    public Guid ArticleId { get; set; }
+    protected Guid ArticleId { get; set; }
 
     /// <summary>
     /// Navigation property to the article
@@ -26,7 +26,7 @@ public class Plan : BaseEntity
     /// <summary>
     /// The conversation that created this plan (optional)
     /// </summary>
-    public Guid? ConversationId { get; set; }
+    protected Guid? ConversationId { get; set; }
 
     /// <summary>
     /// Navigation property to the conversation
@@ -53,7 +53,7 @@ public class Plan : BaseEntity
     /// <summary>
     /// User who created this plan
     /// </summary>
-    public Guid CreatedByUserId { get; set; }
+    protected Guid CreatedByUserId { get; set; }
 
     /// <summary>
     /// Navigation property to the user who created the plan
@@ -75,7 +75,7 @@ public class Plan : BaseEntity
     /// <summary>
     /// Reference to the parent plan this was derived from (if modified)
     /// </summary>
-    public Guid? ParentPlanId { get; set; }
+    protected Guid? ParentPlanId { get; set; }
 
     /// <summary>
     /// Navigation property to the parent plan

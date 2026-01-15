@@ -28,6 +28,7 @@ public class ArticleChatTools
     private readonly IRepository<Plan> _planRepository;
     private readonly IRepository<PlanFragment> _planFragmentRepository;
     private readonly IRepository<User> _userRepository;
+    private readonly IRepository<ChatConversation> _conversationRepository;
     private readonly IArticleVersionService _articleVersionService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<ArticleChatTools> _logger;
@@ -48,6 +49,7 @@ public class ArticleChatTools
         IRepository<Plan> planRepository,
         IRepository<PlanFragment> planFragmentRepository,
         IRepository<User> userRepository,
+        IRepository<ChatConversation> conversationRepository,
         IArticleVersionService articleVersionService,
         IUnitOfWork unitOfWork,
         ILogger<ArticleChatTools> logger,
@@ -66,6 +68,7 @@ public class ArticleChatTools
         _planRepository = planRepository;
         _planFragmentRepository = planFragmentRepository;
         _userRepository = userRepository;
+        _conversationRepository = conversationRepository;
         _articleVersionService = articleVersionService;
         _unitOfWork = unitOfWork;
         _logger = logger;
@@ -145,19 +148,11 @@ public class ArticleChatTools
                 string? sourceType = null;
                 DateTimeOffset? sourceDate = null;
 
-                if (fragment.SourceId.HasValue)
+                if (fragment.Source != null)
                 {
-                    var source = await _fragmentRepository.Query()
-                        .Where(f => f.Id == fragment.Id)
-                        .Select(f => new { f.Source!.Name, f.Source.Type, f.Source.Date })
-                        .FirstOrDefaultAsync(cancellationToken);
-                    
-                    if (source != null)
-                    {
-                        sourceName = source.Name;
-                        sourceType = source.Type.ToString();
-                        sourceDate = source.Date;
-                    }
+                    sourceName = fragment.Source.Name;
+                    sourceType = fragment.Source.Type.ToString();
+                    sourceDate = fragment.Source.Date;
                 }
 
                 fragments.Add(new
@@ -292,19 +287,11 @@ public class ArticleChatTools
                 string? sourceType = null;
                 DateTimeOffset? sourceDate = null;
 
-                if (fragment.SourceId.HasValue)
+                if (fragment.Source != null)
                 {
-                    var source = await _fragmentRepository.Query()
-                        .Where(f => f.Id == fragment.Id)
-                        .Select(f => new { f.Source!.Name, f.Source.Type, f.Source.Date })
-                        .FirstOrDefaultAsync(cancellationToken);
-                    
-                    if (source != null)
-                    {
-                        sourceName = source.Name;
-                        sourceType = source.Type.ToString();
-                        sourceDate = source.Date;
-                    }
+                    sourceName = fragment.Source.Name;
+                    sourceType = fragment.Source.Type.ToString();
+                    sourceDate = fragment.Source.Date;
                 }
 
                 fragments.Add(new
@@ -476,12 +463,11 @@ public class ArticleChatTools
 
             // Get existing draft plan (if any) to determine version and parent
             var existingDraftPlan = await _planRepository.Query()
-                .Where(p => p.ArticleId == _articleId && p.Status == PlanStatus.Draft)
+                .Where(p => p.Article.Id == _articleId && p.Status == PlanStatus.Draft)
                 .OrderByDescending(p => p.Version)
                 .FirstOrDefaultAsync(cancellationToken);
 
             int newVersion = 1;
-            Guid? parentPlanId = null;
 
             if (existingDraftPlan != null)
             {
@@ -490,13 +476,12 @@ public class ArticleChatTools
                 // Entity is already tracked, changes will be saved on SaveChangesAsync
                 
                 newVersion = existingDraftPlan.Version + 1;
-                parentPlanId = existingDraftPlan.Id;
             }
             else
             {
                 // Check if there are any archived plans to determine version
                 var maxVersion = await _planRepository.Query()
-                    .Where(p => p.ArticleId == _articleId)
+                    .Where(p => p.Article.Id == _articleId)
                     .MaxAsync(p => (int?)p.Version, cancellationToken);
                 
                 if (maxVersion.HasValue)
@@ -527,9 +512,9 @@ public class ArticleChatTools
                 CreatedBy = user,
                 CreatedAt = DateTimeOffset.UtcNow,
                 Version = newVersion,
-                ParentPlanId = parentPlanId,
+                ParentPlan = existingDraftPlan,
                 ChangesSummary = request.ChangesSummary,
-                ConversationId = _conversationId
+                Conversation = _conversationId.HasValue ? await _conversationRepository.GetByIdAsync(_conversationId.Value) : null
             };
 
             await _planRepository.AddAsync(plan);

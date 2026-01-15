@@ -84,7 +84,7 @@ namespace Medley.Web.Controllers
             // Tag analytics
             var tags = await _tagRepository.Query()
                 .Include(t => t.TagType)
-                .Select(t => new { TypeName = t.TagType.Name, t.Value, t.SourceId })
+                .Select(t => new { TypeName = t.TagType.Name, t.Value, SourceId = t.Source.Id })
                 .ToListAsync();
 
             var tagMetricsList = new List<TagTypeMetrics>();

@@ -66,7 +66,6 @@ public class TagTypesController : Controller
             var option = new TagOption
             {
                 TagType = model,
-                TagTypeId = model.Id,
                 Value = value
             };
             await _tagOptionRepository.AddAsync(option);
@@ -131,7 +130,6 @@ public class TagTypesController : Controller
                 var option = new TagOption
                 {
                     TagType = existing,
-                    TagTypeId = existing.Id,
                     Value = value
                 };
                 await _tagOptionRepository.AddAsync(option);

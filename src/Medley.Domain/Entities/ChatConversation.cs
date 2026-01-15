@@ -15,7 +15,7 @@ public class ChatConversation : BaseEntity
     /// <summary>
     /// The article this conversation is about
     /// </summary>
-    public Guid ArticleId { get; set; }
+    protected Guid ArticleId { get; set; }
 
     /// <summary>
     /// Navigation property to the article
@@ -37,7 +37,7 @@ public class ChatConversation : BaseEntity
     /// <summary>
     /// The plan this conversation is implementing (if applicable)
     /// </summary>
-    public Guid? ImplementingPlanId { get; set; }
+    protected Guid? ImplementingPlanId { get; set; }
 
     /// <summary>
     /// Navigation property to the plan being implemented
@@ -64,7 +64,7 @@ public class ChatConversation : BaseEntity
     /// <summary>
     /// The user who created this conversation
     /// </summary>
-    public Guid CreatedByUserId { get; set; }
+    protected Guid CreatedByUserId { get; set; }
 
     /// <summary>
     /// Navigation property to the user who created the conversation

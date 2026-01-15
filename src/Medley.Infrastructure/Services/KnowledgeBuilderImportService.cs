@@ -301,7 +301,7 @@ public class KnowledgeBuilderImportService : IKnowledgeBuilderImportService
             Metadata = metadataJson,
             CreatedAt = kbArticle.CreatedAt != default ? kbArticle.CreatedAt : DateTimeOffset.UtcNow,
             ParentArticleId = parentArticleId,
-            ArticleTypeId = articleType?.Id,
+            ArticleType = articleType,
             Status = Domain.Enums.ArticleStatus.Draft
         };
 

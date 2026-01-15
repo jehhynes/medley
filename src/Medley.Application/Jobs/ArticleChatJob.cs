@@ -85,12 +85,12 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                 if (article == null)
                 {
                     _logger.LogWarning("Article not found for conversation {ConversationId}", conversation.Id);
-                    await SendErrorNotification(conversation.Id, "Article not found", cancellationToken);
+                    await SendErrorNotification(conversation, "Article not found", cancellationToken);
                     return;
                 }
 
                 // Notify UI that processing has started
-                await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
+                await _hubContext.Clients.Group($"Article_{conversation.Article.Id}")
                     .SendAsync("ChatTurnStarted", new
                     {
                         conversationId = conversation.Id.ToString(),
@@ -110,7 +110,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                     {
                         case Models.StreamUpdateType.TextDelta:
                             // Send incremental text updates
-                            await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
+                            await _hubContext.Clients.Group($"Article_{conversation.Article.Id}")
                                 .SendAsync("ChatMessageStreaming", new
                                 {
                                     conversationId = update.ConversationId.ToString(),
@@ -122,7 +122,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
 
                         case Models.StreamUpdateType.ToolCall:
                             // Notify about tool invocations
-                            await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
+                            await _hubContext.Clients.Group($"Article_{conversation.Article.Id}")
                                 .SendAsync("ChatToolInvoked", new
                                 {
                                     conversationId = update.ConversationId.ToString(),
@@ -136,7 +136,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
 
                         case Models.StreamUpdateType.ToolResult:
                             // Notify about tool results
-                            await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
+                            await _hubContext.Clients.Group($"Article_{conversation.Article.Id}")
                                 .SendAsync("ChatToolCompleted", new
                                 {
                                     conversationId = update.ConversationId.ToString(),
@@ -156,7 +156,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                             _logger.LogInformation("Chat message processed successfully for conversation {ConversationId}, response saved with ID {MessageId}",
                                 conversation.Id, update.MessageId);
 
-                            await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
+                            await _hubContext.Clients.Group($"Article_{conversation.Article.Id}")
                                 .SendAsync("ChatMessageComplete", new
                                 {
                                     id = update.MessageId.ToString(),
@@ -165,13 +165,13 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                                     text = update.Text,
                                     userName = (string?)null,
                                     createdAt = update.Timestamp,
-                                    articleId = conversation.ArticleId.ToString()
+                                    articleId = conversation.Article.Id.ToString()
                                 }, cancellationToken);
                             break;
 
                         case Models.StreamUpdateType.TurnComplete:
                             // Send turn complete signal
-                            await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
+                            await _hubContext.Clients.Group($"Article_{conversation.Article.Id}")
                                 .SendAsync("ChatTurnComplete", new
                                 {
                                     conversationId = conversation.Id.ToString(),
@@ -186,19 +186,19 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                 if (conversation.Mode == ConversationMode.Plan)
                 {
                     var plan = await _planRepository.Query()
-                        .Where(p => p.ArticleId == conversation.ArticleId && p.Status == PlanStatus.Draft)
+                        .Where(p => p.Article == conversation.Article && p.Status == PlanStatus.Draft)
                         .OrderByDescending(p => p.CreatedAt)
                         .FirstOrDefaultAsync(cancellationToken);
 
                     if (plan != null)
                     {
                         _logger.LogInformation("Sending PlanGenerated event for plan {PlanId}, article {ArticleId}",
-                            plan.Id, conversation.ArticleId);
+                            plan.Id, conversation.Article.Id);
 
-                        await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
+                        await _hubContext.Clients.Group($"Article_{conversation.Article.Id}")
                             .SendAsync("PlanGenerated", new
                             {
-                                articleId = conversation.ArticleId.ToString(),
+                                articleId = conversation.Article.Id.ToString(),
                                 planId = plan.Id.ToString(),
                                 conversationId = conversation.Id.ToString(),
                                 timestamp = DateTimeOffset.UtcNow
@@ -210,8 +210,8 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                 if (conversation.Mode == ConversationMode.Agent)
                 {
                     var aiVersion = await _versionRepository.Query()
-                        .Where(v => v.ArticleId == conversation.ArticleId 
-                            && v.ConversationId == conversation.Id 
+                        .Where(v => v.Article == conversation.Article 
+                            && v.Conversation == conversation 
                             && v.VersionType == VersionType.AI)
                         .OrderByDescending(v => v.CreatedAt)
                         .FirstOrDefaultAsync(cancellationToken);
@@ -219,12 +219,12 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                     if (aiVersion != null)
                     {
                         _logger.LogInformation("Sending ArticleVersionCreated event for version {VersionId}, article {ArticleId}",
-                            aiVersion.Id, conversation.ArticleId);
+                            aiVersion.Id, conversation.Article.Id);
 
-                        await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
+                        await _hubContext.Clients.Group($"Article_{conversation.Article.Id}")
                             .SendAsync("ArticleVersionCreated", new
                             {
-                                articleId = conversation.ArticleId.ToString(),
+                                articleId = conversation.Article.Id.ToString(),
                                 versionId = aiVersion.Id.ToString(),
                                 versionNumber = aiVersion.VersionNumber,
                                 conversationId = conversation.Id.ToString(),
@@ -240,14 +240,14 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
         {
             _logger.LogError(ex, "Error processing chat message {MessageId}", userMessageId);
             
-            // Try to get conversation ID for error notification
+            // Try to get conversation for error notification
             var userMessage = await _chatMessageRepository.Query()
-                .Select(m => new { m.Id, m.ConversationId })
+                .Include(m => m.Conversation)
                 .FirstOrDefaultAsync(m => m.Id == userMessageId, cancellationToken);
             
-            if (userMessage != null)
+            if (userMessage?.Conversation != null)
             {
-                await SendErrorNotification(userMessage.ConversationId, ex.Message, cancellationToken);
+                await SendErrorNotification(userMessage.Conversation, ex.Message, cancellationToken);
             }
             
             throw; // Re-throw for Hangfire retry logic
@@ -257,29 +257,27 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
     /// <summary>
     /// Send error notification via SignalR
     /// </summary>
-    private async Task SendErrorNotification(Guid conversationId, string errorMessage, CancellationToken cancellationToken)
+    private async Task SendErrorNotification(ChatConversation conversation, string errorMessage, CancellationToken cancellationToken)
     {
         try
         {
-            // Get conversation to find article ID for the group
-            var conversation = await _chatService.GetConversationAsync(conversationId, cancellationToken);
-            if (conversation == null)
+            if (conversation.Article == null)
             {
-                _logger.LogWarning("Cannot send error notification - conversation {ConversationId} not found", conversationId);
+                _logger.LogWarning("Cannot send error notification - conversation {ConversationId} has no article", conversation.Id);
                 return;
             }
 
-            await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
+            await _hubContext.Clients.Group($"Article_{conversation.Article.Id}")
                 .SendAsync("ChatError", new
                 {
-                    conversationId = conversationId.ToString(),
+                    conversationId = conversation.Id.ToString(),
                     error = errorMessage,
                     timestamp = DateTimeOffset.UtcNow
                 }, cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send error notification for conversation {ConversationId}", conversationId);
+            _logger.LogError(ex, "Failed to send error notification for conversation {ConversationId}", conversation.Id);
         }
     }
 

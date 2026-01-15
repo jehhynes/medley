@@ -57,7 +57,7 @@ public sealed class EfChatMessageStore : ChatMessageStore
 
         // Get the latest user message timestamp to ensure proper ordering
         var lastMessageCreatedAt = await _messageRepository.Query()
-            .Where(m => m.ConversationId == ConversationId && m.Role == ChatMessageRole.User)
+            .Where(m => m.Conversation == conversation && m.Role == ChatMessageRole.User)
             .OrderByDescending(m => m.CreatedAt)
             .Select(x => (DateTimeOffset?)x.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
@@ -66,7 +66,7 @@ public sealed class EfChatMessageStore : ChatMessageStore
 
         // Load all existing tool messages and extract their CallIds for duplicate detection
         var existingToolMessages = await _messageRepository.Query()
-            .Where(m => m.ConversationId == ConversationId && m.Role == ChatMessageRole.Tool)
+            .Where(m => m.Conversation == conversation && m.Role == ChatMessageRole.Tool)
             .Select(m => m.SerializedMessage)
             .ToListAsync(cancellationToken);
 
@@ -131,7 +131,7 @@ public sealed class EfChatMessageStore : ChatMessageStore
                 Text = aiMessage.Text ?? string.Empty,
                 CreatedAt = createdAt,
                 SerializedMessage = JsonSerializer.Serialize(aiMessage),
-                UserId = null // Assistant/system/tool messages don't have a user
+                User = null // Assistant/system/tool messages don't have a user
             };
 
             await _messageRepository.AddAsync(chatMessage);
@@ -147,7 +147,7 @@ public sealed class EfChatMessageStore : ChatMessageStore
         CancellationToken cancellationToken = default)
     {
         var messages = await _messageRepository.Query()
-            .Where(m => m.ConversationId == ConversationId)
+            .Where(m => m.Conversation.Id == ConversationId)
             .OrderBy(m => m.CreatedAt)
             .ToListAsync(cancellationToken);
 

@@ -30,17 +30,18 @@ public class Article : BusinessEntity
     /// <summary>
     /// Parent article ID for nested/hierarchical articles (null for root-level articles)
     /// </summary>
-    public Guid? ParentArticleId { get; set; }
+    public Guid? ParentArticleId { protected get; set; }
 
     /// <summary>
     /// Navigation property to parent article
     /// </summary>
+    [ForeignKey(nameof(ParentArticleId))]
     public virtual Article? ParentArticle { get; set; }
 
     /// <summary>
     /// Foreign key to ArticleType
     /// </summary>
-    public Guid? ArticleTypeId { get; set; }
+    protected Guid? ArticleTypeId { get; set; }
 
     /// <summary>
     /// Navigation property to ArticleType
@@ -51,7 +52,7 @@ public class Article : BusinessEntity
     /// <summary>
     /// ID of the currently running conversation (if any)
     /// </summary>
-    public Guid? CurrentConversationId { get; set; }
+    protected Guid? CurrentConversationId { get; set; }
 
     /// <summary>
     /// Navigation property to the current conversation
@@ -62,7 +63,7 @@ public class Article : BusinessEntity
     /// <summary>
     /// User currently assigned to this article
     /// </summary>
-    public Guid? AssignedUserId { get; set; }
+    protected Guid? AssignedUserId { get; set; }
 
     /// <summary>
     /// Navigation property to the assigned user

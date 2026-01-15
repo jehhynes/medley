@@ -13,7 +13,7 @@ public class ChatMessage : BaseEntity
     /// <summary>
     /// The conversation this message belongs to
     /// </summary>
-    public Guid ConversationId { get; set; }
+    protected Guid ConversationId { get; set; }
 
     /// <summary>
     /// Navigation property to the conversation
@@ -25,7 +25,7 @@ public class ChatMessage : BaseEntity
     /// <summary>
     /// The user who sent the message (null for assistant/system/tool messages)
     /// </summary>
-    public Guid? UserId { get; set; }
+    protected Guid? UserId { get; set; }
 
     /// <summary>
     /// Navigation property to the user

@@ -10,7 +10,7 @@ namespace Medley.Domain.Entities;
 [Index(nameof(TagTypeId), nameof(Value), IsUnique = true)]
 public class TagOption : BusinessEntity
 {
-    public Guid TagTypeId { get; set; }
+    protected Guid TagTypeId { get; set; }
     
     [ForeignKey(nameof(TagTypeId))]
     [DeleteBehavior(DeleteBehavior.Cascade)]

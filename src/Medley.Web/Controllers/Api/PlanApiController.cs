@@ -20,6 +20,8 @@ public class PlanApiController : ControllerBase
     private readonly IRepository<Plan> _planRepository;
     private readonly IRepository<Article> _articleRepository;
     private readonly IRepository<PlanFragment> _planFragmentRepository;
+    private readonly IRepository<Fragment> _fragmentRepository;
+    private readonly IRepository<User> _userRepository;
     private readonly IRepository<ChatConversation> _conversationRepository;
     private readonly IRepository<Domain.Entities.ChatMessage> _messageRepository;
     private readonly IArticleChatService _articleChatService;
@@ -32,6 +34,8 @@ public class PlanApiController : ControllerBase
         IRepository<Plan> planRepository,
         IRepository<Article> articleRepository,
         IRepository<PlanFragment> planFragmentRepository,
+        IRepository<Fragment> fragmentRepository,
+        IRepository<User> userRepository,
         IRepository<ChatConversation> conversationRepository,
         IRepository<Domain.Entities.ChatMessage> messageRepository,
         IArticleChatService articleChatService,
@@ -43,6 +47,8 @@ public class PlanApiController : ControllerBase
         _planRepository = planRepository;
         _articleRepository = articleRepository;
         _planFragmentRepository = planFragmentRepository;
+        _fragmentRepository = fragmentRepository;
+        _userRepository = userRepository;
         _conversationRepository = conversationRepository;
         _messageRepository = messageRepository;
         _articleChatService = articleChatService;
@@ -65,7 +71,7 @@ public class PlanApiController : ControllerBase
         }
 
         var plan = await _planRepository.Query()
-            .Where(p => p.ArticleId == articleId && p.Status == PlanStatus.Draft)
+            .Where(p => p.Article.Id == articleId && p.Status == PlanStatus.Draft)
             .Include(p => p.PlanFragments)
                 .ThenInclude(pf => pf.Fragment)
                     .ThenInclude(f => f.Source)
@@ -94,7 +100,7 @@ public class PlanApiController : ControllerBase
         }
 
         var plans = await _planRepository.Query()
-            .Where(p => p.ArticleId == articleId)
+            .Where(p => p.Article.Id == articleId)
             .Include(p => p.CreatedBy)
             .OrderByDescending(p => p.Version)
             .Select(p => new
@@ -122,7 +128,7 @@ public class PlanApiController : ControllerBase
     public async Task<IActionResult> GetPlan(Guid articleId, Guid planId)
     {
         var plan = await _planRepository.Query()
-            .Where(p => p.Id == planId && p.ArticleId == articleId)
+            .Where(p => p.Id == planId && p.Article.Id == articleId)
             .Include(p => p.PlanFragments)
                 .ThenInclude(pf => pf.Fragment)
                     .ThenInclude(f => f.Source)
@@ -144,7 +150,7 @@ public class PlanApiController : ControllerBase
     public async Task<IActionResult> RestorePlan(Guid articleId, Guid planId)
     {
         var planToRestore = await _planRepository.Query()
-            .Where(p => p.Id == planId && p.ArticleId == articleId)
+            .Where(p => p.Id == planId && p.Article.Id == articleId)
             .FirstOrDefaultAsync();
 
         if (planToRestore == null)
@@ -159,7 +165,7 @@ public class PlanApiController : ControllerBase
 
         // Archive current draft plan (if any)
         var currentDraft = await _planRepository.Query()
-            .Where(p => p.ArticleId == articleId && p.Status == PlanStatus.Draft)
+            .Where(p => p.Article.Id == articleId && p.Status == PlanStatus.Draft)
             .FirstOrDefaultAsync();
 
         if (currentDraft != null)
@@ -180,7 +186,7 @@ public class PlanApiController : ControllerBase
     public async Task<IActionResult> UpdatePlan(Guid articleId, Guid planId, [FromBody] UpdatePlanRequest request)
     {
         var plan = await _planRepository.Query()
-            .Where(p => p.Id == planId && p.ArticleId == articleId)
+            .Where(p => p.Id == planId && p.Article.Id == articleId)
             .FirstOrDefaultAsync();
 
         if (plan == null)
@@ -209,7 +215,7 @@ public class PlanApiController : ControllerBase
         [FromBody] UpdatePlanFragmentIncludeRequest request)
     {
         var plan = await _planRepository.Query()
-            .Where(p => p.Id == planId && p.ArticleId == articleId)
+            .Where(p => p.Id == planId && p.Article.Id == articleId)
             .FirstOrDefaultAsync();
 
         if (plan == null)
@@ -223,7 +229,7 @@ public class PlanApiController : ControllerBase
         }
 
         var planFragment = await _planFragmentRepository.Query()
-            .Where(pf => pf.PlanId == planId && pf.FragmentId == fragmentId)
+            .Where(pf => pf.Plan == plan && pf.Fragment.Id == fragmentId)
             .FirstOrDefaultAsync();
 
         if (planFragment == null)
@@ -247,7 +253,7 @@ public class PlanApiController : ControllerBase
         [FromBody] UpdatePlanFragmentInstructionsRequest request)
     {
         var plan = await _planRepository.Query()
-            .Where(p => p.Id == planId && p.ArticleId == articleId)
+            .Where(p => p.Id == planId && p.Article.Id == articleId)
             .FirstOrDefaultAsync();
 
         if (plan == null)
@@ -261,7 +267,7 @@ public class PlanApiController : ControllerBase
         }
 
         var planFragment = await _planFragmentRepository.Query()
-            .Where(pf => pf.PlanId == planId && pf.FragmentId == fragmentId)
+            .Where(pf => pf.Plan == plan && pf.Fragment.Id == fragmentId)
             .FirstOrDefaultAsync();
 
         if (planFragment == null)
@@ -281,7 +287,7 @@ public class PlanApiController : ControllerBase
     public async Task<IActionResult> AcceptPlan(Guid articleId, Guid planId)
     {
         var plan = await _planRepository.Query()
-            .Where(p => p.Id == planId && p.ArticleId == articleId)
+            .Where(p => p.Id == planId && p.Article.Id == articleId)
             .FirstOrDefaultAsync();
 
         if (plan == null)
@@ -294,17 +300,17 @@ public class PlanApiController : ControllerBase
             return BadRequest(new { error = "Only draft plans can be accepted" });
         }
 
-        // Get current user ID
-        var userId = _medleyContext.CurrentUserId;
-        if (!userId.HasValue)
+        // Get current user
+        var user = await _medleyContext.GetCurrentUserAsync();
+        if (user == null)
         {
             return Unauthorized();
         }
 
         // 1. Archive the planning conversation (if exists)
-        if (plan.ConversationId.HasValue)
+        if (plan.Conversation != null)
         {
-            var planningConversation = await _conversationRepository.GetByIdAsync(plan.ConversationId.Value);
+            var planningConversation = plan.Conversation;
             if (planningConversation != null)
             {
                 planningConversation.State = ConversationState.Archived;
@@ -315,22 +321,22 @@ public class PlanApiController : ControllerBase
         // 2. Create new Agent conversation for implementation
         var agentConversation = await _articleChatService.CreateConversationAsync(
             articleId,
-            userId.Value,
+            user.Id,
             ConversationMode.Agent);
 
         // 3. Link conversation to plan
-        agentConversation.ImplementingPlanId = planId;
+        agentConversation.ImplementingPlan = plan;
         // Entity is already tracked, changes will be saved on SaveChangesAsync
 
         // 4. Set plan status to InProgress
         plan.Status = PlanStatus.InProgress;
         // Entity is already tracked, changes will be saved on SaveChangesAsync
 
-        // 5. Create user message requesting implementation
+        // 6. Create user message requesting implementation
         var userMessage = new Domain.Entities.ChatMessage
         {
             Conversation = agentConversation,
-            UserId = userId.Value,
+            User = user,
             Role = ChatMessageRole.User,
             Text = "Please implement the improvement plan as described.",
             CreatedAt = DateTimeOffset.UtcNow
@@ -369,7 +375,7 @@ public class PlanApiController : ControllerBase
     public async Task<IActionResult> RejectPlan(Guid articleId, Guid planId)
     {
         var plan = await _planRepository.Query()
-            .Where(p => p.Id == planId && p.ArticleId == articleId)
+            .Where(p => p.Id == planId && p.Article.Id == articleId)
             .FirstOrDefaultAsync();
 
         if (plan == null)
@@ -393,7 +399,7 @@ public class PlanApiController : ControllerBase
         return new
         {
             id = plan.Id,
-            articleId = plan.ArticleId,
+            articleId = plan.Article.Id,
             instructions = plan.Instructions,
             status = plan.Status.ToString(),
             version = plan.Version,
@@ -410,7 +416,7 @@ public class PlanApiController : ControllerBase
                 .ThenBy(x => x.Fragment.CreatedAt).Select(pf => new
                 {
                     id = pf.Id,
-                    fragmentId = pf.FragmentId,
+                    fragmentId = pf.Fragment.Id,
                     similarityScore = pf.SimilarityScore,
                     include = pf.Include,
                     reasoning = pf.Reasoning,

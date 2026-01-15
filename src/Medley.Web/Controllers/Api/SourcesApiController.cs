@@ -62,7 +62,7 @@ public class SourcesApiController : ControllerBase
         // Apply tag filter if provided
         if (tagTypeId.HasValue && tagTypeId.Value != Guid.Empty && !string.IsNullOrWhiteSpace(value))
         {
-            queryable = queryable.Where(s => s.Tags.Any(t => t.TagTypeId == tagTypeId.Value && t.Value == value));
+            queryable = queryable.Where(s => s.Tags.Any(t => t.TagType.Id == tagTypeId.Value && t.Value == value));
         }
 
         var sources = await queryable
@@ -84,7 +84,7 @@ public class SourcesApiController : ControllerBase
                 ExtractionMessage = s.ExtractionMessage,
                 s.CreatedAt,
                 s.TagsGenerated,
-                Tags = s.Tags.Select(t => new { t.TagTypeId, TagType = t.TagType.Name, t.Value })
+                Tags = s.Tags.Select(t => new { TagTypeId = t.TagType.Id, TagType = t.TagType.Name, t.Value })
             })
             .ToListAsync();
 
@@ -129,7 +129,7 @@ public class SourcesApiController : ControllerBase
             source.TagsGenerated,
             Tags = source.Tags.Select(t => new
             {
-                t.TagTypeId,
+                TagTypeId = t.TagType.Id,
                 TagType = t.TagType.Name,
                 t.Value,
                 AllowedValue = t.TagOption?.Value

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Medley.Domain.Enums;
 
 namespace Medley.Domain.Entities;
@@ -60,6 +61,12 @@ public class Source : BusinessEntity
     /// <summary>
     /// The integration this source was imported from
     /// </summary>
+    protected Guid IntegrationId { get; set; }
+
+    /// <summary>
+    /// The integration this source was imported from
+    /// </summary>
+    [ForeignKey(nameof(IntegrationId))]
     public virtual required Integration Integration { get; set; }
 
     public virtual ICollection<Fragment> Fragments { get; set; } = new List<Fragment>();

@@ -80,7 +80,7 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
             // Filter by source if specified
             else if (sourceId.HasValue)
             {
-                query = query.Where(f => f.SourceId == sourceId.Value);
+                query = query.Where(f => f.Source!.Id == sourceId.Value);
             }
 
             var fragmentsWithoutEmbeddings = await query

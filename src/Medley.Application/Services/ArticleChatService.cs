@@ -105,7 +105,7 @@ public class ArticleChatService : IArticleChatService
         await _conversationRepository.AddAsync(conversation);
         if (article != null)
         {
-            article.CurrentConversationId = conversation.Id;
+            article.CurrentConversation = conversation;
             // Entity is already tracked, changes will be saved on SaveChangesAsync
         }
         
@@ -140,7 +140,7 @@ public class ArticleChatService : IArticleChatService
             var (conversation, article) = await LoadConversationWithArticleAsync(conversationId, true, cancellationToken);
             
             // Get the latest user message to process
-            var latestUserMessage = await GetLatestUserMessageAsync(conversationId, cancellationToken);
+            var latestUserMessage = await GetLatestUserMessageAsync(conversation, cancellationToken);
             
             if (latestUserMessage.User == null)
             {
@@ -148,7 +148,7 @@ public class ArticleChatService : IArticleChatService
             }
 
             // Create article-scoped plugins instance
-            var tools = _toolsFactory.Create(article.Id, latestUserMessage.User.Id, conversation.ImplementingPlan?.Id);
+            var tools = _toolsFactory.Create(article.Id, latestUserMessage.User!.Id, conversation.ImplementingPlan?.Id);
             
             // Select system prompt and tools based on mode
             string systemMessage;
@@ -168,12 +168,12 @@ public class ArticleChatService : IArticleChatService
                 systemMessage = template.Content.Replace("{article.Title}", article.Title);
                 aiFunctions = CreateFunctions(tools, conversation.Mode);
             }
-            else if (conversation.Mode == ConversationMode.Agent && conversation.ImplementingPlanId.HasValue)
+            else if (conversation.Mode == ConversationMode.Agent && conversation.ImplementingPlan != null)
             {
                 // Agent mode implementing a plan - use SystemPromptBuilder
                 systemMessage = await _systemPromptBuilder.BuildPromptAsync(
-                    conversation.ArticleId,
-                    conversation.ImplementingPlanId,
+                    conversation.Article.Id,
+                    conversation.ImplementingPlan.Id,
                     TemplateType.ArticlePlanImplementation,
                     cancellationToken);
                 
@@ -217,7 +217,7 @@ public class ArticleChatService : IArticleChatService
             await foreach (var update in ProcessStreamingUpdatesAsync(
                 agentUpdates,
                 conversationId,
-                conversation.ArticleId,
+                conversation.Article.Id,
                 latestUserMessage,
                 cancellationToken))
             {
@@ -225,7 +225,7 @@ public class ArticleChatService : IArticleChatService
             }
             
             // Retrieve the most recent assistant message
-            var assistantMessage = await GetLatestAssistantMessageAsync(conversationId, cancellationToken);
+            var assistantMessage = await GetLatestAssistantMessageAsync(conversation, cancellationToken);
             
             _logger.LogInformation("Completed streaming for conversation {ConversationId} (Mode: {Mode}), message {MessageId}",
                 conversationId, conversation.Mode, assistantMessage.Id);
@@ -235,7 +235,7 @@ public class ArticleChatService : IArticleChatService
             {
                 Type = StreamUpdateType.TurnComplete,
                 ConversationId = conversationId,
-                ArticleId = conversation.ArticleId,
+                ArticleId = conversation.Article.Id,
                 MessageId = assistantMessage.Id
             };
         }
@@ -418,7 +418,7 @@ public class ArticleChatService : IArticleChatService
                 Role = role,
                 Text = aiMessage.Text ?? string.Empty,
                 CreatedAt = aiMessage.CreatedAt ?? DateTimeOffset.UtcNow,
-                UserId = null, // Assistant message has no user id
+                User = null, // Assistant message has no user
                 SerializedMessage = JsonSerializer.Serialize(aiMessage)
             };
 
@@ -440,7 +440,7 @@ public class ArticleChatService : IArticleChatService
         CancellationToken cancellationToken = default)
     {
         var query = _chatMessageRepository.Query()
-            .Where(m => m.ConversationId == conversationId)
+            .Where(m => m.Conversation.Id == conversationId)
             .Include(m => m.User)
             .OrderBy(m => m.CreatedAt);
 
@@ -457,7 +457,7 @@ public class ArticleChatService : IArticleChatService
         CancellationToken cancellationToken = default)
     {
         return await _conversationRepository.Query()
-            .Where(c => c.ArticleId == articleId &&
+            .Where(c => c.Article.Id == articleId &&
                        (c.State == ConversationState.Complete || c.State == ConversationState.Archived))
             .Include(c => c.Messages)
             .OrderByDescending(c => c.CreatedAt)
@@ -480,10 +480,9 @@ public class ArticleChatService : IArticleChatService
         // Entity is already tracked, changes will be saved on SaveChangesAsync
         
         // Clear the article's current conversation reference if it matches this conversation
-        var article = await _articleRepository.GetByIdAsync(conversation.ArticleId);
-        if (article != null && article.CurrentConversationId == conversationId)
+        if (conversation.Article.CurrentConversation == conversation)
         {
-            article.CurrentConversationId = null;
+            conversation.Article.CurrentConversation = null;
             // Entity is already tracked, changes will be saved on SaveChangesAsync
         }
         
@@ -507,10 +506,9 @@ public class ArticleChatService : IArticleChatService
         // Entity is already tracked, changes will be saved on SaveChangesAsync
         
         // Clear the article's current conversation reference if it matches this conversation
-        var article = await _articleRepository.GetByIdAsync(conversation.ArticleId);
-        if (article != null && article.CurrentConversationId == conversationId)
+        if (conversation.Article.CurrentConversation == conversation)
         {
-            article.CurrentConversationId = null;
+            conversation.Article.CurrentConversation = null;
             // Entity is already tracked, changes will be saved on SaveChangesAsync
         }
         
@@ -579,17 +577,17 @@ public class ArticleChatService : IArticleChatService
     /// Retrieves the latest user message for a conversation.
     /// </summary>
     private async Task<DomainChatMessage> GetLatestUserMessageAsync(
-        Guid conversationId,
+        ChatConversation conversation,
         CancellationToken cancellationToken = default)
     {
         var latestUserMessage = await _chatMessageRepository.Query()
-            .Where(m => m.ConversationId == conversationId && m.Role == ChatMessageRole.User)
+            .Where(m => m.Conversation == conversation && m.Role == ChatMessageRole.User)
             .OrderByDescending(m => m.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (latestUserMessage == null)
         {
-            throw new InvalidOperationException($"No user message found for conversation {conversationId}");
+            throw new InvalidOperationException($"No user message found for conversation {conversation.Id}");
         }
 
         return latestUserMessage;
@@ -599,11 +597,11 @@ public class ArticleChatService : IArticleChatService
     /// Retrieves the most recent assistant message for a conversation.
     /// </summary>
     private async Task<DomainChatMessage> GetLatestAssistantMessageAsync(
-        Guid conversationId,
+        ChatConversation conversation,
         CancellationToken cancellationToken = default)
     {
         return await _chatMessageRepository.Query()
-            .Where(m => m.ConversationId == conversationId && m.Role == ChatMessageRole.Assistant)
+            .Where(m => m.Conversation == conversation && m.Role == ChatMessageRole.Assistant)
             .OrderByDescending(m => m.CreatedAt)
             .FirstAsync(cancellationToken);
     }

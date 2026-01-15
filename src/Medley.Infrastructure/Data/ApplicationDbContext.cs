@@ -60,13 +60,13 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
         builder.Entity<Article>()
             .HasOne(a => a.CurrentConversation)
             .WithOne()
-            .HasForeignKey<Article>(a => a.CurrentConversationId)
+            .HasForeignKey<Article>("CurrentConversationId")
             .OnDelete(DeleteBehavior.SetNull); // When conversation is deleted, set Article.CurrentConversationId to null (not cascade)
 
         builder.Entity<ChatConversation>()
             .HasOne(c => c.Article)
             .WithMany(a => a.ChatConversations)
-            .HasForeignKey(c => c.ArticleId)
+            .HasForeignKey("ArticleId")
             .OnDelete(DeleteBehavior.Cascade); // When article is deleted, delete all conversations
     }
 }

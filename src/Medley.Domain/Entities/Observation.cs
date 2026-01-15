@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Medley.Domain.Enums;
+using Microsoft.EntityFrameworkCore;
 using Pgvector;
 
 namespace Medley.Domain.Entities;
@@ -25,8 +26,28 @@ public class Observation : BusinessEntity
     
     public DateTimeOffset? LastModifiedAt { get; set; }
 
-    // Navigation properties
+    /// <summary>
+    /// The source this observation was extracted from
+    /// </summary>
+    protected Guid? SourceId { get; set; }
+
+    /// <summary>
+    /// Navigation property to the source
+    /// </summary>
+    [ForeignKey(nameof(SourceId))]
     public Source? Source { get; set; }
+
+    /// <summary>
+    /// The cluster this observation belongs to
+    /// </summary>
+    protected Guid? ObservationClusterId { get; set; }
+
+    /// <summary>
+    /// Navigation property to the observation cluster
+    /// </summary>
+    [ForeignKey(nameof(ObservationClusterId))]
+    public ObservationCluster? ObservationCluster { get; set; }
+
     public ICollection<Finding> Findings { get; set; } = new List<Finding>();
 }
 
