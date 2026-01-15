@@ -53,7 +53,7 @@ public class TestWebApplicationFactory : WebApplicationFactory<Medley.Web.Progra
 
             // Register test data source as singleton
             services.AddSingleton<NpgsqlDataSource>(sp =>
-                ApplicationDbContextFactory.CreateDataSource(_fixture.ConnectionString));
+                ApplicationDbContextFactory.CreateDataSource(_fixture.ConnectionString!));
 
             // Add DbContext using the test data source
             services.AddDbContext<ApplicationDbContext>((sp, options) =>

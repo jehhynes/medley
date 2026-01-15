@@ -20,7 +20,7 @@ public class FellowMeResponse
 public class FellowUser
 {
     [JsonPropertyName("id")]
-    public string Id { get; set; }
+    public required string Id { get; set; }
     
     [JsonPropertyName("email")]
     public string? Email { get; set; }
@@ -35,7 +35,7 @@ public class FellowUser
 public class FellowWorkspace
 {
     [JsonPropertyName("id")]
-    public string Id { get; set; }
+    public required string Id { get; set; }
     
     [JsonPropertyName("name")]
     public string? Name { get; set; }
@@ -59,7 +59,7 @@ public class FellowRecordingResponse
 public class FellowRecordingsResponse
 {
     [JsonPropertyName("recordings")]
-    public FellowRecordingsData? Recordings { get; set; }
+    public required FellowRecordingsData Recordings { get; set; }
 }
 
 /// <summary>
@@ -68,10 +68,10 @@ public class FellowRecordingsResponse
 public class FellowRecordingsData
 {
     [JsonPropertyName("page_info")]
-    public FellowPageInfo? PageInfo { get; set; }
+    public required FellowPageInfo PageInfo { get; set; }
     
     [JsonPropertyName("data")]
-    public List<FellowRecording>? Data { get; set; }
+    public required List<FellowRecording> Data { get; set; }
 }
 
 /// <summary>
@@ -95,7 +95,7 @@ public class FellowRecording
     public string? Id { get; set; }
     
     [JsonPropertyName("title")]
-    public string? Title { get; set; }
+    public required string Title { get; set; }
     
     [JsonPropertyName("created_at")]
     public DateTimeOffset? CreatedAt { get; set; }
@@ -157,9 +157,9 @@ public class FellowSpeechSegment
 /// </summary>
 public class FellowRecordingsRequestOptions
 {
-    public FellowPaginationOptions? Pagination { get; set; }
-    public FellowIncludeOptions? Include { get; set; }
-    public FellowRecordingFilters? Filters { get; set; }
+    public FellowPaginationOptions Pagination { get; set; } = new FellowPaginationOptions();
+    public FellowIncludeOptions Include { get; set; } = new FellowIncludeOptions();
+    public FellowRecordingFilters Filters { get; set; } = new FellowRecordingFilters();
 }
 
 /// <summary>

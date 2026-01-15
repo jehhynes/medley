@@ -32,7 +32,7 @@ public class AuthControllerTests
             _userManagerMock.Object,
             contextAccessorMock.Object,
             userPrincipalFactoryMock.Object,
-            null, null, null, null);
+            null!, null!, null!, null!);
 
         _auditLogServiceMock = new Mock<IUserAuditLogService>();
         _emailServiceMock = new Mock<IEmailService>();

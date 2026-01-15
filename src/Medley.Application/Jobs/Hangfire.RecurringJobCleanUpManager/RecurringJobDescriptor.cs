@@ -22,7 +22,7 @@ public class RecurringJobDescriptor : IEquatable<RecurringJobDescriptor>
     public string CronExpression { get; }
 
 
-    public bool Equals(RecurringJobDescriptor other)
+    public bool Equals(RecurringJobDescriptor? other)
     {
         if (ReferenceEquals(null, other)) return false;
         if (ReferenceEquals(this, other)) return true;
@@ -85,7 +85,7 @@ public class RecurringJobDescriptor : IEquatable<RecurringJobDescriptor>
     //private static RecurringJobDescriptor Create<T>(Expression<Action<T>> methodCall, string cronExpression,
     //    RecurringJobOptions options) => Create(typeof(T).Name, methodCall, cronExpression, options);
 
-    public override bool Equals(object obj)
+    public override bool Equals(object? obj)
     {
         if (ReferenceEquals(null, obj)) return false;
         if (ReferenceEquals(this, obj)) return true;

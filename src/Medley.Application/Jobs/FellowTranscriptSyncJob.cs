@@ -148,7 +148,7 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
             pageNumber++;
             if (!string.IsNullOrWhiteSpace(cursor))
             {
-                options.Pagination!.Cursor = cursor;
+                options.Pagination.Cursor = cursor;
             }
 
             var response = await _fellowService.ListRecordingsAsync(
@@ -214,7 +214,7 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
             var pageSkipped = 0;
             var createdSourceIds = new List<Guid>();
 
-            foreach (var recording in response.Recordings!.Data!)
+            foreach (var recording in response.Recordings.Data)
             {
                 pageProcessed++;
 
@@ -244,7 +244,7 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
                 }
 
                 // Consolidate transcript by speaker
-                string? consolidatedTranscript = null;
+                string consolidatedTranscript = string.Empty;
                 if (recording.Transcript?.SpeechSegments != null && recording.Transcript.SpeechSegments.Count > 0)
                 {
                     consolidatedTranscript = ConsolidateTranscriptBySpeaker(recording.Transcript.SpeechSegments);

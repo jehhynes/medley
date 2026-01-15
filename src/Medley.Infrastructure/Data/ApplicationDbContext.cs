@@ -18,59 +18,28 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     {
     }
 
-    /// <summary>
-    /// User audit log entries for authentication and authorization events
-    /// </summary>
-    public DbSet<UserAuditLog> UserAuditLogs { get; set; } = null!;
-
-    /// <summary>
-    /// Knowledge fragments with vector embeddings for semantic similarity
-    /// </summary>
-    public DbSet<Fragment> Fragments { get; set; } = null!;
-    public DbSet<Organization> Organizations { get; set; } = null!;
-    public DbSet<Integration> Integrations { get; set; } = null!;
-    public DbSet<Source> Sources { get; set; } = null!;
-    public DbSet<Article> Articles { get; set; } = null!;
-    public DbSet<ArticleType> ArticleTypes { get; set; } = null!;
-    public DbSet<ArticleVersion> ArticleVersions { get; set; } = null!;
-    public DbSet<Insight> Insights { get; set; } = null!;
-    public DbSet<Observation> Observations { get; set; } = null!;
-    public DbSet<Finding> Findings { get; set; } = null!;
-    public DbSet<ObservationCluster> ObservationClusters { get; set; } = null!;
-    public DbSet<Template> Templates { get; set; } = null!;
-    public DbSet<TagType> TagTypes { get; set; } = null!;
-    public DbSet<TagOption> TagOptions { get; set; } = null!;
-    public DbSet<Tag> Tags { get; set; } = null!;
-    
-    /// <summary>
-    /// Chat conversations about articles
-    /// </summary>
-    public DbSet<ChatConversation> ChatConversations { get; set; } = null!;
-    
-    /// <summary>
-    /// Messages in chat conversations
-    /// </summary>
-    public DbSet<ChatMessage> ChatMessages { get; set; } = null!;
-    
-    /// <summary>
-    /// Article improvement plans
-    /// </summary>
-    public DbSet<Plan> Plans { get; set; } = null!;
-    
-    /// <summary>
-    /// Fragment recommendations within plans
-    /// </summary>
-    public DbSet<PlanFragment> PlanFragments { get; set; } = null!;
-    
-    /// <summary>
-    /// AI token usage tracking for cost monitoring and analytics
-    /// </summary>
-    public DbSet<AiTokenUsage> AiTokenUsages { get; set; } = null!;
-    
-    /// <summary>
-    /// Data Protection keys for persisting encryption keys across deployments
-    /// </summary>
-    public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = null!;
+    public DbSet<UserAuditLog> UserAuditLogs { get; set; }
+    public DbSet<Fragment> Fragments { get; set; }
+    public DbSet<Organization> Organizations { get; set; }
+    public DbSet<Integration> Integrations { get; set; }
+    public DbSet<Source> Sources { get; set; }
+    public DbSet<Article> Articles { get; set; }
+    public DbSet<ArticleType> ArticleTypes { get; set; }
+    public DbSet<ArticleVersion> ArticleVersions { get; set; }
+    public DbSet<Insight> Insights { get; set; }
+    public DbSet<Observation> Observations { get; set; }
+    public DbSet<Finding> Findings { get; set; }
+    public DbSet<ObservationCluster> ObservationClusters { get; set; }
+    public DbSet<Template> Templates { get; set; }
+    public DbSet<TagType> TagTypes { get; set; }
+    public DbSet<TagOption> TagOptions { get; set; }
+    public DbSet<Tag> Tags { get; set; }
+    public DbSet<ChatConversation> ChatConversations { get; set; }
+    public DbSet<ChatMessage> ChatMessages { get; set; }
+    public DbSet<Plan> Plans { get; set; }
+    public DbSet<PlanFragment> PlanFragments { get; set; }
+    public DbSet<AiTokenUsage> AiTokenUsages { get; set; }
+    public DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {

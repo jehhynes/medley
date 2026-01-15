@@ -69,7 +69,7 @@ public class AiCallContext
         // Push current context onto the stack (if set)
         if (!string.IsNullOrWhiteSpace(ServiceName))
         {
-            _callStack.Push(new ContextFrame(ServiceName, OperationName!, EntityType, EntityId));
+            _callStack.Push(new ContextFrame(ServiceName, OperationName, EntityType, EntityId));
         }
 
         // Set new context
@@ -125,7 +125,7 @@ public class AiCallContext
     /// <summary>
     /// Represents a saved context frame in the call stack
     /// </summary>
-    private record ContextFrame(string ServiceName, string OperationName, string? EntityType, Guid? EntityId);
+    private record ContextFrame(string ServiceName, string? OperationName, string? EntityType, Guid? EntityId);
 
     /// <summary>
     /// Disposable scope that restores the previous context when disposed

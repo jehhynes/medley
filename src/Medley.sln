@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
-VisualStudioVersion = 18.0.11222.15 d18.0
+VisualStudioVersion = 18.0.11222.15
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medley.Web", "Medley.Web\Medley.Web.csproj", "{F3B89668-1A22-414E-9E5A-5C38379249A7}"
 EndProject
@@ -130,7 +130,6 @@ Global
 		{CF93F536-69E6-43F8-8DA2-11E9555A8A44}.Release|x86.ActiveCfg = Release|Any CPU
 		{CF93F536-69E6-43F8-8DA2-11E9555A8A44}.Release|x86.Build.0 = Release|Any CPU
 		{076FBD96-907C-46AE-A740-B3BC6DA8BC64}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{076FBD96-907C-46AE-A740-B3BC6DA8BC64}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{076FBD96-907C-46AE-A740-B3BC6DA8BC64}.Debug|x64.ActiveCfg = Debug|Any CPU
 		{076FBD96-907C-46AE-A740-B3BC6DA8BC64}.Debug|x64.Build.0 = Debug|Any CPU
 		{076FBD96-907C-46AE-A740-B3BC6DA8BC64}.Debug|x86.ActiveCfg = Debug|Any CPU

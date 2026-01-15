@@ -2,6 +2,7 @@ using Medley.Application.Configuration;
 using Medley.Application.Interfaces;
 using Medley.Application.Services;
 using Medley.Domain.Entities;
+using Medley.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -46,7 +47,7 @@ public class FragmentsApiController : ControllerBase
     {
         var fragments = await _fragmentRepository.Query()
             .Include(f => f.Source)
-            .OrderByDescending(f => f.Source.Date)
+            .OrderByDescending(f => f.Source!.Date)
             .ThenByDescending(f => f.CreatedAt)
             .ThenBy(f => f.Id) // Deterministic tiebreaker for pagination
             .Skip(skip)
@@ -57,10 +58,10 @@ public class FragmentsApiController : ControllerBase
                 f.Title,
                 f.Summary,
                 f.Category,
-                SourceId = f.Source.Id,
-                SourceName = f.Source.Name,
-                SourceType = f.Source.Type,
-                SourceDate = f.Source.Date,
+                SourceId = f.Source == null ? null : (Guid?)f.Source.Id,
+                SourceName = f.Source == null ? null : (string?)f.Source.Name,
+                SourceType = f.Source == null ? null : (SourceType?)f.Source.Type,
+                SourceDate = f.Source == null ? null : (DateTimeOffset?)f.Source.Date,
                 f.CreatedAt,
                 f.Confidence,
                 f.ConfidenceComment
@@ -92,10 +93,10 @@ public class FragmentsApiController : ControllerBase
             fragment.Summary,
             fragment.Category,
             fragment.Content,
-            SourceId = fragment.Source.Id,
-            SourceName = fragment.Source.Name,
-            SourceType = fragment.Source.Type,
-            SourceDate = fragment.Source.Date,
+            SourceId = fragment.Source == null ? null : (Guid?)fragment.Source.Id,
+            SourceName = fragment.Source == null ? null : (string?)fragment.Source.Name,
+            SourceType = fragment.Source == null ? null : (SourceType?)fragment.Source.Type,
+            SourceDate = fragment.Source == null ? null : (DateTimeOffset?)fragment.Source.Date,
             fragment.CreatedAt,
             fragment.LastModifiedAt,
             fragment.Confidence,
@@ -111,7 +112,7 @@ public class FragmentsApiController : ControllerBase
     {
         var fragments = await _fragmentRepository.Query()
             .Include(f => f.Source)
-            .Where(f => f.Source.Id == sourceId)
+            .Where(f => f.Source!.Id == sourceId)
             .OrderByDescending(f => f.CreatedAt)
             .ThenBy(f => f.Id) // Deterministic tiebreaker
             .Select(f => new
@@ -193,10 +194,10 @@ public class FragmentsApiController : ControllerBase
                         fragment.Title,
                         fragment.Summary,
                         fragment.Category,
-                        SourceId = fragment.Source.Id,
-                        SourceName = fragment.Source.Name,
-                        SourceType = fragment.Source.Type,
-                        SourceDate = fragment.Source.Date,
+                        SourceId = fragment.Source == null ? null : (Guid?)fragment.Source.Id,
+                        SourceName = fragment.Source == null ? null : (string?)fragment.Source.Name,
+                        SourceType = fragment.Source == null ? null : (SourceType?)fragment.Source.Type,
+                        SourceDate = fragment.Source == null ? null : (DateTimeOffset?)fragment.Source.Date,
                         fragment.CreatedAt,
                         fragment.Confidence,
                         fragment.ConfidenceComment,

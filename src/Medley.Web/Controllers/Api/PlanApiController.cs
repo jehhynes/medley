@@ -343,11 +343,7 @@ public class PlanApiController : ControllerBase
             try
             {
                 // Enqueue existing ArticleChatJob (reuse existing pipeline)
-                var jobId = _backgroundJobClient.Enqueue<ArticleChatJob>(
-                    job => job.ProcessChatMessageAsync(
-                        userMessage.Id,
-                        null!,
-                        CancellationToken.None));
+                var jobId = _backgroundJobClient.Enqueue<ArticleChatJob>(job => job.ProcessChatMessageAsync(userMessage.Id, default!, default));
 
                 _logger.LogInformation("Enqueued chat job {JobId} for plan implementation conversation {ConversationId}", 
                     jobId, agentConversation.Id);

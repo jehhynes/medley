@@ -142,8 +142,13 @@ public class ArticleChatService : IArticleChatService
             // Get the latest user message to process
             var latestUserMessage = await GetLatestUserMessageAsync(conversationId, cancellationToken);
             
+            if (latestUserMessage.User == null)
+            {
+                throw new InvalidOperationException($"User not found for latest message {latestUserMessage.Id} in conversation {conversationId}");
+            }
+
             // Create article-scoped plugins instance
-            var tools = _toolsFactory.Create(article.Id, latestUserMessage.User!.Id, conversation.ImplementingPlanId);
+            var tools = _toolsFactory.Create(article.Id, latestUserMessage.User.Id, conversation.ImplementingPlan?.Id);
             
             // Select system prompt and tools based on mode
             string systemMessage;
@@ -354,7 +359,7 @@ public class ArticleChatService : IArticleChatService
                     yield return new ChatStreamUpdate
                     {
                         Type = StreamUpdateType.MessageComplete,
-                        MessageId = Guid.Parse(update.MessageId!),
+                        MessageId = messageId,
                         ConversationId = conversationId,
                         ArticleId = articleId,
                         Text = chatResponse.Text
@@ -408,7 +413,7 @@ public class ArticleChatService : IArticleChatService
 
             var message = new DomainChatMessage()
             {
-                Id = role == ChatMessageRole.Tool ? Guid.NewGuid() : Guid.Parse(aiMessage.MessageId!), //Tool messages don't have unique IDs from the chat client
+                Id = role == ChatMessageRole.Tool || aiMessage.MessageId == null ? Guid.NewGuid() : Guid.Parse(aiMessage.MessageId), //Tool messages don't have unique IDs from the chat client
                 Conversation = conversation,
                 Role = role,
                 Text = aiMessage.Text ?? string.Empty,

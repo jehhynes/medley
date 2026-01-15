@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
+	<WarningsAsErrors>nullable</WarningsAsErrors>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>aspnet-Medley.Web-1e2983dc-d9d0-4468-ba34-de1e3bf434d4</UserSecretsId>
   </PropertyGroup>
