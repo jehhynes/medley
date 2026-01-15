@@ -22,74 +22,76 @@
 }
 
 .alert {
-  border: none;
-  border-left: .5rem solid;
-  border-radius: $border-radius;
-
-  a,
-  .alert-link {
-    text-decoration: underline;
-  }
-
-  @each $color, $value in $theme-colors {
-    &-#{$color} {
-      border-left-color: $value;
-      background-color: rgba($value, 0.08);
-      color: darken($value, 10%);
-
-      a,
-      .alert-link {
-        color: darken($value, 15%);
-      }
-    }
-  }
-
-  &-light {
-    border-left-color: $gray-400;
-    background-color: rgba($gray-400, 0.08);
-    color: $body-color;
+    border: .1rem solid;
+    border-left: .5rem solid;
+    border-top-left-radius: 0.75rem;
+    border-bottom-left-radius: 0.75rem;
+    border-top-right-radius: $border-radius;
+    border-bottom-right-radius: $border-radius;
+    background-color: rgba($gray-200, 0.5);
 
     a,
     .alert-link {
-      color: $body-color;
+        text-decoration: underline;
     }
-  }
 
-  &-dark {
-    border-left-color: $dark;
-    background-color: rgba($dark, 0.08);
-    color: $dark;
-
-    a,
-    .alert-link {
-      color: darken($dark, 10%);
-    }
-  }
-
-  // Dark theme adjustments
-  [data-bs-theme="dark"] & {
     @each $color, $value in $theme-colors {
-      &-#{$color} {
-        background-color: rgba($value, 0.15);
-        color: lighten($value, 20%);
+        &-#{$color} {
+            border-left-color: $value;
+            border-top-color: rgba($value, 0.2);
+            border-right-color: rgba($value, 0.2);
+            border-bottom-color: rgba($value, 0.2);
+            color: $body-color;
 
-        a,
-        .alert-link {
-          color: lighten($value, 25%);
+            a,
+            .alert-link {
+                color: $body-color;
+            }
         }
-      }
     }
 
     &-light {
-      background-color: rgba($gray-400, 0.15);
-      color: $gray-300;
+        border-left-color: $gray-400;
+        color: $body-color;
+
+        a,
+        .alert-link {
+            color: $body-color;
+        }
     }
 
     &-dark {
-      background-color: rgba($white, 0.15);
-      color: $white;
+        border-left-color: $dark;
+        color: $dark;
+
+        a,
+        .alert-link {
+            color: darken($dark, 10%);
+        }
     }
-  }
+    // Dark theme adjustments
+    [data-bs-theme="dark"] & {
+        background-color: rgba($gray-800, 0.5);
+
+        @each $color, $value in $theme-colors {
+            &-#{$color} {
+                color: $gray-300;
+
+                a,
+                .alert-link {
+                    color: $gray-300;
+                }
+            }
+        }
+
+        &-light {
+            color: $gray-300;
+        }
+
+        &-dark {
+            color: $white;
+        }
+    }
 }
 
 // Containers
