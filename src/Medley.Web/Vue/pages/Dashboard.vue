@@ -358,6 +358,12 @@ export default {
           },
           options: {
             ...defaultOptions,
+            plugins: {
+              ...defaultOptions.plugins,
+              legend: {
+                display: false
+              }
+            },
             scales: {
               y: {
                 beginAtZero: true,
@@ -438,7 +444,14 @@ export default {
               pointRadius: 3
             }]
           },
-          options: defaultOptions
+          options: {
+            ...defaultOptions,
+            plugins: {
+              legend: {
+                display: false
+              }
+            }
+          }
         });
       }
 
@@ -495,6 +508,7 @@ export default {
             options: {
               ...defaultOptions,
               plugins: {
+                ...defaultOptions.plugins,
                 legend: {
                   display: true,
                   position: 'right'
