@@ -176,12 +176,18 @@ public class CaseInsensitiveQueryTests : DatabaseTestBase
         // Add fragments with special characters
         var specialFragment = new Fragment
         {
+            Title = "Special Characters Test",
+            Summary = "Fragment with special characters",
+            Category = "Test",
             Content = "This contains % and _ special characters",
             Source = await _dbContext.Sources.FirstAsync()
         };
         
         var noSpecialFragment = new Fragment
         {
+            Title = "No Special Characters",
+            Summary = "Regular fragment",
+            Category = "Test",
             Content = "This fragment has no special characters",
             Source = await _dbContext.Sources.FirstAsync()
         };
@@ -294,6 +300,7 @@ public class CaseInsensitiveQueryTests : DatabaseTestBase
         var integration = new Domain.Entities.Integration
         {
             Id = Guid.NewGuid(),
+            Name = "Test Integration",
             Type = IntegrationType.Fellow
         };
         _dbContext.Integrations.Add(integration);
@@ -302,6 +309,10 @@ public class CaseInsensitiveQueryTests : DatabaseTestBase
         {
             Name = "Test Source",
             Type = SourceType.Meeting,
+            MetadataType = SourceMetadataType.Collector_Fellow,
+            Content = "Test content",
+            MetadataJson = "{}",
+            Date = DateTimeOffset.UtcNow,
             Integration = integration
         };
         _dbContext.Sources.Add(source);
@@ -310,14 +321,14 @@ public class CaseInsensitiveQueryTests : DatabaseTestBase
         // Create test fragments with various case combinations
         var testFragments = new[]
         {
-            new Fragment { Content = "This is a test fragment", Source = source },
-            new Fragment { Content = "TEST content with uppercase", Source = source },
-            new Fragment { Content = "Mixed Test Case Content", Source = source },
-            new Fragment { Content = "Another fragment for testing", Source = source },
-            new Fragment { Content = "Ends with test", Source = source },
-            new Fragment { Content = "Test starts this fragment", Source = source },
-            new Fragment { Content = "No matching content here", Source = source },
-            new Fragment { Content = "Special % and _ characters", Source = source }
+            new Fragment { Title = "Test Fragment 1", Summary = "Summary", Category = "Test", Content = "This is a test fragment", Source = source },
+            new Fragment { Title = "Test Fragment 2", Summary = "Summary", Category = "Test", Content = "TEST content with uppercase", Source = source },
+            new Fragment { Title = "Test Fragment 3", Summary = "Summary", Category = "Test", Content = "Mixed Test Case Content", Source = source },
+            new Fragment { Title = "Test Fragment 4", Summary = "Summary", Category = "Test", Content = "Another fragment for testing", Source = source },
+            new Fragment { Title = "Test Fragment 5", Summary = "Summary", Category = "Test", Content = "Ends with test", Source = source },
+            new Fragment { Title = "Test Fragment 6", Summary = "Summary", Category = "Test", Content = "Test starts this fragment", Source = source },
+            new Fragment { Title = "Test Fragment 7", Summary = "Summary", Category = "Test", Content = "No matching content here", Source = source },
+            new Fragment { Title = "Test Fragment 8", Summary = "Summary", Category = "Test", Content = "Special % and _ characters", Source = source }
         };
 
         _dbContext.Fragments.AddRange(testFragments);

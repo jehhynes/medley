@@ -57,7 +57,7 @@ public class IntegrationServiceTests
         {
             Id = id,
             Type = IntegrationType.GitHub,
-            DisplayName = "Test GitHub Integration",
+            Name = "Test GitHub Integration",
             ApiKey = "test-key",
             BaseUrl = "https://api.github.com"
         };
@@ -72,7 +72,7 @@ public class IntegrationServiceTests
         Assert.NotNull(result);
         Assert.Equal(id, result.Id);
         Assert.Equal(IntegrationType.GitHub, result.Type);
-        Assert.Equal("Test GitHub Integration", result.DisplayName);
+        Assert.Equal("Test GitHub Integration", result.Name);
     }
 
     [Fact]
@@ -96,8 +96,8 @@ public class IntegrationServiceTests
         // Arrange
         var integrations = new List<Integration>
         {
-            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.GitHub, DisplayName = "GitHub 1" },
-            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.Fellow, DisplayName = "Fellow 1" }
+            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.GitHub, Name = "GitHub 1" },
+            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.Fellow, Name = "Fellow 1" }
         }.AsQueryable();
 
         _mockRepository.Setup(r => r.Query())
@@ -120,7 +120,7 @@ public class IntegrationServiceTests
         {
             Id = Guid.NewGuid(),
             Type = IntegrationType.GitHub,
-            DisplayName = "Test Integration"
+            Name = "Test Integration"
         };
 
         _mockRepository.Setup(r => r.AddAsync(integration))
@@ -141,7 +141,7 @@ public class IntegrationServiceTests
         {
             Id = Guid.NewGuid(),
             Type = IntegrationType.GitHub,
-            DisplayName = "Test GitHub Integration",
+            Name = "Test GitHub Integration",
             ApiKey = "test-key",
             BaseUrl = "https://api.github.com"
         };
@@ -165,7 +165,7 @@ public class IntegrationServiceTests
         {
             Id = Guid.NewGuid(),
             Type = IntegrationType.GitHub,
-            DisplayName = "Test GitHub Integration",
+            Name = "Test GitHub Integration",
             ApiKey = "invalid-key",
             BaseUrl = "https://api.github.com"
         };
@@ -189,7 +189,7 @@ public class IntegrationServiceTests
         {
             Id = Guid.NewGuid(),
             Type = IntegrationType.Slack, // Not registered in our mock services
-            DisplayName = "Test Slack Integration"
+            Name = "Test Slack Integration"
         };
 
         // Act
@@ -209,7 +209,7 @@ public class IntegrationServiceTests
         {
             Id = Guid.NewGuid(),
             Type = IntegrationType.GitHub,
-            DisplayName = "Test Integration"
+            Name = "Test Integration"
         };
 
         // Act & Assert

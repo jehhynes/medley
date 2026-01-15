@@ -105,7 +105,8 @@ public class AuthControllerTests
         {
             Id = Guid.NewGuid(),
             UserName = "test@example.com",
-            Email = "test@example.com"
+            Email = "test@example.com",
+            FullName = "Test User"
         };
 
         _userManagerMock.Setup(x => x.FindByEmailAsync(model.Email))
@@ -139,7 +140,8 @@ public class AuthControllerTests
         {
             Id = Guid.NewGuid(),
             UserName = "test@example.com",
-            Email = "test@example.com"
+            Email = "test@example.com",
+            FullName = "Test User"
         };
 
         _userManagerMock.Setup(x => x.FindByEmailAsync(model.Email))
@@ -172,7 +174,8 @@ public class AuthControllerTests
         {
             Id = Guid.NewGuid(),
             UserName = "test@example.com",
-            Email = "test@example.com"
+            Email = "test@example.com",
+            FullName = "Test User"
         };
 
         _userManagerMock.Setup(x => x.FindByEmailAsync(model.Email))
@@ -221,7 +224,8 @@ public class AuthControllerTests
         var user = new User
         {
             Id = Guid.NewGuid(),
-            UserName = "test@example.com"
+            UserName = "test@example.com",
+            FullName = "Test User"
         };
 
         _userManagerMock.Setup(x => x.GetUserAsync(It.IsAny<System.Security.Claims.ClaimsPrincipal>()))
@@ -249,7 +253,8 @@ public class AuthControllerTests
         {
             Id = userId,
             Email = "test@example.com",
-            UserName = "test@example.com"
+            UserName = "test@example.com",
+            FullName = "Test User"
         };
 
         _userManagerMock.Setup(x => x.FindByIdAsync(userId.ToString()))
@@ -276,7 +281,8 @@ public class AuthControllerTests
         {
             Id = userId,
             Email = "test@example.com",
-            UserName = "test@example.com"
+            UserName = "test@example.com",
+            FullName = "Test User"
         };
 
         _userManagerMock.Setup(x => x.FindByIdAsync(userId.ToString()))

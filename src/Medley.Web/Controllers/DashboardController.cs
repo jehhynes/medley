@@ -52,7 +52,7 @@ namespace Medley.Web.Controllers
 
             // Temporal analytics - Stacked by Internal/External
             var sourcesByYearData = await _sourceRepository.Query()
-                .Select(s => new { Year = (s.Date ?? s.CreatedAt).Year, s.IsInternal })
+                .Select(s => new { Year = s.Date.Year, s.IsInternal })
                 .ToListAsync();
             
             metrics.SourcesByYear = sourcesByYearData
@@ -71,7 +71,7 @@ namespace Medley.Web.Controllers
                 .ToList();
 
             var monthlyData = await _sourceRepository.Query()
-                .Select(s => s.Date ?? s.CreatedAt)
+                .Select(s => s.Date)
                 .GroupBy(d => new { d.Year, d.Month })
                 .Select(g => new { g.Key.Year, g.Key.Month, Count = g.Count() })
                 .OrderBy(x => x.Year).ThenBy(x => x.Month)

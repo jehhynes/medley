@@ -20,7 +20,7 @@ public class PlanFragment : BaseEntity
     /// </summary>
     [ForeignKey(nameof(PlanId))]
     [DeleteBehavior(DeleteBehavior.Cascade)]
-    public virtual Plan Plan { get; set; } = null!;
+    public required virtual Plan Plan { get; set; }
 
     /// <summary>
     /// The fragment being recommended
@@ -32,17 +32,17 @@ public class PlanFragment : BaseEntity
     /// </summary>
     [ForeignKey(nameof(FragmentId))]
     [DeleteBehavior(DeleteBehavior.Restrict)]
-    public virtual Fragment Fragment { get; set; } = null!;
+    public required virtual Fragment Fragment { get; set; }
 
     /// <summary>
     /// Semantic similarity score between fragment and article
     /// </summary>
-    public double SimilarityScore { get; set; }
+    public required double SimilarityScore { get; set; }
 
     /// <summary>
     /// Whether to include this fragment in the article (true) or just reference it (false)
     /// </summary>
-    public bool Include { get; set; }
+    public required bool Include { get; set; }
 
     /// <summary>
     /// AI agent's reasoning for why this fragment is recommended or not recommended

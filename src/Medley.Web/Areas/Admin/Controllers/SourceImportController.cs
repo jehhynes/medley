@@ -140,7 +140,7 @@ public class SourceImportController : Controller
         var integration = new Integration
         {
             Type = IntegrationType.Manual,
-            DisplayName = "Manual Import",
+            Name = "Manual Import",
             Status = ConnectionStatus.Connected
         };
 

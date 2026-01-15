@@ -127,7 +127,7 @@
                                             }
                                         </div>
                                         <div>
-                                            <div class="fw-semibold">@integration.DisplayName</div>
+                                            <div class="fw-semibold">@integration.Name</div>
                                             <small class="text-muted">ID: @integration.Id.ToString("N")[..8]...</small>
                                         </div>
                                     </div>
@@ -189,7 +189,7 @@
                                             <li><hr class="dropdown-divider"></li>
                                             <li>
                                                 <button type="button" class="dropdown-item text-danger delete-integration" 
-                                                        data-id="@integration.Id" data-name="@integration.DisplayName">
+                                                        data-id="@integration.Id" data-name="@integration.Name">
                                                     <i class="bi bi-trash"></i> Delete
                                                 </button>
                                             </li>

@@ -47,5 +47,5 @@ public class UserAuditLog : BaseEntity
     /// <summary>
     /// Indicates if the action was successful
     /// </summary>
-    public required bool Success { get; set; } = true;
+    public required bool Success { get; set; }
 }

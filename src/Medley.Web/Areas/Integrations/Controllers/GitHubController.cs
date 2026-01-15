@@ -42,7 +42,7 @@ public class GitHubController : Controller
                 throw new Exception("Integration is not a GitHub integration.");
 
             model.Id = integration.Id;
-            model.DisplayName = integration.DisplayName ?? "";
+            model.Name = integration.Name;
             if (!string.IsNullOrWhiteSpace(model.ApiKey))
                 model.ApiKey = integration.ApiKey ?? "";
             model.BaseUrl = integration.BaseUrl ?? "https://api.github.com";
@@ -76,12 +76,12 @@ public class GitHubController : Controller
                 throw new Exception("Integration is not a GitHub integration.");
 
             // Update existing integration
-            integration.DisplayName = model.DisplayName;
+            integration.Name = model.Name;
             integration.ApiKey = model.ApiKey;
             integration.BaseUrl = model.BaseUrl;
             integration.LastModifiedAt = DateTimeOffset.UtcNow;
 
-            TempData["Success"] = $"GitHub integration '{model.DisplayName}' updated successfully.";
+            TempData["Success"] = $"GitHub integration '{model.Name}' updated successfully.";
             // Entity is already tracked, changes will be saved on SaveChangesAsync
         }
         else
@@ -91,13 +91,13 @@ public class GitHubController : Controller
             {
                 Id = Guid.NewGuid(),
                 Type = IntegrationType.GitHub,
-                DisplayName = model.DisplayName,
+                Name = model.Name,
                 ApiKey = model.ApiKey,
                 BaseUrl = model.BaseUrl,
                 LastModifiedAt = DateTimeOffset.UtcNow
             };
 
-            TempData["Success"] = $"GitHub integration '{model.DisplayName}' created successfully.";
+            TempData["Success"] = $"GitHub integration '{model.Name}' created successfully.";
             await _integrationService.AddAsync(integration);
         }
         return RedirectToAction("Index", "Manage");

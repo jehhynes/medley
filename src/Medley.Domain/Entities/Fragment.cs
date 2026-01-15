@@ -14,19 +14,19 @@ public class Fragment : BusinessEntity
     /// Title of the fragment
     /// </summary>
     [MaxLength(200)]
-    public string? Title { get; set; }
+    public required string Title { get; set; }
 
     /// <summary>
     /// Brief summary of the fragment
     /// </summary>
     [MaxLength(500)]
-    public string? Summary { get; set; }
+    public required string Summary { get; set; }
 
     /// <summary>
     /// Category of the fragment (e.g., Decision, Action Item, Feature Request)
     /// </summary>
     [MaxLength(100)]
-    public string? Category { get; set; }
+    public required string Category { get; set; }
 
     /// <summary>
     /// The text content of the fragment

@@ -41,8 +41,8 @@ public class ManageControllerTests
         // Arrange
         var integrations = new List<Integration>
         {
-            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.GitHub, DisplayName = "GitHub 1", Status = ConnectionStatus.Connected },
-            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.Fellow, DisplayName = "Fellow 1", Status = ConnectionStatus.Disconnected }
+            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.GitHub, Name = "GitHub 1", Status = ConnectionStatus.Connected },
+            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.Fellow, Name = "Fellow 1", Status = ConnectionStatus.Disconnected }
         }.AsQueryable();
 
         _mockIntegrationService.Setup(s => s.Query())
@@ -60,13 +60,13 @@ public class ManageControllerTests
     }
 
     [Fact]
-    public async Task Index_WithSearchFilter_FiltersByDisplayName()
+    public async Task Index_WithSearchFilter_FiltersByName()
     {
         // Arrange
         var integrations = new List<Integration>
         {
-            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.GitHub, DisplayName = "GitHub Integration", Status = ConnectionStatus.Connected },
-            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.Fellow, DisplayName = "Fellow Integration", Status = ConnectionStatus.Connected }
+            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.GitHub, Name = "GitHub Integration", Status = ConnectionStatus.Connected },
+            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.Fellow, Name = "Fellow Integration", Status = ConnectionStatus.Connected }
         }.AsQueryable();
 
         _mockIntegrationService.Setup(s => s.Query())
@@ -79,7 +79,7 @@ public class ManageControllerTests
         var viewResult = Assert.IsType<ViewResult>(result);
         var model = Assert.IsType<ManageViewModel>(viewResult.Model);
         Assert.Single(model.Integrations);
-        Assert.Equal("GitHub Integration", model.Integrations.First().DisplayName);
+        Assert.Equal("GitHub Integration", model.Integrations.First().Name);
         Assert.Equal("GitHub", model.SearchTerm);
     }
 
@@ -89,8 +89,8 @@ public class ManageControllerTests
         // Arrange
         var integrations = new List<Integration>
         {
-            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.GitHub, DisplayName = "GitHub 1", Status = ConnectionStatus.Connected },
-            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.Fellow, DisplayName = "Fellow 1", Status = ConnectionStatus.Connected }
+            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.GitHub, Name = "GitHub 1", Status = ConnectionStatus.Connected },
+            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.Fellow, Name = "Fellow 1", Status = ConnectionStatus.Connected }
         }.AsQueryable();
 
         _mockIntegrationService.Setup(s => s.Query())
@@ -113,8 +113,8 @@ public class ManageControllerTests
         // Arrange
         var integrations = new List<Integration>
         {
-            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.GitHub, DisplayName = "GitHub 1", Status = ConnectionStatus.Connected },
-            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.Fellow, DisplayName = "Fellow 1", Status = ConnectionStatus.Disconnected }
+            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.GitHub, Name = "GitHub 1", Status = ConnectionStatus.Connected },
+            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.Fellow, Name = "Fellow 1", Status = ConnectionStatus.Disconnected }
         }.AsQueryable();
 
         _mockIntegrationService.Setup(s => s.Query())
@@ -152,7 +152,7 @@ public class ManageControllerTests
         {
             Id = id,
             Type = IntegrationType.GitHub,
-            DisplayName = "Test Integration",
+            Name = "Test Integration",
             ApiKey = "test-key",
             BaseUrl = "https://api.github.com"
         };
@@ -392,7 +392,7 @@ public class ManageControllerTests
         {
             Id = id,
             Type = IntegrationType.GitHub,
-            DisplayName = "Test Integration",
+            Name = "Test Integration",
             ApiKey = "test-key",
             BaseUrl = "https://api.github.com"
         };
@@ -494,8 +494,8 @@ public class ManageControllerTests
         // Arrange
         var integrations = new List<Integration>
         {
-            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.GitHub, DisplayName = "GitHub Integration", Status = ConnectionStatus.Connected },
-            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.Fellow, DisplayName = "Fellow Integration", Status = ConnectionStatus.Connected }
+            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.GitHub, Name = "GitHub Integration", Status = ConnectionStatus.Connected },
+            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.Fellow, Name = "Fellow Integration", Status = ConnectionStatus.Connected }
         }.AsQueryable();
 
         _mockIntegrationService.Setup(s => s.Query())
@@ -517,8 +517,8 @@ public class ManageControllerTests
         // Arrange
         var integrations = new List<Integration>
         {
-            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.GitHub, DisplayName = "GitHub Integration", Status = ConnectionStatus.Connected },
-            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.Fellow, DisplayName = "Fellow Integration", Status = ConnectionStatus.Connected }
+            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.GitHub, Name = "GitHub Integration", Status = ConnectionStatus.Connected },
+            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.Fellow, Name = "Fellow Integration", Status = ConnectionStatus.Connected }
         }.AsQueryable();
 
         _mockIntegrationService.Setup(s => s.Query())
@@ -540,8 +540,8 @@ public class ManageControllerTests
         // Arrange
         var integrations = new List<Integration>
         {
-            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.GitHub, DisplayName = "GitHub Integration", Status = ConnectionStatus.Connected },
-            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.Fellow, DisplayName = "Fellow Integration", Status = ConnectionStatus.Connected }
+            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.GitHub, Name = "GitHub Integration", Status = ConnectionStatus.Connected },
+            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.Fellow, Name = "Fellow Integration", Status = ConnectionStatus.Connected }
         }.AsQueryable();
 
         _mockIntegrationService.Setup(s => s.Query())
@@ -554,7 +554,7 @@ public class ManageControllerTests
         var viewResult = Assert.IsType<ViewResult>(result);
         var model = Assert.IsType<ManageViewModel>(viewResult.Model);
         Assert.Single(model.Integrations);
-        Assert.Equal("GitHub Integration", model.Integrations.First().DisplayName);
+        Assert.Equal("GitHub Integration", model.Integrations.First().Name);
         Assert.Equal("github", model.SearchTerm);
     }
 
@@ -564,8 +564,8 @@ public class ManageControllerTests
         // Arrange
         var integrations = new List<Integration>
         {
-            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.GitHub, DisplayName = "My GitHub Integration", Status = ConnectionStatus.Connected },
-            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.Fellow, DisplayName = "Fellow Integration", Status = ConnectionStatus.Connected }
+            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.GitHub, Name = "My GitHub Integration", Status = ConnectionStatus.Connected },
+            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.Fellow, Name = "Fellow Integration", Status = ConnectionStatus.Connected }
         }.AsQueryable();
 
         _mockIntegrationService.Setup(s => s.Query())
@@ -578,7 +578,7 @@ public class ManageControllerTests
         var viewResult = Assert.IsType<ViewResult>(result);
         var model = Assert.IsType<ManageViewModel>(viewResult.Model);
         Assert.Single(model.Integrations);
-        Assert.Equal("My GitHub Integration", model.Integrations.First().DisplayName);
+        Assert.Equal("My GitHub Integration", model.Integrations.First().Name);
         Assert.Equal("My", model.SearchTerm);
     }
 
@@ -588,9 +588,9 @@ public class ManageControllerTests
         // Arrange
         var integrations = new List<Integration>
         {
-            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.GitHub, DisplayName = "GitHub Integration", Status = ConnectionStatus.Connected },
-            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.GitHub, DisplayName = "Another GitHub", Status = ConnectionStatus.Disconnected },
-            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.Fellow, DisplayName = "Fellow Integration", Status = ConnectionStatus.Connected }
+            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.GitHub, Name = "GitHub Integration", Status = ConnectionStatus.Connected },
+            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.GitHub, Name = "Another GitHub", Status = ConnectionStatus.Disconnected },
+            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.Fellow, Name = "Fellow Integration", Status = ConnectionStatus.Connected }
         }.AsQueryable();
 
         _mockIntegrationService.Setup(s => s.Query())
@@ -603,7 +603,7 @@ public class ManageControllerTests
         var viewResult = Assert.IsType<ViewResult>(result);
         var model = Assert.IsType<ManageViewModel>(viewResult.Model);
         Assert.Single(model.Integrations);
-        Assert.Equal("GitHub Integration", model.Integrations.First().DisplayName);
+        Assert.Equal("GitHub Integration", model.Integrations.First().Name);
         Assert.Equal("GitHub", model.SearchTerm);
         Assert.Equal(IntegrationType.GitHub, model.SelectedType);
         Assert.Equal(ConnectionStatus.Connected, model.SelectedStatus);
@@ -615,8 +615,8 @@ public class ManageControllerTests
         // Arrange
         var integrations = new List<Integration>
         {
-            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.GitHub, DisplayName = "GitHub Integration", Status = ConnectionStatus.Connected },
-            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.Fellow, DisplayName = "Fellow Integration", Status = ConnectionStatus.Connected }
+            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.GitHub, Name = "GitHub Integration", Status = ConnectionStatus.Connected },
+            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.Fellow, Name = "Fellow Integration", Status = ConnectionStatus.Connected }
         }.AsQueryable();
 
         _mockIntegrationService.Setup(s => s.Query())
@@ -640,8 +640,8 @@ public class ManageControllerTests
         // Arrange
         var integrations = new List<Integration>
         {
-            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.GitHub, DisplayName = "GitHub Integration", Status = ConnectionStatus.Connected },
-            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.Fellow, DisplayName = "Fellow Integration", Status = ConnectionStatus.Connected }
+            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.GitHub, Name = "GitHub Integration", Status = ConnectionStatus.Connected },
+            new Integration { Id = Guid.NewGuid(), Type = IntegrationType.Fellow, Name = "Fellow Integration", Status = ConnectionStatus.Connected }
         }.AsQueryable();
 
         _mockIntegrationService.Setup(s => s.Query())

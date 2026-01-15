@@ -20,7 +20,7 @@ public class AiTokenUsage : BaseEntity
     /// <summary>
     /// Duration of the AI call in milliseconds
     /// </summary>
-    public long DurationMs { get; set; }
+    public required long DurationMs { get; set; }
 
     /// <summary>
     /// Input tokens for chat/inference calls (null for embeddings)
@@ -76,7 +76,7 @@ public class AiTokenUsage : BaseEntity
     /// <summary>
     /// Whether the AI call succeeded
     /// </summary>
-    public bool IsSuccess { get; set; }
+    public required bool IsSuccess { get; set; }
 
     /// <summary>
     /// Error message if the call failed

@@ -11,7 +11,7 @@ public class Integration : BusinessEntity
     public required IntegrationType Type { get; set; }
 
     [MaxLength(200)]
-    public string? DisplayName { get; set; }
+    public required string Name { get; set; }
 
     /// <summary>
     /// API key or token for the integration (encrypted at rest at infra layer)

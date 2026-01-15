@@ -329,7 +329,7 @@ public class PlanApiController : ControllerBase
         // 5. Create user message requesting implementation
         var userMessage = new Domain.Entities.ChatMessage
         {
-            ConversationId = agentConversation.Id,
+            Conversation = agentConversation,
             UserId = userId.Value,
             Role = ChatMessageRole.User,
             Text = "Please implement the improvement plan as described.",

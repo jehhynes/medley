@@ -22,7 +22,7 @@ public class ChatConversation : BaseEntity
     /// </summary>
     [ForeignKey(nameof(ArticleId))]
     [DeleteBehavior(DeleteBehavior.Cascade)]
-    public virtual Article Article { get; set; } = null!;
+    public required virtual Article Article { get; set; }
 
     /// <summary>
     /// Current state of the conversation
@@ -71,7 +71,7 @@ public class ChatConversation : BaseEntity
     /// </summary>
     [ForeignKey(nameof(CreatedByUserId))]
     [DeleteBehavior(DeleteBehavior.Restrict)]
-    public virtual User CreatedBy { get; set; } = null!;
+    public required virtual User CreatedBy { get; set; }
 
     /// <summary>
     /// Messages in this conversation

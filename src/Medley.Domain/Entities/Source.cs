@@ -13,10 +13,10 @@ public class Source : BusinessEntity
     /// <summary>
     /// Type of metadata stored in MetadataJson (allows consumers to know which model to deserialize into)
     /// </summary>
-    public SourceMetadataType MetadataType { get; set; } = SourceMetadataType.Unknown;
+    public required SourceMetadataType MetadataType { get; set; }
 
     [MaxLength(200)]
-    public string? Name { get; set; }
+    public required string Name { get; set; }
 
     [MaxLength(400)]
     public string? ExternalId { get; set; }
@@ -24,17 +24,17 @@ public class Source : BusinessEntity
     /// <summary>
     /// Text content of the source (e.g., transcript data)
     /// </summary>
-    public string? Content { get; set; }
+    public required string Content { get; set; }
 
     /// <summary>
     /// JSON metadata from the external source (e.g., Fellow recording metadata)
     /// </summary>
-    public string? MetadataJson { get; set; }
+    public required string MetadataJson { get; set; }
 
     /// <summary>
     /// Date associated with the source (e.g., meeting date, creation date)
     /// </summary>
-    public DateTimeOffset? Date { get; set; }
+    public required DateTimeOffset Date { get; set; }
 
     /// <summary>
     /// Indicates whether this source is an internal meeting/document (all attendees from same org)

@@ -14,9 +14,9 @@ public class Insight : BusinessEntity
     [MaxLength(4000)]
     public required string Content { get; set; }
 
-    public InsightType Type { get; set; }
+    public required InsightType Type { get; set; }
     
-    public InsightPriority Priority { get; set; }
+    public required InsightPriority Priority { get; set; }
     
     public InsightStatus Status { get; set; } = InsightStatus.Draft;
 

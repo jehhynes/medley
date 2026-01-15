@@ -17,14 +17,11 @@ public class Observation : BusinessEntity
     public Vector? Embedding { get; set; }
 
     [MaxLength(100)]
-    public string? Category { get; set; }
+    public required string Category { get; set; }
+        
+    public required float ConfidenceScore { get; set; }
     
-    [MaxLength(1000)]
-    public string? SourceContext { get; set; }
-    
-    public float ConfidenceScore { get; set; }
-    
-    public ObservationType Type { get; set; }
+    public required ObservationType Type { get; set; }
     
     public DateTimeOffset? LastModifiedAt { get; set; }
 
