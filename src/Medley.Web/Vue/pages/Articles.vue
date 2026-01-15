@@ -124,27 +124,13 @@
           <div
             v-if="contentTabs.versionData"
             v-show="contentTabs.activeTabId === 'version'"
-            class="content-tab-pane diff-viewer">
-            <div class="diff-viewer-header">
-              <div class="diff-viewer-title">
-                <span class="badge bg-primary me-2">Version {{ contentTabs.versionData.versionNumber }}</span>
-                <span class="text-muted">{{ formatDate(contentTabs.versionData.createdAt) }}</span>
-                <span v-if="contentTabs.versionData.createdByName" class="text-muted ms-2">
-                  by {{ contentTabs.versionData.createdByName }}
-                </span>
-              </div>
-            </div>
-            <div class="diff-viewer-content flex-grow-1">
-              <div v-if="contentTabs.versionData.loadingDiff" class="loading-spinner">
-                <div class="spinner-border" role="status">
-                  <span class="visually-hidden">Loading diff...</span>
-                </div>
-              </div>
-              <div v-else-if="contentTabs.versionData.diffError" class="alert alert-danger m-3">
-                {{ contentTabs.versionData.diffError }}
-              </div>
-              <div v-else-if="contentTabs.versionData.diffHtml" v-html="contentTabs.versionData.diffHtml" class="diff-content markdown-container"></div>
-            </div>
+            class="content-tab-pane">
+            <version-viewer
+              :article-id="articles.selectedId"
+              :version-id="contentTabs.versionData.versionId"
+              @version-changed="handleVersionChanged"
+              @version-accepted="handleVersionAccepted"
+              @version-rejected="handleVersionRejected" />
           </div>
 
           <!-- Plan Tab (single, reused) -->
@@ -402,9 +388,9 @@ import {
   showToast
 } from '@/utils/helpers.js';
 import { getUrlParam, setUrlParam, setupPopStateHandler } from '@/utils/url.js';
-import { htmlDiff } from '@/utils/htmlDiff.js';
 
 import FragmentModal from '../components/FragmentModal.vue';
+import VersionViewer from '../components/VersionViewer.vue';
 import articleModalMixin from '../mixins/articleModal.js';
 import articleVersionMixin from '../mixins/articleVersion.js';
 import articleSignalRMixin from '../mixins/articleSignalR.js';
@@ -415,7 +401,8 @@ import { useRouter } from 'vue-router'
 export default {
   name: 'Articles',
   components: {
-    FragmentModal
+    FragmentModal,
+    VersionViewer
   },
   mixins: [
     articleModalMixin,
@@ -1112,39 +1099,56 @@ export default {
       this.contentTabs.activeTabId = 'plan';
     },
 
-    openVersionTab(version) {
+    async openVersionTab(version) {
+      // Load version details if we only have the ID
+      let versionDetails = version;
+      if (typeof version === 'string') {
+        try {
+          versionDetails = await api.get(`/api/articles/${this.articles.selectedId}/versions/${version}`);
+        } catch (err) {
+          console.error('Error loading version details:', err);
+          showToast('error', 'Failed to load version');
+          return;
+        }
+      }
+
       this.contentTabs.versionData = {
-        versionId: version.id,
-        versionNumber: version.versionNumber,
-        createdAt: version.createdAt,
-        createdByName: version.createdByName,
-        loadingDiff: true,
-        diffError: null,
-        diffHtml: null
+        versionId: versionDetails.id,
+        versionNumber: versionDetails.versionNumber
       };
 
       this.contentTabs.activeTabId = 'version';
-      this.loadVersionDiff();
     },
 
-    async loadVersionDiff() {
-      if (!this.contentTabs.versionData) return;
+    async handleVersionChanged(newVersionId) {
+      // Update the tab data with the new version
+      await this.openVersionTab(newVersionId);
+    },
 
-      try {
-        const response = await api.get(
-          `/api/articles/${this.articles.selectedId}/versions/${this.contentTabs.versionData.versionId}/diff`
-        );
-
-        const beforeHtml = this.markdownToHtml(response.beforeContent || '');
-        const afterHtml = this.markdownToHtml(response.afterContent || '');
-
-        this.contentTabs.versionData.diffHtml = htmlDiff(beforeHtml, afterHtml);
-        this.contentTabs.versionData.loadingDiff = false;
-      } catch (err) {
-        this.contentTabs.versionData.diffError = 'Failed to load diff: ' + err.message;
-        this.contentTabs.versionData.loadingDiff = false;
-        console.error('Error loading diff:', err);
+    async handleVersionAccepted(response) {
+      // Close the version tab
+      this.closeContentTab('version');
+      
+      // Reload the article to get the latest content
+      if (this.articles.selectedId) {
+        try {
+          const fullArticle = await api.get(`/api/articles/${this.articles.selectedId}`);
+          this.editor.content = fullArticle.content || '';
+          this.articles.selected = fullArticle;
+          
+          showToast('success', 'Version accepted successfully');
+        } catch (err) {
+          console.error('Error reloading article:', err);
+          showToast('error', 'Failed to reload article');
+        }
       }
+    },
+
+    async handleVersionRejected(versionId) {
+      // Close the version tab
+      this.closeContentTab('version');
+      
+      showToast('success', 'Version rejected');
     },
 
     async loadDraftPlan(articleId) {

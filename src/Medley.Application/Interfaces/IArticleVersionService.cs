@@ -1,3 +1,5 @@
+using Medley.Domain.Entities;
+
 namespace Medley.Application.Interfaces;
 
 /// <summary>
@@ -50,6 +52,28 @@ public interface IArticleVersionService
         Guid userId, 
         Guid? conversationId = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Accept an AI version by creating a new User version with the AI content
+    /// </summary>
+    /// <param name="versionId">The AI version ID to accept</param>
+    /// <param name="user">The user accepting the version</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>The created User version information</returns>
+    Task<ArticleVersionDto> AcceptAiVersionAsync(
+        Guid versionId, 
+        User user, 
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reject an AI version by marking it as inactive
+    /// </summary>
+    /// <param name="versionId">The AI version ID to reject</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Task representing the async operation</returns>
+    Task RejectAiVersionAsync(
+        Guid versionId, 
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -64,6 +88,9 @@ public class ArticleVersionDto
     public string? CreatedByEmail { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public bool IsNewVersion { get; set; }
+    public string VersionType { get; set; } = string.Empty;
+    public bool IsActive { get; set; } = true;
+    public string? ChangeMessage { get; set; }
 }
 
 /// <summary>

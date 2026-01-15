@@ -16,7 +16,7 @@
       <div v-else-if="error" class="alert alert-danger">
         {{ error }}
       </div>
-      <div v-else-if="versions.length === 0" class="empty-state" v-cloak>
+      <div v-else-if="userVersions.length === 0" class="empty-state" v-cloak>
         <div class="empty-state-icon">
           <i class="bi bi-clock-history"></i>
         </div>
@@ -25,7 +25,7 @@
       </div>
       <div v-else class="versions-list">
         <div 
-          v-for="version in versions" 
+          v-for="version in userVersions" 
           :key="version.id" 
           class="version-item"
           :class="{ 'active': selectedVersionId === version.id }"
@@ -70,6 +70,12 @@ export default {
       loading: false,
       error: null
     };
+  },
+  computed: {
+    userVersions() {
+      // Filter to show only User versions in the sidebar
+      return this.versions.filter(v => v.versionType === 'User');
+    }
   },
   watch: {
     articleId: {
