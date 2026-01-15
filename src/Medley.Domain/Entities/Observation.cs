@@ -35,7 +35,7 @@ public class Observation : BusinessEntity
     /// Navigation property to the source
     /// </summary>
     [ForeignKey(nameof(SourceId))]
-    public Source? Source { get; set; }
+    public virtual Source? Source { get; set; }
 
     /// <summary>
     /// The cluster this observation belongs to
@@ -46,9 +46,9 @@ public class Observation : BusinessEntity
     /// Navigation property to the observation cluster
     /// </summary>
     [ForeignKey(nameof(ObservationClusterId))]
-    public ObservationCluster? ObservationCluster { get; set; }
+    public virtual ObservationCluster? ObservationCluster { get; set; }
 
-    public ICollection<Finding> Findings { get; set; } = new List<Finding>();
+    public virtual ICollection<Finding> Findings { get; set; } = new List<Finding>();
 }
 
 

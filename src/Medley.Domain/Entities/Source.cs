@@ -67,7 +67,7 @@ public class Source : BusinessEntity
     /// The integration this source was imported from
     /// </summary>
     [ForeignKey(nameof(IntegrationId))]
-    public virtual required Integration Integration { get; set; }
+    public required virtual Integration Integration { get; set; }
 
     public virtual ICollection<Fragment> Fragments { get; set; } = new List<Fragment>();
     public virtual ICollection<Observation> Observations { get; set; } = new List<Observation>();

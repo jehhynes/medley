@@ -45,6 +45,7 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     {
         base.OnConfiguring(optionsBuilder);
 
+        optionsBuilder.UseLazyLoadingProxies();
         optionsBuilder.ReplaceService<IMethodCallTranslatorProvider, CustomNpgsqlMethodCallTranslatorProvider>();
 
         //optionsBuilder.UseNpgsql("connString", o => o.UseVector());

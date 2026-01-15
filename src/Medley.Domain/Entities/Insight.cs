@@ -21,7 +21,7 @@ public class Insight : BusinessEntity
     public InsightStatus Status { get; set; } = InsightStatus.Draft;
 
     // Navigation properties
-    public ICollection<Finding> Findings { get; set; } = new List<Finding>();
+    public virtual ICollection<Finding> Findings { get; set; } = new List<Finding>();
 }
 
 
