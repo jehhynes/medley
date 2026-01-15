@@ -27,15 +27,18 @@ public class FragmentRepositoryTests : DatabaseTestBase
     public async Task GetByIdAsync_ShouldReturnFragment_WhenExists()
     {
         // Arrange
-        var integration = new Domain.Entities.Integration { Id = Guid.NewGuid(), Type = Domain.Enums.IntegrationType.Fellow };
+        var integration = new Domain.Entities.Integration { Id = Guid.NewGuid(), Name = "Test Integration", Type = Domain.Enums.IntegrationType.Fellow };
         await _dbContext.Integrations.AddAsync(integration);
-        var source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, Name = "Meeting", Integration = integration };
+        var source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, MetadataType = Domain.Enums.SourceMetadataType.Collector_Fellow, Name = "Meeting", Content = "Test content", MetadataJson = "{}", Date = DateTimeOffset.UtcNow, Integration = integration };
         await _dbContext.Sources.AddAsync(source);
         await _dbContext.SaveChangesAsync();
 
         var fragment = new Fragment
         {
             Id = Guid.NewGuid(),
+            Title = "Test Title",
+            Summary = "Test Summary",
+            Category = "Test Category",
             Content = "Test content",
             CreatedAt = DateTimeOffset.UtcNow,
             Source = source
@@ -69,14 +72,17 @@ public class FragmentRepositoryTests : DatabaseTestBase
     public async Task AddAsync_ShouldAddNewFragment()
     {
         // Arrange
-        var integration = new Domain.Entities.Integration { Id = Guid.NewGuid(), Type = Domain.Enums.IntegrationType.Fellow };
+        var integration = new Domain.Entities.Integration { Id = Guid.NewGuid(), Name = "Test Integration", Type = Domain.Enums.IntegrationType.Fellow };
         await _dbContext.Integrations.AddAsync(integration);
         var fragment = new Fragment
         {
             Id = Guid.NewGuid(),
+            Title = "New Fragment Title",
+            Summary = "New Fragment Summary",
+            Category = "Test Category",
             Content = "New fragment",
             CreatedAt = DateTimeOffset.UtcNow,
-            Source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, Name = "Meeting", Integration = integration }
+            Source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, MetadataType = Domain.Enums.SourceMetadataType.Collector_Fellow, Name = "Meeting", Content = "Test content", MetadataJson = "{}", Date = DateTimeOffset.UtcNow, Integration = integration }
         };
 
         // Act
@@ -92,17 +98,17 @@ public class FragmentRepositoryTests : DatabaseTestBase
     public async Task Query_ShouldReturnAllFragments()
     {
         // Arrange
-        var integration = new Domain.Entities.Integration { Id = Guid.NewGuid(), Type = Domain.Enums.IntegrationType.Fellow };
+        var integration = new Domain.Entities.Integration { Id = Guid.NewGuid(), Name = "Test Integration", Type = Domain.Enums.IntegrationType.Fellow };
         await _dbContext.Integrations.AddAsync(integration);
-        var source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, Name = "Meeting", Integration = integration };
+        var source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, MetadataType = Domain.Enums.SourceMetadataType.Collector_Fellow, Name = "Meeting", Content = "Test content", MetadataJson = "{}", Date = DateTimeOffset.UtcNow, Integration = integration };
         await _dbContext.Sources.AddAsync(source);
         await _dbContext.SaveChangesAsync();
 
         var fragments = new[]
         {
-            new Fragment { Id = Guid.NewGuid(), Content = "Fragment 1", CreatedAt = DateTimeOffset.UtcNow, Source = source },
-            new Fragment { Id = Guid.NewGuid(), Content = "Fragment 2", CreatedAt = DateTimeOffset.UtcNow, Source = source },
-            new Fragment { Id = Guid.NewGuid(), Content = "Fragment 3", CreatedAt = DateTimeOffset.UtcNow, Source = source }
+            new Fragment { Id = Guid.NewGuid(), Title = "Title 1", Summary = "Summary 1", Category = "Category", Content = "Fragment 1", CreatedAt = DateTimeOffset.UtcNow, Source = source },
+            new Fragment { Id = Guid.NewGuid(), Title = "Title 2", Summary = "Summary 2", Category = "Category", Content = "Fragment 2", CreatedAt = DateTimeOffset.UtcNow, Source = source },
+            new Fragment { Id = Guid.NewGuid(), Title = "Title 3", Summary = "Summary 3", Category = "Category", Content = "Fragment 3", CreatedAt = DateTimeOffset.UtcNow, Source = source }
         };
         await _dbContext.Fragments.AddRangeAsync(fragments);
         await _dbContext.SaveChangesAsync();
@@ -125,9 +131,9 @@ public class FragmentRepositoryTests : DatabaseTestBase
         var similarEmbedding = CreateTestEmbedding(0.9f, 0.1f);
         var differentEmbedding = CreateTestEmbedding(0.0f, 1.0f);
 
-        var integration = new Domain.Entities.Integration { Id = Guid.NewGuid(), Type = Domain.Enums.IntegrationType.Fellow };
+        var integration = new Domain.Entities.Integration { Id = Guid.NewGuid(), Name = "Test Integration", Type = Domain.Enums.IntegrationType.Fellow };
         await _dbContext.Integrations.AddAsync(integration);
-        var source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, Name = "Meeting", Integration = integration };
+        var source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, MetadataType = Domain.Enums.SourceMetadataType.Collector_Fellow, Name = "Meeting", Content = "Test content", MetadataJson = "{}", Date = DateTimeOffset.UtcNow, Integration = integration };
         await _dbContext.Sources.AddAsync(source);
         await _dbContext.SaveChangesAsync();
 
@@ -136,6 +142,9 @@ public class FragmentRepositoryTests : DatabaseTestBase
             new Fragment
             {
                 Id = Guid.NewGuid(),
+                Title = "Base Fragment",
+                Summary = "Base Summary",
+                Category = "Test",
                 Content = "Base fragment",
                 Embedding = new Vector(baseEmbedding),
                 CreatedAt = DateTimeOffset.UtcNow,
@@ -144,6 +153,9 @@ public class FragmentRepositoryTests : DatabaseTestBase
             new Fragment
             {
                 Id = Guid.NewGuid(),
+                Title = "Similar Fragment",
+                Summary = "Similar Summary",
+                Category = "Test",
                 Content = "Similar fragment",
                 Embedding = new Vector(similarEmbedding),
                 CreatedAt = DateTimeOffset.UtcNow,
@@ -152,6 +164,9 @@ public class FragmentRepositoryTests : DatabaseTestBase
             new Fragment
             {
                 Id = Guid.NewGuid(),
+                Title = "Different Fragment",
+                Summary = "Different Summary",
+                Category = "Test",
                 Content = "Different fragment",
                 Embedding = new Vector(differentEmbedding),
                 CreatedAt = DateTimeOffset.UtcNow,
@@ -181,9 +196,9 @@ public class FragmentRepositoryTests : DatabaseTestBase
         var similarEmbedding = CreateTestEmbedding(0.95f, 0.05f);
         var differentEmbedding = CreateTestEmbedding(0.0f, 1.0f);
 
-        var integration = new Domain.Entities.Integration { Id = Guid.NewGuid(), Type = Domain.Enums.IntegrationType.Fellow };
+        var integration = new Domain.Entities.Integration { Id = Guid.NewGuid(), Name = "Test Integration", Type = Domain.Enums.IntegrationType.Fellow };
         await _dbContext.Integrations.AddAsync(integration);
-        var source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, Name = "Meeting", Integration = integration };
+        var source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, MetadataType = Domain.Enums.SourceMetadataType.Collector_Fellow, Name = "Meeting", Content = "Test content", MetadataJson = "{}", Date = DateTimeOffset.UtcNow, Integration = integration };
         await _dbContext.Sources.AddAsync(source);
         await _dbContext.SaveChangesAsync();
 
@@ -192,6 +207,9 @@ public class FragmentRepositoryTests : DatabaseTestBase
             new Fragment
             {
                 Id = Guid.NewGuid(),
+                Title = "Similar Fragment",
+                Summary = "Similar Summary",
+                Category = "Test",
                 Content = "Similar fragment",
                 Embedding = new Vector(similarEmbedding),
                 CreatedAt = DateTimeOffset.UtcNow,
@@ -200,6 +218,9 @@ public class FragmentRepositoryTests : DatabaseTestBase
             new Fragment
             {
                 Id = Guid.NewGuid(),
+                Title = "Different Fragment",
+                Summary = "Different Summary",
+                Category = "Test",
                 Content = "Different fragment",
                 Embedding = new Vector(differentEmbedding),
                 CreatedAt = DateTimeOffset.UtcNow,
@@ -240,9 +261,9 @@ public class FragmentRepositoryTests : DatabaseTestBase
     {
         // Arrange
         var queryEmbedding = CreateTestEmbedding(1.0f, 0.0f);
-        var integration = new Domain.Entities.Integration { Id = Guid.NewGuid(), Type = Domain.Enums.IntegrationType.Fellow };
+        var integration = new Domain.Entities.Integration { Id = Guid.NewGuid(), Name = "Test Integration", Type = Domain.Enums.IntegrationType.Fellow };
         await _dbContext.Integrations.AddAsync(integration);
-        var source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, Name = "Meeting", Integration = integration };
+        var source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, MetadataType = Domain.Enums.SourceMetadataType.Collector_Fellow, Name = "Meeting", Content = "Test content", MetadataJson = "{}", Date = DateTimeOffset.UtcNow, Integration = integration };
         await _dbContext.Sources.AddAsync(source);
 
         var fragments = new[]
@@ -250,6 +271,9 @@ public class FragmentRepositoryTests : DatabaseTestBase
             new Fragment
             {
                 Id = Guid.NewGuid(),
+                Title = "Fragment With Embedding",
+                Summary = "Fragment Summary",
+                Category = "Test",
                 Content = "Fragment with embedding",
                 Embedding = new Vector(queryEmbedding),
                 CreatedAt = DateTimeOffset.UtcNow,
@@ -258,6 +282,9 @@ public class FragmentRepositoryTests : DatabaseTestBase
             new Fragment
             {
                 Id = Guid.NewGuid(),
+                Title = "Fragment Without Embedding",
+                Summary = "Fragment Summary",
+                Category = "Test",
                 Content = "Fragment without embedding",
                 Embedding = null,
                 CreatedAt = DateTimeOffset.UtcNow,

@@ -15,10 +15,10 @@ public class GitHubViewModel
     /// </summary>
     public bool IsEdit => Id.HasValue;
 
-    [Required(ErrorMessage = "Display name is required")]
-    [MaxLength(200, ErrorMessage = "Display name cannot exceed 200 characters")]
-    [MinLength(3, ErrorMessage = "Display name must be at least 3 characters")]
-    public required string DisplayName { get; set; }
+    [Required(ErrorMessage = "Name is required")]
+    [MaxLength(200, ErrorMessage = "Name cannot exceed 200 characters")]
+    [MinLength(3, ErrorMessage = "Name must be at least 3 characters")]
+    public required string Name { get; set; }
 
     [RequiredIf("Id == null")]
     [MaxLength(500, ErrorMessage = "Personal access token cannot exceed 500 characters")]

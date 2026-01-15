@@ -20,7 +20,7 @@ public class ChatMessage : BaseEntity
     /// </summary>
     [ForeignKey(nameof(ConversationId))]
     [DeleteBehavior(DeleteBehavior.Cascade)]
-    public virtual ChatConversation Conversation { get; set; } = null!;
+    public required virtual ChatConversation Conversation { get; set; }
 
     /// <summary>
     /// The user who sent the message (null for assistant/system/tool messages)
@@ -37,7 +37,7 @@ public class ChatMessage : BaseEntity
     /// <summary>
     /// Role of the message (User, Assistant, System, Tool)
     /// </summary>
-    public ChatMessageRole Role { get; set; }
+    public required ChatMessageRole Role { get; set; }
 
     /// <summary>
     /// The content of the message

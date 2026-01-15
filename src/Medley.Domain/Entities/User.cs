@@ -10,7 +10,7 @@ public class User : IdentityUser<Guid>
     /// <summary>
     /// User's full name
     /// </summary>
-    public string? FullName { get; set; }
+    public required string FullName { get; set; }
 
     /// <summary>
     /// Date when the user was created

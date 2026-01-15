@@ -23,8 +23,8 @@ public class RepositoryTests : DatabaseTestBase
     public async Task Query_ReturnsQueryableCollection()
     {
         // Arrange - Transaction isolation handles cleanup automatically
-        var user1 = new User { Id = Guid.NewGuid(), UserName = "user1", Email = "user1@test.com" };
-        var user2 = new User { Id = Guid.NewGuid(), UserName = "user2", Email = "user2@test.com" };
+        var user1 = new User { Id = Guid.NewGuid(), UserName = "user1", Email = "user1@test.com", FullName = "User One" };
+        var user2 = new User { Id = Guid.NewGuid(), UserName = "user2", Email = "user2@test.com", FullName = "User Two" };
         
         _dbContext.Users.AddRange(user1, user2);
         await _dbContext.SaveChangesAsync();
@@ -44,7 +44,7 @@ public class RepositoryTests : DatabaseTestBase
     {
         // Arrange - Transaction isolation handles cleanup automatically
         var userId = Guid.NewGuid();
-        var user = new User { Id = userId, UserName = "newuser", Email = "newuser@test.com" };
+        var user = new User { Id = userId, UserName = "newuser", Email = "newuser@test.com", FullName = "New User" };
 
         // Act
         await _repository.AddAsync(user);
@@ -61,7 +61,7 @@ public class RepositoryTests : DatabaseTestBase
     {
         // Arrange - Transaction isolation handles cleanup automatically
         var userId = Guid.NewGuid();
-        var user = new User { Id = userId, UserName = "originaluser", Email = "original@test.com" };
+        var user = new User { Id = userId, UserName = "originaluser", Email = "original@test.com", FullName = "Original User" };
         
         _dbContext.Users.Add(user);
         await _dbContext.SaveChangesAsync();

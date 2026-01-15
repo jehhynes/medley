@@ -26,7 +26,7 @@ public class ArticleVersion : BaseEntity
     /// </summary>
     [ForeignKey(nameof(ArticleId))]
     [DeleteBehavior(DeleteBehavior.Cascade)]
-    public virtual Article Article { get; set; } = null!;
+    public required virtual Article Article { get; set; }
 
     /// <summary>
     /// The conversation that created this version (optional)
@@ -55,7 +55,7 @@ public class ArticleVersion : BaseEntity
     /// For User versions: Global sequence (1, 2, 3, ...) scoped to the article.
     /// For AI versions: Sequence scoped to the parent User version (1, 2, 3, ... per parent).
     /// </summary>
-    public int VersionNumber { get; set; }
+    public required int VersionNumber { get; set; }
 
     /// <summary>
     /// User ID who created this version

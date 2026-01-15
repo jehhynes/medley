@@ -11,7 +11,7 @@ public class ObservationCluster : BusinessEntity
     public required string Name { get; set; }
 
     [MaxLength(1000)]
-    public string? Description { get; set; }
+    public required string Description { get; set; }
 
     public virtual ICollection<Observation> Observations { get; set; } = new List<Observation>();
 }

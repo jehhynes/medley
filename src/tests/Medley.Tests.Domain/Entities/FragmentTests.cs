@@ -13,11 +13,19 @@ public class FragmentTests
         // Arrange & Act
         var fragment = new Fragment
         {
+            Title = "Test Title",
+            Summary = "Test Summary",
+            Category = "Test Category",
             Content = string.Empty,
             Source = new Source 
             { 
                 Type = SourceType.Meeting,
-                Integration = new Integration { Id = Guid.NewGuid(), Type = IntegrationType.Fellow }
+                MetadataType = SourceMetadataType.Collector_Fellow,
+                Name = "Test Source",
+                Content = "Test content",
+                MetadataJson = "{}",
+                Date = DateTimeOffset.UtcNow,
+                Integration = new Integration { Id = Guid.NewGuid(), Name = "Test Integration", Type = IntegrationType.Fellow }
             }
         };
 
@@ -45,9 +53,13 @@ public class FragmentTests
         {
             Id = Guid.NewGuid(),
             Type = SourceType.Meeting,
+            MetadataType = SourceMetadataType.Collector_Fellow,
             Name = "Daily Standup",
+            Content = "Meeting transcript content",
+            MetadataJson = "{}",
+            Date = DateTimeOffset.UtcNow,
             ExternalId = "meeting-123",
-            Integration = new Integration { Id = Guid.NewGuid(), Type = IntegrationType.Fellow }
+            Integration = new Integration { Id = Guid.NewGuid(), Name = "Test Integration", Type = IntegrationType.Fellow }
         };
         var createdAt = DateTimeOffset.UtcNow;
         var lastModifiedAt = DateTimeOffset.UtcNow.AddHours(1);
@@ -56,6 +68,9 @@ public class FragmentTests
         var fragment = new Fragment
         {
             Id = id,
+            Title = "Test Title",
+            Summary = "Test Summary",
+            Category = "Test Category",
             Content = content,
             Embedding = embedding,
             Source = source,
@@ -83,12 +98,20 @@ public class FragmentTests
         var fragment = new Fragment
         {
             Id = Guid.NewGuid(),
+            Title = "Test Title",
+            Summary = "Test Summary",
+            Category = "Test Category",
             Content = "Test content without embedding",
             Embedding = null,
             Source = new Source 
             { 
                 Type = SourceType.Meeting,
-                Integration = new Integration { Id = Guid.NewGuid(), Type = IntegrationType.Fellow }
+                MetadataType = SourceMetadataType.Collector_Fellow,
+                Name = "Test Source",
+                Content = "Test content",
+                MetadataJson = "{}",
+                Date = DateTimeOffset.UtcNow,
+                Integration = new Integration { Id = Guid.NewGuid(), Name = "Test Integration", Type = IntegrationType.Fellow }
             }
         };
 
@@ -110,12 +133,20 @@ public class FragmentTests
         var fragment = new Fragment
         {
             Id = Guid.NewGuid(),
+            Title = "Test Title",
+            Summary = "Test Summary",
+            Category = "Test Category",
             Content = "Test content",
             Embedding = embedding,
             Source = new Source 
             { 
                 Type = SourceType.Meeting,
-                Integration = new Integration { Id = Guid.NewGuid(), Type = IntegrationType.Fellow }
+                MetadataType = SourceMetadataType.Collector_Fellow,
+                Name = "Test Source",
+                Content = "Test content",
+                MetadataJson = "{}",
+                Date = DateTimeOffset.UtcNow,
+                Integration = new Integration { Id = Guid.NewGuid(), Name = "Test Integration", Type = IntegrationType.Fellow }
             }
         };
 

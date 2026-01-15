@@ -35,7 +35,7 @@ public class ManageController : Controller
         // Apply search filter
         if (!string.IsNullOrWhiteSpace(search))
         {
-            query = query.Where(i => i.DisplayName!.Contains(search, StringComparison.OrdinalIgnoreCase));
+            query = query.Where(i => i.Name.Contains(search, StringComparison.OrdinalIgnoreCase));
         }
 
         // Apply type filter
@@ -143,7 +143,7 @@ public class ManageController : Controller
             }
 
             await _integrationService.DeleteAsync(integration);
-            TempData["Success"] = $"Integration '{integration.DisplayName}' deleted successfully.";
+            TempData["Success"] = $"Integration '{integration.Name}' deleted successfully.";
         }
         catch (Exception ex)
         {

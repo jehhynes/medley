@@ -43,7 +43,7 @@ public class FellowController : Controller
                 throw new Exception( "Integration is not a Fellow integration.");
 
             model.Id = integration.Id;
-            model.DisplayName = integration.DisplayName ?? "";
+            model.Name = integration.Name;
             model.ApiKey = integration.ApiKey ?? "";
             model.BaseUrl = integration.BaseUrl ?? "https://mycompany.fellow.app";
         }
@@ -75,13 +75,13 @@ public class FellowController : Controller
                 throw new Exception("Integration is not a Fellow integration.");
 
             // Update existing integration
-            integration.DisplayName = model.DisplayName;
+            integration.Name = model.Name;
             if (!string.IsNullOrWhiteSpace(model.ApiKey))
                 integration.ApiKey = model.ApiKey;
             integration.BaseUrl = model.BaseUrl;
             integration.LastModifiedAt = DateTimeOffset.UtcNow;
 
-            TempData["Success"] = $"Fellow integration '{model.DisplayName}' updated successfully.";
+            TempData["Success"] = $"Fellow integration '{model.Name}' updated successfully.";
             // Entity is already tracked, changes will be saved on SaveChangesAsync
         }
         else
@@ -91,13 +91,13 @@ public class FellowController : Controller
             {
                 Id = Guid.NewGuid(),
                 Type = IntegrationType.Fellow,
-                DisplayName = model.DisplayName,
+                Name = model.Name,
                 ApiKey = model.ApiKey,
                 BaseUrl = model.BaseUrl,
                 LastModifiedAt = DateTimeOffset.UtcNow
             };
 
-            TempData["Success"] = $"Fellow integration '{model.DisplayName}' created successfully.";
+            TempData["Success"] = $"Fellow integration '{model.Name}' created successfully.";
             await _integrationService.AddAsync(integration);
         }
         return RedirectToAction("Index", "Manage");

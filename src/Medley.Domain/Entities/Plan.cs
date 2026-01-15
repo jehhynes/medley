@@ -21,7 +21,7 @@ public class Plan : BaseEntity
     /// </summary>
     [ForeignKey(nameof(ArticleId))]
     [DeleteBehavior(DeleteBehavior.Cascade)]
-    public virtual Article Article { get; set; } = null!;
+    public required virtual Article Article { get; set; }
 
     /// <summary>
     /// The conversation that created this plan (optional)
@@ -60,7 +60,7 @@ public class Plan : BaseEntity
     /// </summary>
     [ForeignKey(nameof(CreatedByUserId))]
     [DeleteBehavior(DeleteBehavior.Restrict)]
-    public virtual User CreatedBy { get; set; } = null!;
+    public required virtual User CreatedBy { get; set; }
 
     /// <summary>
     /// When this plan was applied to the article (if applicable)
@@ -70,7 +70,7 @@ public class Plan : BaseEntity
     /// <summary>
     /// Version number of this plan (per article)
     /// </summary>
-    public int Version { get; set; } = 1;
+    public required int Version { get; set; } = 1;
 
     /// <summary>
     /// Reference to the parent plan this was derived from (if modified)

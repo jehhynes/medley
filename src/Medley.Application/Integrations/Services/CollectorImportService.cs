@@ -86,7 +86,7 @@ public class CollectorImportService : ICollectorImportService
             Content = consolidatedTranscript,
             MetadataJson = metadataJson,
             MetadataType = SourceMetadataType.Collector_GoogleDrive,
-            Date = video.CreatedTime.HasValue ? new DateTimeOffset(video.CreatedTime.Value.ToUniversalTime(), TimeSpan.Zero) : null,
+            Date = video.CreatedTime.HasValue ? new DateTimeOffset(video.CreatedTime.Value.ToUniversalTime(), TimeSpan.Zero) : DateTimeOffset.UtcNow,
             Integration = integration
         };
 
@@ -151,7 +151,7 @@ public class CollectorImportService : ICollectorImportService
             Content = consolidatedTranscript,
             MetadataJson = metadataJson,
             MetadataType = SourceMetadataType.Collector_Fellow,
-            Date = recording.StartedAt.HasValue ? new DateTimeOffset(recording.StartedAt.Value.ToUniversalTime(), TimeSpan.Zero) : null,
+            Date = recording.StartedAt.HasValue ? new DateTimeOffset(recording.StartedAt.Value.ToUniversalTime(), TimeSpan.Zero) : DateTimeOffset.UtcNow,
             Integration = integration
         };
 

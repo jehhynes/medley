@@ -40,7 +40,12 @@ public class TagTypesController : Controller
 
     public IActionResult Create()
     {
-        return View(new TagType { Name = string.Empty });
+        return View(new TagType 
+        { 
+            Name = string.Empty,
+            IsConstrained = false,
+            ScopeUpdateMode = ScopeUpdateMode.None
+        });
     }
 
     [HttpPost]

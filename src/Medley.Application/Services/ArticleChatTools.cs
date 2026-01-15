@@ -27,6 +27,7 @@ public class ArticleChatTools
     private readonly IRepository<Article> _articleRepository;
     private readonly IRepository<Plan> _planRepository;
     private readonly IRepository<PlanFragment> _planFragmentRepository;
+    private readonly IRepository<User> _userRepository;
     private readonly IArticleVersionService _articleVersionService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<ArticleChatTools> _logger;
@@ -46,6 +47,7 @@ public class ArticleChatTools
         IRepository<Article> articleRepository,
         IRepository<Plan> planRepository,
         IRepository<PlanFragment> planFragmentRepository,
+        IRepository<User> userRepository,
         IArticleVersionService articleVersionService,
         IUnitOfWork unitOfWork,
         ILogger<ArticleChatTools> logger,
@@ -63,6 +65,7 @@ public class ArticleChatTools
         _articleRepository = articleRepository;
         _planRepository = planRepository;
         _planFragmentRepository = planFragmentRepository;
+        _userRepository = userRepository;
         _articleVersionService = articleVersionService;
         _unitOfWork = unitOfWork;
         _logger = logger;
@@ -502,13 +505,26 @@ public class ArticleChatTools
                 }
             }
 
+            // Load required navigation properties for Plan
+            var article = await _articleRepository.GetByIdAsync(_articleId);
+            if (article == null)
+            {
+                throw new InvalidOperationException($"Article {_articleId} not found");
+            }
+
+            var user = await _userRepository.GetByIdAsync(_currentUserId, cancellationToken);
+            if (user == null)
+            {
+                throw new InvalidOperationException($"User {_currentUserId} not found");
+            }
+
             // Create new plan
             var plan = new Plan
             {
-                ArticleId = _articleId,
+                Article = article,
                 Instructions = request.Instructions,
                 Status = PlanStatus.Draft,
-                CreatedByUserId = _currentUserId,
+                CreatedBy = user,
                 CreatedAt = DateTimeOffset.UtcNow,
                 Version = newVersion,
                 ParentPlanId = parentPlanId,
@@ -521,10 +537,18 @@ public class ArticleChatTools
             // Create plan fragments
             foreach (var rec in request.Recommendations)
             {
+                // Load fragment for required navigation property
+                var fragment = await _fragmentRepository.GetByIdAsync(rec.FragmentId);
+                if (fragment == null)
+                {
+                    _logger.LogWarning("Fragment {FragmentId} not found, skipping plan fragment", rec.FragmentId);
+                    continue;
+                }
+
                 var planFragment = new PlanFragment
                 {
-                    PlanId = plan.Id,
-                    FragmentId = rec.FragmentId,
+                    Plan = plan,
+                    Fragment = fragment,
                     SimilarityScore = rec.SimilarityScore,
                     Include = rec.Include,
                     Reasoning = rec.Reasoning,
@@ -865,11 +889,13 @@ public class PlanFragmentRecommendation
     
     [Description("Whether to include this fragment in the article improvement (true) or exclude it (false)")]
     public bool Include { get; set; }
-    
+
+    [Required]
     [Description("Explanation of why this fragment should not be included in the article. Omit if Include=true")]
     [MaxLength(200)]
     public required string Reasoning { get; set; }
-    
+
+    [Required]
     [Description("Optional instructions on how to incorporate this fragment into the article")]
     [MaxLength(200)]
     public required string Instructions { get; set; }

@@ -15,16 +15,19 @@ namespace Medley.Application.Services;
 public sealed class EfChatMessageStore : ChatMessageStore
 {
     private readonly IRepository<DomainChatMessage> _messageRepository;
+    private readonly IRepository<Domain.Entities.ChatConversation> _conversationRepository;
     private readonly IUnitOfWork _unitOfWork;
     public Guid ConversationId { get; }
 
     public EfChatMessageStore(
         IRepository<DomainChatMessage> messageRepository,
+        IRepository<Domain.Entities.ChatConversation> conversationRepository,
         IUnitOfWork unitOfWork,
         JsonElement serializedStoreState,
         JsonSerializerOptions? jsonSerializerOptions = null)
     {
         _messageRepository = messageRepository ?? throw new ArgumentNullException(nameof(messageRepository));
+        _conversationRepository = conversationRepository ?? throw new ArgumentNullException(nameof(conversationRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
 
         // Deserialize the conversation ID from the thread state
@@ -45,6 +48,13 @@ public sealed class EfChatMessageStore : ChatMessageStore
         IEnumerable<Microsoft.Extensions.AI.ChatMessage> messages,
         CancellationToken cancellationToken = default)
     {
+        // Load conversation for required navigation property (once for all messages in batch)
+        var conversation = await _conversationRepository.GetByIdAsync(ConversationId, cancellationToken);
+        if (conversation == null)
+        {
+            throw new InvalidOperationException($"Conversation {ConversationId} not found");
+        }
+
         // Get the latest user message timestamp to ensure proper ordering
         var lastMessageCreatedAt = await _messageRepository.Query()
             .Where(m => m.ConversationId == ConversationId && m.Role == ChatMessageRole.User)
@@ -116,7 +126,7 @@ public sealed class EfChatMessageStore : ChatMessageStore
             var chatMessage = new DomainChatMessage
             {
                 Id = aiMessage.Role == ChatRole.Tool ? Guid.NewGuid() : messageId, // Tool call messages don't have unique IDs, so generate one
-                ConversationId = ConversationId,
+                Conversation = conversation,
                 Role = messageRole,
                 Text = aiMessage.Text ?? string.Empty,
                 CreatedAt = createdAt,

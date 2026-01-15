@@ -69,8 +69,8 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to sync transcripts for integration {IntegrationId} ({DisplayName})",
-                    integration.Id, integration.DisplayName);
+                _logger.LogError(ex, "Failed to sync transcripts for integration {IntegrationId} ({Name})",
+                    integration.Id, integration.Name);
                 // Continue with other integrations
             }
         }
@@ -90,8 +90,8 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
             return;
         }
 
-        _logger.LogInformation("Syncing transcripts for integration {IntegrationId} ({DisplayName})",
-            integration.Id, integration.DisplayName);
+        _logger.LogInformation("Syncing transcripts for integration {IntegrationId} ({Name})",
+            integration.Id, integration.Name);
 
         var options = new FellowRecordingsRequestOptions
         {
@@ -110,9 +110,9 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
         {
             // Incremental sync: fetch recordings created since last known source
             var lastSourceDate = await _sourceRepository.Query()
-                .Where(s => s.Integration.Id == integration.Id && s.Date.HasValue)
+                .Where(s => s.Integration.Id == integration.Id)
                 .OrderByDescending(s => s.Date)
-                .Select(s => s.Date)
+                .Select(s => (DateTimeOffset?)s.Date)
                 .FirstOrDefaultAsync(cancellationToken);
 
             if (lastSourceDate.HasValue)
@@ -201,8 +201,8 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
         }
 
         _logger.LogInformation(
-            "Sync completed for integration {IntegrationId} ({DisplayName}). Total - Processed: {Processed}, Created: {Created}, Skipped: {Skipped}",
-            integration.Id, integration.DisplayName, totalProcessedCount, totalCreatedCount, totalSkippedCount);
+            "Sync completed for integration {IntegrationId} ({Name}). Total - Processed: {Processed}, Created: {Created}, Skipped: {Skipped}",
+            integration.Id, integration.Name, totalProcessedCount, totalCreatedCount, totalSkippedCount);
     }
 
     private async Task<(int processedCount, int createdCount, int skippedCount, List<Guid> createdSourceIds)> ProcessPage(Integration integration, FellowRecordingsResponse response, CancellationToken cancellationToken = default)
@@ -259,11 +259,12 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
                 var source = new Source
                 {
                     Type = SourceType.Meeting,
+                    MetadataType = SourceMetadataType.Collector_Fellow,
                     Name = recording.Title,
                     ExternalId = recording.Id,
                     Content = consolidatedTranscript,
                     MetadataJson = metadataJson,
-                    Date = recording.StartedAt,
+                    Date = recording.StartedAt ?? DateTimeOffset.UtcNow,
                     Integration = integration
                 };
 

@@ -4,6 +4,7 @@ using Medley.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 
 namespace Medley.Application.Services;
 
@@ -291,11 +292,10 @@ public class FragmentExtractionService
             {
                 var fragment = new Fragment
                 {
-                    Title = fragmentDto.Title?.Trim().Substring(0, Math.Min(200, fragmentDto.Title.Trim().Length)),
-                    Summary = fragmentDto.Summary?.Trim().Substring(0, Math.Min(500, fragmentDto.Summary.Trim().Length)),
-                    Category = fragmentDto.Category?.Trim().Substring(0, Math.Min(100, fragmentDto.Category.Trim().Length)),
-                    Content = fragmentDto.Content?.Trim().Substring(0, Math.Min(10000, fragmentDto.Content.Trim().Length)) 
-                        ?? string.Empty,
+                    Title = fragmentDto.Title.Trim().Substring(0, Math.Min(200, fragmentDto.Title.Trim().Length)),
+                    Summary = fragmentDto.Summary.Trim().Substring(0, Math.Min(500, fragmentDto.Summary.Trim().Length)),
+                    Category = fragmentDto.Category.Trim().Substring(0, Math.Min(100, fragmentDto.Category.Trim().Length)),
+                    Content = fragmentDto.Content.Trim().Substring(0, Math.Min(10000, fragmentDto.Content.Trim().Length)),
                     Source = source,
                     LastModifiedAt = DateTimeOffset.UtcNow,
                 };
@@ -348,14 +348,21 @@ public class FragmentExtractionResponse
 /// </summary>
 public class FragmentDto
 {
+    [Required]
     [Description("Clear, descriptive heading")]
-    public string? Title { get; set; }
+    public required string Title { get; set; }
+    
+    [Required]
     [Description("Short, human-readable condensation of the full content")]
-    public string? Summary { get; set; }
+    public required string Summary { get; set; }
+    
+    [Required]
     [Description("Which of the supplied categories this content applies to")]
-    public string? Category { get; set; }
+    public required string Category { get; set; }
+    
+    [Required]
     [Description("Markdown-formatted content")]
-    public string? Content { get; set; }
+    public required string Content { get; set; }
 }
 
 /// <summary>

@@ -8,6 +8,7 @@ using Medley.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 
 namespace Medley.Application.Jobs;
@@ -104,10 +105,10 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
                 var cluster = new Fragment
                 {
                     Id = Guid.NewGuid(),
-                    Title = clusterResponse.Title?.Trim().Substring(0, Math.Min(200, clusterResponse.Title.Trim().Length)),
-                    Summary = clusterResponse.Summary?.Trim().Substring(0, Math.Min(500, clusterResponse.Summary.Trim().Length)),
-                    Category = clusterResponse.Category?.Trim().Substring(0, Math.Min(100, clusterResponse.Category.Trim().Length)),
-                    Content = clusterResponse.Content?.Trim().Substring(0, Math.Min(10000, clusterResponse.Content.Trim().Length)) ?? string.Empty,
+                    Title = clusterResponse.Title.Trim().Substring(0, Math.Min(200, clusterResponse.Title.Trim().Length)),
+                    Summary = clusterResponse.Summary.Trim().Substring(0, Math.Min(500, clusterResponse.Summary.Trim().Length)),
+                    Category = clusterResponse.Category.Trim().Substring(0, Math.Min(100, clusterResponse.Category.Trim().Length)),
+                    Content = clusterResponse.Content.Trim().Substring(0, Math.Min(10000, clusterResponse.Content.Trim().Length)),
                     IsCluster = true,
                     ClusteringProcessed = DateTimeOffset.UtcNow,
                     Source = null,
@@ -174,17 +175,18 @@ If conflicts exist then prefer the details from the more recent fragments.";
 
 public class FragmentClusteringResponse
 {
+    [Required]
     [Description("Clear, descriptive heading for the clustered content")]
-    public string? Title { get; set; }
-    
+    public required string Title { get; set; }
+    [Required]
     [Description("Short, human-readable condensation of the full content")]
-    public string? Summary { get; set; }
-    
+    public required string Summary { get; set; }
+    [Required]
     [Description("The most appropriate category for this cluster (e.g. Decision, Action Item, Feature Request)")]
-    public string? Category { get; set; }
-    
+    public required string Category { get; set; }
+    [Required]
     [Description("The full consolidated text content")]
-    public string? Content { get; set; }
+    public required string Content { get; set; }
     
     [Description("Any auxiliary information, reasoning, or comments")]
     public string? Message { get; set; }

@@ -28,6 +28,7 @@ public class ArticleChatService : IArticleChatService
     private readonly IRepository<Template> _templateRepository;
     private readonly IRepository<Fragment> _fragmentRepository;
     private readonly IRepository<Plan> _planRepository;
+    private readonly IRepository<User> _userRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IChatClient _chatClient;
     private readonly ArticleChatToolsFactory _toolsFactory;
@@ -44,6 +45,7 @@ public class ArticleChatService : IArticleChatService
         IRepository<Template> templateRepository,
         IRepository<Fragment> fragmentRepository,
         IRepository<Plan> planRepository,
+        IRepository<User> userRepository,
         IUnitOfWork unitOfWork,
         IChatClient chatClient,
         ArticleChatToolsFactory pluginsFactory,
@@ -59,6 +61,7 @@ public class ArticleChatService : IArticleChatService
         _templateRepository = templateRepository;
         _fragmentRepository = fragmentRepository;
         _planRepository = planRepository;
+        _userRepository = userRepository;
         _unitOfWork = unitOfWork;
         _toolsFactory = pluginsFactory;
         _systemPromptBuilder = systemPromptBuilder;
@@ -77,19 +80,29 @@ public class ArticleChatService : IArticleChatService
         ConversationMode mode = ConversationMode.Agent,
         CancellationToken cancellationToken = default)
     {
+        // Load required navigation properties
+        var article = await _articleRepository.GetByIdAsync(articleId);
+        if (article == null)
+        {
+            throw new InvalidOperationException($"Article {articleId} not found");
+        }
+
+        var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
+        if (user == null)
+        {
+            throw new InvalidOperationException($"User {userId} not found");
+        }
+
         var conversation = new ChatConversation
         {
-            ArticleId = articleId,
+            Article = article,
             State = ConversationState.Active,
             Mode = mode,
-            CreatedByUserId = userId,
+            CreatedBy = user,
             CreatedAt = DateTimeOffset.UtcNow
         };
 
         await _conversationRepository.AddAsync(conversation);
-        
-        // Set the article's current conversation reference
-        var article = await _articleRepository.GetByIdAsync(articleId);
         if (article != null)
         {
             article.CurrentConversationId = conversation.Id;
@@ -369,6 +382,13 @@ public class ArticleChatService : IArticleChatService
 
     private async Task<List<DomainChatMessage>> SaveMessages(ChatResponse chatResponse, List<ChatResponseUpdate> responseUpdates, Guid conversationId, DomainChatMessage lastMessage)
     {
+        // Load conversation for required navigation property
+        var conversation = await _conversationRepository.GetByIdAsync(conversationId);
+        if (conversation == null)
+        {
+            throw new InvalidOperationException($"Conversation {conversationId} not found");
+        }
+
         List<DomainChatMessage> result = new();
         foreach (var aiMessage in chatResponse.Messages) //Should only be one message
         {
@@ -389,7 +409,7 @@ public class ArticleChatService : IArticleChatService
             var message = new DomainChatMessage()
             {
                 Id = role == ChatMessageRole.Tool ? Guid.NewGuid() : Guid.Parse(aiMessage.MessageId!), //Tool messages don't have unique IDs from the chat client
-                ConversationId = conversationId,
+                Conversation = conversation,
                 Role = role,
                 Text = aiMessage.Text ?? string.Empty,
                 CreatedAt = aiMessage.CreatedAt ?? DateTimeOffset.UtcNow,
@@ -591,6 +611,7 @@ public class ArticleChatService : IArticleChatService
         var serializedState = JsonSerializer.SerializeToElement(conversationId.ToString("N"));
         return new EfChatMessageStore(
             _chatMessageRepository,
+            _conversationRepository,
             _unitOfWork,
             serializedState);
     }

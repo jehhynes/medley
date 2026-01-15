@@ -14,16 +14,19 @@ public class ArticleVersionService : IArticleVersionService
 {
     private readonly IRepository<ArticleVersion> _versionRepository;
     private readonly IRepository<Article> _articleRepository;
+    private readonly IRepository<User> _userRepository;
     private readonly ILogger<ArticleVersionService> _logger;
     private readonly diff_match_patch _diffMatchPatch;
 
     public ArticleVersionService(
         IRepository<ArticleVersion> versionRepository,
         IRepository<Article> articleRepository,
+        IRepository<User> userRepository,
         ILogger<ArticleVersionService> logger)
     {
         _versionRepository = versionRepository;
         _articleRepository = articleRepository;
+        _userRepository = userRepository;
         _logger = logger;
         _diffMatchPatch = new diff_match_patch();
     }
@@ -160,14 +163,27 @@ public class ArticleVersionService : IArticleVersionService
             diffPatch = _diffMatchPatch.patch_toText(_diffMatchPatch.patch_make(diffs));
         }
 
+        // Load article for required navigation property
+        var article = await _articleRepository.GetByIdAsync(articleId);
+        if (article == null)
+        {
+            throw new InvalidOperationException($"Article {articleId} not found");
+        }
+
+        // Load user if userId is provided
+        User? user = null;
+        if (userId.HasValue)
+        {
+            user = await _userRepository.GetByIdAsync(userId.Value);
+        }
 
         var version = new ArticleVersion
         {
-            ArticleId = articleId,
+            Article = article,
             ContentSnapshot = newContent,
             ContentDiff = diffPatch,
             VersionNumber = nextVersion,
-            CreatedById = userId,
+            CreatedBy = user,
             CreatedAt = DateTimeOffset.UtcNow,
             VersionType = VersionType.User,
             ParentVersionId = null // User versions have no parent
@@ -321,14 +337,24 @@ public class ArticleVersionService : IArticleVersionService
                 contentDiff = _diffMatchPatch.patch_toText(_diffMatchPatch.patch_make(diffs));
             }
 
+            // Load article for required navigation property
+            var article = await _articleRepository.GetByIdAsync(articleId);
+            if (article == null)
+            {
+                throw new InvalidOperationException($"Article {articleId} not found");
+            }
+
+            // Load user for navigation property
+            var createdByUser = await _userRepository.GetByIdAsync(userId);
+
             // Create new AI version
             var newVersion = new ArticleVersion
             {
-                ArticleId = articleId,
+                Article = article,
                 ContentSnapshot = content,
                 ContentDiff = contentDiff,
                 VersionNumber = versionNumber,
-                CreatedById = userId,
+                CreatedBy = createdByUser,
                 CreatedAt = DateTimeOffset.UtcNow,
                 VersionType = VersionType.AI,
                 ParentVersionId = mostRecentUserVersion.Id,

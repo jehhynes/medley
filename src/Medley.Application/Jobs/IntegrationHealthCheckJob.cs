@@ -45,13 +45,13 @@ public class IntegrationHealthCheckJob : BaseHangfireJob<IntegrationHealthCheckJ
                     await _integrationService.TestConnectionAsync(integration, cancellationToken);
                     checkedCount++;
                     _logger.LogDebug("Health check completed for integration {IntegrationId} ({IntegrationName})", 
-                        integration.Id, integration.DisplayName);
+                        integration.Id, integration.Name);
                 }
                 catch (Exception ex)
                 {
                     errorCount++;
                     _logger.LogError(ex, "Health check failed for integration {IntegrationId} ({IntegrationName})", 
-                        integration.Id, integration.DisplayName);
+                        integration.Id, integration.Name);
                 }
             }
 
@@ -85,7 +85,7 @@ public class IntegrationHealthCheckJob : BaseHangfireJob<IntegrationHealthCheckJ
             await _integrationService.TestConnectionAsync(integration, cancellationToken);
             
             _logger.LogInformation("Health check completed for integration {IntegrationId} ({IntegrationName})", 
-                integration.Id, integration.DisplayName);
+                integration.Id, integration.Name);
         });
     }
 }

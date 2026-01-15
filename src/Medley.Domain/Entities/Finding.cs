@@ -6,8 +6,8 @@ namespace Medley.Domain.Entities;
 public class Finding : BusinessEntity
 {
     public required string Content { get; set; }
-    public FindingType Type { get; set; }
-    public float ConfidenceScore { get; set; }
+    public required FindingType Type { get; set; }
+    public required float ConfidenceScore { get; set; }
     
     // Navigation properties
     public virtual ICollection<Observation> Observations { get; set; } = new List<Observation>();

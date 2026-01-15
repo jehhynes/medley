@@ -25,7 +25,8 @@ public class UnitOfWorkTests : IClassFixture<UnitOfWorkDatabaseFixture>
         { 
             Id = Guid.NewGuid(), 
             UserName = "testuser",
-            Email = "testuser@test.com"
+            Email = "testuser@test.com",
+            FullName = "Test User"
         };
         dbContext.Users.Add(user);
 
@@ -66,13 +67,15 @@ public class UnitOfWorkTests : IClassFixture<UnitOfWorkDatabaseFixture>
         { 
             Id = Guid.NewGuid(), 
             UserName = "user1",
-            Email = "user1@test.com"
+            Email = "user1@test.com",
+            FullName = "User One"
         };
         var user2 = new User 
         { 
             Id = Guid.NewGuid(), 
             UserName = "user2",
-            Email = "user2@test.com"
+            Email = "user2@test.com",
+            FullName = "User Two"
         };
         
         dbContext.Users.AddRange(user1, user2);

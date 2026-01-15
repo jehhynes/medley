@@ -322,7 +322,7 @@ public class ArticleChatApiController : ControllerBase
         // Save user message
         var userMessage = new Domain.Entities.ChatMessage
         {
-            ConversationId = conversationId,
+            Conversation = conversation,
             UserId = userId.Value,
             Role = ChatMessageRole.User,
             Text = request.Message,
