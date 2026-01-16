@@ -108,3 +108,26 @@
     --bs-btn-color: #46627f;
     --bs-btn-border-color: #46627f;
 }
+
+// Override button border colors to match TipTap editor
+.btn-outline-secondary {
+    --bs-btn-border-color: var(--bs-border-color);
+    
+    &:hover:not(:disabled):not(.active) {
+        background-color: var(--bg-hover);
+        border-color: var(--bs-border-color);
+        color: var(--bs-body-color);
+    }
+    
+    &.active,
+    &:active {
+        background-color: var(--bs-primary);
+        color: white;
+        border-color: var(--bs-primary);
+    }
+}
+
+// Ensure dropdown borders match TipTap editor
+.dropdown-menu {
+    --bs-dropdown-border-color: var(--bs-border-color);
+}

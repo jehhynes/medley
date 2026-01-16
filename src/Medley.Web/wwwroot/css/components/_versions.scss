@@ -72,6 +72,9 @@
 
 /* Diff Viewer */
 .diff-viewer {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
     overflow: hidden;
 
     .diff-viewer-header {
@@ -81,6 +84,7 @@
         padding: 0.5rem;
         border-bottom: 1px solid var(--bs-border-color);
         background-color: var(--bg-hover);
+        flex-shrink: 0;
 
         .diff-viewer-title {
             display: flex;
@@ -96,7 +100,9 @@
     }
 
     .diff-viewer-content {
+        flex: 1;
         overflow-y: auto;
+        overflow-x: hidden;
         padding: 1rem;
 
         .diff-content {
