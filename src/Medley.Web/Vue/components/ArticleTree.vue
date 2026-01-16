@@ -73,13 +73,7 @@
 
 <script>
 import dropdownMixin from '@/mixins/dropdown';
-import { 
-  getIconClass, 
-  getStatusIcon, 
-  getStatusColorClass, 
-  showProcessingSpinner, 
-  showUserTurnIndicator 
-} from '@/utils/helpers.js';
+import { useArticleView } from '@/composables/useArticleView';
 
 export default {
   name: 'ArticleTree',
@@ -108,6 +102,31 @@ export default {
   },
   inject: ['dragState'],
   emits: ['select', 'toggle-expand', 'create-child', 'edit-article', 'move-article'],
+  setup(props, { emit }) {
+    const {
+      selectArticle,
+      getArticleIcon,
+      editArticle,
+      createChild,
+      getIconClass,
+      getStatusIcon,
+      getStatusColorClass,
+      showProcessingSpinner,
+      showUserTurnIndicator
+    } = useArticleView(props, emit);
+
+    return {
+      selectArticle,
+      getArticleIcon,
+      editArticle,
+      createChild,
+      getIconClass,
+      getStatusIcon,
+      getStatusColorClass,
+      showProcessingSpinner,
+      showUserTurnIndicator
+    };
+  },
   data() {
     return {
       dragCounter: 0
@@ -120,29 +139,8 @@ export default {
     isExpanded(articleId) {
       return this.expandedIds.has(articleId);
     },
-    selectArticle(article) {
-      this.$emit('select', article);
-      // Collapse left sidebar on mobile after selection
-      window.MedleySidebar?.collapseLeftSidebar();
-    },
     hasChildren(article) {
       return article.children && article.children.length > 0;
-    },
-    getArticleIcon(article) {
-      // Look up icon from dictionary, fallback to bi-file-text
-      if (article.articleTypeId && this.articleTypeIconMap[article.articleTypeId]) {
-        return this.articleTypeIconMap[article.articleTypeId];
-      }
-      return 'bi-file-text';
-    },
-    getIconClass,
-    getStatusIcon,
-    getStatusColorClass,
-    createChild(parentArticleId) {
-      this.$emit('create-child', parentArticleId);
-    },
-    editArticle(article) {
-      this.$emit('edit-article', article);
     },
     /**
      * Check if an article is of type "Index"
@@ -249,9 +247,7 @@ export default {
     moveArticle(sourceId, targetId) {
       // Propagate the event up the tree
       this.$emit('move-article', sourceId, targetId);
-    },
-    showProcessingSpinner,
-    showUserTurnIndicator
+    }
   }
 };
 </script>

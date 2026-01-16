@@ -67,23 +67,21 @@
           <article-list
             v-show="viewMode === 'list'"
             v-cloak
-            :articles="flatArticlesList"
+            :articles="articles.list"
             :selected-id="articles.selectedId"
             :article-type-icon-map="articles.typeIconMap"
             :article-types="articles.types"
-            :breadcrumbs-cache="articles.breadcrumbsCache"
             @select="selectArticle"
-            @create-child="showCreateArticleModal"
             @edit-article="showEditArticleModal"
           ></article-list>
           <my-work-list
             v-show="viewMode === 'mywork'"
             v-cloak
-            :articles="myWorkList"
+            :articles="articles.list"
             :selected-id="articles.selectedId"
             :article-type-icon-map="articles.typeIconMap"
             :article-types="articles.types"
-            :breadcrumbs-cache="articles.breadcrumbsCache"
+            :current-user-id="currentUserId"
             @select="selectArticle"
             @edit-article="showEditArticleModal"
           ></my-work-list>
@@ -394,17 +392,12 @@ import {
   getStatusIcon,
   getStatusColorClass,
   formatDate,
-  copyToClipboard,
-  debounce,
-  initializeMarkdownRenderer,
   getArticleTypes,
-  findInTree,
-  findInList,
   showProcessingSpinner,
   showUserTurnIndicator,
   showToast
 } from '@/utils/helpers.js';
-import { getUrlParam, setUrlParam, setupPopStateHandler } from '@/utils/url.js';
+import { getUrlParam } from '@/utils/url.js';
 
 import FragmentModal from '../components/FragmentModal.vue';
 import VersionViewer from '../components/VersionViewer.vue';
@@ -414,7 +407,10 @@ import articleVersionMixin from '../mixins/articleVersion.js';
 import articleSignalRMixin from '../mixins/articleSignalR.js';
 import articleFilterMixin from '../mixins/articleFilter.js';
 import { useSidebarState } from '@/composables/useSidebarState'
+import { useArticleTree } from '@/composables/useArticleTree'
+import { useMyWork } from '@/composables/useMyWork'
 import { useRouter } from 'vue-router'
+import { computed } from 'vue'
 
 export default {
   name: 'Articles',
@@ -446,16 +442,11 @@ export default {
         typeIndexMap: {},
         expandedIds: new Set(),
         index: new Map(),
-        parentPathCache: new Map(),
-        breadcrumbsCache: new Map()
+        parentPathCache: new Map()
       },
 
       // View mode state
       viewMode: 'tree',
-
-      // Cached data for performance
-      cachedFlatList: [],
-      cachedMyWorkList: [],
 
       // Editor state
       editor: {
@@ -536,14 +527,13 @@ export default {
     hasUnsavedChanges() {
       return this.$refs.tiptapEditor?.hasChanges || false;
     },
-    flatArticlesList() {
-      return this.cachedFlatList;
-    },
     myWorkCount() {
-      return this.cachedMyWorkList.length;
-    },
-    myWorkList() {
-      return this.cachedMyWorkList;
+      // Use shared My Work composable to get count
+      const { myWorkCount } = useMyWork(
+        computed(() => this.articles.list),
+        computed(() => this.currentUserId)
+      );
+      return myWorkCount.value;
     },
     availableTabs() {
       const tabs = [{ id: 'editor', label: 'Editor', closeable: false, type: 'editor' }];
@@ -576,10 +566,11 @@ export default {
       try {
         const queryString = this.buildFilterQueryString();
         this.articles.list = await api.get(`/api/articles/tree${queryString}`);
-        this.buildArticleIndex();
-        this.buildParentPathCache();
-        this.rebuildFlatListCache();
-        this.rebuildMyWorkListCache();
+        
+        // Initialize article tree composable with current state
+        const treeOps = useArticleTree(this);
+        treeOps.buildArticleIndex();
+        treeOps.buildParentPathCache();
       } catch (err) {
         this.ui.error = 'Failed to load articles: ' + err.message;
         console.error('Error loading articles:', err);
@@ -602,166 +593,6 @@ export default {
         console.error('Error loading article types:', err);
         showToast('error', 'Failed to load article types');
       }
-    },
-
-    buildArticleIndex(articles = this.articles.list) {
-      const index = new Map();
-      const traverse = (items) => {
-        items.forEach(article => {
-          index.set(article.id, article);
-          if (article.children && article.children.length > 0) {
-            traverse(article.children);
-          }
-        });
-      };
-      traverse(articles);
-      this.articles.index = index;
-    },
-
-    buildParentPathCache(articles = this.articles.list, path = []) {
-      articles.forEach(article => {
-        this.articles.parentPathCache.set(article.id, [...path]);
-
-        if (path.length > 0) {
-          const breadcrumb = path.map(p => p.title).join(' > ');
-          this.articles.breadcrumbsCache.set(article.id, breadcrumb);
-        } else {
-          this.articles.breadcrumbsCache.set(article.id, null);
-        }
-
-        if (article.children && article.children.length > 0) {
-          this.buildParentPathCache(article.children, [...path, { id: article.id, title: article.title }]);
-        }
-      });
-    },
-
-    rebuildFlatListCache() {
-      const flattenArticles = (articles, parentId = null) => {
-        let result = [];
-        for (const article of articles) {
-          const matchesArticleType = this.filters.articleTypeIds.length === 0 ||
-            this.filters.articleTypeIds.includes(article.articleTypeId);
-
-          const matchesStatus = this.filters.statuses.length === 0 ||
-            this.filters.statuses.includes(article.status);
-
-          const shouldInclude = matchesArticleType && matchesStatus;
-
-          if (shouldInclude) {
-            const articleWithParent = {
-              ...article,
-              parentArticleId: parentId
-            };
-            result.push(articleWithParent);
-          }
-
-          if (article.children && article.children.length > 0) {
-            result = result.concat(flattenArticles(article.children, article.id));
-          }
-        }
-        return result;
-      };
-
-      const flattened = flattenArticles(this.articles.list);
-      this.cachedFlatList = flattened.sort((a, b) => {
-        return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
-      });
-      this.rebuildMyWorkListCache();
-    },
-
-    rebuildFlatListCacheDebounced() {
-      if (!this._debouncedRebuildCache) {
-        this._debouncedRebuildCache = debounce(() => {
-          this.rebuildFlatListCache();
-          this.rebuildMyWorkListCache();
-        }, 100);
-      }
-      this._debouncedRebuildCache();
-    },
-
-    rebuildMyWorkListCache() {
-      // Get user ID from window.MedleyUser
-      const userId = this.currentUserId;
-      if (!userId) {
-        this.cachedMyWorkList = [];
-        return;
-      }
-
-      // Flatten all articles
-      const allArticles = this.flattenAllArticles(this.articles.list);
-      
-      // Filter: assigned to user AND status is Draft or Review
-      const filtered = allArticles.filter(article => {
-        // Check if assigned to user
-        const isAssigned = article.assignedUser && 
-                          article.assignedUser.id && 
-                          article.assignedUser.id === userId;
-        
-        // Check if status is Draft or Review (status comes as string from API)
-        const isDraftOrReview = article.status === 'Draft' || article.status === 'Review';
-        
-        return isAssigned && isDraftOrReview;
-      });
-      
-      // Sort by priority
-      this.cachedMyWorkList = this.sortMyWorkArticles(filtered);
-    },
-
-    flattenAllArticles(articles, parentId = null) {
-      let result = [];
-      for (const article of articles) {
-        result.push({ ...article, parentArticleId: parentId });
-        if (article.children && article.children.length > 0) {
-          result = result.concat(this.flattenAllArticles(article.children, article.id));
-        }
-      }
-      return result;
-    },
-
-    sortMyWorkArticles(articles) {
-      return articles.sort((a, b) => {
-        // Priority 1: User's turn (waiting for review)
-        const aUserTurn = showUserTurnIndicator(a) ? 1 : 0;
-        const bUserTurn = showUserTurnIndicator(b) ? 1 : 0;
-        if (aUserTurn !== bUserTurn) return bUserTurn - aUserTurn;
-        
-        // Priority 2: No conversation (assigned but no conversation yet)
-        const aNoConversation = (!a.currentConversation || !a.currentConversation.id) ? 1 : 0;
-        const bNoConversation = (!b.currentConversation || !b.currentConversation.id) ? 1 : 0;
-        if (aNoConversation !== bNoConversation) return bNoConversation - aNoConversation;
-        
-        // Priority 3: AI processing
-        const aAiProcessing = showProcessingSpinner(a) ? 1 : 0;
-        const bAiProcessing = showProcessingSpinner(b) ? 1 : 0;
-        if (aAiProcessing !== bAiProcessing) return bAiProcessing - aAiProcessing;
-        
-        // Priority 4: Last activity date (most recent first)
-        const aLastActivity = this.getLastActivityDate(a);
-        const bLastActivity = this.getLastActivityDate(b);
-        return bLastActivity - aLastActivity;
-      });
-    },
-
-    getLastActivityDate(article) {
-      let latestDate = new Date(article.modifiedAt || article.createdAt || 0);
-      
-      // Check conversation's last message time if available
-      if (article.currentConversation?.lastMessageAt) {
-        const conversationDate = new Date(article.currentConversation.lastMessageAt);
-        if (conversationDate > latestDate) {
-          latestDate = conversationDate;
-        }
-      }
-      
-      // Check latest version date if available (from versions array)
-      if (article.latestVersionDate) {
-        const versionDate = new Date(article.latestVersionDate);
-        if (versionDate > latestDate) {
-          latestDate = versionDate;
-        }
-      }
-      
-      return latestDate;
     },
 
     async selectArticle(article, replaceState = false) {
@@ -811,30 +642,6 @@ export default {
       }
     },
 
-    sortArticles(articles) {
-      articles.sort((a, b) => {
-        const aType = this.articles.typeIndexMap[a.articleTypeId];
-        const bType = this.articles.typeIndexMap[b.articleTypeId];
-
-        const aIsIndex = aType?.name.toLowerCase() === 'index';
-        const bIsIndex = bType?.name.toLowerCase() === 'index';
-
-        if (aIsIndex && !bIsIndex) return -1;
-        if (!aIsIndex && bIsIndex) return 1;
-
-        return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
-      });
-    },
-
-    sortArticlesRecursive(articles) {
-      this.sortArticles(articles);
-
-      articles.forEach(article => {
-        if (article.children && article.children.length > 0) {
-          this.sortArticlesRecursive(article.children);
-        }
-      });
-    },
 
     toggleExpand(articleId) {
       if (this.articles.expandedIds.has(articleId)) {
@@ -844,32 +651,9 @@ export default {
       }
     },
 
-    getArticleParents(articleId) {
-      const parentPath = this.articles.parentPathCache.get(articleId);
-      return parentPath ? parentPath.map(p => p.id) : [];
-    },
-
-    findParentArray(articleId, articles = this.articles.list) {
-      for (const article of articles) {
-        if (article.id === articleId) {
-          return articles;
-        }
-      }
-
-      for (const article of articles) {
-        if (article.children && article.children.length > 0) {
-          const found = this.findParentArray(articleId, article.children);
-          if (found) {
-            return found;
-          }
-        }
-      }
-
-      return null;
-    },
-
     expandParents(articleId) {
-      const parents = this.getArticleParents(articleId);
+      const treeOps = useArticleTree(this);
+      const parents = treeOps.getArticleParents(articleId);
       if (parents) {
         parents.forEach(parentId => {
           this.articles.expandedIds.add(parentId);
@@ -878,117 +662,25 @@ export default {
     },
 
     insertArticleIntoTree(article) {
-      const existing = this.articles.index.get(article.id);
-      if (existing) {
-        return;
-      }
-
-      if (!article.children) {
-        article.children = [];
-      }
-
-      if (!article.parentArticleId) {
-        this.articles.list.push(article);
-        this.sortArticles(this.articles.list);
-        this.articles.parentPathCache.set(article.id, []);
-        this.articles.breadcrumbsCache.set(article.id, null);
-      } else {
-        const parent = this.articles.index.get(article.parentArticleId);
-        if (parent) {
-          if (!parent.children) {
-            parent.children = [];
-          }
-          parent.children.push(article);
-          this.sortArticles(parent.children);
-          this.articles.expandedIds.add(parent.id);
-
-          const parentPath = this.articles.parentPathCache.get(parent.id) || [];
-          const newPath = [...parentPath, { id: parent.id, title: parent.title }];
-          this.articles.parentPathCache.set(article.id, newPath);
-          const breadcrumb = newPath.map(p => p.title).join(' > ');
-          this.articles.breadcrumbsCache.set(article.id, breadcrumb);
-        } else {
-          console.warn(`Parent article ${article.parentArticleId} not found, inserting at root`);
-          this.articles.list.push(article);
-          this.sortArticles(this.articles.list);
-          this.articles.parentPathCache.set(article.id, []);
-          this.articles.breadcrumbsCache.set(article.id, null);
-        }
-      }
-
-      this.articles.index.set(article.id, article);
-      this.rebuildFlatListCache();
-      this.rebuildMyWorkListCache();
+      const treeOps = useArticleTree(this);
+      treeOps.insertArticleIntoTree(article);
     },
 
     updateArticleInTree(articleId, updates) {
-      const article = this.articles.index.get(articleId);
-      if (article) {
-        Object.assign(article, updates);
-
-        if (updates.title !== undefined && article.children && article.children.length > 0) {
-          this.buildParentPathCache(article.children, [
-            ...(this.articles.parentPathCache.get(articleId) || []),
-            { id: article.id, title: article.title }
-          ]);
-        }
-
-        if (updates.title !== undefined || updates.articleTypeId !== undefined) {
-          const parentArray = this.findParentArray(articleId);
-          if (parentArray) {
-            this.sortArticles(parentArray);
-          }
-          this.rebuildFlatListCache();
-        }
-
-        if (this.articles.selectedId === articleId) {
-          if (updates.title !== undefined) {
-            this.editor.title = updates.title;
-          }
-          if (updates.content !== undefined) {
-            this.editor.content = updates.content;
-          }
-          Object.assign(this.articles.selected, updates);
-        }
-      } else {
-        console.warn(`Article ${articleId} not found in tree for update`);
-      }
+      const treeOps = useArticleTree(this);
+      treeOps.updateArticleInTree(articleId, updates);
     },
 
     removeArticleFromTree(articleId) {
-      const article = this.articles.index.get(articleId);
-
-      const removeFromArray = (articles) => {
-        for (let i = 0; i < articles.length; i++) {
-          if (articles[i].id === articleId) {
-            articles.splice(i, 1);
-            return true;
-          }
-          if (articles[i].children && articles[i].children.length > 0) {
-            if (removeFromArray(articles[i].children)) {
-              return true;
-            }
-          }
-        }
-        return false;
-      };
-
-      removeFromArray(this.articles.list);
-
-      const removeFromCaches = (art) => {
-        if (!art) return;
-        this.articles.index.delete(art.id);
-        this.articles.parentPathCache.delete(art.id);
-        this.articles.breadcrumbsCache.delete(art.id);
-        if (art.children && art.children.length > 0) {
-          art.children.forEach(child => removeFromCaches(child));
-        }
-      };
-
-      removeFromCaches(article);
-      this.rebuildFlatListCache();
-      this.rebuildMyWorkListCache();
+      const treeOps = useArticleTree(this);
+      treeOps.removeArticleFromTree(articleId);
     },
+
+    moveArticleInTree(articleId, oldParentId, newParentId) {
+      const treeOps = useArticleTree(this);
+      treeOps.moveArticleInTree(articleId, oldParentId, newParentId);
+    },
+
 
     async saveArticle(retryCount = 0) {
       if (!this.articles.selected) return;
@@ -1149,54 +841,6 @@ export default {
       });
     },
 
-    moveArticleInTree(articleId, oldParentId, newParentId) {
-      let movedArticle = null;
-
-      const removeFromParent = (articles) => {
-        for (let i = 0; i < articles.length; i++) {
-          if (articles[i].id === articleId) {
-            movedArticle = articles.splice(i, 1)[0];
-            return true;
-          }
-          if (articles[i].children && articles[i].children.length > 0) {
-            if (removeFromParent(articles[i].children)) {
-              return true;
-            }
-          }
-        }
-        return false;
-      };
-
-      removeFromParent(this.articles.list);
-
-      if (!movedArticle) {
-        console.error('Article not found for move:', articleId);
-        return;
-      }
-
-      const newParent = this.articles.index.get(newParentId);
-      if (newParent) {
-        if (!newParent.children) {
-          newParent.children = [];
-        }
-        newParent.children.push(movedArticle);
-        this.sortArticles(newParent.children);
-
-        const parentPath = this.articles.parentPathCache.get(newParentId) || [];
-        const newPath = [...parentPath, { id: newParent.id, title: newParent.title }];
-        this.buildParentPathCache([movedArticle], newPath);
-
-        this.articles.expandedIds.add(newParentId);
-      } else {
-        console.error('New parent not found:', newParentId);
-        this.articles.list.push(movedArticle);
-        this.sortArticles(this.articles.list);
-        this.buildParentPathCache([movedArticle], []);
-      }
-
-      this.rebuildFlatListCache();
-      this.rebuildMyWorkListCache();
-    },
 
     switchContentTab(tabId) {
       this.contentTabs.activeTabId = tabId;
@@ -1358,8 +1002,8 @@ export default {
       this.loadArticles()
     ]);
 
-    this.sortArticlesRecursive(this.articles.list);
-    this.rebuildMyWorkListCache();
+    const treeOps = useArticleTree(this);
+    treeOps.sortArticlesRecursive(this.articles.list);
 
     const articleIdFromUrl = getUrlParam('id');
     if (articleIdFromUrl) {

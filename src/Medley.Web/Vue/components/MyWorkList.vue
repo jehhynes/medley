@@ -1,6 +1,6 @@
 <template>
   <virtual-scroller 
-    :items="articles" 
+    :items="myWorkArticles" 
     :item-height="itemHeight"
     :buffer="buffer"
     key-field="id"
@@ -20,7 +20,7 @@
           <span class="article-title-text">{{ article.title }}</span>
           <div class="article-meta">
             <span class="article-activity-time text-muted small">
-              {{ formatRelativeTime(article) }}
+              {{ formatActivityDate(article) }}
             </span>
           </div>
         </div>
@@ -58,14 +58,12 @@
 </template>
 
 <script>
+import { computed, toRef } from 'vue';
 import VirtualScroller from './VirtualScroller.vue';
 import dropdownMixin from '@/mixins/dropdown';
+import { useArticleView } from '@/composables/useArticleView';
+import { useMyWork } from '@/composables/useMyWork';
 import { 
-  getIconClass, 
-  getStatusIcon, 
-  getStatusColorClass, 
-  showProcessingSpinner, 
-  showUserTurnIndicator,
   formatRelativeTime 
 } from '@/utils/helpers.js';
 
@@ -92,12 +90,43 @@ export default {
       type: Array,
       default: () => []
     },
-    breadcrumbsCache: {
-      type: Map,
-      default: () => new Map()
+    currentUserId: {
+      type: String,
+      default: null
     }
   },
   emits: ['select', 'edit-article'],
+  setup(props, { emit }) {
+    const {
+      selectArticle,
+      getArticleIcon,
+      editArticle,
+      getIconClass,
+      getStatusIcon,
+      getStatusColorClass,
+      showProcessingSpinner,
+      showUserTurnIndicator
+    } = useArticleView(props, emit);
+
+    // Use shared My Work composable
+    const { myWorkArticles, getLastActivityDate } = useMyWork(
+      toRef(props, 'articles'),
+      toRef(props, 'currentUserId')
+    );
+
+    return {
+      selectArticle,
+      getArticleIcon,
+      editArticle,
+      getIconClass,
+      getStatusIcon,
+      getStatusColorClass,
+      showProcessingSpinner,
+      showUserTurnIndicator,
+      myWorkArticles,
+      getLastActivityDate
+    };
+  },
   data() {
     return {
       itemHeight: 52, // Height of each article row in pixels
@@ -105,24 +134,6 @@ export default {
     };
   },
   methods: {
-    selectArticle(article) {
-      this.$emit('select', article);
-      // Collapse left sidebar on mobile after selection
-      window.MedleySidebar?.collapseLeftSidebar();
-    },
-    getArticleIcon(article) {
-      // Look up icon from dictionary, fallback to bi-file-text
-      if (article.articleTypeId && this.articleTypeIconMap[article.articleTypeId]) {
-        return this.articleTypeIconMap[article.articleTypeId];
-      }
-      return 'bi-file-text';
-    },
-    getIconClass,
-    getStatusIcon,
-    getStatusColorClass,
-    editArticle(article) {
-      this.$emit('edit-article', article);
-    },
     /**
      * Determine if a separator is needed before this article
      * Shows separator when transitioning to AI processing items
@@ -130,11 +141,11 @@ export default {
     needsSeparator(index) {
       if (index === 0) return false; // No separator before first item
       
-      const currentArticle = this.articles[index];
-      const previousArticle = this.articles[index - 1];
+      const currentArticle = this.myWorkArticles[index];
+      const previousArticle = this.myWorkArticles[index - 1];
       
-      const currentIsAiProcessing = showProcessingSpinner(currentArticle);
-      const previousIsAiProcessing = showProcessingSpinner(previousArticle);
+      const currentIsAiProcessing = this.showProcessingSpinner(currentArticle);
+      const previousIsAiProcessing = this.showProcessingSpinner(previousArticle);
       
       // Show separator when we transition to AI processing items
       // (previous was not AI processing, current is AI processing)
@@ -145,29 +156,10 @@ export default {
      * @param {Object} article - Article to get activity time for
      * @returns {string} Relative time string (e.g., "2 hours ago")
      */
-    formatRelativeTime(article) {
-      let latestDate = new Date(article.modifiedAt || article.createdAt || 0);
-      
-      // Check conversation's last message time if available
-      if (article.currentConversation?.lastMessageAt) {
-        const conversationDate = new Date(article.currentConversation.lastMessageAt);
-        if (conversationDate > latestDate) {
-          latestDate = conversationDate;
-        }
-      }
-      
-      // Check latest version date if available
-      if (article.latestVersionDate) {
-        const versionDate = new Date(article.latestVersionDate);
-        if (versionDate > latestDate) {
-          latestDate = versionDate;
-        }
-      }
-      
+    formatActivityDate(article) {
+      const latestDate = this.getLastActivityDate(article);
       return formatRelativeTime(latestDate, { short: false });
-    },
-    showProcessingSpinner,
-    showUserTurnIndicator
+    }
   }
 };
 </script>
