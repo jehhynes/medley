@@ -102,8 +102,10 @@
 </template>
 
 <script>
+import { computed } from 'vue';
 import { api } from '@/utils/api.js';
 import { htmlDiff } from '@/utils/htmlDiff.js';
+import { useArticleVersions } from '@/composables/useArticleVersions.js';
 
 export default {
   name: 'VersionViewer',
@@ -118,6 +120,11 @@ export default {
     }
   },
   emits: ['version-changed', 'version-accepted', 'version-rejected'],
+  setup(props) {
+    const articleId = computed(() => props.articleId);
+    const versionState = useArticleVersions(articleId);
+    return { versionState };
+  },
   data() {
     return {
       version: null,
@@ -156,13 +163,15 @@ export default {
       this.error = null;
 
       try {
-        // Load all versions for dropdown (only once) - includes both User and AI versions
-        if (this.allVersions.length === 0) {
-          this.allVersions = await api.get(`/api/articles/${this.articleId}/versions`);
+        // Use cached versions from composable
+        this.allVersions = this.versionState.versions;
+        
+        // Find specific version in cached data using helper
+        this.version = this.versionState.getVersionById(this.versionId);
+        
+        if (!this.version) {
+          throw new Error('Version not found');
         }
-
-        // Load specific version
-        this.version = await api.get(`/api/articles/${this.articleId}/versions/${this.versionId}`);
         
         // Load the diff
         await this.loadVersionDiff();
