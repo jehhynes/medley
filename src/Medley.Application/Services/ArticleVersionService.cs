@@ -179,6 +179,10 @@ public class ArticleVersionService : IArticleVersionService
 
         await _versionRepository.AddAsync(version);
 
+        // Update the article's CurrentVersionId to point to this new User version
+        // The article entity is already tracked, so this change will be saved automatically
+        article.CurrentVersionId = version.Id;
+
         _logger.LogInformation(
             "Created new User version {VersionNumber} for article {ArticleId} by user {UserId}",
             nextVersion, articleId, userId);

@@ -91,6 +91,7 @@ public class ArticlesApiController : ControllerBase
                 .Include(a => a.ArticleType)
                 .Include(a => a.CurrentConversation)
                 .Include(a => a.AssignedUser)
+                .Include(a => a.CurrentVersion)
                 .ToListAsync();
 
             // Apply filters to get matching articles
@@ -141,6 +142,7 @@ public class ArticlesApiController : ControllerBase
                 .Include(a => a.ArticleType)
                 .Include(a => a.CurrentConversation)
                 .Include(a => a.AssignedUser)
+                .Include(a => a.CurrentVersion)
                 .ToListAsync();
         }
 
@@ -565,9 +567,10 @@ public class ArticlesApiController : ControllerBase
             .Select(a => new
             {
                 id = a.Id.ToString(),
-                a.Title,
-                a.Status,
-                a.CreatedAt,
+                title = a.Title,
+                status = a.Status,
+                createdAt = a.CreatedAt,
+                modifiedAt = a.CurrentVersion != null ? a.CurrentVersion.ModifiedAt : null,
                 articleTypeId = a.ArticleTypeId,
                 currentConversation = a.CurrentConversation != null ? new 
                 { 

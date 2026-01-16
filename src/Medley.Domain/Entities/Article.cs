@@ -71,6 +71,18 @@ public class Article : BusinessEntity
     [DeleteBehavior(DeleteBehavior.SetNull)]
     public virtual User? AssignedUser { get; set; }
 
+    /// <summary>
+    /// ID of the current User version (most recent user edit)
+    /// </summary>
+    public Guid? CurrentVersionId { get; set; }
+
+    /// <summary>
+    /// Navigation property to the current version
+    /// </summary>
+    [ForeignKey(nameof(CurrentVersionId))]
+    [DeleteBehavior(DeleteBehavior.SetNull)]
+    public virtual ArticleVersion? CurrentVersion { get; set; }
+
     
     /// <summary>
     /// Navigation property to child articles

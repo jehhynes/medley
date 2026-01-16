@@ -227,6 +227,10 @@ export default {
                         article.currentConversation.isRunning = true;
                         article.currentConversation.id = data.conversationId;
                     }
+                    // Rebuild My Work cache since conversation status changed
+                    if (this.rebuildMyWorkListCache) {
+                        this.rebuildMyWorkListCache();
+                    }
                 }
             });
 
@@ -235,6 +239,10 @@ export default {
                 const article = this.articles.index.get(this.articles.selectedId);
                 if (article && article.currentConversation) {
                     article.currentConversation.isRunning = false;
+                    // Rebuild My Work cache since conversation status changed
+                    if (this.rebuildMyWorkListCache) {
+                        this.rebuildMyWorkListCache();
+                    }
                 }
             });
 
