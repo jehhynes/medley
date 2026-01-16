@@ -82,7 +82,7 @@ public class GitHubController : Controller
             integration.LastModifiedAt = DateTimeOffset.UtcNow;
 
             TempData["Success"] = $"GitHub integration '{model.Name}' updated successfully.";
-            // Entity is already tracked, changes will be saved on SaveChangesAsync
+            
         }
         else
         {

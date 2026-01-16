@@ -99,7 +99,7 @@ public class TemplatesApiController : ControllerBase
 
             template.LastModifiedAt = DateTimeOffset.UtcNow;
 
-            // Entity is already tracked, changes will be saved on SaveChangesAsync
+            
             await _unitOfWork.SaveChangesAsync();
 
             _logger.LogInformation("Updated template {TemplateId} ({TemplateName})", id, template.Type.GetName());

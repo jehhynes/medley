@@ -85,7 +85,7 @@ public class ArticleTypesController : Controller
         existing.Name = model.Name;
         existing.Icon = model.Icon;
 
-        // Entity is already tracked, changes will be saved on SaveChangesAsync
+        
         await _unitOfWork.SaveChangesAsync();
 
         TempData["SuccessMessage"] = "Article type updated";

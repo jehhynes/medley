@@ -131,7 +131,7 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
 
                         fragment.Embedding = new Vector(processedVector);
 
-                        // Entity is already tracked, changes will be saved on SaveChangesAsync
+                        
                         processedCount++;
 
                         _logger.LogDebug("Generated embedding for fragment {FragmentId} (Title: {Title}) with {Dimensions} dimensions",

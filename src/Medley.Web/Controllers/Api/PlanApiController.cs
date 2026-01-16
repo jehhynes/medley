@@ -308,7 +308,7 @@ public class PlanApiController : ControllerBase
             if (planningConversation != null)
             {
                 planningConversation.State = ConversationState.Archived;
-                // Entity is already tracked, changes will be saved on SaveChangesAsync
+                
             }
         }
 
@@ -320,11 +320,11 @@ public class PlanApiController : ControllerBase
 
         // 3. Link conversation to plan
         agentConversation.ImplementingPlanId = planId;
-        // Entity is already tracked, changes will be saved on SaveChangesAsync
+        
 
         // 4. Set plan status to InProgress
         plan.Status = PlanStatus.InProgress;
-        // Entity is already tracked, changes will be saved on SaveChangesAsync
+        
 
         // 5. Create user message requesting implementation
         var userMessage = new Domain.Entities.ChatMessage

@@ -487,7 +487,7 @@ public class ArticleChatTools
             {
                 // This is a modification - archive the current draft
                 existingDraftPlan.Status = PlanStatus.Archived;
-                // Entity is already tracked, changes will be saved on SaveChangesAsync
+                
                 
                 newVersion = existingDraftPlan.Version + 1;
                 parentPlanId = existingDraftPlan.Id;
@@ -626,7 +626,6 @@ public class ArticleChatTools
                 _articleId,
                 request.Content,
                 request.ChangeMessage,
-                _currentUserId,
                 _conversationId,
                 cancellationToken);
             
@@ -638,7 +637,7 @@ public class ArticleChatTools
                 {
                     plan.Status = PlanStatus.Applied;
                     plan.AppliedAt = DateTimeOffset.UtcNow;
-                    // Entity is already tracked, changes will be saved on SaveChangesAsync
+                    
                     _logger.LogInformation("Marked plan {PlanId} as Applied", _implementingPlanId.Value);
                 }
             }
@@ -744,7 +743,6 @@ public class ArticleChatTools
                 _articleId,
                 result.ImprovedContent,
                 changeMessage,
-                _currentUserId,
                 _conversationId,
                 cancellationToken);
 

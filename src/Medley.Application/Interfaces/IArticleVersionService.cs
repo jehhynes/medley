@@ -16,7 +16,7 @@ public interface IArticleVersionService
     /// <param name="userId">The user making the change</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>The captured version information</returns>
-    Task<ArticleVersionDto> CaptureUserVersionAsync(Guid articleId, string newContent, string? previousContent, Guid? userId, CancellationToken cancellationToken = default);
+    Task<ArticleVersionDto> CaptureUserVersionAsync(Guid articleId, string newContent, string? previousContent, Guid userId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get version history for an article
@@ -49,7 +49,6 @@ public interface IArticleVersionService
         Guid articleId, 
         string content, 
         string changeMessage, 
-        Guid userId, 
         Guid? conversationId = null,
         CancellationToken cancellationToken = default);
 

@@ -217,6 +217,8 @@ public class ArticlesApiController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateArticleRequest request)
     {
+        var currentUser = await _medleyContext.GetCurrentUserAsync();
+        
         ArticleType? articleType = null;
         if (request.ArticleTypeId.HasValue)
         {
@@ -229,7 +231,8 @@ public class ArticlesApiController : ControllerBase
             Status = Domain.Enums.ArticleStatus.Draft,
             ParentArticleId = request.ParentArticleId,
             ArticleType = articleType,
-            Content = $"# {request.Title}\n\n"
+            Content = $"# {request.Title}\n\n",
+            CreatedBy = currentUser
         };
 
         await _articleRepository.AddAsync(article);
@@ -294,7 +297,7 @@ public class ArticlesApiController : ControllerBase
             article.ArticleTypeId = request.ArticleTypeId.Value;
         }
 
-        // Entity is already tracked, changes will be saved on SaveChangesAsync
+        
 
         // Register post-commit action to send SignalR notification
         var notification = new
@@ -356,10 +359,10 @@ public class ArticlesApiController : ControllerBase
         // Auto-assign to current user
         var assignmentChanged = await AssignArticleToUserAsync(article, user.Id);
 
-        // Entity is already tracked, changes will be saved on SaveChangesAsync
+        
 
         // Capture version after saving article
-        var capturedVersion = await _versionService.CaptureUserVersionAsync(id, article.Content, oldContent, _medleyContext.CurrentUserId);
+        var capturedVersion = await _versionService.CaptureUserVersionAsync(id, article.Content, oldContent, user.Id);
 
         if (capturedVersion.IsNewVersion)
         {
@@ -483,7 +486,7 @@ public class ArticlesApiController : ControllerBase
 
         // Update the parent
         article.ParentArticleId = request.NewParentArticleId.Value;
-        // Entity is already tracked, changes will be saved on SaveChangesAsync
+        
 
         // Register post-commit action to send SignalR notification
         var notification = new

@@ -363,7 +363,7 @@ public class ArticleChatApiController : ControllerBase
                 });
             }
             
-            // Entity is already tracked, changes will be saved on SaveChangesAsync
+            
         }
         
         await _conversationRepository.AddAsync(conversation);

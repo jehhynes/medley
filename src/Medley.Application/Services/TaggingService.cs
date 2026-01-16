@@ -125,7 +125,7 @@ public class TaggingService : ITaggingService
         }
 
         source.TagsGenerated = DateTimeOffset.UtcNow;
-        // Entity is already tracked, changes will be saved on SaveChangesAsync
+        
 
         return new TaggingResult
         {
@@ -323,7 +323,7 @@ public class TaggingService : ITaggingService
                 existingTag.TagOption = matchedOption;
                 existingTag.TagType = tagType;
 
-                // Entity is already tracked, changes will be saved on SaveChangesAsync
+                
             }
             else
             {

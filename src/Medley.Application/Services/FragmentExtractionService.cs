@@ -321,7 +321,7 @@ public class FragmentExtractionService
             source.ExtractionMessage = combinedMessage.Length > 2000 
                 ? combinedMessage.Substring(0, 2000) 
                 : combinedMessage;
-            // Entity is already tracked, changes will be saved on SaveChangesAsync
+            
             _logger.LogDebug("Saved extraction message to source {SourceId}", source.Id);
         }
 

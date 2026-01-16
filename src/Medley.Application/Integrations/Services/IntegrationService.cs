@@ -58,7 +58,7 @@ public class IntegrationService : IIntegrationService
             _logger.LogWarning("No connection service found for integration type {IntegrationType}", integration.Type);
             integration.Status = ConnectionStatus.Error;
             integration.LastHealthCheckAt = DateTimeOffset.UtcNow;
-            // Entity is already tracked, changes will be saved on SaveChangesAsync
+            
             
             // Broadcast status update
             //await _notificationService.SendIntegrationStatusUpdateAsync(
@@ -74,7 +74,7 @@ public class IntegrationService : IIntegrationService
         integration.Status = status;
         integration.LastHealthCheckAt = DateTimeOffset.UtcNow;
         
-        // Entity is already tracked, changes will be saved on SaveChangesAsync
+        
         
         // Broadcast status update if status changed
         //if (previousStatus != status)
