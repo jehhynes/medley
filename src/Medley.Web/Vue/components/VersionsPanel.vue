@@ -33,14 +33,17 @@
           <div class="version-header">
             <span class="badge bg-primary">v{{ version.versionNumber }}</span>
             <span class="version-date">{{ formatDate(version.createdAt) }}</span>
+            <span v-if="version.createdByName" class="version-author">
+              <i class="bi bi-person-fill"></i>
+              {{ version.createdByName }}
+            </span>
+            <span v-else-if="version.createdByEmail" class="version-author">
+              <i class="bi bi-person-fill"></i>
+              {{ version.createdByEmail }}
+            </span>
           </div>
-          <div v-if="version.createdByName" class="version-author">
-            <i class="bi bi-person-fill"></i>
-            {{ version.createdByName }}
-          </div>
-          <div v-else-if="version.createdByEmail" class="version-author">
-            <i class="bi bi-person-fill"></i>
-            {{ version.createdByEmail }}
+          <div v-if="version.changeMessage" class="version-message">
+            {{ version.changeMessage }}
           </div>
         </div>
       </div>
