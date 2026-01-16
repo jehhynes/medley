@@ -1,6 +1,6 @@
 <template>
   <virtual-scroller 
-    :items="articles" 
+    :items="flattenedArticles" 
     :item-height="itemHeight"
     :buffer="buffer"
     key-field="id"
@@ -15,8 +15,8 @@
         </div>
         <div class="article-list-title">
           <span class="article-title-text">{{ article.title }}</span>
-          <div v-if="getBreadcrumbs(article)" class="article-breadcrumbs">
-            {{ getBreadcrumbs(article) }}
+          <div v-if="article.breadcrumbs" class="article-breadcrumbs">
+            {{ article.breadcrumbs }}
           </div>
         </div>
         <div class="status-actions">
@@ -53,15 +53,10 @@
 </template>
 
 <script>
+import { computed } from 'vue';
 import VirtualScroller from './VirtualScroller.vue';
 import dropdownMixin from '@/mixins/dropdown';
-import { 
-  getIconClass, 
-  getStatusIcon, 
-  getStatusColorClass, 
-  showProcessingSpinner, 
-  showUserTurnIndicator 
-} from '@/utils/helpers.js';
+import { useArticleView } from '@/composables/useArticleView';
 
 export default {
   name: 'ArticleList',
@@ -85,53 +80,77 @@ export default {
     articleTypes: {
       type: Array,
       default: () => []
-    },
-    breadcrumbsCache: {
-      type: Map,
-      default: () => new Map()
     }
   },
-  emits: ['select', 'create-child', 'edit-article'],
+  emits: ['select', 'edit-article'],
+  setup(props, { emit }) {
+    const {
+      selectArticle,
+      getArticleIcon,
+      editArticle,
+      getIconClass,
+      getStatusIcon,
+      getStatusColorClass,
+      showProcessingSpinner,
+      showUserTurnIndicator
+    } = useArticleView(props, emit);
+
+    /**
+     * Flatten the article tree into a sorted list with breadcrumbs.
+     * Note: Filters are applied server-side via API query params, not here.
+     * This just flattens the already-filtered tree from the server.
+     */
+    const flattenedArticles = computed(() => {
+      /**
+       * Recursively flatten articles with breadcrumbs
+       * @param {Array} articles - Articles to flatten
+       * @param {Array} parentPath - Path of parent titles
+       * @returns {Array} Flattened articles with breadcrumbs
+       */
+      const flattenArticles = (articles, parentPath = []) => {
+        let result = [];
+        for (const article of articles) {
+          const breadcrumbs = parentPath.length > 0 
+            ? parentPath.join(' > ') 
+            : null;
+
+          const articleWithMeta = {
+            ...article,
+            breadcrumbs
+          };
+          result.push(articleWithMeta);
+
+          if (article.children && article.children.length > 0) {
+            const newPath = [...parentPath, article.title];
+            result = result.concat(flattenArticles(article.children, newPath));
+          }
+        }
+        return result;
+      };
+
+      const flattened = flattenArticles(props.articles);
+      return flattened.sort((a, b) => {
+        return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
+      });
+    });
+
+    return {
+      selectArticle,
+      getArticleIcon,
+      editArticle,
+      getIconClass,
+      getStatusIcon,
+      getStatusColorClass,
+      showProcessingSpinner,
+      showUserTurnIndicator,
+      flattenedArticles
+    };
+  },
   data() {
     return {
       itemHeight: 52, // Height of each article row in pixels
       buffer: 5 // Number of extra items to render above/below viewport
     };
-  },
-  methods: {
-    selectArticle(article) {
-      this.$emit('select', article);
-      // Collapse left sidebar on mobile after selection
-      window.MedleySidebar?.collapseLeftSidebar();
-    },
-    getArticleIcon(article) {
-      // Look up icon from dictionary, fallback to bi-file-text
-      if (article.articleTypeId && this.articleTypeIconMap[article.articleTypeId]) {
-        return this.articleTypeIconMap[article.articleTypeId];
-      }
-      return 'bi-file-text';
-    },
-    getIconClass,
-    getStatusIcon,
-    getStatusColorClass,
-    createChild(parentArticleId) {
-      this.$emit('create-child', parentArticleId);
-    },
-    editArticle(article) {
-      this.$emit('edit-article', article);
-    },
-    /**
-     * Get breadcrumbs for an article
-     * Uses pre-computed breadcrumbs cache for O(1) lookup instead of traversing tree.
-     * @param {Object} article - Article to get breadcrumbs for
-     * @returns {string|null} Breadcrumb string (e.g., "Parent > Grandparent") or null if root level
-     */
-    getBreadcrumbs(article) {
-      // Use pre-computed breadcrumbs from cache for O(1) lookup
-      return this.breadcrumbsCache.get(article.id) || null;
-    },
-    showProcessingSpinner,
-    showUserTurnIndicator
   }
 };
 </script>
