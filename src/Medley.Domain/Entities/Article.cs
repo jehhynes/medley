@@ -28,6 +28,18 @@ public class Article : BusinessEntity
     public DateTimeOffset? PublishedAt { get; set; }
     
     /// <summary>
+    /// User who created this article
+    /// </summary>
+    public Guid? CreatedById { get; set; }
+
+    /// <summary>
+    /// Navigation property to the user who created this article
+    /// </summary>
+    [ForeignKey(nameof(CreatedById))]
+    [DeleteBehavior(DeleteBehavior.SetNull)]
+    public virtual User? CreatedBy { get; set; }
+    
+    /// <summary>
     /// Parent article ID for nested/hierarchical articles (null for root-level articles)
     /// </summary>
     public Guid? ParentArticleId { get; set; }

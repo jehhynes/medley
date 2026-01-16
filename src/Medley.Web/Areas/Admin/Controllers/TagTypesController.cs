@@ -138,7 +138,7 @@ public class TagTypesController : Controller
             }
         }
 
-        // Entity is already tracked, changes will be saved on SaveChangesAsync
+        
         await _unitOfWork.SaveChangesAsync();
 
         TempData["SuccessMessage"] = "Tag type updated";

@@ -78,13 +78,52 @@ public class ArticleVersionService : IArticleVersionService
         return VersionStatus.OldAiVersion;
     }
 
+    /// <summary>
+    /// Checks if content has meaningful text beyond the markdown H1 header
+    /// </summary>
+    private bool HasContentBeyondHeader(string? content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return false;
+        }
+
+        // Strip HTML comment header (e.g., <!-- articleId: xxx -->)
+        var strippedContent = System.Text.RegularExpressions.Regex.Replace(
+            content, 
+            @"^\s*<!--[\s\S]*?-->\s*", 
+            string.Empty, 
+            System.Text.RegularExpressions.RegexOptions.None,
+            TimeSpan.FromSeconds(1));
+
+        // Find the first H1 markdown heading
+        var h1Pattern = @"^#\s+.*?$";
+        var match = System.Text.RegularExpressions.Regex.Match(
+            strippedContent, 
+            h1Pattern, 
+            System.Text.RegularExpressions.RegexOptions.Multiline);
+
+        if (!match.Success)
+        {
+            // No H1 found, check if there's any non-whitespace content
+            return !string.IsNullOrWhiteSpace(strippedContent);
+        }
+
+        // Get content after the H1
+        var contentAfterH1 = strippedContent.Substring(match.Index + match.Length);
+        
+        // Check if there's any non-whitespace content after the H1
+        return !string.IsNullOrWhiteSpace(contentAfterH1);
+    }
+
     public async Task<ArticleVersionDto> CaptureUserVersionAsync(
         Guid articleId, 
         string newContent, 
         string? previousContent, 
-        Guid? userId, 
+        Guid userId, 
         CancellationToken cancellationToken = default)
     {
+
         try
         {
             // Get the latest version with parent version loaded
@@ -97,35 +136,52 @@ public class ArticleVersionService : IArticleVersionService
             bool isNewVersion = true;
             ArticleVersion version;
 
-            // Check if content is unchanged - don't create/update version if identical
-            if (latestVersion != null && latestVersion.ContentSnapshot == newContent)
+            // Check if we need to create a base version first (if article has content beyond header)
+            if (latestVersion == null && !string.IsNullOrEmpty(previousContent) && HasContentBeyondHeader(previousContent))
             {
-                version = latestVersion;
-                isNewVersion = false;
-            }
-            // Check if we can update the existing version (draft mode)
-            else if (latestVersion != null && userId.HasValue)
-            {
-                var lastModified = latestVersion.ModifiedAt ?? latestVersion.CreatedAt;
-                var timeSinceModified = DateTimeOffset.UtcNow - lastModified;
+                // Load article with CreatedBy to create base version
+                var articleForBase = await _articleRepository.Query()
+                    .Where(a => a.Id == articleId)
+                    .Include(a => a.CreatedBy)
+                    .SingleAsync(cancellationToken);
 
-                // Update existing version if same user and within 30 minutes
-                if (latestVersion.CreatedById == userId && timeSinceModified.TotalMinutes <= 30)
+                // Create base version (v1) with the existing article content
+                latestVersion = await CreateBaseVersionAsync(
+                    articleForBase,
+                    previousContent,
+                    cancellationToken);
+            }
+
+            // Check if content is unchanged - don't create/update version if identical
+            if (latestVersion != null)
+            {
+                if (previousContent == newContent)
                 {
-                    // Update existing version (draft mode)
-                    isNewVersion = false;
-                    version = await UpdateExistingVersionAsync(latestVersion, newContent, cancellationToken);
+                    version = latestVersion;
+                    isNewVersion = true;
                 }
                 else
                 {
-                    // Create new version with latestVersion as parent
-                    version = await CreateNewVersionAsync(articleId, newContent, latestVersion, userId, cancellationToken);
+                    // Check if we can update the existing version (draft mode)
+                    var lastModified = latestVersion.ModifiedAt ?? latestVersion.CreatedAt;
+                    var timeSinceModified = DateTimeOffset.UtcNow - lastModified;
+
+                    // Update existing version if same user and within 30 minutes
+                    if (latestVersion.CreatedById == userId && timeSinceModified.TotalMinutes <= 30)
+                    {
+                        // Update existing version (draft mode)
+                        isNewVersion = false;
+                        version = await UpdateExistingVersionAsync(latestVersion, newContent, cancellationToken);
+                    }
+                    else
+                    {
+                        // Create new version with latestVersion as parent
+                        version = await CreateNewVersionAsync(articleId, newContent, latestVersion, userId, cancellationToken);
+                    }
                 }
             }
             else
             {
-                // Create new version (no latest version or no user)
-                // latestVersion will be null for first version
                 version = await CreateNewVersionAsync(articleId, newContent, latestVersion, userId, cancellationToken);
             }
 
@@ -177,7 +233,7 @@ public class ArticleVersionService : IArticleVersionService
         existingVersion.ContentDiff = diffPatch;
         existingVersion.ModifiedAt = DateTimeOffset.UtcNow;
 
-        // Entity is already tracked, changes will be saved on SaveChangesAsync
+        
 
         _logger.LogInformation(
             "Updated draft version {VersionNumber} for article {ArticleId} by user {UserId}",
@@ -238,7 +294,6 @@ public class ArticleVersionService : IArticleVersionService
         await _versionRepository.AddAsync(version);
 
         // Update the article's CurrentVersionId to point to this new User version
-        // The article entity is already tracked, so this change will be saved automatically
         article.CurrentVersionId = version.Id;
 
         _logger.LogInformation(
@@ -246,6 +301,42 @@ public class ArticleVersionService : IArticleVersionService
             nextVersion, articleId, userId);
 
         return version;
+    }
+
+    /// <summary>
+    /// Create a base version (v1) using the article's creation metadata and existing content
+    /// </summary>
+    private async Task<ArticleVersion> CreateBaseVersionAsync(
+        Article article,
+        string existingContent,
+        CancellationToken cancellationToken)
+    {
+        // Use the article's creator if available
+        var baseVersion = new ArticleVersion
+        {
+            Article = article,
+            ContentSnapshot = existingContent,
+            ContentDiff = null, // No parent version, so no diff
+            VersionNumber = 1,
+            CreatedBy = article.CreatedBy,
+            CreatedAt = article.CreatedAt,
+            VersionType = VersionType.User,
+            ParentVersionId = null,
+            ChangeMessage = "Initial version"
+        };
+
+        baseVersion.ModifiedAt = baseVersion.CreatedAt;
+
+        await _versionRepository.AddAsync(baseVersion);
+
+        // Update the article's CurrentVersionId to point to this base version
+        article.CurrentVersionId = baseVersion.Id;
+
+        _logger.LogInformation(
+            "Created base version (v1) for article {ArticleId} with creation date {CreatedAt} by user {UserId}",
+            article.Id, article.CreatedAt, article.CreatedById);
+
+        return baseVersion;
     }
 
     public async Task<List<ArticleVersionDto>> GetVersionsAsync(
@@ -363,7 +454,6 @@ public class ArticleVersionService : IArticleVersionService
         Guid articleId,
         string content,
         string changeMessage,
-        Guid userId,
         Guid? conversationId = null,
         CancellationToken cancellationToken = default)
     {
@@ -408,9 +498,6 @@ public class ArticleVersionService : IArticleVersionService
                 throw new InvalidOperationException($"Article {articleId} not found");
             }
 
-            // Load user for navigation property
-            var createdByUser = await _userRepository.GetByIdAsync(userId);
-
             // Create new AI version
             var newVersion = new ArticleVersion
             {
@@ -418,7 +505,6 @@ public class ArticleVersionService : IArticleVersionService
                 ContentSnapshot = content,
                 ContentDiff = contentDiff,
                 VersionNumber = versionNumber,
-                CreatedBy = createdByUser,
                 CreatedAt = DateTimeOffset.UtcNow,
                 VersionType = VersionType.AI,
                 ParentVersionId = mostRecentUserVersion.Id,
@@ -436,9 +522,9 @@ public class ArticleVersionService : IArticleVersionService
             {
                 Id = newVersion.Id,
                 VersionNumber = mostRecentUserVersion.VersionNumber + "." + newVersion.VersionNumber,
-                CreatedBy = userId,
-                CreatedByName = newVersion.CreatedBy?.FullName,
-                CreatedByEmail = newVersion.CreatedBy?.Email,
+                CreatedBy = null,
+                CreatedByName = null,
+                CreatedByEmail = null,
                 CreatedAt = newVersion.CreatedAt,
                 IsNewVersion = true,
                 VersionType = newVersion.VersionType.ToString(),

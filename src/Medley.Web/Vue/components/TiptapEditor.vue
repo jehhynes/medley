@@ -560,7 +560,16 @@ export default {
         this.handleKeyDown = (event) => {
             if ((event.ctrlKey || event.metaKey) && event.key === 's') {
                 event.preventDefault();
-                if (!this.isSaving && this.hasChanges) {
+                // Cancel any pending auto-save
+                if (this.autoSaveTimer) {
+                    clearTimeout(this.autoSaveTimer);
+                    this.autoSaveTimer = null;
+                }
+                // Trigger immediate save if there are changes or auto-save is pending
+                if (!this.isSaving && (this.hasChanges || this.autoSaveState === 'changed')) {
+                    if (this.autoSave) {
+                        this.autoSaveState = 'saving';
+                    }
                     this.handleSave();
                 }
             }

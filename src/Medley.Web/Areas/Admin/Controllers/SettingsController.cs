@@ -76,7 +76,7 @@ public class SettingsController : Controller
             organization.EmailDomain = normalizedDomain;
             organization.EnableSmartTagging = enableSmartTagging;
             
-            // Entity is already tracked, changes will be saved on SaveChangesAsync
+            
             await _unitOfWork.SaveChangesAsync();
 
             _logger.LogInformation("Updated organization settings for {OrganizationId}", organizationId);
