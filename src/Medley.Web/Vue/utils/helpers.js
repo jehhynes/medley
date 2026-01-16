@@ -55,6 +55,69 @@ export const formatDate = (dateString) => {
 };
 
 /**
+ * Formats a date as relative time (e.g., "2 minutes ago", "3h ago")
+ * @param {string|Date} dateInput - Date string or Date object
+ * @param {Object} options - Formatting options
+ * @param {boolean} options.short - Use short format (e.g., "2m ago" vs "2 minutes ago")
+ * @param {boolean} options.includeTime - Include time in fallback date format for old dates
+ * @returns {string} Relative time string
+ */
+export const formatRelativeTime = (dateInput, options = {}) => {
+    const { short = false, includeTime = false } = options;
+    
+    if (!dateInput) return 'N/A';
+    
+    const date = dateInput instanceof Date ? dateInput : new Date(dateInput);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMinutes = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    // Just now
+    if (diffMinutes < 1) {
+        return 'Just now';
+    }
+    
+    // Minutes
+    if (diffMinutes < 60) {
+        if (short) {
+            return `${diffMinutes}m ago`;
+        }
+        return `${diffMinutes} minute${diffMinutes === 1 ? '' : 's'} ago`;
+    }
+    
+    // Hours
+    if (diffHours < 24) {
+        if (short) {
+            return `${diffHours}h ago`;
+        }
+        return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+    }
+    
+    // Days (within a week)
+    if (diffDays < 7) {
+        if (short) {
+            return `${diffDays}d ago`;
+        }
+        return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+    }
+    
+    // Older dates - show formatted date
+    if (includeTime) {
+        return date.toLocaleDateString([], {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+    
+    return date.toLocaleDateString();
+};
+
+/**
  * Returns Bootstrap badge class for article status
  * @param {string|number} status - Article status (Draft, Review, Approved, Archived)
  * @returns {string} Bootstrap badge class

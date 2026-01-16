@@ -16,6 +16,12 @@
             <button type="button" class="btn btn-sm btn-outline-secondary" :class="{ active: viewMode === 'list' }" @click="setViewMode('list')" title="List View">
               <i class="bi bi-list-ul"></i>
             </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary position-relative" :class="{ active: viewMode === 'mywork' }" @click="setViewMode('mywork')" title="My Work">
+              <i class="bi bi-person-check"></i>
+              <span v-if="myWorkCount > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                {{ myWorkCount }}
+              </span>
+            </button>
           </div>
           <button class="btn btn-sm btn-outline-secondary position-relative" @click="showFilterModal" title="Filter Articles" v-cloak>
             <i class="bi bi-funnel"></i>
@@ -70,6 +76,17 @@
             @create-child="showCreateArticleModal"
             @edit-article="showEditArticleModal"
           ></article-list>
+          <my-work-list
+            v-show="viewMode === 'mywork'"
+            v-cloak
+            :articles="myWorkList"
+            :selected-id="articles.selectedId"
+            :article-type-icon-map="articles.typeIconMap"
+            :article-types="articles.types"
+            :breadcrumbs-cache="articles.breadcrumbsCache"
+            @select="selectArticle"
+            @edit-article="showEditArticleModal"
+          ></my-work-list>
         </template>
       </div>
     </div>
@@ -391,6 +408,7 @@ import { getUrlParam, setUrlParam, setupPopStateHandler } from '@/utils/url.js';
 
 import FragmentModal from '../components/FragmentModal.vue';
 import VersionViewer from '../components/VersionViewer.vue';
+import MyWorkList from '../components/MyWorkList.vue';
 import articleModalMixin from '../mixins/articleModal.js';
 import articleVersionMixin from '../mixins/articleVersion.js';
 import articleSignalRMixin from '../mixins/articleSignalR.js';
@@ -402,7 +420,8 @@ export default {
   name: 'Articles',
   components: {
     FragmentModal,
-    VersionViewer
+    VersionViewer,
+    MyWorkList
   },
   mixins: [
     articleModalMixin,
@@ -436,6 +455,7 @@ export default {
 
       // Cached data for performance
       cachedFlatList: [],
+      cachedMyWorkList: [],
 
       // Editor state
       editor: {
@@ -501,6 +521,7 @@ export default {
       // User info from server
       userDisplayName: window.MedleyUser?.displayName || 'User',
       userIsAuthenticated: window.MedleyUser?.isAuthenticated || false,
+      currentUserId: window.MedleyUser?.id || null,
 
       // Fragment modal state
       selectedFragment: null
@@ -517,6 +538,12 @@ export default {
     },
     flatArticlesList() {
       return this.cachedFlatList;
+    },
+    myWorkCount() {
+      return this.cachedMyWorkList.length;
+    },
+    myWorkList() {
+      return this.cachedMyWorkList;
     },
     availableTabs() {
       const tabs = [{ id: 'editor', label: 'Editor', closeable: false, type: 'editor' }];
@@ -552,6 +579,7 @@ export default {
         this.buildArticleIndex();
         this.buildParentPathCache();
         this.rebuildFlatListCache();
+        this.rebuildMyWorkListCache();
       } catch (err) {
         this.ui.error = 'Failed to load articles: ' + err.message;
         console.error('Error loading articles:', err);
@@ -638,15 +666,102 @@ export default {
       this.cachedFlatList = flattened.sort((a, b) => {
         return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
       });
+      this.rebuildMyWorkListCache();
     },
 
     rebuildFlatListCacheDebounced() {
-      if (!this._debouncedRebuildFlatListCache) {
-        this._debouncedRebuildFlatListCache = debounce(() => {
+      if (!this._debouncedRebuildCache) {
+        this._debouncedRebuildCache = debounce(() => {
           this.rebuildFlatListCache();
+          this.rebuildMyWorkListCache();
         }, 100);
       }
-      this._debouncedRebuildFlatListCache();
+      this._debouncedRebuildCache();
+    },
+
+    rebuildMyWorkListCache() {
+      // Get user ID from window.MedleyUser
+      const userId = this.currentUserId;
+      if (!userId) {
+        this.cachedMyWorkList = [];
+        return;
+      }
+
+      // Flatten all articles
+      const allArticles = this.flattenAllArticles(this.articles.list);
+      
+      // Filter: assigned to user AND status is Draft or Review
+      const filtered = allArticles.filter(article => {
+        // Check if assigned to user
+        const isAssigned = article.assignedUser && 
+                          article.assignedUser.id && 
+                          article.assignedUser.id === userId;
+        
+        // Check if status is Draft or Review (status comes as string from API)
+        const isDraftOrReview = article.status === 'Draft' || article.status === 'Review';
+        
+        return isAssigned && isDraftOrReview;
+      });
+      
+      // Sort by priority
+      this.cachedMyWorkList = this.sortMyWorkArticles(filtered);
+    },
+
+    flattenAllArticles(articles, parentId = null) {
+      let result = [];
+      for (const article of articles) {
+        result.push({ ...article, parentArticleId: parentId });
+        if (article.children && article.children.length > 0) {
+          result = result.concat(this.flattenAllArticles(article.children, article.id));
+        }
+      }
+      return result;
+    },
+
+    sortMyWorkArticles(articles) {
+      return articles.sort((a, b) => {
+        // Priority 1: User's turn (waiting for review)
+        const aUserTurn = showUserTurnIndicator(a) ? 1 : 0;
+        const bUserTurn = showUserTurnIndicator(b) ? 1 : 0;
+        if (aUserTurn !== bUserTurn) return bUserTurn - aUserTurn;
+        
+        // Priority 2: No conversation (assigned but no conversation yet)
+        const aNoConversation = (!a.currentConversation || !a.currentConversation.id) ? 1 : 0;
+        const bNoConversation = (!b.currentConversation || !b.currentConversation.id) ? 1 : 0;
+        if (aNoConversation !== bNoConversation) return bNoConversation - aNoConversation;
+        
+        // Priority 3: AI processing
+        const aAiProcessing = showProcessingSpinner(a) ? 1 : 0;
+        const bAiProcessing = showProcessingSpinner(b) ? 1 : 0;
+        if (aAiProcessing !== bAiProcessing) return bAiProcessing - aAiProcessing;
+        
+        // Priority 4: Last activity date (most recent first)
+        const aLastActivity = this.getLastActivityDate(a);
+        const bLastActivity = this.getLastActivityDate(b);
+        return bLastActivity - aLastActivity;
+      });
+    },
+
+    getLastActivityDate(article) {
+      let latestDate = new Date(article.modifiedAt || article.createdAt || 0);
+      
+      // Check conversation's last message time if available
+      if (article.currentConversation?.lastMessageAt) {
+        const conversationDate = new Date(article.currentConversation.lastMessageAt);
+        if (conversationDate > latestDate) {
+          latestDate = conversationDate;
+        }
+      }
+      
+      // Check latest version date if available (from versions array)
+      if (article.latestVersionDate) {
+        const versionDate = new Date(article.latestVersionDate);
+        if (versionDate > latestDate) {
+          latestDate = versionDate;
+        }
+      }
+      
+      return latestDate;
     },
 
     async selectArticle(article, replaceState = false) {
@@ -803,6 +918,7 @@ export default {
 
       this.articles.index.set(article.id, article);
       this.rebuildFlatListCache();
+      this.rebuildMyWorkListCache();
     },
 
     updateArticleInTree(articleId, updates) {
@@ -871,6 +987,7 @@ export default {
 
       removeFromCaches(article);
       this.rebuildFlatListCache();
+      this.rebuildMyWorkListCache();
     },
 
     async saveArticle(retryCount = 0) {
@@ -1078,6 +1195,7 @@ export default {
       }
 
       this.rebuildFlatListCache();
+      this.rebuildMyWorkListCache();
     },
 
     switchContentTab(tabId) {
@@ -1229,7 +1347,7 @@ export default {
 
   async mounted() {
     const savedViewMode = localStorage.getItem('articlesViewMode');
-    if (savedViewMode && (savedViewMode === 'tree' || savedViewMode === 'list')) {
+    if (savedViewMode && (savedViewMode === 'tree' || savedViewMode === 'list' || savedViewMode === 'mywork')) {
       this.viewMode = savedViewMode;
     }
 
@@ -1241,6 +1359,7 @@ export default {
     ]);
 
     this.sortArticlesRecursive(this.articles.list);
+    this.rebuildMyWorkListCache();
 
     const articleIdFromUrl = getUrlParam('id');
     if (articleIdFromUrl) {
