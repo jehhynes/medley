@@ -24,41 +24,25 @@
         <template #toolbar-prepend>
           <button 
             type="button"
-            class="tiptap-toolbar-btn"
+            class="tiptap-toolbar-btn tiptap-btn-with-text is-active"
             @click="acceptPlan"
             :disabled="!canEditPlan"
             title="Accept Plan">
-            <i class="bi bi-check-lg"></i>
+            <i class="bi bi-check-lg me-1"></i>
+            Accept
           </button>
           <button 
             type="button"
-            class="tiptap-toolbar-btn"
+            class="tiptap-toolbar-btn tiptap-btn-with-text"
             @click="rejectPlan"
             :disabled="!canEditPlan"
             title="Reject Plan">
-            <i class="bi bi-x-lg"></i>
+            <i class="bi bi-x-lg me-1"></i>
+            Reject
           </button>
           <div class="tiptap-toolbar-divider"></div>
         </template>
         <template #toolbar-append>
-          <div class="tiptap-toolbar-divider"></div>
-          
-          <!-- Version Dropdown -->
-          <div class="d-flex align-items-center me-2">
-            <select 
-              class="form-select form-select-sm"
-              :value="plan.id"
-              @change="onVersionChange"
-              style="min-width: 150px;">
-              <option 
-                v-for="p in allPlans" 
-                :key="p.id" 
-                :value="p.id">
-                v{{ p.version }} {{ p.status === 'Draft' ? '(current)' : '' }} - {{ formatDate(p.createdAt) }}
-              </option>
-            </select>
-          </div>
-
           <!-- Restore Button (for archived plans) -->
           <button 
             v-if="isArchivedPlan"
@@ -72,7 +56,38 @@
             Restore
           </button>
 
-          <span class="text-muted small align-self-center">by {{ plan.createdBy.name }}</span>
+          <div class="tiptap-toolbar-divider"></div>
+          
+          <!-- Version Dropdown -->
+          <div class="tiptap-dropdown active position-relative" ref="planDropdown">
+            <button 
+              type="button"
+              class="tiptap-toolbar-btn tiptap-btn-with-text"
+              @click="toggleVersionDropdown"
+              title="Select version">
+              v{{ plan.version }}
+              <i class="bi bi-chevron-down ms-1"></i>
+            </button>
+            <div 
+              v-if="versionDropdownOpen" 
+              class="tiptap-dropdown-menu right-aligned"
+              style="min-width: 400px;"
+              @click.stop>
+              <div 
+                v-for="p in allPlans" 
+                :key="p.id" 
+                class="tiptap-dropdown-item"
+                :class="{ 'is-active': p.id === plan.id }"
+                @click="selectVersion(p.id)">
+                <div class="d-flex justify-content-between align-items-center gap-3 w-100">
+                  <strong>v{{ p.version }}</strong>
+                  <span class="text-muted small">{{ p.status === 'Draft' ? '(current)' : '' }}</span>
+                  <span class="text-muted small">{{ formatDate(p.createdAt) }}</span>
+                  <span class="text-muted small">{{ p.createdBy.name }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </template>
         <template #notifications>
           <!-- Changes Summary (for modified plans) -->
@@ -287,7 +302,8 @@ export default {
       planInstructions: '',
       savingFragments: new Set(),
       selectedFragment: null,
-      isRestoringPlan: false
+      isRestoringPlan: false,
+      versionDropdownOpen: false
     };
   },
   computed: {
@@ -408,10 +424,20 @@ export default {
       }
     },
 
-    async onVersionChange(event) {
-      const planId = event.target.value;
+    toggleVersionDropdown() {
+      this.versionDropdownOpen = !this.versionDropdownOpen;
+    },
+
+    async selectVersion(planId) {
       if (planId) {
+        this.versionDropdownOpen = false;
         await this.loadSpecificPlan(planId);
+      }
+    },
+
+    handleClickOutside(event) {
+      if (this.$refs.planDropdown && !this.$refs.planDropdown.contains(event.target)) {
+        this.versionDropdownOpen = false;
       }
     },
 
@@ -697,16 +723,15 @@ export default {
         textarea.style.height = textarea.scrollHeight + 'px';
       });
     });
+
+    // Add click-outside listener for dropdown
+    document.addEventListener('click', this.handleClickOutside);
+  },
+
+  beforeUnmount() {
+    // Remove click-outside listener
+    document.removeEventListener('click', this.handleClickOutside);
   }
 };
 </script>
 
-<style scoped>
-.fragment-title {
-  cursor: pointer;
-}
-
-.fragment-title:hover {
-  text-decoration: underline;
-}
-</style>

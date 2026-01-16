@@ -6,7 +6,7 @@
       </div>
     </div>
 
-    <div v-else-if="error" class="alert alert-danger m-3">
+    <div v-else-if="error" class="alert alert-danger">
       {{ error }}
     </div>
 
@@ -15,10 +15,10 @@
       <div class="diff-viewer-header">
         <div class="diff-viewer-title">
           <!-- Accept/Reject buttons for AI versions -->
-          <template v-if="isAIVersion">
+          <template v-if="isAIVersion && canReviewVersion">
             <button 
               type="button"
-              class="btn btn-sm btn-success me-2"
+              class="tiptap-toolbar-btn tiptap-btn-with-text is-active"
               @click="acceptVersion"
               :disabled="isProcessing"
               title="Accept AI Version">
@@ -28,39 +28,63 @@
             </button>
             <button 
               type="button"
-              class="btn btn-sm btn-outline-secondary me-2"
+              class="tiptap-toolbar-btn tiptap-btn-with-text"
               @click="rejectVersion"
               :disabled="isProcessing"
               title="Reject AI Version">
               <i class="bi bi-x-lg me-1"></i>
               Reject
             </button>
+            <div class="tiptap-toolbar-divider"></div>
           </template>
+          
+          <!-- Current Version Status (middle area) -->
+          <div class="d-flex align-items-center me-auto">
+            <span>
+              <strong class="fs-6">{{ getBaseStatusLabel(version.status) }}</strong>
+              <span v-if="getStatusDetails(version)" class="text-muted small ms-2">
+                {{ getStatusDetails(version) }}
+              </span>
+            </span>
+          </div>
         </div>
         
         <!-- Version Dropdown -->
-        <div class="d-flex align-items-center">
-          <select 
-            class="form-select form-select-sm"
-            :value="version.id"
-            @change="onVersionChange"
-            style="min-width: 350px;">
-            <option 
+        <div class="tiptap-dropdown active position-relative" ref="versionDropdown">
+          <button 
+            type="button"
+            class="tiptap-toolbar-btn tiptap-btn-with-text"
+            @click="toggleVersionDropdown"
+            title="Select version">
+            v{{ version.versionNumber }}
+            <i class="bi bi-chevron-down ms-1"></i>
+          </button>
+          <div 
+            v-if="versionDropdownOpen" 
+            class="tiptap-dropdown-menu right-aligned"
+            style="min-width: 400px;"
+            @click.stop>
+            <div 
               v-for="v in allVersions" 
               :key="v.id" 
-              :value="v.id">
-              v{{ v.versionNumber }} - {{ formatDate(v.createdAt) }}{{ v.createdByName ? ' - ' + v.createdByName : '' }}
-            </option>
-          </select>
+              class="tiptap-dropdown-item"
+              :class="{ 'is-active': v.id === version.id }"
+              @click="selectVersion(v.id)">
+              <div class="d-flex justify-content-between align-items-center gap-3 w-100">
+                <strong>v{{ v.versionNumber }}</strong>
+                <span class="text-muted small">{{ formatDate(v.createdAt) }}</span>
+                <span class="text-muted small" v-if="v.createdByName">{{ v.createdByName }}</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       <!-- Diff Content -->
       <div class="diff-viewer-content flex-grow-1">
         <!-- Version Change Message -->
-        <div v-if="version.changeMessage" class="alert alert-info m-3">
-          <i class="bi bi-info-circle me-2"></i>
-          <strong>Changes:</strong> {{ version.changeMessage }}
+        <div v-if="version.changeMessage" class="alert alert-info">
+          {{ version.changeMessage }}
         </div>
 
         <div v-if="loadingDiff" class="loading-spinner">
@@ -68,7 +92,7 @@
             <span class="visually-hidden">Loading diff...</span>
           </div>
         </div>
-        <div v-else-if="diffError" class="alert alert-danger m-3">
+        <div v-else-if="diffError" class="alert alert-danger">
           {{ diffError }}
         </div>
         <div v-else-if="diffHtml" v-html="diffHtml" class="diff-content markdown-container"></div>
@@ -103,13 +127,19 @@ export default {
       loadingDiff: false,
       diffError: null,
       diffHtml: null,
-      isProcessing: false
+      isProcessing: false,
+      versionDropdownOpen: false
     };
   },
   computed: {
     isAIVersion() {
       // Check if version type is AI
       return this.version && this.version.versionType === 'AI';
+    },
+    canReviewVersion() {
+      // Can only review the pending AI version
+      return this.version && 
+             this.version.status === 'PendingAiVersion';
     }
   },
   watch: {
@@ -166,10 +196,20 @@ export default {
       }
     },
 
-    async onVersionChange(event) {
-      const versionId = event.target.value;
+    toggleVersionDropdown() {
+      this.versionDropdownOpen = !this.versionDropdownOpen;
+    },
+
+    async selectVersion(versionId) {
       if (versionId && versionId !== this.versionId) {
+        this.versionDropdownOpen = false;
         this.$emit('version-changed', versionId);
+      }
+    },
+
+    handleClickOutside(event) {
+      if (this.$refs.versionDropdown && !this.$refs.versionDropdown.contains(event.target)) {
+        this.versionDropdownOpen = false;
       }
     },
 
@@ -199,6 +239,42 @@ export default {
       if (!dateString) return '';
       const date = new Date(dateString);
       return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+    },
+
+    getBaseStatusLabel(status) {
+      const labels = {
+        'CurrentVersion': 'Current Version',
+        'OldVersion': 'Prior Version',
+        'PendingAiVersion': 'AI Update',
+        'AcceptedAiVersion': 'AI Update',
+        'RejectedAiVersion': 'AI Update',
+        'OldAiVersion': 'AI Update'
+      };
+      return labels[status] || status;
+    },
+
+    getStatusDetails(version) {
+      if (!version) return '';
+      
+      const status = version.status;
+      const userName = version.createdByName;
+      const date = version.createdAt ? this.formatDate(version.createdAt) : '';
+      
+      switch (status) {
+        case 'AcceptedAiVersion':
+          return userName && date ? `Accepted by ${userName} on ${date}` : 'Accepted';
+        case 'RejectedAiVersion':
+          return userName && date ? `Rejected by ${userName} on ${date}` : 'Rejected';
+        case 'CurrentVersion':
+        case 'OldVersion':
+          return userName && date ? `by ${userName} on ${date}` : '';
+        case 'PendingAiVersion':
+          return 'Pending';
+        case 'OldAiVersion':
+          return 'Archived';
+        default:
+          return '';
+      }
     },
 
     async acceptVersion() {
@@ -249,7 +325,7 @@ export default {
 
       bootbox.confirm({
         title: 'Reject AI Version',
-        message: `Reject version ${this.version.versionNumber}? This version will be marked as inactive and won't auto-load anymore.`,
+        message: `Reject version ${this.version.versionNumber}? This version will be marked as rejected and won't auto-load anymore.`,
         buttons: {
           confirm: {
             label: 'Reject',
@@ -284,6 +360,16 @@ export default {
         }
       });
     }
+  },
+
+  mounted() {
+    // Add click-outside listener for dropdown
+    document.addEventListener('click', this.handleClickOutside);
+  },
+
+  beforeUnmount() {
+    // Remove click-outside listener
+    document.removeEventListener('click', this.handleClickOutside);
   }
 };
 </script>
