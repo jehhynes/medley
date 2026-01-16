@@ -50,9 +50,17 @@ $link-color:                $success !default;
 $table-color:                 initial !default;
 $table-bg-scale:              0% !default;
 
+// Borders
+
+$border-color:                      $gray-300 !default;
+
+// Buttons
+
+$btn-border-color:                  $border-color !default;
+
 // Dropdowns
 
-$dropdown-border-color:             $gray-400 !default;
+$dropdown-border-color:             $border-color !default;
 $dropdown-link-color:               $gray-700 !default;
 $dropdown-link-hover-color:         $white !default;
 $dropdown-link-hover-bg:            $primary !default;

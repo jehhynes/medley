@@ -59,7 +59,7 @@
           <div class="tiptap-toolbar-divider"></div>
           
           <!-- Version Dropdown -->
-          <div class="tiptap-dropdown active position-relative" ref="planDropdown">
+          <div class="tiptap-dropdown active position-relative" ref="planDropdown" style="margin-left: auto;">
             <button 
               type="button"
               class="tiptap-toolbar-btn tiptap-btn-with-text"
@@ -71,7 +71,7 @@
             <div 
               v-if="versionDropdownOpen" 
               class="tiptap-dropdown-menu right-aligned"
-              style="min-width: 400px;"
+              style="min-width: 400px; max-height: 400px; overflow-y: auto;"
               @click.stop>
               <div 
                 v-for="p in allPlans" 
@@ -81,7 +81,6 @@
                 @click="selectVersion(p.id)">
                 <div class="d-flex justify-content-between align-items-center gap-3 w-100">
                   <strong>v{{ p.version }}</strong>
-                  <span class="text-muted small">{{ p.status === 'Draft' ? '(current)' : '' }}</span>
                   <span class="text-muted small">{{ formatDate(p.createdAt) }}</span>
                   <span class="text-muted small">{{ p.createdBy.name }}</span>
                 </div>

@@ -17,7 +17,7 @@
               <i class="bi bi-list-ul"></i>
             </button>
             <button type="button" class="btn btn-sm btn-outline-secondary position-relative" :class="{ active: viewMode === 'mywork' }" @click="setViewMode('mywork')" title="My Work">
-              <i class="bi bi-person-check"></i>
+              <i class="bi bi-person"></i>
               <span v-if="myWorkCount > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
                 {{ myWorkCount }}
               </span>
