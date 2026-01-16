@@ -97,8 +97,14 @@ public class ArticleVersionService : IArticleVersionService
             bool isNewVersion = true;
             ArticleVersion version;
 
+            // Check if content is unchanged - don't create/update version if identical
+            if (latestVersion != null && latestVersion.ContentSnapshot == newContent)
+            {
+                version = latestVersion;
+                isNewVersion = false;
+            }
             // Check if we can update the existing version (draft mode)
-            if (latestVersion != null && userId.HasValue)
+            else if (latestVersion != null && userId.HasValue)
             {
                 var lastModified = latestVersion.ModifiedAt ?? latestVersion.CreatedAt;
                 var timeSinceModified = DateTimeOffset.UtcNow - lastModified;

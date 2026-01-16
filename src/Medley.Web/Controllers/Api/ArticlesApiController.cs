@@ -743,32 +743,6 @@ public class ArticlesApiController : ControllerBase
     }
 
     /// <summary>
-    /// Get the latest active AI version for an article
-    /// </summary>
-    [HttpGet("{id}/versions/ai/latest")]
-    public async Task<IActionResult> GetLatestAIVersion(Guid id)
-    {
-        var article = await _articleRepository.GetByIdAsync(id);
-        if (article == null)
-        {
-            return NotFound(new { message = "Article not found" });
-        }
-
-        // Get all AI versions for this article
-        var aiVersions = await _versionService.GetVersionsAsync(id, Domain.Enums.VersionType.AI);
-        
-        // Filter for pending AI version (status = PendingAiVersion)
-        var latestAiVersion = aiVersions.FirstOrDefault(v => v.Status == "PendingAiVersion");
-
-        if (latestAiVersion == null)
-        {
-            return NoContent();
-        }
-
-        return Ok(latestAiVersion);
-    }
-
-    /// <summary>
     /// Accept an AI version by creating a new User version with the AI content
     /// </summary>
     [HttpPost("{articleId}/versions/{versionId}/accept")]

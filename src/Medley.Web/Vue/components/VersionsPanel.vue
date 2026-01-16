@@ -52,8 +52,10 @@
 </template>
 
 <script>
+import { computed } from 'vue';
 import { api } from '@/utils/api.js';
 import { formatRelativeTime } from '@/utils/helpers.js';
+import { useArticleVersions } from '@/composables/useArticleVersions.js';
 
 export default {
   name: 'VersionsPanel',
@@ -68,17 +70,20 @@ export default {
     }
   },
   emits: ['select-version'],
-  data() {
-    return {
-      versions: [],
-      loading: false,
-      error: null
-    };
+  setup(props) {
+    const articleId = computed(() => props.articleId);
+    const versionState = useArticleVersions(articleId);
+    return { versionState };
   },
   computed: {
     userVersions() {
-      // Filter to show only User versions in the sidebar
-      return this.versions.filter(v => v.versionType === 'User');
+      return this.versionState.userVersions.value;
+    },
+    loading() {
+      return this.versionState.loading.value;
+    },
+    error() {
+      return this.versionState.error.value;
     }
   },
   watch: {
@@ -88,7 +93,7 @@ export default {
         if (newArticleId) {
           this.loadVersions();
         } else {
-          this.versions = [];
+          this.versionState.setVersions([]);
         }
       }
     }
@@ -97,17 +102,17 @@ export default {
     async loadVersions() {
       if (!this.articleId) return;
       
-      this.loading = true;
-      this.error = null;
+      this.versionState.setLoading(true);
+      this.versionState.setError(null);
       
       try {
-        // Using imported api
-        this.versions = await api.get(`/api/articles/${this.articleId}/versions`);
+        const versions = await api.get(`/api/articles/${this.articleId}/versions`);
+        this.versionState.setVersions(versions);
       } catch (err) {
-        this.error = 'Failed to load version history: ' + err.message;
+        this.versionState.setError('Failed to load version history: ' + err.message);
         console.error('Error loading versions:', err);
       } finally {
-        this.loading = false;
+        this.versionState.setLoading(false);
       }
     },
     selectVersion(version) {

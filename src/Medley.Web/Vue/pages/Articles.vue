@@ -409,6 +409,7 @@ import articleFilterMixin from '../mixins/articleFilter.js';
 import { useSidebarState } from '@/composables/useSidebarState'
 import { useArticleTree } from '@/composables/useArticleTree'
 import { useMyWork } from '@/composables/useMyWork'
+import { useArticleVersions } from '@/composables/useArticleVersions'
 import { useRouter } from 'vue-router'
 import { computed } from 'vue'
 
@@ -929,17 +930,24 @@ export default {
     },
 
     async loadLatestAIVersion(articleId) {
-      try {
-        const response = await api.get(`/api/articles/${articleId}/versions/ai/latest`);
+      // Use composable to find pending AI version by status
+      const versionState = useArticleVersions(computed(() => articleId));
+      
+      // Wait for versions to be loaded if not already
+      if (!versionState.loaded.value) {
+        // Versions will be loaded by VersionsPanel watch handler
+        // Check again after a tick
+        this.$nextTick(() => {
+          if (versionState.pendingAiVersion.value) {
+            this.openVersionTab(versionState.pendingAiVersion.value);
+          }
+        });
+        return;
+      }
 
-        if (response && response.id) {
-          this.openVersionTab(response);
-        }
-      } catch (err) {
-        if (err.response && err.response.status === 204) {
-          return;
-        }
-        console.error('Error loading latest AI version:', err);
+      // Use cached data - pendingAiVersion is found by status filter
+      if (versionState.pendingAiVersion.value) {
+        this.openVersionTab(versionState.pendingAiVersion.value);
       }
     },
 
