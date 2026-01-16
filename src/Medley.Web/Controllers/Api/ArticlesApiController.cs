@@ -254,8 +254,7 @@ public class ArticlesApiController : ControllerBase
             article.Status,
             article.ParentArticleId,
             articleTypeId = article.ArticleTypeId,
-            article.CreatedAt,
-            children = new List<object>()
+            article.CreatedAt
         });
     }
 
@@ -360,20 +359,23 @@ public class ArticlesApiController : ControllerBase
         // Capture version after saving article
         var capturedVersion = await _versionService.CaptureUserVersionAsync(id, article.Content, oldContent, _medleyContext.CurrentUserId);
 
-        // Register post-commit action to send SignalR notification
-        var versionNotification = new
+        if (capturedVersion.IsNewVersion)
         {
-            ArticleId = id,
-            VersionId = capturedVersion.Id,
-            VersionNumber = capturedVersion.VersionNumber,
-            CreatedAt = capturedVersion.CreatedAt,
-            Timestamp = DateTimeOffset.UtcNow
-        };
-        
-        HttpContext.RegisterPostCommitAction(async () =>
-        {
-            await _hubContext.Clients.All.SendAsync("VersionCreated", versionNotification);
-        });
+            // Register post-commit action to send SignalR notification
+            var versionNotification = new
+            {
+                ArticleId = id,
+                VersionId = capturedVersion.Id,
+                VersionNumber = capturedVersion.VersionNumber,
+                CreatedAt = capturedVersion.CreatedAt,
+                Timestamp = DateTimeOffset.UtcNow
+            };
+
+            HttpContext.RegisterPostCommitAction(async () =>
+            {
+                await _hubContext.Clients.All.SendAsync("VersionCreated", versionNotification);
+            });
+        }
 
         // Register post-commit action to send SignalR notification (only if title changed)
         if (article.Title != oldTitle)
