@@ -106,9 +106,27 @@ public class ArticleVersion : BaseEntity
     public string? ChangeMessage { get; set; }
 
     /// <summary>
-    /// Indicates if this version is currently active in its chain
+    /// Review action taken on this AI version (None, Accepted, or Rejected)
+    /// Only applicable to AI versions; User versions always have ReviewAction.None
     /// </summary>
-    public bool IsActive { get; set; } = true;
+    public ReviewAction ReviewAction { get; set; } = ReviewAction.None;
+
+    /// <summary>
+    /// When this AI version was reviewed (accepted or rejected)
+    /// </summary>
+    public DateTimeOffset? ReviewedAt { get; set; }
+
+    /// <summary>
+    /// User ID who reviewed this AI version
+    /// </summary>
+    public Guid? ReviewedById { get; set; }
+
+    /// <summary>
+    /// Navigation property to the user who reviewed this version
+    /// </summary>
+    [ForeignKey(nameof(ReviewedById))]
+    [DeleteBehavior(DeleteBehavior.SetNull)]
+    public virtual User? ReviewedBy { get; set; }
 }
 
 

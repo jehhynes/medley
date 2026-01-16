@@ -757,8 +757,8 @@ public class ArticlesApiController : ControllerBase
         // Get all AI versions for this article
         var aiVersions = await _versionService.GetVersionsAsync(id, Domain.Enums.VersionType.AI);
         
-        // Filter for active versions (the latest AI version should be marked as active)
-        var latestAiVersion = aiVersions.FirstOrDefault(v => v.IsActive);
+        // Filter for pending AI version (status = PendingAiVersion)
+        var latestAiVersion = aiVersions.FirstOrDefault(v => v.Status == "PendingAiVersion");
 
         if (latestAiVersion == null)
         {
@@ -836,9 +836,15 @@ public class ArticlesApiController : ControllerBase
             return NotFound(new { message = "Article not found" });
         }
 
+        var currentUser = await _medleyContext.GetCurrentUserAsync();
+        if (currentUser == null)
+        {
+            return Unauthorized(new { message = "User not authenticated" });
+        }
+
         try
         {
-            await _versionService.RejectAiVersionAsync(versionId);
+            await _versionService.RejectAiVersionAsync(versionId, currentUser);
 
             return Ok(new
             {

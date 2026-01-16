@@ -31,6 +31,53 @@ public class ArticleVersionService : IArticleVersionService
         _diffMatchPatch = new diff_match_patch();
     }
 
+    /// <summary>
+    /// Computes the status of a version based on its relationships and review state
+    /// </summary>
+    private async Task<VersionStatus> ComputeVersionStatusAsync(
+        ArticleVersion version,
+        Guid? currentVersionId,
+        Dictionary<Guid, List<ArticleVersion>> aiVersionsByParent,
+        CancellationToken cancellationToken = default)
+    {
+        // User versions: check if current or old
+        if (version.VersionType == VersionType.User)
+        {
+            return version.Id == currentVersionId 
+                ? VersionStatus.CurrentVersion 
+                : VersionStatus.OldVersion;
+        }
+
+        // AI versions: check review action first
+        if (version.ReviewAction == ReviewAction.Accepted)
+        {
+            return VersionStatus.AcceptedAiVersion;
+        }
+
+        if (version.ReviewAction == ReviewAction.Rejected)
+        {
+            return VersionStatus.RejectedAiVersion;
+        }
+
+        // AI versions with ReviewAction.None: determine if pending or old
+        if (version.ParentVersionId.HasValue && 
+            aiVersionsByParent.TryGetValue(version.ParentVersionId.Value, out var siblingVersions))
+        {
+            // Find the absolute latest AI version for this parent (highest version number, regardless of review status)
+            var absoluteLatestVersion = siblingVersions
+                .OrderByDescending(v => v.VersionNumber)
+                .FirstOrDefault();
+
+            // Only mark as PendingAiVersion if this is the absolute latest AND unreviewed
+            if (absoluteLatestVersion?.Id == version.Id && version.ReviewAction == ReviewAction.None)
+            {
+                return VersionStatus.PendingAiVersion;
+            }
+        }
+
+        return VersionStatus.OldAiVersion;
+    }
+
     public async Task<ArticleVersionDto> CaptureUserVersionAsync(
         Guid articleId, 
         string newContent, 
@@ -76,6 +123,9 @@ public class ArticleVersionService : IArticleVersionService
                 version = await CreateNewVersionAsync(articleId, newContent, latestVersion, userId, cancellationToken);
             }
 
+            // Get current version ID for status computation
+            var article = await _articleRepository.GetByIdAsync(articleId);
+            
             return new ArticleVersionDto
             {
                 Id = version.Id,
@@ -86,8 +136,10 @@ public class ArticleVersionService : IArticleVersionService
                 CreatedAt = version.CreatedAt,
                 IsNewVersion = isNewVersion,
                 VersionType = version.VersionType.ToString(),
-                IsActive = version.IsActive,
-                ChangeMessage = version.ChangeMessage
+                ChangeMessage = version.ChangeMessage,
+                Status = (version.Id == article?.CurrentVersionId 
+                    ? VersionStatus.CurrentVersion 
+                    : VersionStatus.OldVersion).ToString()
             };
         }
         catch (Exception ex)
@@ -207,31 +259,47 @@ public class ArticleVersionService : IArticleVersionService
         var allVersions = await query
             .Include(v => v.CreatedBy)
             .Include(v => v.ParentVersion)
+            .Include(v => v.ReviewedBy)
             .ToListAsync(cancellationToken);
 
-        // Sort versions hierarchically:
-        // 1. Group by base version number (User versions by their own number, AI versions by parent's number)
-        // 2. Within each group, AI versions first (ordered by version number descending), then User version
-        var sortedVersions = allVersions
-            .OrderByDescending(v => v.ParentVersion?.VersionNumber ?? v.VersionNumber) // Primary: base version number (8, 7, 6, etc.)
-            .ThenBy(v => v.ParentVersion == null ? 1 : 0) // Secondary: AI versions (0) before User version (1)
-            .ThenByDescending(v => v.VersionNumber) // Tertiary: AI versions ordered 8.3, 8.2, 8.1
-            .Select(v => new ArticleVersionDto
+        // Get the article to determine current version
+        var article = await _articleRepository.GetByIdAsync(articleId);
+        var currentVersionId = article?.CurrentVersionId;
+
+        // Build a lookup of AI versions by parent for status computation
+        var aiVersionsByParent = allVersions
+            .Where(v => v.VersionType == VersionType.AI && v.ParentVersionId.HasValue)
+            .GroupBy(v => v.ParentVersionId!.Value)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        // Sort versions hierarchically and compute status for each
+        var sortedVersions = new List<ArticleVersionDto>();
+        
+        foreach (var v in allVersions
+            .OrderByDescending(v => v.ParentVersion?.VersionNumber ?? v.VersionNumber)
+            .ThenBy(v => v.ParentVersion == null ? 1 : 0)
+            .ThenByDescending(v => v.VersionNumber))
+        {
+            var status = await ComputeVersionStatusAsync(v, currentVersionId, aiVersionsByParent, cancellationToken);
+            
+            sortedVersions.Add(new ArticleVersionDto
             {
                 Id = v.Id,
-                // Format: "parentVersion.childVersion" for AI versions, just "version" for User versions
                 VersionNumber = v.ParentVersion != null 
                     ? v.ParentVersion.VersionNumber.ToString() + "." + v.VersionNumber.ToString()
                     : v.VersionNumber.ToString(),
                 CreatedBy = v.CreatedById,
-                CreatedByName = v.CreatedBy != null ? v.CreatedBy.FullName : null,
-                CreatedByEmail = v.CreatedBy != null ? v.CreatedBy.Email : null,
+                CreatedByName = v.CreatedBy?.FullName,
+                CreatedByEmail = v.CreatedBy?.Email,
                 CreatedAt = v.CreatedAt,
                 VersionType = v.VersionType.ToString(),
-                IsActive = v.IsActive,
-                ChangeMessage = v.ChangeMessage
-            })
-            .ToList();
+                ChangeMessage = v.ChangeMessage,
+                Status = status.ToString(),
+                ReviewedAt = v.ReviewedAt,
+                ReviewedById = v.ReviewedById,
+                ReviewedByName = v.ReviewedBy?.FullName
+            });
+        }
 
         return sortedVersions;
     }
@@ -318,17 +386,6 @@ public class ArticleVersionService : IArticleVersionService
 
             int versionNumber = (maxVersionNumber ?? 0) + 1;
 
-            // Deactivate existing AI versions
-            var existingAiVersions = await _versionRepository.Query()
-                .Where(v => v.ArticleId == articleId && v.VersionType == VersionType.AI && v.IsActive)
-                .ToListAsync(cancellationToken);
-
-            foreach (var existingVersion in existingAiVersions)
-            {
-                existingVersion.IsActive = false;
-                // Entity is already tracked, changes will be saved on SaveChangesAsync
-            }
-
             // Calculate diff from parent User version
             string? contentDiff = null;
             if (!string.IsNullOrEmpty(mostRecentUserVersion.ContentSnapshot))
@@ -360,8 +417,8 @@ public class ArticleVersionService : IArticleVersionService
                 VersionType = VersionType.AI,
                 ParentVersionId = mostRecentUserVersion.Id,
                 ChangeMessage = changeMessage,
-                IsActive = true,
-                ConversationId = conversationId
+                ConversationId = conversationId,
+                ReviewAction = ReviewAction.None
             };
 
             await _versionRepository.AddAsync(newVersion);
@@ -379,8 +436,11 @@ public class ArticleVersionService : IArticleVersionService
                 CreatedAt = newVersion.CreatedAt,
                 IsNewVersion = true,
                 VersionType = newVersion.VersionType.ToString(),
-                IsActive = newVersion.IsActive,
-                ChangeMessage = newVersion.ChangeMessage
+                ChangeMessage = newVersion.ChangeMessage,
+                Status = VersionStatus.PendingAiVersion.ToString(),
+                ReviewedAt = null,
+                ReviewedById = null,
+                ReviewedByName = null
             };
         }
         catch (Exception ex)
@@ -433,8 +493,10 @@ public class ArticleVersionService : IArticleVersionService
                 user.Id, 
                 cancellationToken);
 
-            // Mark the AI version as inactive (accepted)
-            aiVersion.IsActive = false;
+            // Mark the AI version as accepted with review tracking
+            aiVersion.ReviewAction = ReviewAction.Accepted;
+            aiVersion.ReviewedAt = DateTimeOffset.UtcNow;
+            aiVersion.ReviewedById = user.Id;
 
             // Update the article's content to match the accepted AI version
             var article = aiVersion.Article;
@@ -454,8 +516,8 @@ public class ArticleVersionService : IArticleVersionService
                 CreatedAt = newUserVersion.CreatedAt,
                 IsNewVersion = true,
                 VersionType = newUserVersion.VersionType.ToString(),
-                IsActive = newUserVersion.IsActive,
-                ChangeMessage = newUserVersion.ChangeMessage
+                ChangeMessage = newUserVersion.ChangeMessage,
+                Status = VersionStatus.CurrentVersion.ToString()
             };
         }
         catch (Exception ex)
@@ -466,7 +528,8 @@ public class ArticleVersionService : IArticleVersionService
     }
 
     public async Task RejectAiVersionAsync(
-        Guid versionId, 
+        Guid versionId,
+        User user,
         CancellationToken cancellationToken = default)
     {
         try
@@ -486,10 +549,12 @@ public class ArticleVersionService : IArticleVersionService
                 throw new InvalidOperationException($"Version {versionId} is not an AI version");
             }
 
-            // Mark the AI version as inactive (rejected)
-            aiVersion.IsActive = false;
+            // Mark the AI version as rejected with review tracking
+            aiVersion.ReviewAction = ReviewAction.Rejected;
+            aiVersion.ReviewedAt = DateTimeOffset.UtcNow;
+            aiVersion.ReviewedById = user.Id;
 
-            _logger.LogInformation("Rejected AI version {VersionId}", versionId);
+            _logger.LogInformation("Rejected AI version {VersionId} by user {UserId}", versionId, user.Id);
         }
         catch (Exception ex)
         {

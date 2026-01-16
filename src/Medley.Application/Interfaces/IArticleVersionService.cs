@@ -66,13 +66,15 @@ public interface IArticleVersionService
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Reject an AI version by marking it as inactive
+    /// Reject an AI version by marking it as rejected with review tracking
     /// </summary>
     /// <param name="versionId">The AI version ID to reject</param>
+    /// <param name="user">The user rejecting the version</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Task representing the async operation</returns>
     Task RejectAiVersionAsync(
-        Guid versionId, 
+        Guid versionId,
+        User user,
         CancellationToken cancellationToken = default);
 }
 
@@ -89,8 +91,27 @@ public class ArticleVersionDto
     public DateTimeOffset CreatedAt { get; set; }
     public bool IsNewVersion { get; set; }
     public string VersionType { get; set; } = string.Empty;
-    public bool IsActive { get; set; } = true;
     public string? ChangeMessage { get; set; }
+    
+    /// <summary>
+    /// Computed status of this version
+    /// </summary>
+    public string Status { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// When this version was reviewed (for AI versions)
+    /// </summary>
+    public DateTimeOffset? ReviewedAt { get; set; }
+    
+    /// <summary>
+    /// User ID who reviewed this version (for AI versions)
+    /// </summary>
+    public Guid? ReviewedById { get; set; }
+    
+    /// <summary>
+    /// Name of user who reviewed this version (for AI versions)
+    /// </summary>
+    public string? ReviewedByName { get; set; }
 }
 
 /// <summary>
