@@ -8,6 +8,8 @@ The design follows Vue 3 Composition API best practices using `<script setup lan
 
 The conversion will be incremental, allowing the application to remain functional throughout the migration process. TypeScript's strict mode will be enabled to maximize type safety benefits.
 
+Commit after each major task is complete.
+
 ## Architecture
 
 ### High-Level Structure
@@ -1734,3 +1736,4 @@ During migration:
 - Existing functionality remains unchanged
 - No breaking changes to component APIs
 - Gradual adoption allows testing at each step
+- Commit after each major task is complete.
