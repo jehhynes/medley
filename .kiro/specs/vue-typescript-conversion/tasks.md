@@ -361,10 +361,10 @@ Commit after each major task is complete.
     - Type all state and computed properties
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8_
 
-  - [-] 12.3 Commit changes
+  - [x] 12.3 Commit changes
 
-- [~] 13. Convert router and main entry point
-  - [ ] 13.1 Convert router configuration to TypeScript
+- [-] 13. Convert router and main entry point
+  - [x] 13.1 Convert router configuration to TypeScript
     - Rename router/index.js to router/index.ts
     - Import RouteRecordRaw type from vue-router
     - Type all route definitions
@@ -372,14 +372,14 @@ Commit after each major task is complete.
     - Type navigation guards with proper parameter types
     - _Requirements: 9.1, 9.2, 9.3, 9.4_
   
-  - [ ] 13.2 Convert main entry point and App component
+  - [x] 13.2 Convert main entry point and App component
     - Rename main.js to main.ts
     - Add proper TypeScript types for app initialization
     - Update App.vue to use `<script setup lang="ts">`
     - Type any app-level state
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8_
 
-  - [ ] 13.3 Commit changes
+  - [-] 13.3 Commit changes
 
 - [~] 14. Final checkpoint and validation
   - Ensure C# project builds successfully
