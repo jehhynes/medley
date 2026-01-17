@@ -71,183 +71,205 @@
   </ul>
 </template>
 
-<script>
-import dropdownMixin from '@/mixins/dropdown';
+<script setup lang="ts">
+import { ref, inject } from 'vue';
+import { useDropDown } from '@/composables/useDropDown';
 import { useArticleView } from '@/composables/useArticleView';
+import type { ArticleDto, ArticleTypeDto } from '@/types/generated/api-client';
 
-export default {
-  name: 'ArticleTree',
-  mixins: [dropdownMixin],
-  props: {
-    articles: {
-      type: Array,
-      default: () => []
-    },
-    selectedId: {
-      type: String,
-      default: null
-    },
-    expandedIds: {
-      type: Set,
-      default: () => new Set()
-    },
-    articleTypeIconMap: {
-      type: Object,
-      default: () => ({})
-    },
-    articleTypes: {
-      type: Array,
-      default: () => []
-    }
-  },
-  inject: ['dragState'],
-  emits: ['select', 'toggle-expand', 'create-child', 'edit-article', 'move-article'],
-  setup(props, { emit }) {
-    const {
-      selectArticle,
-      getArticleIcon,
-      editArticle,
-      createChild,
-      getIconClass,
-      getStatusIcon,
-      getStatusColorClass,
-      showProcessingSpinner,
-      showUserTurnIndicator
-    } = useArticleView(props, emit);
+// Drag state interface
+interface DragState {
+  draggingArticleId: string | null;
+  dragOverId: string | null;
+}
 
-    return {
-      selectArticle,
-      getArticleIcon,
-      editArticle,
-      createChild,
-      getIconClass,
-      getStatusIcon,
-      getStatusColorClass,
-      showProcessingSpinner,
-      showUserTurnIndicator
-    };
-  },
-  data() {
-    return {
-      dragCounter: 0
-    };
-  },
-  methods: {
-    toggleExpand(articleId) {
-      this.$emit('toggle-expand', articleId);
-    },
-    isExpanded(articleId) {
-      return this.expandedIds.has(articleId);
-    },
-    hasChildren(article) {
-      return article.children && article.children.length > 0;
-    },
-    /**
-     * Check if an article is of type "Index"
-     * Index articles can accept other articles as children via drag and drop.
-     * @param {Object} article - Article to check
-     * @returns {boolean} True if article is an Index type
-     */
-    isIndexType(article) {
-      if (!article.articleTypeId) {
-        return false;
-      }
-      const articleType = this.articleTypes.find(t => t.id === article.articleTypeId);
-      return articleType && articleType.name.toLowerCase() === 'index';
-    },
-    /**
-     * Handle drag start event
-     * Initiates article drag operation and stores dragging article ID in shared state.
-     * @param {DragEvent} event - DOM drag event
-     * @param {Object} article - Article being dragged
-     */
-    handleDragStart(event, article) {
-      this.dragState.draggingArticleId = article.id;
-      event.dataTransfer.effectAllowed = 'move';
-      event.dataTransfer.setData('text/plain', article.id);
+// Props interface
+interface Props {
+  articles: ArticleDto[];
+  selectedId: string | null;
+  expandedIds: Set<string>;
+  articleTypeIconMap: Record<string, string>;
+  articleTypes: ArticleTypeDto[];
+}
 
-      // Add a semi-transparent drag image
-      const dragImage = event.target.cloneNode(true);
-      dragImage.style.opacity = '0.5';
-      event.dataTransfer.setDragImage(event.target, 0, 0);
-    },
-    /**
-     * Handle drag over event
-     * Validates drop target (must be Index type, not self) and shows visual feedback.
-     * @param {DragEvent} event - DOM drag event
-     * @param {Object} article - Article being dragged over (potential drop target)
-     */
-    handleDragOver(event, article) {
-      // Don't allow dropping on itself
-      if (article.id === this.dragState.draggingArticleId) {
-        return;
-      }
+const props = withDefaults(defineProps<Props>(), {
+  articles: () => [],
+  selectedId: null,
+  expandedIds: () => new Set(),
+  articleTypeIconMap: () => ({}),
+  articleTypes: () => []
+});
 
-      // Only allow dropping on Index type articles
-      if (!this.isIndexType(article)) {
-        return;
-      }
+// Emits interface
+interface Emits {
+  (e: 'select', article: ArticleDto): void;
+  (e: 'toggle-expand', articleId: string): void;
+  (e: 'create-child', articleId: string): void;
+  (e: 'edit-article', article: ArticleDto): void;
+  (e: 'move-article', sourceId: string, targetId: string): void;
+}
 
-      event.preventDefault();
-      event.stopPropagation();
-      event.dataTransfer.dropEffect = 'move';
+const emit = defineEmits<Emits>();
 
-      // Set drag over state
-      if (this.dragState.dragOverId !== article.id) {
-        this.dragState.dragOverId = article.id;
-        this.dragCounter = 0;
-      }
-    },
-    handleDragLeave(event, article) {
-      // Only clear drag over state if we're actually leaving the element
-      // Use relatedTarget to check if we're entering a child element
-      const rect = event.currentTarget.getBoundingClientRect();
-      const x = event.clientX;
-      const y = event.clientY;
+// Inject drag state from parent
+const dragState = inject<DragState>('dragState', {
+  draggingArticleId: null,
+  dragOverId: null
+});
 
-      // Check if the mouse is still within the bounds of the element
-      if (x < rect.left || x >= rect.right || y < rect.top || y >= rect.bottom) {
-        if (this.dragState.dragOverId === article.id) {
-          this.dragState.dragOverId = null;
-          this.dragCounter = 0;
-        }
-      }
-    },
-    /**
-     * Handle drop event
-     * Completes the drag operation by emitting a move-article event to the parent.
-     * Validates drop target and clears drag state.
-     * @param {DragEvent} event - DOM drop event
-     * @param {Object} targetArticle - Article receiving the drop (new parent)
-     */
-    handleDrop(event, targetArticle) {
-      event.preventDefault();
-      event.stopPropagation();
+// Use dropdown composable
+const { handleDropdownClick } = useDropDown();
 
-      // Clear drag state
-      this.dragState.dragOverId = null;
-      this.dragCounter = 0;
+// Use article view composable
+const {
+  selectArticle,
+  getArticleIcon,
+  editArticle,
+  createChild,
+  getIconClass,
+  getStatusIcon,
+  getStatusColorClass,
+  showProcessingSpinner,
+  showUserTurnIndicator
+} = useArticleView(props, emit);
 
-      if (!this.dragState.draggingArticleId || this.dragState.draggingArticleId === targetArticle.id) {
-        this.dragState.draggingArticleId = null;
-        return;
-      }
+// Component state
+const dragCounter = ref<number>(0);
 
-      // Only allow dropping on Index type articles
-      if (!this.isIndexType(targetArticle)) {
-        this.dragState.draggingArticleId = null;
-        return;
-      }
+// Methods
+const toggleExpand = (articleId: string): void => {
+  emit('toggle-expand', articleId);
+};
 
-      // Emit the move event to parent
-      this.$emit('move-article', this.dragState.draggingArticleId, targetArticle.id);
+const isExpanded = (articleId: string): boolean => {
+  return props.expandedIds.has(articleId);
+};
 
-      this.dragState.draggingArticleId = null;
-    },
-    moveArticle(sourceId, targetId) {
-      // Propagate the event up the tree
-      this.$emit('move-article', sourceId, targetId);
+const hasChildren = (article: ArticleDto): boolean => {
+  return !!(article.children && article.children.length > 0);
+};
+
+/**
+ * Check if an article is of type "Index"
+ * Index articles can accept other articles as children via drag and drop.
+ * @param article - Article to check
+ * @returns True if article is an Index type
+ */
+const isIndexType = (article: ArticleDto): boolean => {
+  if (!article.articleTypeId) {
+    return false;
+  }
+  const articleType = props.articleTypes.find(t => t.id === article.articleTypeId);
+  return !!(articleType && articleType.name?.toLowerCase() === 'index');
+};
+
+/**
+ * Handle drag start event
+ * Initiates article drag operation and stores dragging article ID in shared state.
+ * @param event - DOM drag event
+ * @param article - Article being dragged
+ */
+const handleDragStart = (event: DragEvent, article: ArticleDto): void => {
+  if (!article.id) return;
+  
+  dragState.draggingArticleId = article.id;
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', article.id);
+
+    // Add a semi-transparent drag image
+    const target = event.target as HTMLElement;
+    const dragImage = target.cloneNode(true) as HTMLElement;
+    dragImage.style.opacity = '0.5';
+    event.dataTransfer.setDragImage(target, 0, 0);
+  }
+};
+
+/**
+ * Handle drag over event
+ * Validates drop target (must be Index type, not self) and shows visual feedback.
+ * @param event - DOM drag event
+ * @param article - Article being dragged over (potential drop target)
+ */
+const handleDragOver = (event: DragEvent, article: ArticleDto): void => {
+  if (!article.id) return;
+  
+  // Don't allow dropping on itself
+  if (article.id === dragState.draggingArticleId) {
+    return;
+  }
+
+  // Only allow dropping on Index type articles
+  if (!isIndexType(article)) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'move';
+  }
+
+  // Set drag over state
+  if (dragState.dragOverId !== article.id) {
+    dragState.dragOverId = article.id;
+    dragCounter.value = 0;
+  }
+};
+
+const handleDragLeave = (event: DragEvent, article: ArticleDto): void => {
+  if (!article.id) return;
+  
+  // Only clear drag over state if we're actually leaving the element
+  // Use relatedTarget to check if we're entering a child element
+  const target = event.currentTarget as HTMLElement;
+  const rect = target.getBoundingClientRect();
+  const x = event.clientX;
+  const y = event.clientY;
+
+  // Check if the mouse is still within the bounds of the element
+  if (x < rect.left || x >= rect.right || y < rect.top || y >= rect.bottom) {
+    if (dragState.dragOverId === article.id) {
+      dragState.dragOverId = null;
+      dragCounter.value = 0;
     }
   }
+};
+
+/**
+ * Handle drop event
+ * Completes the drag operation by emitting a move-article event to the parent.
+ * Validates drop target and clears drag state.
+ * @param event - DOM drop event
+ * @param targetArticle - Article receiving the drop (new parent)
+ */
+const handleDrop = (event: DragEvent, targetArticle: ArticleDto): void => {
+  event.preventDefault();
+  event.stopPropagation();
+
+  // Clear drag state
+  dragState.dragOverId = null;
+  dragCounter.value = 0;
+
+  if (!dragState.draggingArticleId || !targetArticle.id || dragState.draggingArticleId === targetArticle.id) {
+    dragState.draggingArticleId = null;
+    return;
+  }
+
+  // Only allow dropping on Index type articles
+  if (!isIndexType(targetArticle)) {
+    dragState.draggingArticleId = null;
+    return;
+  }
+
+  // Emit the move event to parent
+  emit('move-article', dragState.draggingArticleId, targetArticle.id);
+
+  dragState.draggingArticleId = null;
+};
+
+const moveArticle = (sourceId: string, targetId: string): void => {
+  // Propagate the event up the tree
+  emit('move-article', sourceId, targetId);
 };
 </script>
