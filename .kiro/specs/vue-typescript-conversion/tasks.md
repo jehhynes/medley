@@ -96,8 +96,8 @@ This implementation plan converts the Medley application to use TypeScript acros
     - Check that TypeScript types match C# DTOs
     - _Requirements: 16.3, 16.4, 16.6_
 
-- [ ] 4. Create frontend type structure with generated types
-  - [ ] 4.1 Create types directory structure
+- [x] 4. Create frontend type structure with generated types
+  - [x] 4.1 Create types directory structure
     - Create Vue/types/generated/ directory (for NSwag output)
     - Create Vue/types/signalr/ directory
     - Create Vue/types/dtos/extensions.ts for manual type extensions
@@ -105,7 +105,7 @@ This implementation plan converts the Medley application to use TypeScript acros
     - Update .gitignore to track generated files
     - _Requirements: 2.9, 2.10, 16.7, 16.8_
   
-  - [ ] 4.2 Create manual type extensions for SignalR-specific types
+  - [x] 4.2 Create manual type extensions for SignalR-specific types
     - Create types/dtos/extensions.ts
     - Re-export generated types from api-client.ts
     - Add ConversationSummary interface (not in REST API)
