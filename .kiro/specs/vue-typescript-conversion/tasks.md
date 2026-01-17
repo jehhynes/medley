@@ -182,7 +182,7 @@ Commit after each major task is complete.
 
   - [x] 6.7 Commit changes
 
-- [-] 7. Create type guards and validation utilities
+- [x] 7. Create type guards and validation utilities
   - [x] 7.1 Create type guard functions for critical DTOs
     - Create types/guards.ts
     - Implement isArticle type guard
@@ -221,9 +221,9 @@ Commit after each major task is complete.
     - Verify error is logged and handled gracefully
     - Run 100 iterations
 
-  - [-] 7.7 Commit changes
+  - [x] 7.7 Commit changes
 
-- [~] 8. Checkpoint - Verify backend and infrastructure
+- [-] 8. Checkpoint - Verify backend and infrastructure
   - Ensure C# project builds successfully with strongly-typed hubs
   - Verify NSwag generates TypeScript types correctly
   - Ensure TypeScript compilation succeeds with generated types
