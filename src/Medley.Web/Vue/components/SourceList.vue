@@ -27,34 +27,38 @@
   </ul>
 </template>
 
-<script>
+<script setup lang="ts">
 import { 
   formatDate, 
   getSourceTypeIcon 
-} from '@/utils/helpers.js';
+} from '@/utils/helpers';
+import type { SourceDto } from '@/types/generated/api-client';
 
-export default {
-  name: 'SourceList',
-  props: {
-    sources: {
-      type: Array,
-      default: () => []
-    },
-    selectedId: {
-      type: String,
-      default: null
-    }
-  },
-  emits: ['select'],
-  methods: {
-    selectSource(source) {
-      this.$emit('select', source);
-      // Collapse left sidebar on mobile after selection
-      window.MedleySidebar?.collapseLeftSidebar();
-    },
-    // Expose imported utility functions to template
-    formatDate,
-    getSourceIcon: getSourceTypeIcon
-  }
-};
+// Props
+interface Props {
+  sources: SourceDto[];
+  selectedId?: string | null;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  sources: () => [],
+  selectedId: null
+});
+
+// Emits
+interface Emits {
+  (e: 'select', source: SourceDto): void;
+}
+
+const emit = defineEmits<Emits>();
+
+// Methods
+function selectSource(source: SourceDto): void {
+  emit('select', source);
+  // Collapse left sidebar on mobile after selection
+  (window as any).MedleySidebar?.collapseLeftSidebar();
+}
+
+// Expose utility functions to template
+const getSourceIcon = getSourceTypeIcon;
 </script>

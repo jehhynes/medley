@@ -70,116 +70,137 @@
   </div>
 </template>
 
-<script>
-export default {
-  name: 'ToolCallItem',
-  props: {
-    tool: {
-      type: Object,
-      required: true
-    }
-  },
-  emits: ['open-plan', 'open-fragment', 'open-version'],
-  data() {
-    return {
-      isExpanded: false,
-      fragments: null
-    };
-  },
-  methods: {
-    formatToolName(toolName) {
-      if (!toolName) return '';
-      
-      // First, split on underscores
-      let words = toolName.split('_');
-      
-      // Then split each word on uppercase letters (PascalCase/camelCase)
-      words = words.flatMap(word => {
-        // Insert space before uppercase letters and split
-        return word.replace(/([A-Z])/g, ' $1').trim().split(/\s+/);
-      });
-      
-      // Capitalize first letter of each word
-      return words
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-        .join(' ');
-    },
+<script setup lang="ts">
+import { ref } from 'vue';
+import type { FragmentTitleDto } from '@/types/generated/api-client';
 
-    getToolIcon(toolName) {
-      if (!toolName) return 'bi-gear';
-      
-      const lowerName = toolName.toLowerCase();
-      if (lowerName.includes('search') || lowerName.includes('findsimilar')) {
-        return 'bi-search';
-      }
-      if (lowerName.includes('fragment') || lowerName.includes('content')) {
-        return 'bi-puzzle';
-      }
-      if (lowerName.includes('createplan')) {
-        return 'bi-list-check';
-      }
-      if (lowerName.includes('version') || lowerName.includes('createarticleversion')) {
-        return 'bi-file-text';
-      }
-      return 'bi-gear';
-    },
+// Tool result interface
+interface ToolResult {
+  ids?: string[];
+  [key: string]: any;
+}
 
-    getIdFromResult(result) {
-      if (!result) return null;
-      
-      try {
-        // Check if result has ids array and return first ID
-        if (result.ids && Array.isArray(result.ids) && result.ids.length > 0) {
-          return result.ids[0];
-        }
-        return null;
-      } catch (e) {
-        return null;
-      }
-    },
+// Tool interface
+interface Tool {
+  name: string;
+  display?: string;
+  completed: boolean;
+  isError?: boolean;
+  result?: ToolResult;
+}
 
-    isMultiResultTool(toolName) {
-      if (!toolName) return false;
-      const lowerName = toolName.toLowerCase();
-      return lowerName.includes('search') || lowerName.includes('findsimilar');
-    },
+// Props
+interface Props {
+  tool: Tool;
+}
 
-    async toggleExpansion() {
-      this.isExpanded = !this.isExpanded;
-      
-      // Load fragments if expanding and not already loaded
-      if (this.isExpanded && this.fragments === null) {
-        await this.loadFragments();
-      }
-    },
+const props = defineProps<Props>();
 
-    async loadFragments() {
-      // If no result or no IDs, set empty array
-      if (!this.tool.result || !this.tool.result.ids || this.tool.result.ids.length === 0) {
-        this.fragments = [];
-        return;
-      }
+// Emits
+interface Emits {
+  (e: 'open-plan', planId: string): void;
+  (e: 'open-fragment', fragmentId: string): void;
+  (e: 'open-version', versionId: string): void;
+}
 
-      try {
-        // Use the new batch endpoint to load fragment titles
-        const response = await fetch('/api/fragments/titles', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(this.tool.result.ids)
-        });
+const emit = defineEmits<Emits>();
 
-        if (!response.ok) {
-          throw new Error('Failed to load fragment titles');
-        }
+// State
+const isExpanded = ref<boolean>(false);
+const fragments = ref<FragmentTitleDto[] | null>(null);
 
-        this.fragments = await response.json();
-      } catch (err) {
-        console.error('Error loading tool fragments:', err);
-        this.fragments = [];
-      }
-    }
+// Methods
+function formatToolName(toolName: string): string {
+  if (!toolName) return '';
+  
+  // First, split on underscores
+  let words = toolName.split('_');
+  
+  // Then split each word on uppercase letters (PascalCase/camelCase)
+  words = words.flatMap(word => {
+    // Insert space before uppercase letters and split
+    return word.replace(/([A-Z])/g, ' $1').trim().split(/\s+/);
+  });
+  
+  // Capitalize first letter of each word
+  return words
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function getToolIcon(toolName: string): string {
+  if (!toolName) return 'bi-gear';
+  
+  const lowerName = toolName.toLowerCase();
+  if (lowerName.includes('search') || lowerName.includes('findsimilar')) {
+    return 'bi-search';
   }
-};
+  if (lowerName.includes('fragment') || lowerName.includes('content')) {
+    return 'bi-puzzle';
+  }
+  if (lowerName.includes('createplan')) {
+    return 'bi-list-check';
+  }
+  if (lowerName.includes('version') || lowerName.includes('createarticleversion')) {
+    return 'bi-file-text';
+  }
+  return 'bi-gear';
+}
+
+function getIdFromResult(result: ToolResult | undefined): string | null {
+  if (!result) return null;
+  
+  try {
+    // Check if result has ids array and return first ID
+    if (result.ids && Array.isArray(result.ids) && result.ids.length > 0) {
+      return result.ids[0];
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function isMultiResultTool(toolName: string): boolean {
+  if (!toolName) return false;
+  const lowerName = toolName.toLowerCase();
+  return lowerName.includes('search') || lowerName.includes('findsimilar');
+}
+
+async function toggleExpansion(): Promise<void> {
+  isExpanded.value = !isExpanded.value;
+  
+  // Load fragments if expanding and not already loaded
+  if (isExpanded.value && fragments.value === null) {
+    await loadFragments();
+  }
+}
+
+async function loadFragments(): Promise<void> {
+  // If no result or no IDs, set empty array
+  if (!props.tool.result || !props.tool.result.ids || props.tool.result.ids.length === 0) {
+    fragments.value = [];
+    return;
+  }
+
+  try {
+    // Use the new batch endpoint to load fragment titles
+    const response = await fetch('/api/fragments/titles', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(props.tool.result.ids)
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to load fragment titles');
+    }
+
+    fragments.value = await response.json();
+  } catch (err) {
+    console.error('Error loading tool fragments:', err);
+    fragments.value = [];
+  }
+}
 </script>

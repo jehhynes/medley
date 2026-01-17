@@ -7,27 +7,32 @@
   ></div>
 </template>
 
-<script>
-export default {
-  name: 'Backdrop',
-  props: {
-    isAutomatic: {
-      type: Boolean,
-      default: false
-    }
-  },
-  emits: ['click'],
-  computed: {
-    backdropClass() {
-      // Use 'show-initial' for automatic opening (mobile-only backdrop)
-      // Use 'show' for manual toggle (backdrop on all sizes up to xl)
-      return this.isAutomatic ? 'show-initial' : 'show'
-    }
-  },
-  methods: {
-    handleClick() {
-      this.$emit('click')
-    }
-  }
+<script setup lang="ts">
+// Props
+interface Props {
+  isAutomatic?: boolean;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  isAutomatic: false
+});
+
+// Emits
+interface Emits {
+  (e: 'click'): void;
+}
+
+const emit = defineEmits<Emits>();
+
+// Computed
+const backdropClass = computed<string>(() => {
+  // Use 'show-initial' for automatic opening (mobile-only backdrop)
+  // Use 'show' for manual toggle (backdrop on all sizes up to xl)
+  return props.isAutomatic ? 'show-initial' : 'show';
+});
+
+// Methods
+function handleClick(): void {
+  emit('click');
 }
 </script>

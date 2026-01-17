@@ -231,7 +231,7 @@ Commit after each major task is complete.
   - Ask the user if questions arise
   - commit changes
 
-- [-] 9. Convert composables to TypeScript
+- [x] 9. Convert composables to TypeScript
   - [x] 9.1 Convert existing composables to TypeScript
     - Rename useArticleTree.js to useArticleTree.ts
     - Add TypeScript types for parameters and return values
@@ -269,10 +269,10 @@ Commit after each major task is complete.
     - Add TypeScript types for all parameters and return values
     - _Requirements: 7.4, 7.5, 7.6_
 
-  - [-] 9.6 Commit changes
+  - [x] 9.6 Commit changes
 
-- [~] 10. Convert core components to TypeScript
-  - [ ] 10.1 Convert ArticleList component
+- [x] 10. Convert core components to TypeScript
+  - [x] 10.1 Convert ArticleList component
     - Update ArticleList.vue to use `<script setup lang="ts">`
     - Define Props interface for component props
     - Define Emits interface for component events
@@ -282,7 +282,7 @@ Commit after each major task is complete.
     - Update component to use useArticleSignalR composable
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 7.7_
   
-  - [ ] 10.2 Convert ArticleTree component
+  - [x] 10.2 Convert ArticleTree component
     - Update ArticleTree.vue to use `<script setup lang="ts">`
     - Define Props and Emits interfaces
     - Type all state and computed properties
@@ -290,17 +290,17 @@ Commit after each major task is complete.
     - Use typed API client
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8_
   
-  - [ ] 10.3 Convert ChatPanel component
+  - [x] 10.3 Convert ChatPanel component
     - Update ChatPanel.vue to use `<script setup lang="ts">`
     - Define Props and Emits interfaces
     - Type all state with ChatMessage, Conversation types from generated DTOs
     - Use typed SignalR connection for chat events
     - Use typed API client for message sending
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8_
-  - [ ] 10.4 Commit changes
+  - [x] 10.4 Commit changes
 
-- [~] 11. Convert supporting components to TypeScript
-  - [ ] 11.1 Convert FragmentList and FragmentModal components
+- [-] 11. Convert supporting components to TypeScript
+  - [x] 11.1 Convert FragmentList and FragmentModal components
     - Update FragmentList.vue to use `<script setup lang="ts">`
     - Update FragmentModal.vue to use `<script setup lang="ts">`
     - Define Props and Emits interfaces for both
@@ -308,14 +308,14 @@ Commit after each major task is complete.
     - Use typed API client
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8_
   
-  - [ ] 11.2 Convert SourceList component
+  - [x] 11.2 Convert SourceList component
     - Update SourceList.vue to use `<script setup lang="ts">`
     - Define Props and Emits interfaces
     - Use generated Source DTO types
     - Use typed API client
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8_
   
-  - [ ] 11.3 Convert VersionsPanel and VersionViewer components
+  - [x] 11.3 Convert VersionsPanel and VersionViewer components
     - Update VersionsPanel.vue to use `<script setup lang="ts">`
     - Update VersionViewer.vue to use `<script setup lang="ts">`
     - Define Props and Emits interfaces for both
@@ -323,14 +323,14 @@ Commit after each major task is complete.
     - Use typed API client
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8_
   
-  - [ ] 11.4 Convert PlanViewer component
+  - [x] 11.4 Convert PlanViewer component
     - Update PlanViewer.vue to use `<script setup lang="ts">`
     - Define Props and Emits interfaces
     - Use generated Plan DTO types
     - Use typed API client
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8_
   
-  - [ ] 11.5 Convert remaining components
+  - [x] 11.5 Convert remaining components
     - Update TiptapEditor.vue to use `<script setup lang="ts">`
     - Update VirtualScroller.vue to use `<script setup lang="ts">`
     - Update VerticalMenu.vue to use `<script setup lang="ts">`
@@ -342,7 +342,7 @@ Commit after each major task is complete.
     - Type all state and computed properties
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8_
 
-  - [ ] 11.6 Commit changes
+  - [-] 11.6 Commit changes
 
 - [~] 12. Convert page components to TypeScript
   - [ ] 12.1 Convert Articles page

@@ -27,7 +27,7 @@
   </ul>
 </template>
 
-<script>
+<script setup lang="ts">
 import { 
   formatDate, 
   getSourceTypeIcon, 
@@ -35,34 +35,31 @@ import {
   getIconClass, 
   getConfidenceIcon, 
   getConfidenceColor
-} from '@/utils/helpers.js';
+} from '@/utils/helpers';
+import type { FragmentDto, FragmentSearchResult } from '@/types/generated/api-client';
 
-export default {
-  name: 'FragmentList',
-  props: {
-    fragments: {
-      type: Array,
-      default: () => []
-    },
-    selectedId: {
-      type: String,
-      default: null
-    }
-  },
-  emits: ['select'],
-  methods: {
-    selectFragment(fragment) {
-      this.$emit('select', fragment);
-      // Collapse left sidebar on mobile after selection
-      window.MedleySidebar?.collapseLeftSidebar();
-    },
-    // Expose imported utility functions to template
-    formatDate,
-    getSourceIcon: getSourceTypeIcon,
-    getFragmentCategoryIcon,
-    getIconClass,
-    getConfidenceIcon,
-    getConfidenceColor
-  }
-};
+// Props
+interface Props {
+  fragments: (FragmentDto | FragmentSearchResult)[];
+  selectedId?: string | null;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  fragments: () => [],
+  selectedId: null
+});
+
+// Emits
+interface Emits {
+  (e: 'select', fragment: FragmentDto | FragmentSearchResult): void;
+}
+
+const emit = defineEmits<Emits>();
+
+// Methods
+function selectFragment(fragment: FragmentDto | FragmentSearchResult): void {
+  emit('select', fragment);
+  // Collapse left sidebar on mobile after selection
+  (window as any).MedleySidebar?.collapseLeftSidebar();
+}
 </script>

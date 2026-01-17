@@ -57,109 +57,80 @@
   </virtual-scroller>
 </template>
 
-<script>
-import { computed, toRef } from 'vue';
+<script setup lang="ts">
+import { ref, toRef } from 'vue';
 import VirtualScroller from './VirtualScroller.vue';
-import dropdownMixin from '@/mixins/dropdown';
+import { useDropDown } from '@/composables/useDropDown';
 import { useArticleView } from '@/composables/useArticleView';
 import { useMyWork } from '@/composables/useMyWork';
-import { 
-  formatRelativeTime 
-} from '@/utils/helpers.js';
+import { formatRelativeTime } from '@/utils/helpers';
+import type { ArticleDto } from '@/types/generated/api-client';
 
-export default {
-  name: 'MyWorkList',
-  components: {
-    VirtualScroller
-  },
-  mixins: [dropdownMixin],
-  props: {
-    articles: {
-      type: Array,
-      default: () => []
-    },
-    selectedId: {
-      type: String,
-      default: null
-    },
-    articleTypeIconMap: {
-      type: Object,
-      default: () => ({})
-    },
-    articleTypes: {
-      type: Array,
-      default: () => []
-    },
-    currentUserId: {
-      type: String,
-      default: null
-    }
-  },
-  emits: ['select', 'edit-article'],
-  setup(props, { emit }) {
-    const {
-      selectArticle,
-      getArticleIcon,
-      editArticle,
-      getIconClass,
-      getStatusIcon,
-      getStatusColorClass,
-      showProcessingSpinner,
-      showUserTurnIndicator
-    } = useArticleView(props, emit);
+// Props
+interface Props {
+  articles: ArticleDto[];
+  selectedId?: string | null;
+  articleTypeIconMap?: Record<string, string>;
+  articleTypes?: any[];
+  currentUserId?: string | null;
+}
 
-    // Use shared My Work composable
-    const { myWorkArticles, getLastActivityDate } = useMyWork(
-      toRef(props, 'articles'),
-      toRef(props, 'currentUserId')
-    );
+const props = withDefaults(defineProps<Props>(), {
+  articles: () => [],
+  selectedId: null,
+  articleTypeIconMap: () => ({}),
+  articleTypes: () => [],
+  currentUserId: null
+});
 
-    return {
-      selectArticle,
-      getArticleIcon,
-      editArticle,
-      getIconClass,
-      getStatusIcon,
-      getStatusColorClass,
-      showProcessingSpinner,
-      showUserTurnIndicator,
-      myWorkArticles,
-      getLastActivityDate
-    };
-  },
-  data() {
-    return {
-      itemHeight: 52, // Height of each article row in pixels
-      buffer: 5 // Number of extra items to render above/below viewport
-    };
-  },
-  methods: {
-    /**
-     * Determine if a separator is needed before this article
-     * Shows separator when transitioning to AI processing items
-     */
-    needsSeparator(index) {
-      if (index === 0) return false; // No separator before first item
-      
-      const currentArticle = this.myWorkArticles[index];
-      const previousArticle = this.myWorkArticles[index - 1];
-      
-      const currentIsAiProcessing = this.showProcessingSpinner(currentArticle);
-      const previousIsAiProcessing = this.showProcessingSpinner(previousArticle);
-      
-      // Show separator when we transition to AI processing items
-      // (previous was not AI processing, current is AI processing)
-      return !previousIsAiProcessing && currentIsAiProcessing;
-    },
-    /**
-     * Format the last activity time as relative time
-     * @param {Object} article - Article to get activity time for
-     * @returns {string} Relative time string (e.g., "2 hours ago")
-     */
-    formatActivityDate(article) {
-      const latestDate = this.getLastActivityDate(article);
-      return formatRelativeTime(latestDate, { short: false });
-    }
-  }
-};
+// Emits
+interface Emits {
+  (e: 'select', article: ArticleDto): void;
+  (e: 'edit-article', article: ArticleDto): void;
+}
+
+const emit = defineEmits<Emits>();
+
+// Composables
+const {
+  selectArticle,
+  getArticleIcon,
+  editArticle,
+  getIconClass,
+  getStatusIcon,
+  getStatusColorClass,
+  showProcessingSpinner,
+  showUserTurnIndicator
+} = useArticleView(props, emit);
+
+const { myWorkArticles, getLastActivityDate } = useMyWork(
+  toRef(props, 'articles'),
+  toRef(props, 'currentUserId')
+);
+
+const { handleDropdownClick } = useDropDown();
+
+// State
+const itemHeight = ref<number>(52); // Height of each article row in pixels
+const buffer = ref<number>(5); // Number of extra items to render above/below viewport
+
+// Methods
+function needsSeparator(index: number): boolean {
+  if (index === 0) return false; // No separator before first item
+  
+  const currentArticle = myWorkArticles.value[index];
+  const previousArticle = myWorkArticles.value[index - 1];
+  
+  const currentIsAiProcessing = showProcessingSpinner(currentArticle);
+  const previousIsAiProcessing = showProcessingSpinner(previousArticle);
+  
+  // Show separator when we transition to AI processing items
+  // (previous was not AI processing, current is AI processing)
+  return !previousIsAiProcessing && currentIsAiProcessing;
+}
+
+function formatActivityDate(article: ArticleDto): string {
+  const latestDate = getLastActivityDate(article);
+  return formatRelativeTime(latestDate, { short: false });
+}
 </script>

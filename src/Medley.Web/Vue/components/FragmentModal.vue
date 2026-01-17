@@ -57,78 +57,81 @@
   </div>
 </template>
 
-<script>
+<script setup lang="ts">
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { 
   getIconClass, 
   getFragmentCategoryIcon, 
   getConfidenceIcon, 
   getConfidenceColor
-} from '@/utils/helpers.js';
+} from '@/utils/helpers';
+import type { FragmentDto } from '@/types/generated/api-client';
 
-export default {
-  name: 'FragmentModal',
-  props: {
-    fragment: {
-      type: Object,
-      default: null
-    },
-    visible: {
-      type: Boolean,
-      default: false
-    }
-  },
-  emits: ['close'],
-  data() {
-    return {
-      showConfidenceComment: false
-    };
-  },
-  computed: {
-    renderedMarkdown() {
-      if (!this.fragment || !this.fragment.content) {
-        return '';
-      }
-      if (typeof marked !== 'undefined') {
-        return marked.parse(this.fragment.content);
-      }
-      return this.fragment.content.replace(/\n/g, '<br>');
-    }
-  },
-  watch: {
-    visible(newVal) {
-      if (!newVal) {
-        this.showConfidenceComment = false;
-      }
-    }
-  },
-  methods: {
-    close() {
-      this.$emit('close');
-    },
-    
-    toggleConfidenceComment() {
-      this.showConfidenceComment = !this.showConfidenceComment;
-    },
-
-    // Expose imported utility functions to template
-    getIconClass,
-    getFragmentCategoryIcon,
-    getConfidenceIcon,
-    getConfidenceColor,
-
-    handleKeydown(event) {
-      if (event.key === 'Escape' && this.visible) {
-        this.close();
-      }
-    }
-  },
-
-  mounted() {
-    window.addEventListener('keydown', this.handleKeydown);
-  },
-
-  beforeUnmount() {
-    window.removeEventListener('keydown', this.handleKeydown);
-  }
+// Declare marked as global
+declare const marked: {
+  parse: (markdown: string) => string;
 };
+
+// Props
+interface Props {
+  fragment: FragmentDto | null;
+  visible: boolean;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  fragment: null,
+  visible: false
+});
+
+// Emits
+interface Emits {
+  (e: 'close'): void;
+}
+
+const emit = defineEmits<Emits>();
+
+// State
+const showConfidenceComment = ref<boolean>(false);
+
+// Computed
+const renderedMarkdown = computed<string>(() => {
+  if (!props.fragment || !props.fragment.content) {
+    return '';
+  }
+  if (typeof marked !== 'undefined') {
+    return marked.parse(props.fragment.content);
+  }
+  return props.fragment.content.replace(/\n/g, '<br>');
+});
+
+// Watchers
+watch(() => props.visible, (newVal) => {
+  if (!newVal) {
+    showConfidenceComment.value = false;
+  }
+});
+
+// Methods
+function close(): void {
+  emit('close');
+}
+
+function toggleConfidenceComment(): void {
+  showConfidenceComment.value = !showConfidenceComment.value;
+}
+
+function handleKeydown(event: KeyboardEvent): void {
+  if (event.key === 'Escape' && props.visible) {
+    close();
+  }
+}
+
+// Lifecycle
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleKeydown);
+});
 </script>
