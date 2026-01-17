@@ -51,78 +51,75 @@
   </div>
 </template>
 
-<script>
-import { computed } from 'vue';
-import { api } from '@/utils/api.js';
-import { formatRelativeTime } from '@/utils/helpers.js';
-import { useArticleVersions } from '@/composables/useArticleVersions.js';
+<script setup lang="ts">
+import { ref, computed, watch } from 'vue';
+import { api } from '@/utils/api';
+import { formatRelativeTime } from '@/utils/helpers';
+import { useArticleVersions } from '@/composables/useArticleVersions';
+import type { ArticleVersionDto } from '@/types/generated/api-client';
 
-export default {
-  name: 'VersionsPanel',
-  props: {
-    articleId: {
-      type: String,
-      default: null
-    },
-    selectedVersionId: {
-      type: String,
-      default: null
-    }
-  },
-  emits: ['select-version'],
-  setup(props) {
-    const articleId = computed(() => props.articleId);
-    const versionState = useArticleVersions(articleId);
-    return { versionState };
-  },
-  computed: {
-    userVersions() {
-      return this.versionState.userVersions.value;
-    },
-    loading() {
-      return this.versionState.loading.value;
-    },
-    error() {
-      return this.versionState.error.value;
-    }
-  },
-  watch: {
-    articleId: {
-      immediate: true,
-      handler(newArticleId) {
-        if (newArticleId) {
-          this.loadVersions();
-        } else {
-          this.versionState.setVersions([]);
-        }
-      }
-    }
-  },
-  methods: {
-    async loadVersions() {
-      if (!this.articleId) return;
-      
-      this.versionState.setLoading(true);
-      this.versionState.setError(null);
-      
-      try {
-        const versions = await api.get(`/api/articles/${this.articleId}/versions`);
-        this.versionState.setVersions(versions);
-      } catch (err) {
-        this.versionState.setError('Failed to load version history: ' + err.message);
-        console.error('Error loading versions:', err);
-      } finally {
-        this.versionState.setLoading(false);
-      }
-    },
-    selectVersion(version) {
-      this.$emit('select-version', version);
-      // Collapse right sidebar on mobile after selection
-      window.MedleySidebar?.collapseRightSidebar();
-    },
-    formatDate(dateString) {
-      return formatRelativeTime(dateString, { short: false, includeTime: true });
-    }
+// Props
+interface Props {
+  articleId: string | null;
+  selectedVersionId?: string | null;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  articleId: null,
+  selectedVersionId: null
+});
+
+// Emits
+interface Emits {
+  (e: 'select-version', version: ArticleVersionDto): void;
+}
+
+const emit = defineEmits<Emits>();
+
+// Composable
+const articleIdRef = computed(() => props.articleId);
+const versionState = useArticleVersions(articleIdRef);
+
+// Computed
+const userVersions = computed(() => versionState.userVersions.value);
+const loading = computed(() => versionState.loading.value);
+const error = computed(() => versionState.error.value);
+
+// Watch
+watch(() => props.articleId, async (newArticleId) => {
+  if (newArticleId) {
+    await loadVersions();
+  } else {
+    versionState.setVersions([]);
   }
-};
+}, { immediate: true });
+
+// Methods
+async function loadVersions(): Promise<void> {
+  if (!props.articleId) return;
+  
+  versionState.setLoading(true);
+  versionState.setError(null);
+  
+  try {
+    const versions = await api.get<ArticleVersionDto[]>(`/api/articles/${props.articleId}/versions`);
+    versionState.setVersions(versions);
+  } catch (err: any) {
+    versionState.setError('Failed to load version history: ' + err.message);
+    console.error('Error loading versions:', err);
+  } finally {
+    versionState.setLoading(false);
+  }
+}
+
+function selectVersion(version: ArticleVersionDto): void {
+  emit('select-version', version);
+  // Collapse right sidebar on mobile after selection
+  (window as any).MedleySidebar?.collapseRightSidebar();
+}
+
+function formatDate(dateString: Date | undefined): string {
+  if (!dateString) return '';
+  return formatRelativeTime(dateString, { short: false, includeTime: true });
+}
 </script>

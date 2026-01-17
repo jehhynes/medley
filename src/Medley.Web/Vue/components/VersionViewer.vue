@@ -101,284 +101,314 @@
   </div>
 </template>
 
-<script>
-import { computed } from 'vue';
-import { api } from '@/utils/api.js';
-import { htmlDiff } from '@/utils/htmlDiff.js';
-import { useArticleVersions } from '@/composables/useArticleVersions.js';
+<script setup lang="ts">
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { api } from '@/utils/api';
+import { htmlDiff } from '@/utils/htmlDiff';
+import { useArticleVersions } from '@/composables/useArticleVersions';
+import type { ArticleVersionDto, ArticleVersionComparisonDto, VersionType } from '@/types/generated/api-client';
 
-export default {
-  name: 'VersionViewer',
-  props: {
-    articleId: {
-      type: String,
-      required: true
-    },
-    versionId: {
-      type: String,
-      required: true
-    }
-  },
-  emits: ['version-changed', 'version-accepted', 'version-rejected'],
-  setup(props) {
-    const articleId = computed(() => props.articleId);
-    const versionState = useArticleVersions(articleId);
-    return { versionState };
-  },
-  data() {
-    return {
-      version: null,
-      allVersions: [],
-      loading: true,
-      error: null,
-      loadingDiff: false,
-      diffError: null,
-      diffHtml: null,
-      isProcessing: false,
-      versionDropdownOpen: false
-    };
-  },
-  computed: {
-    isAIVersion() {
-      // Check if version type is AI
-      return this.version && this.version.versionType === 'AI';
-    },
-    canReviewVersion() {
-      // Can only review the pending AI version
-      return this.version && 
-             this.version.status === 'PendingAiVersion';
-    }
-  },
-  watch: {
-    versionId: {
-      immediate: true,
-      handler() {
-        this.loadVersion();
-      }
-    }
-  },
-  methods: {
-    async loadVersion() {
-      this.loading = true;
-      this.error = null;
-
-      try {
-        // Use cached versions from composable
-        this.allVersions = this.versionState.versions;
-        
-        // Find specific version in cached data using helper
-        this.version = this.versionState.getVersionById(this.versionId);
-        
-        if (!this.version) {
-          throw new Error('Version not found');
-        }
-        
-        // Load the diff
-        await this.loadVersionDiff();
-      } catch (err) {
-        console.error('Error loading version:', err);
-        this.error = err.message || 'Failed to load version';
-      } finally {
-        this.loading = false;
-      }
-    },
-
-    async loadVersionDiff() {
-      this.loadingDiff = true;
-      this.diffError = null;
-      this.diffHtml = null;
-
-      try {
-        const response = await api.get(
-          `/api/articles/${this.articleId}/versions/${this.versionId}/diff`
-        );
-
-        const beforeHtml = this.markdownToHtml(response.beforeContent || '');
-        const afterHtml = this.markdownToHtml(response.afterContent || '');
-
-        this.diffHtml = htmlDiff(beforeHtml, afterHtml);
-      } catch (err) {
-        this.diffError = 'Failed to load diff: ' + err.message;
-        console.error('Error loading diff:', err);
-      } finally {
-        this.loadingDiff = false;
-      }
-    },
-
-    toggleVersionDropdown() {
-      this.versionDropdownOpen = !this.versionDropdownOpen;
-    },
-
-    async selectVersion(versionId) {
-      if (versionId && versionId !== this.versionId) {
-        this.versionDropdownOpen = false;
-        this.$emit('version-changed', versionId);
-      }
-    },
-
-    handleClickOutside(event) {
-      if (this.$refs.versionDropdown && !this.$refs.versionDropdown.contains(event.target)) {
-        this.versionDropdownOpen = false;
-      }
-    },
-
-    markdownToHtml(markdown) {
-      if (!markdown) return '';
-      
-      // Use marked library if available
-      if (window.marked) {
-        try {
-          return window.marked.parse(markdown, { 
-            breaks: true, 
-            gfm: true,
-            headerIds: false,
-            mangle: false
-          });
-        } catch (e) {
-          console.error('Failed to parse markdown:', e);
-          return markdown;
-        }
-      }
-      
-      // Fallback: return markdown as-is wrapped in pre
-      return `<pre>${markdown}</pre>`;
-    },
-
-    formatDate(dateString) {
-      if (!dateString) return '';
-      const date = new Date(dateString);
-      return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-    },
-
-    getBaseStatusLabel(status) {
-      const labels = {
-        'CurrentVersion': 'Current Version',
-        'OldVersion': 'Prior Version',
-        'PendingAiVersion': 'AI Update',
-        'AcceptedAiVersion': 'AI Update',
-        'RejectedAiVersion': 'AI Update',
-        'OldAiVersion': 'AI Update'
-      };
-      return labels[status] || status;
-    },
-
-    getStatusDetails(version) {
-      if (!version) return '';
-      
-      const status = version.status;
-      const userName = version.createdByName;
-      const date = version.createdAt ? this.formatDate(version.createdAt) : '';
-      
-      switch (status) {
-        case 'AcceptedAiVersion':
-          return userName && date ? `Accepted by ${userName} on ${date}` : 'Accepted';
-        case 'RejectedAiVersion':
-          return userName && date ? `Rejected by ${userName} on ${date}` : 'Rejected';
-        case 'CurrentVersion':
-        case 'OldVersion':
-          return userName && date ? `by ${userName} on ${date}` : '';
-        case 'PendingAiVersion':
-          return 'Pending';
-        case 'OldAiVersion':
-          return 'Archived';
-        default:
-          return '';
-      }
-    },
-
-    async acceptVersion() {
-      if (!this.version || this.isProcessing) return;
-
-      bootbox.confirm({
-        title: 'Accept AI Version',
-        message: `Accept version ${this.version.versionNumber}? This will create a new user version based on this AI version.`,
-        buttons: {
-          confirm: {
-            label: 'Accept',
-            className: 'btn-success'
-          },
-          cancel: {
-            label: 'Cancel',
-            className: 'btn-secondary'
-          }
-        },
-        callback: async (result) => {
-          if (result) {
-            this.isProcessing = true;
-            try {
-              const response = await api.post(
-                `/api/articles/${this.articleId}/versions/${this.version.id}/accept`
-              );
-
-              if (response) {
-                // Emit event so parent can handle the refresh
-                this.$emit('version-accepted', response);
-              }
-            } catch (err) {
-              console.error('Error accepting version:', err);
-              bootbox.alert({
-                title: 'Error',
-                message: 'Failed to accept version: ' + err.message,
-                className: 'bootbox-error'
-              });
-            } finally {
-              this.isProcessing = false;
-            }
-          }
-        }
-      });
-    },
-
-    async rejectVersion() {
-      if (!this.version || this.isProcessing) return;
-
-      bootbox.confirm({
-        title: 'Reject AI Version',
-        message: `Reject version ${this.version.versionNumber}? This version will be marked as rejected and won't auto-load anymore.`,
-        buttons: {
-          confirm: {
-            label: 'Reject',
-            className: 'btn-danger'
-          },
-          cancel: {
-            label: 'Cancel',
-            className: 'btn-secondary'
-          }
-        },
-        callback: async (result) => {
-          if (result) {
-            this.isProcessing = true;
-            try {
-              await api.post(
-                `/api/articles/${this.articleId}/versions/${this.version.id}/reject`
-              );
-
-              // Emit event so parent can handle the refresh
-              this.$emit('version-rejected', this.version.id);
-            } catch (err) {
-              console.error('Error rejecting version:', err);
-              bootbox.alert({
-                title: 'Error',
-                message: 'Failed to reject version: ' + err.message,
-                className: 'bootbox-error'
-              });
-            } finally {
-              this.isProcessing = false;
-            }
-          }
-        }
-      });
-    }
-  },
-
-  mounted() {
-    // Add click-outside listener for dropdown
-    document.addEventListener('click', this.handleClickOutside);
-  },
-
-  beforeUnmount() {
-    // Remove click-outside listener
-    document.removeEventListener('click', this.handleClickOutside);
-  }
+// Declare global types
+declare const marked: {
+  parse: (markdown: string, options?: any) => string;
 };
+
+declare const bootbox: {
+  confirm: (options: {
+    title: string;
+    message: string;
+    buttons: {
+      confirm: { label: string; className: string };
+      cancel: { label: string; className: string };
+    };
+    callback: (result: boolean) => void;
+  }) => void;
+  alert: (options: {
+    title: string;
+    message: string;
+    className?: string;
+  }) => void;
+};
+
+// Extended version interface with computed status
+interface ArticleVersionWithStatus extends ArticleVersionDto {
+  status?: string;
+  createdByName?: string;
+  createdByEmail?: string;
+}
+
+// Props
+interface Props {
+  articleId: string;
+  versionId: string;
+}
+
+const props = defineProps<Props>();
+
+// Emits
+interface Emits {
+  (e: 'version-changed', versionId: string): void;
+  (e: 'version-accepted', response: any): void;
+  (e: 'version-rejected', versionId: string): void;
+}
+
+const emit = defineEmits<Emits>();
+
+// Composable
+const articleIdRef = computed(() => props.articleId);
+const versionState = useArticleVersions(articleIdRef);
+
+// State
+const version = ref<ArticleVersionWithStatus | null>(null);
+const allVersions = ref<ArticleVersionDto[]>([]);
+const loading = ref<boolean>(true);
+const error = ref<string | null>(null);
+const loadingDiff = ref<boolean>(false);
+const diffError = ref<string | null>(null);
+const diffHtml = ref<string | null>(null);
+const isProcessing = ref<boolean>(false);
+const versionDropdownOpen = ref<boolean>(false);
+const versionDropdown = ref<HTMLElement | null>(null);
+
+// Computed
+const isAIVersion = computed<boolean>(() => {
+  return version.value?.versionType === 'AI' as VersionType;
+});
+
+const canReviewVersion = computed<boolean>(() => {
+  return version.value?.status === 'PendingAiVersion';
+});
+
+// Watch
+watch(() => props.versionId, () => {
+  loadVersion();
+}, { immediate: true });
+
+// Methods
+async function loadVersion(): Promise<void> {
+  loading.value = true;
+  error.value = null;
+
+  try {
+    // Use cached versions from composable
+    allVersions.value = versionState.versions.value;
+    
+    // Find specific version in cached data using helper
+    const foundVersion = versionState.getVersionById(props.versionId);
+    
+    if (!foundVersion) {
+      throw new Error('Version not found');
+    }
+    
+    version.value = foundVersion as ArticleVersionWithStatus;
+    
+    // Load the diff
+    await loadVersionDiff();
+  } catch (err: any) {
+    console.error('Error loading version:', err);
+    error.value = err.message || 'Failed to load version';
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function loadVersionDiff(): Promise<void> {
+  loadingDiff.value = true;
+  diffError.value = null;
+  diffHtml.value = null;
+
+  try {
+    const response = await api.get<ArticleVersionComparisonDto>(
+      `/api/articles/${props.articleId}/versions/${props.versionId}/diff`
+    );
+
+    const beforeHtml = markdownToHtml(response.beforeContent || '');
+    const afterHtml = markdownToHtml(response.afterContent || '');
+
+    diffHtml.value = htmlDiff(beforeHtml, afterHtml);
+  } catch (err: any) {
+    diffError.value = 'Failed to load diff: ' + err.message;
+    console.error('Error loading diff:', err);
+  } finally {
+    loadingDiff.value = false;
+  }
+}
+
+function toggleVersionDropdown(): void {
+  versionDropdownOpen.value = !versionDropdownOpen.value;
+}
+
+async function selectVersion(versionId: string): Promise<void> {
+  if (versionId && versionId !== props.versionId) {
+    versionDropdownOpen.value = false;
+    emit('version-changed', versionId);
+  }
+}
+
+function handleClickOutside(event: MouseEvent): void {
+  if (versionDropdown.value && !versionDropdown.value.contains(event.target as Node)) {
+    versionDropdownOpen.value = false;
+  }
+}
+
+function markdownToHtml(markdown: string): string {
+  if (!markdown) return '';
+  
+  // Use marked library if available
+  if (typeof marked !== 'undefined') {
+    try {
+      return marked.parse(markdown, { 
+        breaks: true, 
+        gfm: true,
+        headerIds: false,
+        mangle: false
+      });
+    } catch (e) {
+      console.error('Failed to parse markdown:', e);
+      return markdown;
+    }
+  }
+  
+  // Fallback: return markdown as-is wrapped in pre
+  return `<pre>${markdown}</pre>`;
+}
+
+function formatDate(dateString: Date | undefined): string {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+}
+
+function getBaseStatusLabel(status: string | undefined): string {
+  if (!status) return '';
+  
+  const labels: Record<string, string> = {
+    'CurrentVersion': 'Current Version',
+    'OldVersion': 'Prior Version',
+    'PendingAiVersion': 'AI Update',
+    'AcceptedAiVersion': 'AI Update',
+    'RejectedAiVersion': 'AI Update',
+    'OldAiVersion': 'AI Update'
+  };
+  return labels[status] || status;
+}
+
+function getStatusDetails(version: ArticleVersionWithStatus | null): string {
+  if (!version) return '';
+  
+  const status = version.status;
+  const userName = version.createdByName;
+  const date = version.createdAt ? formatDate(version.createdAt) : '';
+  
+  switch (status) {
+    case 'AcceptedAiVersion':
+      return userName && date ? `Accepted by ${userName} on ${date}` : 'Accepted';
+    case 'RejectedAiVersion':
+      return userName && date ? `Rejected by ${userName} on ${date}` : 'Rejected';
+    case 'CurrentVersion':
+    case 'OldVersion':
+      return userName && date ? `by ${userName} on ${date}` : '';
+    case 'PendingAiVersion':
+      return 'Pending';
+    case 'OldAiVersion':
+      return 'Archived';
+    default:
+      return '';
+  }
+}
+
+async function acceptVersion(): Promise<void> {
+  if (!version.value || isProcessing.value) return;
+
+  bootbox.confirm({
+    title: 'Accept AI Version',
+    message: `Accept version ${version.value.versionNumber}? This will create a new user version based on this AI version.`,
+    buttons: {
+      confirm: {
+        label: 'Accept',
+        className: 'btn-success'
+      },
+      cancel: {
+        label: 'Cancel',
+        className: 'btn-secondary'
+      }
+    },
+    callback: async (result: boolean) => {
+      if (result) {
+        isProcessing.value = true;
+        try {
+          const response = await api.post<void, any>(
+            `/api/articles/${props.articleId}/versions/${version.value!.id}/accept`,
+            undefined as any
+          );
+
+          if (response) {
+            // Emit event so parent can handle the refresh
+            emit('version-accepted', response);
+          }
+        } catch (err: any) {
+          console.error('Error accepting version:', err);
+          bootbox.alert({
+            title: 'Error',
+            message: 'Failed to accept version: ' + err.message,
+            className: 'bootbox-error'
+          });
+        } finally {
+          isProcessing.value = false;
+        }
+      }
+    }
+  });
+}
+
+async function rejectVersion(): Promise<void> {
+  if (!version.value || isProcessing.value) return;
+
+  bootbox.confirm({
+    title: 'Reject AI Version',
+    message: `Reject version ${version.value.versionNumber}? This version will be marked as rejected and won't auto-load anymore.`,
+    buttons: {
+      confirm: {
+        label: 'Reject',
+        className: 'btn-danger'
+      },
+      cancel: {
+        label: 'Cancel',
+        className: 'btn-secondary'
+      }
+    },
+    callback: async (result: boolean) => {
+      if (result) {
+        isProcessing.value = true;
+        try {
+          await api.post<void, void>(
+            `/api/articles/${props.articleId}/versions/${version.value!.id}/reject`,
+            undefined as any
+          );
+
+          // Emit event so parent can handle the refresh
+          emit('version-rejected', version.value!.id!);
+        } catch (err: any) {
+          console.error('Error rejecting version:', err);
+          bootbox.alert({
+            title: 'Error',
+            message: 'Failed to reject version: ' + err.message,
+            className: 'bootbox-error'
+          });
+        } finally {
+          isProcessing.value = false;
+        }
+      }
+    }
+  });
+}
+
+// Lifecycle
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleClickOutside);
+});
 </script>

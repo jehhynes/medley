@@ -66,54 +66,52 @@
   </div>
 </template>
 
-<script>
-import { useSidebarState } from '@/composables/useSidebarState'
+<script setup lang="ts">
+import { computed } from 'vue';
+import { useRoute } from 'vue-router';
+import { useSidebarState } from '@/composables/useSidebarState';
 
-export default {
-  name: 'VerticalMenu',
-  props: {
-    // User display name (from server)
-    displayName: {
-      type: String,
-      default: 'User'
-    },
-    // Whether user is authenticated (from server)
-    isAuthenticated: {
-      type: Boolean,
-      default: false
-    }
-  },
-  setup() {
-    const { leftSidebarVisible } = useSidebarState()
-    return { leftSidebarVisible }
-  },
-  computed: {
-    currentPage() {
-      // Check if it's an admin page first - don't return 'Home' for admin pages
-      if (this.isAdminPage) {
-        return null;
-      }
-      
-      const path = this.$route.path.toLowerCase();
-      const segments = path.split('/').filter(s => s);
-      const firstSegment = segments[0] || 'home';
-      
-      switch(firstSegment) {
-        case 'articles': return 'Articles';
-        case 'sources': return 'Sources';
-        case 'fragments': return 'Fragments';
-        case 'auth': return 'Auth';
-        case 'account': return 'Account';
-        case 'home':
-        default: return 'Home';
-      }
-    },
-    isAdminPage() {
-      const path = this.$route.path.toLowerCase();
-      const segments = path.split('/').filter(s => s);
-      const firstSegment = segments[0] || '';
-      return firstSegment === 'admin' || firstSegment === 'integrations';
-    }
+// Props
+interface Props {
+  displayName?: string;
+  isAuthenticated?: boolean;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  displayName: 'User',
+  isAuthenticated: false
+});
+
+// Composables
+const { leftSidebarVisible } = useSidebarState();
+const route = useRoute();
+
+// Computed
+const currentPage = computed<string | null>(() => {
+  // Check if it's an admin page first - don't return 'Home' for admin pages
+  if (isAdminPage.value) {
+    return null;
   }
-};
+  
+  const path = route.path.toLowerCase();
+  const segments = path.split('/').filter(s => s);
+  const firstSegment = segments[0] || 'home';
+  
+  switch(firstSegment) {
+    case 'articles': return 'Articles';
+    case 'sources': return 'Sources';
+    case 'fragments': return 'Fragments';
+    case 'auth': return 'Auth';
+    case 'account': return 'Account';
+    case 'home':
+    default: return 'Home';
+  }
+});
+
+const isAdminPage = computed<boolean>(() => {
+  const path = route.path.toLowerCase();
+  const segments = path.split('/').filter(s => s);
+  const firstSegment = segments[0] || '';
+  return firstSegment === 'admin' || firstSegment === 'integrations';
+});
 </script>

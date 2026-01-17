@@ -265,7 +265,8 @@
   </div>
 </template>
 
-<script>
+<script setup lang="ts">
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import FragmentModal from './FragmentModal.vue';
 import { 
   getFragmentCategoryIcon, 
@@ -273,464 +274,486 @@ import {
   getConfidenceIcon, 
   getConfidenceColor,
   getArticleTypes 
-} from '@/utils/helpers.js';
+} from '@/utils/helpers';
+import type { FragmentDto, UserSummaryDto } from '@/types/generated/api-client';
 
-export default {
-  name: 'PlanViewer',
-  components: {
-    FragmentModal
-  },
-  props: {
-    planId: {
-      type: String,
-      required: true
-    },
-    articleId: {
-      type: String,
-      required: true
-    }
-  },
-  emits: ['conversation-created', 'close-plan'],
-  data() {
-    return {
-      plan: null,
-      allPlans: [],
-      loading: true,
-      error: null,
-      isSaving: false,
-      planInstructions: '',
-      savingFragments: new Set(),
-      selectedFragment: null,
-      isRestoringPlan: false,
-      versionDropdownOpen: false
+// Declare global types
+declare const bootbox: {
+  confirm: (options: {
+    title: string;
+    message: string;
+    buttons: {
+      confirm: { label: string; className: string };
+      cancel: { label: string; className: string };
     };
-  },
-  computed: {
-    includedFragments() {
-      if (!this.plan) return [];
-      return this.plan.fragments.filter(f => f.include);
-    },
-    excludedFragments() {
-      if (!this.plan) return [];
-      return this.plan.fragments.filter(f => !f.include);
-    },
-    isArchivedPlan() {
-      return this.plan && this.plan.status !== 'Draft';
-    },
-    canEditPlan() {
-      return this.plan && this.plan.status === 'Draft';
-    }
-  },
-  watch: {
-    planId: {
-      immediate: true,
-      handler() {
-        this.loadPlan();
-      }
-    },
-    'plan.instructions': {
-      handler(newVal) {
-        if (newVal !== undefined) {
-          this.planInstructions = newVal;
-        }
-      },
-      immediate: true
-    },
-    'plan.fragments': {
-      handler() {
-        // Auto-expand textareas when fragments change
-        this.$nextTick(() => {
-          const textareas = this.$el?.querySelectorAll('textarea');
-          textareas?.forEach(textarea => {
-            textarea.style.height = 'auto';
-            textarea.style.height = textarea.scrollHeight + 'px';
-          });
-        });
-      },
-      deep: true
-    }
-  },
-  methods: {
-    async loadPlan() {
-      this.loading = true;
-      this.error = null;
+    callback: (result: boolean) => void;
+  }) => void;
+};
 
-      try {
-        // Load all plans for version dropdown
-        const plansResponse = await fetch(`/api/articles/${this.articleId}/plans`);
-        if (plansResponse.ok) {
-          this.allPlans = await plansResponse.json();
-        }
+declare const marked: {
+  parse: (markdown: string) => string;
+};
 
-        // Load active plan
-        const response = await fetch(`/api/articles/${this.articleId}/plans/active`);
-        
-        if (response.status === 204) {
-          this.error = 'No active plan found';
-          return;
-        }
+// Plan types (not yet in generated types)
+interface PlanFragmentDto {
+  fragmentId: string;
+  fragment: FragmentDto;
+  include: boolean;
+  similarityScore: number;
+  reasoning: string;
+  instructions: string;
+}
 
-        if (!response.ok) {
-          throw new Error('Failed to load plan');
-        }
+interface PlanDto {
+  id: string;
+  articleId: string;
+  version: number;
+  instructions: string;
+  fragments: PlanFragmentDto[];
+  status: string;
+  createdBy: UserSummaryDto;
+  createdAt: Date;
+  changesSummary?: string;
+}
 
-        this.plan = await response.json();
-        this.planInstructions = this.plan.instructions || '';
-        
-        // Auto-expand textareas after plan loads
-        this.$nextTick(() => {
-          const textareas = this.$el?.querySelectorAll('textarea');
-          textareas?.forEach(textarea => {
-            textarea.style.height = 'auto';
-            textarea.style.height = textarea.scrollHeight + 'px';
-          });
-        });
-      } catch (err) {
-        console.error('Error loading plan:', err);
-        this.error = err.message;
-      } finally {
-        this.loading = false;
-      }
-    },
+// Props
+interface Props {
+  planId: string;
+  articleId: string;
+}
 
-    async loadSpecificPlan(planId) {
-      this.loading = true;
-      this.error = null;
+const props = defineProps<Props>();
 
-      try {
-        const response = await fetch(`/api/articles/${this.articleId}/plans/${planId}`);
-        
-        if (!response.ok) {
-          throw new Error('Failed to load plan');
-        }
+// Emits
+interface Emits {
+  (e: 'conversation-created', conversationId: string): void;
+  (e: 'close-plan'): void;
+}
 
-        this.plan = await response.json();
-        this.planInstructions = this.plan.instructions || '';
-        
-        // Auto-expand textareas after plan loads
-        this.$nextTick(() => {
-          const textareas = this.$el?.querySelectorAll('textarea');
-          textareas?.forEach(textarea => {
-            textarea.style.height = 'auto';
-            textarea.style.height = textarea.scrollHeight + 'px';
-          });
-        });
-      } catch (err) {
-        console.error('Error loading plan:', err);
-        this.error = err.message;
-      } finally {
-        this.loading = false;
-      }
-    },
+const emit = defineEmits<Emits>();
 
-    toggleVersionDropdown() {
-      this.versionDropdownOpen = !this.versionDropdownOpen;
-    },
+// State
+const plan = ref<PlanDto | null>(null);
+const allPlans = ref<PlanDto[]>([]);
+const loading = ref<boolean>(true);
+const error = ref<string | null>(null);
+const isSaving = ref<boolean>(false);
+const planInstructions = ref<string>('');
+const savingFragments = ref<Set<string>>(new Set());
+const selectedFragment = ref<FragmentDto | null>(null);
+const isRestoringPlan = ref<boolean>(false);
+const versionDropdownOpen = ref<boolean>(false);
+const planDropdown = ref<HTMLElement | null>(null);
 
-    async selectVersion(planId) {
-      if (planId) {
-        this.versionDropdownOpen = false;
-        await this.loadSpecificPlan(planId);
-      }
-    },
+// Computed
+const includedFragments = computed<PlanFragmentDto[]>(() => {
+  if (!plan.value) return [];
+  return plan.value.fragments.filter(f => f.include);
+});
 
-    handleClickOutside(event) {
-      if (this.$refs.planDropdown && !this.$refs.planDropdown.contains(event.target)) {
-        this.versionDropdownOpen = false;
-      }
-    },
+const excludedFragments = computed<PlanFragmentDto[]>(() => {
+  if (!plan.value) return [];
+  return plan.value.fragments.filter(f => !f.include);
+});
 
-    async restorePlan() {
-      if (!this.plan || this.isRestoringPlan) return;
+const isArchivedPlan = computed<boolean>(() => {
+  return plan.value !== null && plan.value.status !== 'Draft';
+});
 
-      const confirmMessage = `Restore version ${this.plan.version} as the active plan? The current draft will be archived.`;
-      
-      bootbox.confirm({
-        title: 'Restore Plan',
-        message: confirmMessage,
-        buttons: {
-          confirm: {
-            label: 'Restore',
-            className: 'btn-primary'
-          },
-          cancel: {
-            label: 'Cancel',
-            className: 'btn-secondary'
-          }
-        },
-        callback: async (result) => {
-          if (result) {
-            this.isRestoringPlan = true;
-            try {
-              const response = await fetch(`/api/articles/${this.articleId}/plans/${this.plan.id}/restore`, {
-                method: 'POST'
-              });
+const canEditPlan = computed<boolean>(() => {
+  return plan.value !== null && plan.value.status === 'Draft';
+});
 
-              if (!response.ok) {
-                throw new Error('Failed to restore plan');
-              }
+// Watch
+watch(() => props.planId, () => {
+  loadPlan();
+}, { immediate: true });
 
-              // Reload all plans and show the restored one
-              await this.loadPlan();
-            } catch (err) {
-              console.error('Error restoring plan:', err);
-              this.error = 'Failed to restore plan: ' + err.message;
-            } finally {
-              this.isRestoringPlan = false;
-            }
-          }
-        }
-      });
-    },
+watch(() => plan.value?.instructions, (newVal) => {
+  if (newVal !== undefined) {
+    planInstructions.value = newVal;
+  }
+}, { immediate: true });
 
-    async savePlan() {
-      if (!this.plan || this.isSaving) return;
-
-      this.isSaving = true;
-      try {
-        const response = await fetch(`/api/articles/${this.articleId}/plans/${this.plan.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            instructions: this.planInstructions
-          })
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to save plan');
-        }
-
-        // Update the local plan object
-        this.plan.instructions = this.planInstructions;
-      } catch (err) {
-        console.error('Error saving plan:', err);
-        this.error = 'Failed to save plan: ' + err.message;
-      } finally {
-        this.isSaving = false;
-      }
-    },
-
-    async acceptPlan() {
-      if (!this.plan || !this.canEditPlan) return;
-
-      bootbox.confirm({
-        title: 'Accept Plan',
-        message: "Accept this plan and begin AI implementation?",
-        buttons: {
-          confirm: {
-            label: 'Accept',
-            className: 'btn-success'
-          },
-          cancel: {
-            label: 'Cancel',
-            className: 'btn-secondary'
-          }
-        },
-        callback: async (result) => {
-          if (result) {
-            this.isSaving = true;
-            try {
-              const response = await fetch(`/api/articles/${this.articleId}/plans/${this.plan.id}/accept`, {
-                method: 'POST'
-              });
-
-              if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to accept plan');
-              }
-
-              const data = await response.json();
-              
-              // Emit event to load the new conversation in the chat panel
-              if (data.conversationId) {
-                this.$emit('conversation-created', data.conversationId);
-              }
-            } catch (err) {
-              console.error('Error accepting plan:', err);
-              this.error = 'Failed to accept plan: ' + err.message;
-            } finally {
-              this.isSaving = false;
-            }
-          }
-        }
-      });
-    },
-
-    async rejectPlan() {
-      if (!this.plan || !this.canEditPlan) return;
-
-      bootbox.confirm({
-        title: 'Reject Plan',
-        message: "Reject this plan? It will be archived.",
-        buttons: {
-          confirm: {
-            label: 'Reject',
-            className: 'btn-danger'
-          },
-          cancel: {
-            label: 'Cancel',
-            className: 'btn-secondary'
-          }
-        },
-        callback: async (result) => {
-          if (result) {
-            this.isSaving = true;
-            try {
-              const response = await fetch(`/api/articles/${this.articleId}/plans/${this.plan.id}/reject`, {
-                method: 'POST'
-              });
-
-              if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to reject plan');
-              }
-
-              // Close the plan tab after successful rejection
-              this.$emit('close-plan');
-            } catch (err) {
-              console.error('Error rejecting plan:', err);
-              this.error = 'Failed to reject plan: ' + err.message;
-            } finally {
-              this.isSaving = false;
-            }
-          }
-        }
-      });
-    },
-
-    selectFragment(planFragment) {
-      this.selectedFragment = planFragment.fragment;
-    },
-
-    closeFragmentModal() {
-      this.selectedFragment = null;
-    },
-
-    async updateFragmentInclude(planFragment) {
-      if (this.savingFragments.has(planFragment.fragmentId)) return;
-
-      this.savingFragments.add(planFragment.fragmentId);
-      try {
-        const response = await fetch(`/api/articles/${this.articleId}/plans/${this.plan.id}/fragments/${planFragment.fragmentId}/include`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            include: planFragment.include
-          })
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to update fragment');
-        }
-      } catch (err) {
-        console.error('Error updating fragment:', err);
-        this.error = 'Failed to update fragment: ' + err.message;
-        // Revert the change on error
-        planFragment.include = !planFragment.include;
-      } finally {
-        this.savingFragments.delete(planFragment.fragmentId);
-      }
-    },
-
-    toggleFragmentInclude(planFragment) {
-      planFragment.include = !planFragment.include;
-      this.updateFragmentInclude(planFragment);
-    },
-
-    async updateFragmentInstructions(planFragment) {
-      if (this.savingFragments.has(planFragment.fragmentId)) return;
-
-      this.savingFragments.add(planFragment.fragmentId);
-      try {
-        const response = await fetch(`/api/articles/${this.articleId}/plans/${this.plan.id}/fragments/${planFragment.fragmentId}/instructions`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            instructions: planFragment.instructions
-          })
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to update instructions');
-        }
-      } catch (err) {
-        console.error('Error updating instructions:', err);
-        this.error = 'Failed to update instructions: ' + err.message;
-      } finally {
-        this.savingFragments.delete(planFragment.fragmentId);
-      }
-    },
-
-    formatDate(dateString) {
-      if (!dateString) return '';
-      const date = new Date(dateString);
-      return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-    },
-
-    renderMarkdown(content) {
-      if (!content) return '';
-      if (typeof marked !== 'undefined') {
-        return marked.parse(content);
-      }
-      return content.replace(/\n/g, '<br>');
-    },
-
-    getSimilarityPercent(score) {
-      return Math.round(score * 100);
-    },
-
-    getSimilarityClass(score) {
-      if (score >= 0.8) return 'bg-success';
-      if (score >= 0.6) return 'bg-warning';
-      return 'bg-secondary';
-    },
-
-    getFragmentCategoryIcon,
-
-    getIconClass,
-
-    getConfidenceIcon,
-
-    getConfidenceColor,
-
-    handleKeydown(event) {
-      // Fragment modal handles its own Escape key
-    },
-
-    autoExpandTextarea(event) {
-      const textarea = event.target;
+watch(() => plan.value?.fragments, () => {
+  // Auto-expand textareas when fragments change
+  nextTick(() => {
+    const textareas = document.querySelectorAll<HTMLTextAreaElement>('textarea');
+    textareas.forEach(textarea => {
       textarea.style.height = 'auto';
       textarea.style.height = textarea.scrollHeight + 'px';
-    }
-  },
+    });
+  });
+}, { deep: true });
 
-  mounted() {
-    // Preload article types for icon display
-    getArticleTypes();
+// Methods
+async function loadPlan(): Promise<void> {
+  loading.value = true;
+  error.value = null;
+
+  try {
+    // Load all plans for version dropdown
+    const plansResponse = await fetch(`/api/articles/${props.articleId}/plans`);
+    if (plansResponse.ok) {
+      allPlans.value = await plansResponse.json();
+    }
+
+    // Load active plan
+    const response = await fetch(`/api/articles/${props.articleId}/plans/active`);
     
-    // Auto-expand all textareas on mount
-    this.$nextTick(() => {
-      const textareas = this.$el.querySelectorAll('textarea');
+    if (response.status === 204) {
+      error.value = 'No active plan found';
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error('Failed to load plan');
+    }
+
+    plan.value = await response.json();
+    planInstructions.value = plan.value.instructions || '';
+    
+    // Auto-expand textareas after plan loads
+    nextTick(() => {
+      const textareas = document.querySelectorAll<HTMLTextAreaElement>('textarea');
       textareas.forEach(textarea => {
         textarea.style.height = 'auto';
         textarea.style.height = textarea.scrollHeight + 'px';
       });
     });
-
-    // Add click-outside listener for dropdown
-    document.addEventListener('click', this.handleClickOutside);
-  },
-
-  beforeUnmount() {
-    // Remove click-outside listener
-    document.removeEventListener('click', this.handleClickOutside);
+  } catch (err: any) {
+    console.error('Error loading plan:', err);
+    error.value = err.message;
+  } finally {
+    loading.value = false;
   }
-};
+}
+
+async function loadSpecificPlan(planId: string): Promise<void> {
+  loading.value = true;
+  error.value = null;
+
+  try {
+    const response = await fetch(`/api/articles/${props.articleId}/plans/${planId}`);
+    
+    if (!response.ok) {
+      throw new Error('Failed to load plan');
+    }
+
+    plan.value = await response.json();
+    planInstructions.value = plan.value.instructions || '';
+    
+    // Auto-expand textareas after plan loads
+    nextTick(() => {
+      const textareas = document.querySelectorAll<HTMLTextAreaElement>('textarea');
+      textareas.forEach(textarea => {
+        textarea.style.height = 'auto';
+        textarea.style.height = textarea.scrollHeight + 'px';
+      });
+    });
+  } catch (err: any) {
+    console.error('Error loading plan:', err);
+    error.value = err.message;
+  } finally {
+    loading.value = false;
+  }
+}
+
+function toggleVersionDropdown(): void {
+  versionDropdownOpen.value = !versionDropdownOpen.value;
+}
+
+async function selectVersion(planId: string): Promise<void> {
+  if (planId) {
+    versionDropdownOpen.value = false;
+    await loadSpecificPlan(planId);
+  }
+}
+
+function handleClickOutside(event: MouseEvent): void {
+  if (planDropdown.value && !planDropdown.value.contains(event.target as Node)) {
+    versionDropdownOpen.value = false;
+  }
+}
+
+async function restorePlan(): Promise<void> {
+  if (!plan.value || isRestoringPlan.value) return;
+
+  const confirmMessage = `Restore version ${plan.value.version} as the active plan? The current draft will be archived.`;
+  
+  bootbox.confirm({
+    title: 'Restore Plan',
+    message: confirmMessage,
+    buttons: {
+      confirm: {
+        label: 'Restore',
+        className: 'btn-primary'
+      },
+      cancel: {
+        label: 'Cancel',
+        className: 'btn-secondary'
+      }
+    },
+    callback: async (result: boolean) => {
+      if (result) {
+        isRestoringPlan.value = true;
+        try {
+          const response = await fetch(`/api/articles/${props.articleId}/plans/${plan.value!.id}/restore`, {
+            method: 'POST'
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to restore plan');
+          }
+
+          // Reload all plans and show the restored one
+          await loadPlan();
+        } catch (err: any) {
+          console.error('Error restoring plan:', err);
+          error.value = 'Failed to restore plan: ' + err.message;
+        } finally {
+          isRestoringPlan.value = false;
+        }
+      }
+    }
+  });
+}
+
+async function savePlan(): Promise<void> {
+  if (!plan.value || isSaving.value) return;
+
+  isSaving.value = true;
+  try {
+    const response = await fetch(`/api/articles/${props.articleId}/plans/${plan.value.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        instructions: planInstructions.value
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to save plan');
+    }
+
+    // Update the local plan object
+    plan.value.instructions = planInstructions.value;
+  } catch (err: any) {
+    console.error('Error saving plan:', err);
+    error.value = 'Failed to save plan: ' + err.message;
+  } finally {
+    isSaving.value = false;
+  }
+}
+
+async function acceptPlan(): Promise<void> {
+  if (!plan.value || !canEditPlan.value) return;
+
+  bootbox.confirm({
+    title: 'Accept Plan',
+    message: "Accept this plan and begin AI implementation?",
+    buttons: {
+      confirm: {
+        label: 'Accept',
+        className: 'btn-success'
+      },
+      cancel: {
+        label: 'Cancel',
+        className: 'btn-secondary'
+      }
+    },
+    callback: async (result: boolean) => {
+      if (result) {
+        isSaving.value = true;
+        try {
+          const response = await fetch(`/api/articles/${props.articleId}/plans/${plan.value!.id}/accept`, {
+            method: 'POST'
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to accept plan');
+          }
+
+          const data = await response.json();
+          
+          // Emit event to load the new conversation in the chat panel
+          if (data.conversationId) {
+            emit('conversation-created', data.conversationId);
+          }
+        } catch (err: any) {
+          console.error('Error accepting plan:', err);
+          error.value = 'Failed to accept plan: ' + err.message;
+        } finally {
+          isSaving.value = false;
+        }
+      }
+    }
+  });
+}
+
+async function rejectPlan(): Promise<void> {
+  if (!plan.value || !canEditPlan.value) return;
+
+  bootbox.confirm({
+    title: 'Reject Plan',
+    message: "Reject this plan? It will be archived.",
+    buttons: {
+      confirm: {
+        label: 'Reject',
+        className: 'btn-danger'
+      },
+      cancel: {
+        label: 'Cancel',
+        className: 'btn-secondary'
+      }
+    },
+    callback: async (result: boolean) => {
+      if (result) {
+        isSaving.value = true;
+        try {
+          const response = await fetch(`/api/articles/${props.articleId}/plans/${plan.value!.id}/reject`, {
+            method: 'POST'
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to reject plan');
+          }
+
+          // Close the plan tab after successful rejection
+          emit('close-plan');
+        } catch (err: any) {
+          console.error('Error rejecting plan:', err);
+          error.value = 'Failed to reject plan: ' + err.message;
+        } finally {
+          isSaving.value = false;
+        }
+      }
+    }
+  });
+}
+
+function selectFragment(planFragment: PlanFragmentDto): void {
+  selectedFragment.value = planFragment.fragment;
+}
+
+function closeFragmentModal(): void {
+  selectedFragment.value = null;
+}
+
+async function updateFragmentInclude(planFragment: PlanFragmentDto): Promise<void> {
+  if (savingFragments.value.has(planFragment.fragmentId)) return;
+
+  savingFragments.value.add(planFragment.fragmentId);
+  try {
+    const response = await fetch(`/api/articles/${props.articleId}/plans/${plan.value!.id}/fragments/${planFragment.fragmentId}/include`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        include: planFragment.include
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update fragment');
+    }
+  } catch (err: any) {
+    console.error('Error updating fragment:', err);
+    error.value = 'Failed to update fragment: ' + err.message;
+    // Revert the change on error
+    planFragment.include = !planFragment.include;
+  } finally {
+    savingFragments.value.delete(planFragment.fragmentId);
+  }
+}
+
+function toggleFragmentInclude(planFragment: PlanFragmentDto): void {
+  planFragment.include = !planFragment.include;
+  updateFragmentInclude(planFragment);
+}
+
+async function updateFragmentInstructions(planFragment: PlanFragmentDto): Promise<void> {
+  if (savingFragments.value.has(planFragment.fragmentId)) return;
+
+  savingFragments.value.add(planFragment.fragmentId);
+  try {
+    const response = await fetch(`/api/articles/${props.articleId}/plans/${plan.value!.id}/fragments/${planFragment.fragmentId}/instructions`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        instructions: planFragment.instructions
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update instructions');
+    }
+  } catch (err: any) {
+    console.error('Error updating instructions:', err);
+    error.value = 'Failed to update instructions: ' + err.message;
+  } finally {
+    savingFragments.value.delete(planFragment.fragmentId);
+  }
+}
+
+function formatDate(dateString: Date | undefined): string {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+}
+
+function renderMarkdown(content: string): string {
+  if (!content) return '';
+  if (typeof marked !== 'undefined') {
+    return marked.parse(content);
+  }
+  return content.replace(/\n/g, '<br>');
+}
+
+function getSimilarityPercent(score: number): number {
+  return Math.round(score * 100);
+}
+
+function getSimilarityClass(score: number): string {
+  if (score >= 0.8) return 'bg-success';
+  if (score >= 0.6) return 'bg-warning';
+  return 'bg-secondary';
+}
+
+function autoExpandTextarea(event: Event): void {
+  const textarea = event.target as HTMLTextAreaElement;
+  textarea.style.height = 'auto';
+  textarea.style.height = textarea.scrollHeight + 'px';
+}
+
+// Lifecycle
+onMounted(() => {
+  // Preload article types for icon display
+  getArticleTypes();
+  
+  // Auto-expand all textareas on mount
+  nextTick(() => {
+    const textareas = document.querySelectorAll<HTMLTextAreaElement>('textarea');
+    textareas.forEach(textarea => {
+      textarea.style.height = 'auto';
+      textarea.style.height = textarea.scrollHeight + 'px';
+    });
+  });
+
+  // Add click-outside listener for dropdown
+  document.addEventListener('click', handleClickOutside);
+});
+
+onBeforeUnmount(() => {
+  // Remove click-outside listener
+  document.removeEventListener('click', handleClickOutside);
+});
 </script>
 
