@@ -1,0 +1,180 @@
+using System.ComponentModel.DataAnnotations;
+using Medley.Domain.Enums;
+
+namespace Medley.Application.Models.DTOs;
+
+/// <summary>
+/// Data transfer object for Article entity
+/// </summary>
+public class ArticleDto
+{
+    /// <summary>
+    /// Unique identifier for the article
+    /// </summary>
+    public required Guid Id { get; set; }
+
+    /// <summary>
+    /// Article title
+    /// </summary>
+    public required string Title { get; set; }
+
+    /// <summary>
+    /// Article summary
+    /// </summary>
+    public string? Summary { get; set; }
+
+    /// <summary>
+    /// Article content (markdown)
+    /// </summary>
+    public string? Content { get; set; }
+
+    /// <summary>
+    /// Article status
+    /// </summary>
+    public ArticleStatus Status { get; set; }
+
+    /// <summary>
+    /// When the article was published
+    /// </summary>
+    public DateTimeOffset? PublishedAt { get; set; }
+
+    /// <summary>
+    /// Parent article ID (null for root articles)
+    /// </summary>
+    public Guid? ParentArticleId { get; set; }
+
+    /// <summary>
+    /// Parent article title
+    /// </summary>
+    public string? ParentTitle { get; set; }
+
+    /// <summary>
+    /// Article type ID
+    /// </summary>
+    public Guid? ArticleTypeId { get; set; }
+
+    /// <summary>
+    /// User assigned to this article
+    /// </summary>
+    public UserSummaryDto? AssignedUser { get; set; }
+
+    /// <summary>
+    /// Child articles
+    /// </summary>
+    public List<ArticleDto> Children { get; set; } = new();
+
+    /// <summary>
+    /// Current conversation summary
+    /// </summary>
+    public ConversationSummaryDto? CurrentConversation { get; set; }
+
+    /// <summary>
+    /// Number of child articles
+    /// </summary>
+    public int ChildrenCount { get; set; }
+
+    /// <summary>
+    /// Number of fragments
+    /// </summary>
+    public int FragmentsCount { get; set; }
+
+    /// <summary>
+    /// When the article was created
+    /// </summary>
+    public DateTimeOffset CreatedAt { get; set; }
+
+    /// <summary>
+    /// When the article was last modified
+    /// </summary>
+    public DateTimeOffset? ModifiedAt { get; set; }
+}
+
+/// <summary>
+/// Request to create a new article
+/// </summary>
+public class ArticleCreateRequest
+{
+    /// <summary>
+    /// Article title
+    /// </summary>
+    [Required]
+    [StringLength(200, MinimumLength = 1)]
+    public required string Title { get; set; }
+
+    /// <summary>
+    /// Parent article ID (null for root articles)
+    /// </summary>
+    public Guid? ParentArticleId { get; set; }
+
+    /// <summary>
+    /// Article type ID
+    /// </summary>
+    public Guid? ArticleTypeId { get; set; }
+}
+
+/// <summary>
+/// Request to update article metadata
+/// </summary>
+public class ArticleUpdateMetadataRequest
+{
+    /// <summary>
+    /// Article title
+    /// </summary>
+    [Required]
+    [StringLength(200, MinimumLength = 1)]
+    public required string Title { get; set; }
+
+    /// <summary>
+    /// Article status
+    /// </summary>
+    public ArticleStatus? Status { get; set; }
+
+    /// <summary>
+    /// Article type ID
+    /// </summary>
+    public Guid? ArticleTypeId { get; set; }
+}
+
+/// <summary>
+/// Request to update article content
+/// </summary>
+public class ArticleUpdateContentRequest
+{
+    /// <summary>
+    /// Article content (markdown)
+    /// </summary>
+    [Required]
+    public required string Content { get; set; }
+}
+
+/// <summary>
+/// Request to move an article to a different parent
+/// </summary>
+public class ArticleMoveRequest
+{
+    /// <summary>
+    /// New parent article ID
+    /// </summary>
+    public Guid? NewParentArticleId { get; set; }
+}
+
+/// <summary>
+/// Article type information
+/// </summary>
+public class ArticleTypeDto
+{
+    /// <summary>
+    /// Unique identifier for the article type
+    /// </summary>
+    public required Guid Id { get; set; }
+
+    /// <summary>
+    /// Article type name
+    /// </summary>
+    public required string Name { get; set; }
+
+    /// <summary>
+    /// Icon for the article type
+    /// </summary>
+    public string? Icon { get; set; }
+}
