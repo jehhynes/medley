@@ -299,7 +299,7 @@ Commit after each major task is complete.
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8_
   - [x] 10.4 Commit changes
 
-- [-] 11. Convert supporting components to TypeScript
+- [x] 11. Convert supporting components to TypeScript
   - [x] 11.1 Convert FragmentList and FragmentModal components
     - Update FragmentList.vue to use `<script setup lang="ts">`
     - Update FragmentModal.vue to use `<script setup lang="ts">`
@@ -342,17 +342,17 @@ Commit after each major task is complete.
     - Type all state and computed properties
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8_
 
-  - [-] 11.6 Commit changes
+  - [x] 11.6 Commit changes
 
-- [~] 12. Convert page components to TypeScript
-  - [ ] 12.1 Convert Articles page
+- [-] 12. Convert page components to TypeScript
+  - [x] 12.1 Convert Articles page
     - Update pages/Articles.vue to use `<script setup lang="ts">`
     - Define Props interface if needed
     - Type all state and computed properties
     - Use typed composables and API client
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8_
   
-  - [ ] 12.2 Convert remaining pages
+  - [x] 12.2 Convert remaining pages
     - Update pages/Dashboard.vue to use `<script setup lang="ts">`
     - Update pages/Fragments.vue to use `<script setup lang="ts">`
     - Update pages/Sources.vue to use `<script setup lang="ts">`
@@ -361,7 +361,7 @@ Commit after each major task is complete.
     - Type all state and computed properties
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8_
 
-  - [ ] 12.3 Commit changes
+  - [-] 12.3 Commit changes
 
 - [~] 13. Convert router and main entry point
   - [ ] 13.1 Convert router configuration to TypeScript

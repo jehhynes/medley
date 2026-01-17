@@ -385,8 +385,11 @@
       @close="closeFragmentModal" />
 </template>
 
-<script>
-import { api, createSignalRConnection } from '@/utils/api.js';
+<script setup lang="ts">
+import { ref, computed, provide, onMounted, onBeforeUnmount, nextTick, type Ref } from 'vue';
+import { useRouter } from 'vue-router';
+import * as signalR from '@microsoft/signalr';
+import { api } from '@/utils/api';
 import { 
   getStatusBadgeClass,
   getStatusIcon,
@@ -396,171 +399,232 @@ import {
   showProcessingSpinner,
   showUserTurnIndicator,
   showToast
-} from '@/utils/helpers.js';
-import { getUrlParam } from '@/utils/url.js';
+} from '@/utils/helpers';
+import { getUrlParam } from '@/utils/url';
+import type { 
+  Article, 
+  ArticleType, 
+  Fragment,
+  ArticleVersion,
+  Plan
+} from '@/types/generated/api-client';
+import type { ArticleHubConnection } from '@/types/signalr/article-hub';
+import { createArticleHubConnection } from '@/utils/signalr';
+import { useSidebarState } from '@/composables/useSidebarState';
+import { useArticleTree } from '@/composables/useArticleTree';
+import { useMyWork } from '@/composables/useMyWork';
+import { useArticleVersions } from '@/composables/useArticleVersions';
+import { useArticleModal } from '@/composables/useArticleModal';
+import { useArticleVersion } from '@/composables/useArticleVersion';
+import { useArticleSignalR } from '@/composables/useArticleSignalR';
+import { useArticleFilter } from '@/composables/useArticleFilter';
 
 import FragmentModal from '../components/FragmentModal.vue';
 import VersionViewer from '../components/VersionViewer.vue';
 import MyWorkList from '../components/MyWorkList.vue';
-import articleModalMixin from '../mixins/articleModal.js';
-import articleVersionMixin from '../mixins/articleVersion.js';
-import articleSignalRMixin from '../mixins/articleSignalR.js';
-import articleFilterMixin from '../mixins/articleFilter.js';
-import { useSidebarState } from '@/composables/useSidebarState'
-import { useArticleTree } from '@/composables/useArticleTree'
-import { useMyWork } from '@/composables/useMyWork'
-import { useArticleVersions } from '@/composables/useArticleVersions'
-import { useRouter } from 'vue-router'
-import { computed } from 'vue'
 
-export default {
-  name: 'Articles',
-  components: {
-    FragmentModal,
-    VersionViewer,
-    MyWorkList
-  },
-  mixins: [
-    articleModalMixin,
-    articleVersionMixin,
-    articleSignalRMixin,
-    articleFilterMixin
-  ],
-  setup() {
-    const { leftSidebarVisible, rightSidebarVisible } = useSidebarState()
-    const router = useRouter()
-    return { leftSidebarVisible, rightSidebarVisible, router }
-  },
-  data() {
-    return {
-      // Article state
-      articles: {
-        list: [],
-        selected: null,
-        selectedId: null,
-        types: [],
-        typeIconMap: {},
-        typeIndexMap: {},
-        expandedIds: new Set(),
-        index: new Map(),
-        parentPathCache: new Map()
-      },
+// Interfaces
+interface ArticleState {
+  list: Article[];
+  selected: Article | null;
+  selectedId: string | null;
+  types: ArticleType[];
+  typeIconMap: Record<number, string>;
+  typeIndexMap: Record<number, ArticleType>;
+  expandedIds: Set<string>;
+  index: Map<string, Article>;
+  parentPathCache: Map<string, string[]>;
+}
 
-      // View mode state
-      viewMode: 'tree',
+interface EditorState {
+  title: string;
+  content: string;
+  isSaving: boolean;
+}
 
-      // Editor state
-      editor: {
-        title: '',
-        content: '',
-        isSaving: false
-      },
+interface ContentTabsState {
+  activeTabId: string;
+  versionData: { versionId: string; versionNumber: number } | null;
+  planData: { planId: string } | null;
+}
 
-      // Content tabs state
-      contentTabs: {
-        activeTabId: 'editor',
-        versionData: null,
-        planData: null
-      },
+interface UIState {
+  loading: boolean;
+  error: string | null;
+  sidebarMenuOpen: boolean;
+  activeRightTab: 'assistant' | 'versions';
+}
 
-      // Create modal state
-      createModal: {
-        visible: false,
-        title: '',
-        typeId: null,
-        parentId: null,
-        isSubmitting: false
-      },
+interface VersionState {
+  selected: ArticleVersion | null;
+  diffHtml: string | null;
+  loadingDiff: boolean;
+  diffError: string | null;
+}
 
-      // Edit modal state
-      editModal: {
-        visible: false,
-        articleId: null,
-        title: '',
-        typeId: null,
-        isSubmitting: false
-      },
+interface SignalRState {
+  connection: ArticleHubConnection | null;
+  updateQueue: any[];
+  processing: boolean;
+}
 
-      // UI state
-      ui: {
-        loading: false,
-        error: null,
-        sidebarMenuOpen: false,
-        activeRightTab: 'assistant'
-      },
+interface DragState {
+  draggingArticleId: string | null;
+  dragOverId: string | null;
+}
 
-      // Version state
-      version: {
-        selected: null,
-        diffHtml: null,
-        loadingDiff: false,
-        diffError: null
-      },
+// Setup composables
+const { leftSidebarVisible, rightSidebarVisible } = useSidebarState();
+const router = useRouter();
 
-      // SignalR state
-      signalr: {
-        connection: null,
-        updateQueue: [],
-        processing: false
-      },
+// Reactive state
+const articles = ref<ArticleState>({
+  list: [],
+  selected: null,
+  selectedId: null,
+  types: [],
+  typeIconMap: {},
+  typeIndexMap: {},
+  expandedIds: new Set(),
+  index: new Map(),
+  parentPathCache: new Map()
+});
 
-      // Drag state
-      dragState: {
-        draggingArticleId: null,
-        dragOverId: null
-      },
+const viewMode = ref<'tree' | 'list' | 'mywork'>('tree');
 
-      // User info from server
-      userDisplayName: window.MedleyUser?.displayName || 'User',
-      userIsAuthenticated: window.MedleyUser?.isAuthenticated || false,
-      currentUserId: window.MedleyUser?.id || null,
+const editor = ref<EditorState>({
+  title: '',
+  content: '',
+  isSaving: false
+});
 
-      // Fragment modal state
-      selectedFragment: null
-    };
-  },
-  provide() {
-    return {
-      dragState: this.dragState
-    };
-  },
-  computed: {
-    hasUnsavedChanges() {
-      return this.$refs.tiptapEditor?.hasChanges || false;
-    },
-    myWorkCount() {
-      // Use shared My Work composable to get count
-      const { myWorkCount } = useMyWork(
-        computed(() => this.articles.list),
-        computed(() => this.currentUserId)
-      );
-      return myWorkCount.value;
-    },
-    availableTabs() {
-      const tabs = [{ id: 'editor', label: 'Editor', closeable: false, type: 'editor' }];
+const contentTabs = ref<ContentTabsState>({
+  activeTabId: 'editor',
+  versionData: null,
+  planData: null
+});
 
-      if (this.contentTabs.versionData) {
-        tabs.push({
-          id: 'version',
-          label: `Version ${this.contentTabs.versionData.versionNumber}`,
-          closeable: true,
-          type: 'version'
-        });
-      }
+const ui = ref<UIState>({
+  loading: false,
+  error: null,
+  sidebarMenuOpen: false,
+  activeRightTab: 'assistant'
+});
 
-      if (this.contentTabs.planData) {
-        tabs.push({
-          id: 'plan',
-          label: 'Plan',
-          closeable: true,
-          type: 'plan'
-        });
-      }
+const version = ref<VersionState>({
+  selected: null,
+  diffHtml: null,
+  loadingDiff: false,
+  diffError: null
+});
 
-      return tabs;
-    }
-  },
-  methods: {
+const signalr = ref<SignalRState>({
+  connection: null,
+  updateQueue: [],
+  processing: false
+});
+
+const dragState = ref<DragState>({
+  draggingArticleId: null,
+  dragOverId: null
+});
+
+const userDisplayName = ref<string>(window.MedleyUser?.displayName || 'User');
+const userIsAuthenticated = ref<boolean>(window.MedleyUser?.isAuthenticated || false);
+const currentUserId = ref<string | null>(window.MedleyUser?.id || null);
+const selectedFragment = ref<Fragment | null>(null);
+
+// Refs for components
+const tiptapEditor = ref<any>(null);
+const chatPanel = ref<any>(null);
+const versionsPanel = ref<any>(null);
+const titleInput = ref<HTMLInputElement | null>(null);
+const editTitleInput = ref<HTMLInputElement | null>(null);
+const filterSearchInput = ref<HTMLInputElement | null>(null);
+
+// Provide drag state for child components
+provide('dragState', dragState);
+
+// Use composables for modal and filter functionality
+const {
+  createModal,
+  editModal,
+  showCreateArticleModal,
+  closeCreateModal,
+  showEditArticleModal,
+  closeEditModal,
+  createArticle,
+  updateArticle
+} = useArticleModal(articles, () => loadArticles());
+
+const {
+  filterModal,
+  filters,
+  hasActiveFilters,
+  activeFilterCount,
+  showFilterModal,
+  closeFilterModal,
+  applyFilters,
+  clearFilters,
+  isStatusSelected,
+  toggleStatusFilter,
+  isArticleTypeSelected,
+  toggleArticleTypeFilter,
+  getArticleTypeIconClass,
+  buildFilterQueryString
+} = useArticleFilter(articles);
+
+const {
+  clearVersionSelection
+} = useArticleVersion(version);
+
+const {
+  initializeSignalRConnection,
+  disconnectSignalR
+} = useArticleSignalR(signalr, articles, () => loadArticles());
+
+let handleBeforeUnload: ((event: BeforeUnloadEvent) => void) | null = null;
+// Computed properties
+const hasUnsavedChanges = computed(() => {
+  return tiptapEditor.value?.hasChanges || false;
+});
+
+const myWorkCount = computed(() => {
+  const { myWorkCount: count } = useMyWork(
+    computed(() => articles.value.list),
+    computed(() => currentUserId.value)
+  );
+  return count.value;
+});
+
+const availableTabs = computed(() => {
+  const tabs: Array<{ id: string; label: string; closeable: boolean; type: string }> = [
+    { id: 'editor', label: 'Editor', closeable: false, type: 'editor' }
+  ];
+
+  if (contentTabs.value.versionData) {
+    tabs.push({
+      id: 'version',
+      label: `Version ${contentTabs.value.versionData.versionNumber}`,
+      closeable: true,
+      type: 'version'
+    });
+  }
+
+  if (contentTabs.value.planData) {
+    tabs.push({
+      id: 'plan',
+      label: 'Plan',
+      closeable: true,
+      type: 'plan'
+    });
+  }
+
+  return tabs;
+});
+
+// Methods
+const
     async loadArticles() {
       this.ui.loading = true;
       this.ui.error = null;
