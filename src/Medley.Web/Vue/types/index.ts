@@ -9,3 +9,9 @@ export * from './dtos/extensions';
 
 // Re-export SignalR hub types
 export * from './signalr';
+
+// Re-export type guards
+export * from './guards';
+
+// Re-export utility types and functions
+export * from './utils';
