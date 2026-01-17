@@ -223,7 +223,7 @@ Commit after each major task is complete.
 
   - [x] 7.7 Commit changes
 
-- [-] 8. Checkpoint - Verify backend and infrastructure
+- [x] 8. Checkpoint - Verify backend and infrastructure
   - Ensure C# project builds successfully with strongly-typed hubs
   - Verify NSwag generates TypeScript types correctly
   - Ensure TypeScript compilation succeeds with generated types
@@ -231,8 +231,8 @@ Commit after each major task is complete.
   - Ask the user if questions arise
   - commit changes
 
-- [~] 9. Convert composables to TypeScript
-  - [ ] 9.1 Convert existing composables to TypeScript
+- [-] 9. Convert composables to TypeScript
+  - [x] 9.1 Convert existing composables to TypeScript
     - Rename useArticleTree.js to useArticleTree.ts
     - Add TypeScript types for parameters and return values
     - Rename useArticleVersions.js to useArticleVersions.ts and add types
@@ -241,7 +241,7 @@ Commit after each major task is complete.
     - Rename useSidebarState.js to useSidebarState.ts and add types
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
   
-  - [ ] 9.2 Convert articleSignalR mixin to typed composable
+  - [x] 9.2 Convert articleSignalR mixin to typed composable
     - Create composables/useArticleSignalR.ts
     - Define UseArticleSignalROptions interface
     - Define SignalRQueueUpdate interface
@@ -250,26 +250,26 @@ Commit after each major task is complete.
     - Add proper TypeScript types for all state and functions
     - _Requirements: 7.1_
   
-  - [ ] 9.3 Convert articleFilter mixin to typed composable
+  - [x] 9.3 Convert articleFilter mixin to typed composable
     - Create composables/useArticleFilter.ts
     - Define filter options interface
     - Implement useArticleFilter with typed parameters and return value
     - _Requirements: 7.2_
   
-  - [ ] 9.4 Convert articleModal mixin to typed composable
+  - [x] 9.4 Convert articleModal mixin to typed composable
     - Create composables/useArticleModal.ts
     - Define modal state interface
     - Implement useArticleModal with typed state and methods
     - _Requirements: 7.3_
   
-  - [ ] 9.5 Convert remaining mixins to typed composables
+  - [x] 9.5 Convert remaining mixins to typed composables
     - Convert articleVersion mixin to composables/useArticleVersion.ts
     - Convert dropDown mixin to composables/useDropDown.ts
     - Convert infiniteScroll mixin to composables/useInfiniteScroll.ts
     - Add TypeScript types for all parameters and return values
     - _Requirements: 7.4, 7.5, 7.6_
 
-  - [ ] 9.6 Commit changes
+  - [-] 9.6 Commit changes
 
 - [~] 10. Convert core components to TypeScript
   - [ ] 10.1 Convert ArticleList component

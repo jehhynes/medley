@@ -1,22 +1,35 @@
-import { computed } from 'vue';
-import { showProcessingSpinner, showUserTurnIndicator } from '@/utils/helpers.js';
+import { computed, type Ref, type ComputedRef } from 'vue';
+import type { ArticleDto } from '@/types/generated/api-client';
+import { showProcessingSpinner, showUserTurnIndicator } from '@/utils/helpers';
+
+/**
+ * Return type for useMyWork composable
+ */
+interface UseMyWorkReturn {
+  myWorkArticles: ComputedRef<ArticleDto[]>;
+  myWorkCount: ComputedRef<number>;
+  getLastActivityDate: (article: ArticleDto) => Date;
+}
 
 /**
  * Composable for "My Work" filtering and sorting logic.
  * Shared between MyWorkList component and Articles parent for badge count.
  * 
- * @param {Object} articles - Reactive articles list (tree structure)
- * @param {string} currentUserId - Current user ID
- * @returns {Object} Computed myWorkArticles and myWorkCount
+ * @param articles - Reactive articles list (tree structure)
+ * @param currentUserId - Current user ID
+ * @returns Computed myWorkArticles and myWorkCount
  */
-export function useMyWork(articles, currentUserId) {
+export function useMyWork(
+  articles: Ref<ArticleDto[]>,
+  currentUserId: Ref<string | null | undefined>
+): UseMyWorkReturn {
   /**
    * Flatten all articles in the tree
-   * @param {Array} articles - Articles to flatten
-   * @returns {Array} Flattened articles
+   * @param articles - Articles to flatten
+   * @returns Flattened articles
    */
-  const flattenAllArticles = (articles) => {
-    let result = [];
+  const flattenAllArticles = (articles: ArticleDto[]): ArticleDto[] => {
+    let result: ArticleDto[] = [];
     for (const article of articles) {
       result.push({ ...article });
       if (article.children && article.children.length > 0) {
@@ -28,25 +41,18 @@ export function useMyWork(articles, currentUserId) {
 
   /**
    * Get the last activity date for an article
-   * @param {Object} article - Article to get activity date for
-   * @returns {Date} Latest activity date
+   * @param article - Article to get activity date for
+   * @returns Latest activity date
    */
-  const getLastActivityDate = (article) => {
+  const getLastActivityDate = (article: ArticleDto): Date => {
     let latestDate = new Date(article.modifiedAt || article.createdAt || 0);
     
     // Check conversation's last message time if available
-    if (article.currentConversation?.lastMessageAt) {
-      const conversationDate = new Date(article.currentConversation.lastMessageAt);
-      if (conversationDate > latestDate) {
-        latestDate = conversationDate;
-      }
-    }
-    
-    // Check latest version date if available
-    if (article.latestVersionDate) {
-      const versionDate = new Date(article.latestVersionDate);
-      if (versionDate > latestDate) {
-        latestDate = versionDate;
+    if (article.currentConversation?.isRunning) {
+      // If conversation is running, use current time as activity indicator
+      const now = new Date();
+      if (now > latestDate) {
+        latestDate = now;
       }
     }
     
@@ -97,7 +103,7 @@ export function useMyWork(articles, currentUserId) {
       // Priority 4: Last activity date (most recent first)
       const aLastActivity = getLastActivityDate(a);
       const bLastActivity = getLastActivityDate(b);
-      return bLastActivity - aLastActivity;
+      return bLastActivity.getTime() - aLastActivity.getTime();
     });
   });
 
