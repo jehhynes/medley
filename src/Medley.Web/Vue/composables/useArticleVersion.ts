@@ -1,12 +1,5 @@
-/**
- * Version object interface
- */
-export interface ArticleVersion {
-  id: string;
-  versionNumber: number;
-  createdAt: string;
-  [key: string]: any;
-}
+import { type ComputedRef, type Ref } from 'vue';
+import type { ArticleVersionDto } from '@/types/generated/api-client';
 
 /**
  * Options for useArticleVersion composable
@@ -15,7 +8,7 @@ export interface UseArticleVersionOptions {
   /**
    * Function to open a version tab
    */
-  openVersionTab?: (version: ArticleVersion) => void;
+  openVersionTab?: (version: ArticleVersionDto) => void;
 
   /**
    * Function to switch content tab
@@ -23,16 +16,16 @@ export interface UseArticleVersionOptions {
   switchContentTab?: (tab: string) => void;
 
   /**
-   * Current selected article ID
+   * Current selected article ID (reactive)
    */
-  selectedArticleId?: string | null;
+  selectedArticleId?: string | null | ComputedRef<string | null> | Ref<string | null>;
 }
 
 /**
  * Return type for useArticleVersion composable
  */
 interface UseArticleVersionReturn {
-  handleVersionSelect: (version: ArticleVersion | null) => Promise<void>;
+  handleVersionSelect: (version: ArticleVersionDto | null) => Promise<void>;
   markdownToHtml: (markdown: string | null | undefined) => string;
   clearVersionSelection: () => void;
 }
@@ -51,8 +44,13 @@ export function useArticleVersion(options: UseArticleVersionOptions = {}): UseAr
    * 
    * @param version - Version to select
    */
-  const handleVersionSelect = async (version: ArticleVersion | null): Promise<void> => {
-    if (!version || !options.selectedArticleId) return;
+  const handleVersionSelect = async (version: ArticleVersionDto | null): Promise<void> => {
+    // Get the actual value if it's a ref/computed
+    const articleId = typeof options.selectedArticleId === 'object' && options.selectedArticleId !== null && 'value' in options.selectedArticleId
+      ? options.selectedArticleId.value
+      : options.selectedArticleId;
+    
+    if (!version || !articleId) return;
 
     // Open version in a new tab instead of replacing content
     if (options.openVersionTab) {

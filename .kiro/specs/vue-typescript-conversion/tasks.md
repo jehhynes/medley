@@ -4,7 +4,6 @@
 
 This implementation plan converts the Medley application to use TypeScript across both frontend and backend. The approach includes setting up NSwag for automatic type generation from C# to TypeScript, creating strongly-typed SignalR hubs in C#, converting the Vue 3 frontend to TypeScript, and ensuring type safety throughout the entire stack.
 
-Commit after each major task is complete.
 
 ## Tasks
 
@@ -134,7 +133,7 @@ Commit after each major task is complete.
 
   - [x] 5.3 Commit changes
 
-- [-] 6. Create typed API client wrapper and utilities
+- [x] 6. Create typed API client wrapper and utilities
   - [x] 6.1 Create API client wrapper using generated NSwag client
     - Create utils/api.ts
     - Import MedleyApiClient and ApiException from generated types
@@ -344,7 +343,7 @@ Commit after each major task is complete.
 
   - [x] 11.6 Commit changes
 
-- [-] 12. Convert page components to TypeScript
+- [x] 12. Convert page components to TypeScript
   - [x] 12.1 Convert Articles page
     - Update pages/Articles.vue to use `<script setup lang="ts">`
     - Define Props interface if needed
@@ -363,7 +362,7 @@ Commit after each major task is complete.
 
   - [x] 12.3 Commit changes
 
-- [-] 13. Convert router and main entry point
+- [x] 13. Convert router and main entry point
   - [x] 13.1 Convert router configuration to TypeScript
     - Rename router/index.js to router/index.ts
     - Import RouteRecordRaw type from vue-router
@@ -379,9 +378,9 @@ Commit after each major task is complete.
     - Type any app-level state
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8_
 
-  - [-] 13.3 Commit changes
+  - [x] 13.3 Commit changes
 
-- [~] 14. Final checkpoint and validation
+- [x] 14. Final checkpoint and validation
   - Ensure C# project builds successfully
   - Ensure NSwag generates types on every build
   - Ensure all TypeScript compilation succeeds with no errors
@@ -389,32 +388,32 @@ Commit after each major task is complete.
   - Verify application builds successfully
   - Test application functionality in development mode
   - Check for any remaining .js files that should be converted
+  - Check for any remaining js scripts in .vue files
   - Verify type coverage is comprehensive
   - Ask the user if questions arise
-  - Commit changes
 
-- [~] 15. Clean up and documentation
-  - [ ] 15.1 Remove old JavaScript files and mixins
+- [x] 15. Clean up and documentation
+  - [x] 15.1 Remove old JavaScript files and mixins
     - Delete mixins directory (all converted to composables)
     - Verify no .js files remain in Vue directory (except config files)
     - Update any remaining imports
     - _Requirements: 7.7_
   
-  - [ ] 15.2 Add JSDoc comments to complex types
+  - [x] 15.2 Add JSDoc comments to complex types
     - Add documentation to DTO interfaces
     - Add documentation to composable functions
     - Add documentation to utility functions
     - Document type guard usage
     - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.5, 13.6_
   
-  - [ ] 15.3 Update build scripts and verify production build
+  - [x] 15.3 Update build scripts and verify production build
     - Verify production build succeeds
     - Check bundle size hasn't increased significantly
     - Test production build functionality
     - Update any build documentation
     - _Requirements: 10.3, 10.4, 10.5, 10.6_
 
-  - [ ] 15.4 Commit changes
+  - [x] 15.4 Commit changes
 
 ## Notes
 

@@ -171,7 +171,7 @@
           <div class="chart-card">
             <h3 class="chart-card-title">Sources by {{ tagMetric.tagTypeName }}</h3>
             <div class="chart-container small">
-              <canvas :ref="'tagChart_' + sanitizeId(tagMetric.tagTypeName)"></canvas>
+              <canvas :data-tag-chart="sanitizeId(tagMetric.tagTypeName)"></canvas>
             </div>
           </div>
         </div>
@@ -518,10 +518,12 @@ const initializeCharts = (): void => {
   // Tag Charts
   metrics.value.sourcesByTagType.forEach(metric => {
     const safeId = sanitizeId(metric.tagTypeName);
-    const canvasRef = (window as any).$refs?.['tagChart_' + safeId];
     
-    if (canvasRef && canvasRef[0] && metric.tagCounts.length > 0) {
-      charts.value['tag_' + safeId] = new Chart(canvasRef[0], {
+    // Find the canvas element by querying the DOM
+    const canvasElement = document.querySelector(`canvas[data-tag-chart="${safeId}"]`) as HTMLCanvasElement;
+    
+    if (canvasElement && metric.tagCounts.length > 0) {
+      charts.value['tag_' + safeId] = new Chart(canvasElement, {
         type: 'pie',
         data: {
           labels: metric.tagCounts.map(x => x.label),
