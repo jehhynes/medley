@@ -132,8 +132,10 @@ Commit after each major task is complete.
     - Create types/signalr/index.ts for exports
     - _Requirements: 3.2, 3.3, 3.7_
 
-- [ ] 6. Create typed API client wrapper and utilities
-  - [ ] 6.1 Create API client wrapper using generated NSwag client
+  - [x] 5.3 Commit changes
+
+- [-] 6. Create typed API client wrapper and utilities
+  - [x] 6.1 Create API client wrapper using generated NSwag client
     - Create utils/api.ts
     - Import MedleyApiClient and ApiException from generated types
     - Create ApiClientWrapper class that wraps generated client
@@ -163,7 +165,7 @@ Commit after each major task is complete.
     - Test JSON parsing errors
     - _Requirements: 4.5_
   
-  - [ ] 6.5 Create typed SignalR connection utilities
+  - [x] 6.5 Create typed SignalR connection utilities
     - Create utils/signalr.ts
     - Import SignalR and hub type definitions
     - Implement createArticleHubConnection function returning ArticleHubConnection
@@ -171,14 +173,16 @@ Commit after each major task is complete.
     - Add reconnection event handlers
     - _Requirements: 3.4, 3.5_
   
-  - [ ] 6.6 Convert remaining utility files to TypeScript
+  - [x] 6.6 Convert remaining utility files to TypeScript
     - Convert utils/helpers.js to helpers.ts with typed function signatures
     - Convert utils/htmlDiff.js to htmlDiff.ts with typed parameters
     - Convert utils/url.js to url.ts with typed parameters
     - Add JSDoc comments for complex functions
     - _Requirements: 8.1, 8.2, 8.3, 8.4_
 
-- [ ] 7. Create type guards and validation utilities
+  - [x] 6.7 Commit changes
+
+- [~] 7. Create type guards and validation utilities
   - [ ] 7.1 Create type guard functions for critical DTOs
     - Create types/guards.ts
     - Implement isArticle type guard
@@ -217,14 +221,17 @@ Commit after each major task is complete.
     - Verify error is logged and handled gracefully
     - Run 100 iterations
 
-- [ ] 8. Checkpoint - Verify backend and infrastructure
+  - [ ] 7.7 Commit changes
+
+- [~] 8. Checkpoint - Verify backend and infrastructure
   - Ensure C# project builds successfully with strongly-typed hubs
   - Verify NSwag generates TypeScript types correctly
   - Ensure TypeScript compilation succeeds with generated types
   - Check that type definitions are properly exported
   - Ask the user if questions arise
+  - commit changes
 
-- [ ] 9. Convert composables to TypeScript
+- [~] 9. Convert composables to TypeScript
   - [ ] 9.1 Convert existing composables to TypeScript
     - Rename useArticleTree.js to useArticleTree.ts
     - Add TypeScript types for parameters and return values
@@ -262,7 +269,9 @@ Commit after each major task is complete.
     - Add TypeScript types for all parameters and return values
     - _Requirements: 7.4, 7.5, 7.6_
 
-- [ ] 10. Convert core components to TypeScript
+  - [ ] 9.6 Commit changes
+
+- [~] 10. Convert core components to TypeScript
   - [ ] 10.1 Convert ArticleList component
     - Update ArticleList.vue to use `<script setup lang="ts">`
     - Define Props interface for component props
@@ -288,8 +297,9 @@ Commit after each major task is complete.
     - Use typed SignalR connection for chat events
     - Use typed API client for message sending
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8_
+  - [ ] 10.4 Commit changes
 
-- [ ] 11. Convert supporting components to TypeScript
+- [~] 11. Convert supporting components to TypeScript
   - [ ] 11.1 Convert FragmentList and FragmentModal components
     - Update FragmentList.vue to use `<script setup lang="ts">`
     - Update FragmentModal.vue to use `<script setup lang="ts">`
@@ -332,7 +342,9 @@ Commit after each major task is complete.
     - Type all state and computed properties
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8_
 
-- [ ] 12. Convert page components to TypeScript
+  - [ ] 11.6 Commit changes
+
+- [~] 12. Convert page components to TypeScript
   - [ ] 12.1 Convert Articles page
     - Update pages/Articles.vue to use `<script setup lang="ts">`
     - Define Props interface if needed
@@ -349,7 +361,9 @@ Commit after each major task is complete.
     - Type all state and computed properties
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8_
 
-- [ ] 13. Convert router and main entry point
+  - [ ] 12.3 Commit changes
+
+- [~] 13. Convert router and main entry point
   - [ ] 13.1 Convert router configuration to TypeScript
     - Rename router/index.js to router/index.ts
     - Import RouteRecordRaw type from vue-router
@@ -365,7 +379,9 @@ Commit after each major task is complete.
     - Type any app-level state
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8_
 
-- [ ] 14. Final checkpoint and validation
+  - [ ] 13.3 Commit changes
+
+- [~] 14. Final checkpoint and validation
   - Ensure C# project builds successfully
   - Ensure NSwag generates types on every build
   - Ensure all TypeScript compilation succeeds with no errors
@@ -375,8 +391,9 @@ Commit after each major task is complete.
   - Check for any remaining .js files that should be converted
   - Verify type coverage is comprehensive
   - Ask the user if questions arise
+  - Commit changes
 
-- [ ] 15. Clean up and documentation
+- [~] 15. Clean up and documentation
   - [ ] 15.1 Remove old JavaScript files and mixins
     - Delete mixins directory (all converted to composables)
     - Verify no .js files remain in Vue directory (except config files)
@@ -396,6 +413,8 @@ Commit after each major task is complete.
     - Test production build functionality
     - Update any build documentation
     - _Requirements: 10.3, 10.4, 10.5, 10.6_
+
+  - [ ] 15.4 Commit changes
 
 ## Notes
 
