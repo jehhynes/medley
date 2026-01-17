@@ -1,6 +1,7 @@
 using Hangfire;
 using Medley.Application.Helpers;
 using Medley.Application.Hubs;
+using Medley.Application.Hubs.Clients;
 using Medley.Application.Interfaces;
 using Medley.Application.Jobs;
 using Medley.Domain.Entities;
@@ -28,7 +29,7 @@ public class ArticleChatApiController : ControllerBase
     private readonly IRepository<Plan> _planRepository;
     private readonly IRepository<User> _userRepository;
     private readonly IBackgroundJobClient _backgroundJobClient;
-    private readonly IHubContext<ArticleHub> _hubContext;
+    private readonly IHubContext<ArticleHub, IArticleClient> _hubContext;
     private readonly ILogger<ArticleChatApiController> _logger;
     private readonly ToolDisplayExtractor _toolDisplayExtractor;
     private readonly IMedleyContext _medleyContext;
@@ -41,7 +42,7 @@ public class ArticleChatApiController : ControllerBase
         IRepository<Plan> planRepository,
         IRepository<User> userRepository,
         IBackgroundJobClient backgroundJobClient,
-        IHubContext<ArticleHub> hubContext,
+        IHubContext<ArticleHub, IArticleClient> hubContext,
         ILogger<ArticleChatApiController> logger,
         ToolDisplayExtractor toolDisplayExtractor,
         IMedleyContext medleyContext)
@@ -347,19 +348,16 @@ public class ArticleChatApiController : ControllerBase
                 var assignedUser = await _userRepository.GetByIdAsync(userId.Value);
                 
                 // Register assignment notification
-                var assignmentNotification = new
-                {
-                    ArticleId = articleId.ToString(),
-                    UserId = assignedUser?.Id.ToString(),
-                    UserName = assignedUser?.FullName,
-                    UserInitials = assignedUser?.Initials,
-                    UserColor = assignedUser?.Color,
-                    Timestamp = DateTimeOffset.UtcNow
-                };
-                
                 HttpContext.RegisterPostCommitAction(async () =>
                 {
-                    await _hubContext.Clients.All.SendAsync("ArticleAssignmentChanged", assignmentNotification);
+                    await _hubContext.Clients.All.ArticleAssignmentChanged(new ArticleAssignmentChangedPayload(
+                        articleId.ToString(),
+                        assignedUser?.Id.ToString(),
+                        assignedUser?.FullName,
+                        assignedUser?.Initials,
+                        assignedUser?.Color,
+                        DateTimeOffset.UtcNow
+                    ));
                 });
             }
             
@@ -375,19 +373,32 @@ public class ArticleChatApiController : ControllerBase
 
 
         // Register SignalR notification to be sent after transaction commits
-        RegisterSignalRNotification(
-            $"Article_{articleId}",
-            "ChatMessageReceived",
-            new
+        HttpContext.RegisterPostCommitAction(async () =>
+        {
+            try
             {
-                id = userMessage.Id.ToString(),
-                conversationId = conversationId.ToString(),
-                role = "user",
-                text = request.Message,
-                userName = userName,
-                createdAt = userMessage.CreatedAt,
-                articleId = articleId.ToString()
-            });
+                // Note: ChatMessageReceived is not part of IArticleClient interface
+                // This is a custom event that needs to be added to the interface
+                // For now, we'll cast to IClientProxy to maintain functionality
+                var clientProxy = (Microsoft.AspNetCore.SignalR.IClientProxy)_hubContext.Clients.Group($"Article_{articleId}");
+                await clientProxy.SendAsync("ChatMessageReceived", new
+                {
+                    id = userMessage.Id.ToString(),
+                    conversationId = conversationId.ToString(),
+                    role = "user",
+                    text = request.Message,
+                    userName = userName,
+                    createdAt = userMessage.CreatedAt,
+                    articleId = articleId.ToString()
+                });
+                
+                _logger.LogDebug("SignalR notification sent: ChatMessageReceived to group Article_{ArticleId}", articleId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send SignalR notification: ChatMessageReceived to group Article_{ArticleId}", articleId);
+            }
+        });
 
 
         // Capture variables for post-commit actions
@@ -457,15 +468,28 @@ public class ArticleChatApiController : ControllerBase
         var completedAt = DateTimeOffset.UtcNow;
 
         // Register SignalR notification to be sent after transaction commits
-        RegisterSignalRNotification(
-            $"Article_{articleId}",
-            "ConversationCompleted",
-            new
+        HttpContext.RegisterPostCommitAction(async () =>
+        {
+            try
             {
-                conversationId = conversationId.ToString(),
-                articleId = articleId.ToString(),
-                completedAt = completedAt
-            });
+                // Note: ConversationCompleted is not part of IArticleClient interface
+                // This is a custom event that needs to be added to the interface
+                // For now, we'll cast to IClientProxy to maintain functionality
+                var clientProxy = (Microsoft.AspNetCore.SignalR.IClientProxy)_hubContext.Clients.Group($"Article_{articleId}");
+                await clientProxy.SendAsync("ConversationCompleted", new
+                {
+                    conversationId = conversationId.ToString(),
+                    articleId = articleId.ToString(),
+                    completedAt = completedAt
+                });
+                
+                _logger.LogDebug("SignalR notification sent: ConversationCompleted to group Article_{ArticleId}", articleId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send SignalR notification: ConversationCompleted to group Article_{ArticleId}", articleId);
+            }
+        });
 
         return Ok(new
         {
@@ -490,15 +514,28 @@ public class ArticleChatApiController : ControllerBase
         await _chatService.CancelConversationAsync(conversationId);
 
         // Register SignalR notification to be sent after transaction commits
-        RegisterSignalRNotification(
-            $"Article_{articleId}",
-            "ConversationCancelled",
-            new
+        HttpContext.RegisterPostCommitAction(async () =>
+        {
+            try
             {
-                conversationId = conversationId.ToString(),
-                articleId = articleId.ToString(),
-                timestamp = DateTimeOffset.UtcNow
-            });
+                // Note: ConversationCancelled is not part of IArticleClient interface
+                // This is a custom event that needs to be added to the interface
+                // For now, we'll cast to IClientProxy to maintain functionality
+                var clientProxy = (Microsoft.AspNetCore.SignalR.IClientProxy)_hubContext.Clients.Group($"Article_{articleId}");
+                await clientProxy.SendAsync("ConversationCancelled", new
+                {
+                    conversationId = conversationId.ToString(),
+                    articleId = articleId.ToString(),
+                    timestamp = DateTimeOffset.UtcNow
+                });
+                
+                _logger.LogDebug("SignalR notification sent: ConversationCancelled to group Article_{ArticleId}", articleId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send SignalR notification: ConversationCancelled to group Article_{ArticleId}", articleId);
+            }
+        });
 
         return Ok(new
         {
@@ -518,31 +555,6 @@ public class ArticleChatApiController : ControllerBase
             _logger.LogWarning(ex, "Failed to deserialize SerializedMessage for message {MessageId}", messageId);
             return null;
         }
-    }
-
-    /// <summary>
-    /// Register a SignalR notification to be sent after the transaction commits
-    /// </summary>
-    /// <param name="groupName">The SignalR group name to send to</param>
-    /// <param name="methodName">The client method name to invoke</param>
-    /// <param name="payload">The payload object to send</param>
-    private void RegisterSignalRNotification(string groupName, string methodName, object payload)
-    {
-        HttpContext.RegisterPostCommitAction(async () =>
-        {
-            try
-            {
-                await _hubContext.Clients.Group(groupName)
-                    .SendAsync(methodName, payload);
-                
-                _logger.LogDebug("SignalR notification sent: {MethodName} to group {GroupName}", methodName, groupName);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to send SignalR notification: {MethodName} to group {GroupName}", methodName, groupName);
-                // Don't rethrow - SignalR failures shouldn't break the main flow
-            }
-        });
     }
 }
 

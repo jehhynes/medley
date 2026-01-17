@@ -1,10 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using Medley.Application.Hubs.Clients;
 
 namespace Medley.Application.Hubs;
 
 /// <summary>
-/// SignalR hub for real-time article updates and chat
+/// Strongly-typed SignalR hub for real-time article updates and chat
 /// 
 /// Events sent by server (via IHubContext in background jobs):
 /// - ChatMessageProcessing: Sent when AI agent starts processing a message
@@ -16,7 +17,7 @@ namespace Medley.Application.Hubs;
 /// - PlanGenerated: Sent when an improvement plan is created
 /// </summary>
 [Authorize]
-public class ArticleHub : Hub
+public class ArticleHub : Hub<IArticleClient>
 {
     /// <summary>
     /// Join a specific article's chat room
@@ -41,13 +42,12 @@ public class ArticleHub : Hub
     {
         var userName = Context.User?.Identity?.Name ?? "Anonymous";
         
-        await Clients.Group($"Article_{articleId}").SendAsync("ReceiveMessage", new
-        {
-            ArticleId = articleId,
-            UserName = userName,
-            Message = message,
-            Timestamp = DateTimeOffset.UtcNow
-        });
+        await Clients.Group($"Article_{articleId}").ReceiveMessage(new ReceiveMessagePayload(
+            articleId,
+            userName,
+            message,
+            DateTimeOffset.UtcNow
+        ));
     }
 
     /// <summary>
@@ -55,13 +55,13 @@ public class ArticleHub : Hub
     /// </summary>
     public async Task NotifyArticleCreated(string articleId, string title, string? parentArticleId)
     {
-        await Clients.All.SendAsync("ArticleCreated", new
-        {
-            ArticleId = articleId,
-            Title = title,
-            ParentArticleId = parentArticleId,
-            Timestamp = DateTimeOffset.UtcNow
-        });
+        await Clients.All.ArticleCreated(new ArticleCreatedPayload(
+            articleId,
+            title,
+            parentArticleId,
+            null, // ArticleTypeId not provided in this method
+            DateTimeOffset.UtcNow
+        ));
     }
 
     /// <summary>
@@ -69,12 +69,12 @@ public class ArticleHub : Hub
     /// </summary>
     public async Task NotifyArticleUpdated(string articleId, string title)
     {
-        await Clients.All.SendAsync("ArticleUpdated", new
-        {
-            ArticleId = articleId,
-            Title = title,
-            Timestamp = DateTimeOffset.UtcNow
-        });
+        await Clients.All.ArticleUpdated(new ArticleUpdatedPayload(
+            articleId,
+            title,
+            null, // ArticleTypeId not provided in this method
+            DateTimeOffset.UtcNow
+        ));
     }
 
     /// <summary>
@@ -82,11 +82,10 @@ public class ArticleHub : Hub
     /// </summary>
     public async Task NotifyArticleDeleted(string articleId)
     {
-        await Clients.All.SendAsync("ArticleDeleted", new
-        {
-            ArticleId = articleId,
-            Timestamp = DateTimeOffset.UtcNow
-        });
+        await Clients.All.ArticleDeleted(new ArticleDeletedPayload(
+            articleId,
+            DateTimeOffset.UtcNow
+        ));
     }
 
     /// <summary>
@@ -94,15 +93,14 @@ public class ArticleHub : Hub
     /// </summary>
     public async Task NotifyArticleAssignmentChanged(string articleId, string? userId, string? userName, string? userInitials, string? userColor)
     {
-        await Clients.All.SendAsync("ArticleAssignmentChanged", new
-        {
-            ArticleId = articleId,
-            UserId = userId,
-            UserName = userName,
-            UserInitials = userInitials,
-            UserColor = userColor,
-            Timestamp = DateTimeOffset.UtcNow
-        });
+        await Clients.All.ArticleAssignmentChanged(new ArticleAssignmentChangedPayload(
+            articleId,
+            userId,
+            userName,
+            userInitials,
+            userColor,
+            DateTimeOffset.UtcNow
+        ));
     }
 
     /// <summary>
