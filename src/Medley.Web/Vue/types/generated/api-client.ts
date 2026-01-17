@@ -17,7 +17,7 @@ export class MedleyApiClient {
         this.baseUrl = baseUrl ?? "";
     }
 
-    getMetrics(): Promise<DashboardMetrics> {
+    dashboard_GetMetrics(): Promise<DashboardMetrics> {
         let url_ = this.baseUrl + "/api/Dashboard/metrics";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -29,11 +29,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetMetrics(_response);
+            return this.processDashboard_GetMetrics(_response);
         });
     }
 
-    protected processGetMetrics(response: Response): Promise<DashboardMetrics> {
+    protected processDashboard_GetMetrics(response: Response): Promise<DashboardMetrics> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -49,19 +49,8 @@ export class MedleyApiClient {
         }
         return Promise.resolve<DashboardMetrics>(null as any);
     }
-}
 
-export class MedleyApiClient {
-    private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
-    private baseUrl: string;
-    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
-
-    constructor(baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
-        this.http = http ? http : window as any;
-        this.baseUrl = baseUrl ?? "";
-    }
-
-    healthCheck(): Promise<FileResponse> {
+    home_HealthCheck(): Promise<FileResponse> {
         let url_ = this.baseUrl + "/load-balancer-health-check";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -73,11 +62,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processHealthCheck(_response);
+            return this.processHome_HealthCheck(_response);
         });
     }
 
-    protected processHealthCheck(response: Response): Promise<FileResponse> {
+    protected processHome_HealthCheck(response: Response): Promise<FileResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200 || status === 206) {
@@ -98,19 +87,8 @@ export class MedleyApiClient {
         }
         return Promise.resolve<FileResponse>(null as any);
     }
-}
 
-export class MedleyApiClient {
-    private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
-    private baseUrl: string;
-    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
-
-    constructor(baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
-        this.http = http ? http : window as any;
-        this.baseUrl = baseUrl ?? "";
-    }
-
-    getConversation(articleId: string, conversationId: string | null): Promise<FileResponse> {
+    articleChatApi_GetConversation(articleId: string, conversationId: string | null): Promise<FileResponse> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/assistant/conversation/{conversationId}";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -128,11 +106,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetConversation(_response);
+            return this.processArticleChatApi_GetConversation(_response);
         });
     }
 
-    protected processGetConversation(response: Response): Promise<FileResponse> {
+    protected processArticleChatApi_GetConversation(response: Response): Promise<FileResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200 || status === 206) {
@@ -154,7 +132,7 @@ export class MedleyApiClient {
         return Promise.resolve<FileResponse>(null as any);
     }
 
-    createConversation(articleId: string, mode?: ConversationMode | undefined): Promise<FileResponse> {
+    articleChatApi_CreateConversation(articleId: string, mode?: ConversationMode | undefined): Promise<FileResponse> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/assistant/conversation?";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -173,11 +151,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processCreateConversation(_response);
+            return this.processArticleChatApi_CreateConversation(_response);
         });
     }
 
-    protected processCreateConversation(response: Response): Promise<FileResponse> {
+    protected processArticleChatApi_CreateConversation(response: Response): Promise<FileResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200 || status === 206) {
@@ -199,7 +177,7 @@ export class MedleyApiClient {
         return Promise.resolve<FileResponse>(null as any);
     }
 
-    getMessages(articleId: string, conversationId: string, limit?: number | null | undefined): Promise<FileResponse> {
+    articleChatApi_GetMessages(articleId: string, conversationId: string, limit?: number | null | undefined): Promise<FileResponse> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/assistant/conversations/{conversationId}/messages?";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -219,11 +197,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetMessages(_response);
+            return this.processArticleChatApi_GetMessages(_response);
         });
     }
 
-    protected processGetMessages(response: Response): Promise<FileResponse> {
+    protected processArticleChatApi_GetMessages(response: Response): Promise<FileResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200 || status === 206) {
@@ -245,7 +223,7 @@ export class MedleyApiClient {
         return Promise.resolve<FileResponse>(null as any);
     }
 
-    sendMessage(articleId: string, conversationId: string, request: SendMessageRequest): Promise<FileResponse> {
+    articleChatApi_SendMessage(articleId: string, conversationId: string, request: SendMessageRequest): Promise<FileResponse> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/assistant/conversations/{conversationId}/messages";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -267,11 +245,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processSendMessage(_response);
+            return this.processArticleChatApi_SendMessage(_response);
         });
     }
 
-    protected processSendMessage(response: Response): Promise<FileResponse> {
+    protected processArticleChatApi_SendMessage(response: Response): Promise<FileResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200 || status === 206) {
@@ -293,7 +271,7 @@ export class MedleyApiClient {
         return Promise.resolve<FileResponse>(null as any);
     }
 
-    getHistory(articleId: string): Promise<FileResponse> {
+    articleChatApi_GetHistory(articleId: string): Promise<FileResponse> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/assistant/history";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -308,11 +286,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetHistory(_response);
+            return this.processArticleChatApi_GetHistory(_response);
         });
     }
 
-    protected processGetHistory(response: Response): Promise<FileResponse> {
+    protected processArticleChatApi_GetHistory(response: Response): Promise<FileResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200 || status === 206) {
@@ -334,7 +312,7 @@ export class MedleyApiClient {
         return Promise.resolve<FileResponse>(null as any);
     }
 
-    completeConversation(articleId: string, conversationId: string): Promise<FileResponse> {
+    articleChatApi_CompleteConversation(articleId: string, conversationId: string): Promise<FileResponse> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/assistant/conversations/{conversationId}/complete";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -352,11 +330,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processCompleteConversation(_response);
+            return this.processArticleChatApi_CompleteConversation(_response);
         });
     }
 
-    protected processCompleteConversation(response: Response): Promise<FileResponse> {
+    protected processArticleChatApi_CompleteConversation(response: Response): Promise<FileResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200 || status === 206) {
@@ -378,7 +356,7 @@ export class MedleyApiClient {
         return Promise.resolve<FileResponse>(null as any);
     }
 
-    cancelConversation(articleId: string, conversationId: string): Promise<FileResponse> {
+    articleChatApi_CancelConversation(articleId: string, conversationId: string): Promise<FileResponse> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/assistant/conversations/{conversationId}/cancel";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -396,11 +374,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processCancelConversation(_response);
+            return this.processArticleChatApi_CancelConversation(_response);
         });
     }
 
-    protected processCancelConversation(response: Response): Promise<FileResponse> {
+    protected processArticleChatApi_CancelConversation(response: Response): Promise<FileResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200 || status === 206) {
@@ -421,19 +399,8 @@ export class MedleyApiClient {
         }
         return Promise.resolve<FileResponse>(null as any);
     }
-}
 
-export class MedleyApiClient {
-    private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
-    private baseUrl: string;
-    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
-
-    constructor(baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
-        this.http = http ? http : window as any;
-        this.baseUrl = baseUrl ?? "";
-    }
-
-    getArticleTypes(): Promise<ArticleTypeDto[]> {
+    articlesApi_GetArticleTypes(): Promise<ArticleTypeDto[]> {
         let url_ = this.baseUrl + "/api/articles/types";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -445,11 +412,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetArticleTypes(_response);
+            return this.processArticlesApi_GetArticleTypes(_response);
         });
     }
 
-    protected processGetArticleTypes(response: Response): Promise<ArticleTypeDto[]> {
+    protected processArticlesApi_GetArticleTypes(response: Response): Promise<ArticleTypeDto[]> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -466,7 +433,7 @@ export class MedleyApiClient {
         return Promise.resolve<ArticleTypeDto[]>(null as any);
     }
 
-    getTree(query?: string | null | undefined, statuses?: number[] | null | undefined, articleTypeIds?: string[] | null | undefined): Promise<ArticleDto[]> {
+    articlesApi_GetTree(query?: string | null | undefined, statuses?: number[] | null | undefined, articleTypeIds?: string[] | null | undefined): Promise<ArticleDto[]> {
         let url_ = this.baseUrl + "/api/articles/tree?";
         if (query !== undefined && query !== null)
             url_ += "query=" + encodeURIComponent("" + query) + "&";
@@ -484,11 +451,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetTree(_response);
+            return this.processArticlesApi_GetTree(_response);
         });
     }
 
-    protected processGetTree(response: Response): Promise<ArticleDto[]> {
+    protected processArticlesApi_GetTree(response: Response): Promise<ArticleDto[]> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -505,7 +472,7 @@ export class MedleyApiClient {
         return Promise.resolve<ArticleDto[]>(null as any);
     }
 
-    get(id: string): Promise<ArticleDto> {
+    articlesApi_Get(id: string): Promise<ArticleDto> {
         let url_ = this.baseUrl + "/api/articles/{id}";
         if (id === undefined || id === null)
             throw new globalThis.Error("The parameter 'id' must be defined.");
@@ -520,11 +487,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGet(_response);
+            return this.processArticlesApi_Get(_response);
         });
     }
 
-    protected processGet(response: Response): Promise<ArticleDto> {
+    protected processArticlesApi_Get(response: Response): Promise<ArticleDto> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -547,7 +514,7 @@ export class MedleyApiClient {
         return Promise.resolve<ArticleDto>(null as any);
     }
 
-    delete(id: string): Promise<void> {
+    articlesApi_Delete(id: string): Promise<void> {
         let url_ = this.baseUrl + "/api/articles/{id}";
         if (id === undefined || id === null)
             throw new globalThis.Error("The parameter 'id' must be defined.");
@@ -561,11 +528,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processDelete(_response);
+            return this.processArticlesApi_Delete(_response);
         });
     }
 
-    protected processDelete(response: Response): Promise<void> {
+    protected processArticlesApi_Delete(response: Response): Promise<void> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 204) {
@@ -586,7 +553,7 @@ export class MedleyApiClient {
         return Promise.resolve<void>(null as any);
     }
 
-    getChildren(id: string): Promise<ArticleDto[]> {
+    articlesApi_GetChildren(id: string): Promise<ArticleDto[]> {
         let url_ = this.baseUrl + "/api/articles/{id}/children";
         if (id === undefined || id === null)
             throw new globalThis.Error("The parameter 'id' must be defined.");
@@ -601,11 +568,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetChildren(_response);
+            return this.processArticlesApi_GetChildren(_response);
         });
     }
 
-    protected processGetChildren(response: Response): Promise<ArticleDto[]> {
+    protected processArticlesApi_GetChildren(response: Response): Promise<ArticleDto[]> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -628,7 +595,7 @@ export class MedleyApiClient {
         return Promise.resolve<ArticleDto[]>(null as any);
     }
 
-    create(request: ArticleCreateRequest): Promise<ArticleDto> {
+    articlesApi_Create(request: ArticleCreateRequest): Promise<ArticleDto> {
         let url_ = this.baseUrl + "/api/articles";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -644,11 +611,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processCreate(_response);
+            return this.processArticlesApi_Create(_response);
         });
     }
 
-    protected processCreate(response: Response): Promise<ArticleDto> {
+    protected processArticlesApi_Create(response: Response): Promise<ArticleDto> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 201) {
@@ -671,7 +638,7 @@ export class MedleyApiClient {
         return Promise.resolve<ArticleDto>(null as any);
     }
 
-    updateMetadata(id: string, request: ArticleUpdateMetadataRequest): Promise<ArticleDto> {
+    articlesApi_UpdateMetadata(id: string, request: ArticleUpdateMetadataRequest): Promise<ArticleDto> {
         let url_ = this.baseUrl + "/api/articles/{id}/metadata";
         if (id === undefined || id === null)
             throw new globalThis.Error("The parameter 'id' must be defined.");
@@ -690,11 +657,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processUpdateMetadata(_response);
+            return this.processArticlesApi_UpdateMetadata(_response);
         });
     }
 
-    protected processUpdateMetadata(response: Response): Promise<ArticleDto> {
+    protected processArticlesApi_UpdateMetadata(response: Response): Promise<ArticleDto> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -723,7 +690,7 @@ export class MedleyApiClient {
         return Promise.resolve<ArticleDto>(null as any);
     }
 
-    updateContent(id: string, request: ArticleUpdateContentRequest): Promise<VersionCaptureResponse> {
+    articlesApi_UpdateContent(id: string, request: ArticleUpdateContentRequest): Promise<VersionCaptureResponse> {
         let url_ = this.baseUrl + "/api/articles/{id}/content";
         if (id === undefined || id === null)
             throw new globalThis.Error("The parameter 'id' must be defined.");
@@ -742,11 +709,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processUpdateContent(_response);
+            return this.processArticlesApi_UpdateContent(_response);
         });
     }
 
-    protected processUpdateContent(response: Response): Promise<VersionCaptureResponse> {
+    protected processArticlesApi_UpdateContent(response: Response): Promise<VersionCaptureResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -781,7 +748,7 @@ export class MedleyApiClient {
         return Promise.resolve<VersionCaptureResponse>(null as any);
     }
 
-    move(id: string, request: ArticleMoveRequest): Promise<void> {
+    articlesApi_Move(id: string, request: ArticleMoveRequest): Promise<void> {
         let url_ = this.baseUrl + "/api/articles/{id}/move";
         if (id === undefined || id === null)
             throw new globalThis.Error("The parameter 'id' must be defined.");
@@ -799,11 +766,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processMove(_response);
+            return this.processArticlesApi_Move(_response);
         });
     }
 
-    protected processMove(response: Response): Promise<void> {
+    protected processArticlesApi_Move(response: Response): Promise<void> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -830,7 +797,7 @@ export class MedleyApiClient {
         return Promise.resolve<void>(null as any);
     }
 
-    getVersionHistory(id: string): Promise<ArticleVersionDto[]> {
+    articlesApi_GetVersionHistory(id: string): Promise<ArticleVersionDto[]> {
         let url_ = this.baseUrl + "/api/articles/{id}/versions";
         if (id === undefined || id === null)
             throw new globalThis.Error("The parameter 'id' must be defined.");
@@ -845,11 +812,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetVersionHistory(_response);
+            return this.processArticlesApi_GetVersionHistory(_response);
         });
     }
 
-    protected processGetVersionHistory(response: Response): Promise<ArticleVersionDto[]> {
+    protected processArticlesApi_GetVersionHistory(response: Response): Promise<ArticleVersionDto[]> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -872,7 +839,7 @@ export class MedleyApiClient {
         return Promise.resolve<ArticleVersionDto[]>(null as any);
     }
 
-    getVersion(articleId: string, versionId: string): Promise<ArticleVersionDto> {
+    articlesApi_GetVersion(articleId: string, versionId: string): Promise<ArticleVersionDto> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/versions/{versionId}";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -890,11 +857,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetVersion(_response);
+            return this.processArticlesApi_GetVersion(_response);
         });
     }
 
-    protected processGetVersion(response: Response): Promise<ArticleVersionDto> {
+    protected processArticlesApi_GetVersion(response: Response): Promise<ArticleVersionDto> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -917,7 +884,7 @@ export class MedleyApiClient {
         return Promise.resolve<ArticleVersionDto>(null as any);
     }
 
-    getVersionDiff(articleId: string, versionId: string): Promise<ArticleVersionComparisonDto> {
+    articlesApi_GetVersionDiff(articleId: string, versionId: string): Promise<ArticleVersionComparisonDto> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/versions/{versionId}/diff";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -935,11 +902,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetVersionDiff(_response);
+            return this.processArticlesApi_GetVersionDiff(_response);
         });
     }
 
-    protected processGetVersionDiff(response: Response): Promise<ArticleVersionComparisonDto> {
+    protected processArticlesApi_GetVersionDiff(response: Response): Promise<ArticleVersionComparisonDto> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -962,7 +929,7 @@ export class MedleyApiClient {
         return Promise.resolve<ArticleVersionComparisonDto>(null as any);
     }
 
-    acceptAiVersion(articleId: string, versionId: string): Promise<VersionCaptureResponse> {
+    articlesApi_AcceptAiVersion(articleId: string, versionId: string): Promise<VersionCaptureResponse> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/versions/{versionId}/accept";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -980,11 +947,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processAcceptAiVersion(_response);
+            return this.processArticlesApi_AcceptAiVersion(_response);
         });
     }
 
-    protected processAcceptAiVersion(response: Response): Promise<VersionCaptureResponse> {
+    protected processArticlesApi_AcceptAiVersion(response: Response): Promise<VersionCaptureResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -1023,7 +990,7 @@ export class MedleyApiClient {
         return Promise.resolve<VersionCaptureResponse>(null as any);
     }
 
-    rejectAiVersion(articleId: string, versionId: string): Promise<void> {
+    articlesApi_RejectAiVersion(articleId: string, versionId: string): Promise<void> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/versions/{versionId}/reject";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -1040,11 +1007,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processRejectAiVersion(_response);
+            return this.processArticlesApi_RejectAiVersion(_response);
         });
     }
 
-    protected processRejectAiVersion(response: Response): Promise<void> {
+    protected processArticlesApi_RejectAiVersion(response: Response): Promise<void> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -1080,19 +1047,8 @@ export class MedleyApiClient {
         }
         return Promise.resolve<void>(null as any);
     }
-}
 
-export class MedleyApiClient {
-    private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
-    private baseUrl: string;
-    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
-
-    constructor(baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
-        this.http = http ? http : window as any;
-        this.baseUrl = baseUrl ?? "";
-    }
-
-    getAll(skip?: number | undefined, take?: number | undefined): Promise<FragmentDto[]> {
+    fragmentsApi_GetAll(skip?: number | undefined, take?: number | undefined): Promise<FragmentDto[]> {
         let url_ = this.baseUrl + "/api/fragments?";
         if (skip === null)
             throw new globalThis.Error("The parameter 'skip' cannot be null.");
@@ -1112,11 +1068,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetAll(_response);
+            return this.processFragmentsApi_GetAll(_response);
         });
     }
 
-    protected processGetAll(response: Response): Promise<FragmentDto[]> {
+    protected processFragmentsApi_GetAll(response: Response): Promise<FragmentDto[]> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -1133,7 +1089,7 @@ export class MedleyApiClient {
         return Promise.resolve<FragmentDto[]>(null as any);
     }
 
-    get(id: string): Promise<FragmentDto> {
+    fragmentsApi_Get(id: string): Promise<FragmentDto> {
         let url_ = this.baseUrl + "/api/fragments/{id}";
         if (id === undefined || id === null)
             throw new globalThis.Error("The parameter 'id' must be defined.");
@@ -1148,11 +1104,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGet(_response);
+            return this.processFragmentsApi_Get(_response);
         });
     }
 
-    protected processGet(response: Response): Promise<FragmentDto> {
+    protected processFragmentsApi_Get(response: Response): Promise<FragmentDto> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -1175,7 +1131,7 @@ export class MedleyApiClient {
         return Promise.resolve<FragmentDto>(null as any);
     }
 
-    getBySourceId(sourceId: string): Promise<FragmentDto[]> {
+    fragmentsApi_GetBySourceId(sourceId: string): Promise<FragmentDto[]> {
         let url_ = this.baseUrl + "/api/fragments/by-source/{sourceId}";
         if (sourceId === undefined || sourceId === null)
             throw new globalThis.Error("The parameter 'sourceId' must be defined.");
@@ -1190,11 +1146,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetBySourceId(_response);
+            return this.processFragmentsApi_GetBySourceId(_response);
         });
     }
 
-    protected processGetBySourceId(response: Response): Promise<FragmentDto[]> {
+    protected processFragmentsApi_GetBySourceId(response: Response): Promise<FragmentDto[]> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -1211,7 +1167,7 @@ export class MedleyApiClient {
         return Promise.resolve<FragmentDto[]>(null as any);
     }
 
-    search(query?: string | undefined, take?: number | undefined): Promise<FragmentSearchResult[]> {
+    fragmentsApi_Search(query?: string | undefined, take?: number | undefined): Promise<FragmentSearchResult[]> {
         let url_ = this.baseUrl + "/api/fragments/search?";
         if (query === null)
             throw new globalThis.Error("The parameter 'query' cannot be null.");
@@ -1231,11 +1187,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processSearch(_response);
+            return this.processFragmentsApi_Search(_response);
         });
     }
 
-    protected processSearch(response: Response): Promise<FragmentSearchResult[]> {
+    protected processFragmentsApi_Search(response: Response): Promise<FragmentSearchResult[]> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -1262,7 +1218,7 @@ export class MedleyApiClient {
         return Promise.resolve<FragmentSearchResult[]>(null as any);
     }
 
-    getTitles(ids: string[]): Promise<FragmentTitleDto[]> {
+    fragmentsApi_GetTitles(ids: string[]): Promise<FragmentTitleDto[]> {
         let url_ = this.baseUrl + "/api/fragments/titles";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -1278,11 +1234,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetTitles(_response);
+            return this.processFragmentsApi_GetTitles(_response);
         });
     }
 
-    protected processGetTitles(response: Response): Promise<FragmentTitleDto[]> {
+    protected processFragmentsApi_GetTitles(response: Response): Promise<FragmentTitleDto[]> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -1308,19 +1264,8 @@ export class MedleyApiClient {
         }
         return Promise.resolve<FragmentTitleDto[]>(null as any);
     }
-}
 
-export class MedleyApiClient {
-    private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
-    private baseUrl: string;
-    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
-
-    constructor(baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
-        this.http = http ? http : window as any;
-        this.baseUrl = baseUrl ?? "";
-    }
-
-    getActivePlan(articleId: string): Promise<FileResponse> {
+    planApi_GetActivePlan(articleId: string): Promise<FileResponse> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/plans/active";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -1335,11 +1280,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetActivePlan(_response);
+            return this.processPlanApi_GetActivePlan(_response);
         });
     }
 
-    protected processGetActivePlan(response: Response): Promise<FileResponse> {
+    protected processPlanApi_GetActivePlan(response: Response): Promise<FileResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200 || status === 206) {
@@ -1361,7 +1306,7 @@ export class MedleyApiClient {
         return Promise.resolve<FileResponse>(null as any);
     }
 
-    getAllPlans(articleId: string): Promise<FileResponse> {
+    planApi_GetAllPlans(articleId: string): Promise<FileResponse> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/plans";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -1376,11 +1321,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetAllPlans(_response);
+            return this.processPlanApi_GetAllPlans(_response);
         });
     }
 
-    protected processGetAllPlans(response: Response): Promise<FileResponse> {
+    protected processPlanApi_GetAllPlans(response: Response): Promise<FileResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200 || status === 206) {
@@ -1402,7 +1347,7 @@ export class MedleyApiClient {
         return Promise.resolve<FileResponse>(null as any);
     }
 
-    getPlan(articleId: string, planId: string): Promise<FileResponse> {
+    planApi_GetPlan(articleId: string, planId: string): Promise<FileResponse> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/plans/{planId}";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -1420,11 +1365,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetPlan(_response);
+            return this.processPlanApi_GetPlan(_response);
         });
     }
 
-    protected processGetPlan(response: Response): Promise<FileResponse> {
+    protected processPlanApi_GetPlan(response: Response): Promise<FileResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200 || status === 206) {
@@ -1446,7 +1391,7 @@ export class MedleyApiClient {
         return Promise.resolve<FileResponse>(null as any);
     }
 
-    updatePlan(articleId: string, planId: string, request: UpdatePlanRequest): Promise<FileResponse> {
+    planApi_UpdatePlan(articleId: string, planId: string, request: UpdatePlanRequest): Promise<FileResponse> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/plans/{planId}";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -1468,11 +1413,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processUpdatePlan(_response);
+            return this.processPlanApi_UpdatePlan(_response);
         });
     }
 
-    protected processUpdatePlan(response: Response): Promise<FileResponse> {
+    protected processPlanApi_UpdatePlan(response: Response): Promise<FileResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200 || status === 206) {
@@ -1494,7 +1439,7 @@ export class MedleyApiClient {
         return Promise.resolve<FileResponse>(null as any);
     }
 
-    restorePlan(articleId: string, planId: string): Promise<FileResponse> {
+    planApi_RestorePlan(articleId: string, planId: string): Promise<FileResponse> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/plans/{planId}/restore";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -1512,11 +1457,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processRestorePlan(_response);
+            return this.processPlanApi_RestorePlan(_response);
         });
     }
 
-    protected processRestorePlan(response: Response): Promise<FileResponse> {
+    protected processPlanApi_RestorePlan(response: Response): Promise<FileResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200 || status === 206) {
@@ -1538,7 +1483,7 @@ export class MedleyApiClient {
         return Promise.resolve<FileResponse>(null as any);
     }
 
-    updatePlanFragmentInclude(articleId: string, planId: string, fragmentId: string, request: UpdatePlanFragmentIncludeRequest): Promise<FileResponse> {
+    planApi_UpdatePlanFragmentInclude(articleId: string, planId: string, fragmentId: string, request: UpdatePlanFragmentIncludeRequest): Promise<FileResponse> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/plans/{planId}/fragments/{fragmentId}/include";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -1563,11 +1508,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processUpdatePlanFragmentInclude(_response);
+            return this.processPlanApi_UpdatePlanFragmentInclude(_response);
         });
     }
 
-    protected processUpdatePlanFragmentInclude(response: Response): Promise<FileResponse> {
+    protected processPlanApi_UpdatePlanFragmentInclude(response: Response): Promise<FileResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200 || status === 206) {
@@ -1589,7 +1534,7 @@ export class MedleyApiClient {
         return Promise.resolve<FileResponse>(null as any);
     }
 
-    updatePlanFragmentInstructions(articleId: string, planId: string, fragmentId: string, request: UpdatePlanFragmentInstructionsRequest): Promise<FileResponse> {
+    planApi_UpdatePlanFragmentInstructions(articleId: string, planId: string, fragmentId: string, request: UpdatePlanFragmentInstructionsRequest): Promise<FileResponse> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/plans/{planId}/fragments/{fragmentId}/instructions";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -1614,11 +1559,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processUpdatePlanFragmentInstructions(_response);
+            return this.processPlanApi_UpdatePlanFragmentInstructions(_response);
         });
     }
 
-    protected processUpdatePlanFragmentInstructions(response: Response): Promise<FileResponse> {
+    protected processPlanApi_UpdatePlanFragmentInstructions(response: Response): Promise<FileResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200 || status === 206) {
@@ -1640,7 +1585,7 @@ export class MedleyApiClient {
         return Promise.resolve<FileResponse>(null as any);
     }
 
-    acceptPlan(articleId: string, planId: string): Promise<FileResponse> {
+    planApi_AcceptPlan(articleId: string, planId: string): Promise<FileResponse> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/plans/{planId}/accept";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -1658,11 +1603,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processAcceptPlan(_response);
+            return this.processPlanApi_AcceptPlan(_response);
         });
     }
 
-    protected processAcceptPlan(response: Response): Promise<FileResponse> {
+    protected processPlanApi_AcceptPlan(response: Response): Promise<FileResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200 || status === 206) {
@@ -1684,7 +1629,7 @@ export class MedleyApiClient {
         return Promise.resolve<FileResponse>(null as any);
     }
 
-    rejectPlan(articleId: string, planId: string): Promise<FileResponse> {
+    planApi_RejectPlan(articleId: string, planId: string): Promise<FileResponse> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/plans/{planId}/reject";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -1702,11 +1647,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processRejectPlan(_response);
+            return this.processPlanApi_RejectPlan(_response);
         });
     }
 
-    protected processRejectPlan(response: Response): Promise<FileResponse> {
+    protected processPlanApi_RejectPlan(response: Response): Promise<FileResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200 || status === 206) {
@@ -1727,19 +1672,8 @@ export class MedleyApiClient {
         }
         return Promise.resolve<FileResponse>(null as any);
     }
-}
 
-export class MedleyApiClient {
-    private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
-    private baseUrl: string;
-    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
-
-    constructor(baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
-        this.http = http ? http : window as any;
-        this.baseUrl = baseUrl ?? "";
-    }
-
-    getAll(query?: string | null | undefined, tagTypeId?: string | null | undefined, value?: string | null | undefined, skip?: number | undefined, take?: number | undefined): Promise<SourceSummaryDto[]> {
+    sourcesApi_GetAll(query?: string | null | undefined, tagTypeId?: string | null | undefined, value?: string | null | undefined, skip?: number | undefined, take?: number | undefined): Promise<SourceSummaryDto[]> {
         let url_ = this.baseUrl + "/api/sources?";
         if (query !== undefined && query !== null)
             url_ += "query=" + encodeURIComponent("" + query) + "&";
@@ -1765,11 +1699,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetAll(_response);
+            return this.processSourcesApi_GetAll(_response);
         });
     }
 
-    protected processGetAll(response: Response): Promise<SourceSummaryDto[]> {
+    protected processSourcesApi_GetAll(response: Response): Promise<SourceSummaryDto[]> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -1786,7 +1720,7 @@ export class MedleyApiClient {
         return Promise.resolve<SourceSummaryDto[]>(null as any);
     }
 
-    get(id: string): Promise<SourceDto> {
+    sourcesApi_Get(id: string): Promise<SourceDto> {
         let url_ = this.baseUrl + "/api/sources/{id}";
         if (id === undefined || id === null)
             throw new globalThis.Error("The parameter 'id' must be defined.");
@@ -1801,11 +1735,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGet(_response);
+            return this.processSourcesApi_Get(_response);
         });
     }
 
-    protected processGet(response: Response): Promise<SourceDto> {
+    protected processSourcesApi_Get(response: Response): Promise<SourceDto> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -1828,7 +1762,7 @@ export class MedleyApiClient {
         return Promise.resolve<SourceDto>(null as any);
     }
 
-    extractFragments(id: string): Promise<void> {
+    sourcesApi_ExtractFragments(id: string): Promise<void> {
         let url_ = this.baseUrl + "/api/sources/{id}/extract-fragments";
         if (id === undefined || id === null)
             throw new globalThis.Error("The parameter 'id' must be defined.");
@@ -1842,11 +1776,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processExtractFragments(_response);
+            return this.processSourcesApi_ExtractFragments(_response);
         });
     }
 
-    protected processExtractFragments(response: Response): Promise<void> {
+    protected processSourcesApi_ExtractFragments(response: Response): Promise<void> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -1871,7 +1805,7 @@ export class MedleyApiClient {
         return Promise.resolve<void>(null as any);
     }
 
-    tagSource(id: string, force?: boolean | undefined): Promise<void> {
+    sourcesApi_TagSource(id: string, force?: boolean | undefined): Promise<void> {
         let url_ = this.baseUrl + "/api/sources/{id}/tag?";
         if (id === undefined || id === null)
             throw new globalThis.Error("The parameter 'id' must be defined.");
@@ -1889,11 +1823,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processTagSource(_response);
+            return this.processSourcesApi_TagSource(_response);
         });
     }
 
-    protected processTagSource(response: Response): Promise<void> {
+    protected processSourcesApi_TagSource(response: Response): Promise<void> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -1907,19 +1841,8 @@ export class MedleyApiClient {
         }
         return Promise.resolve<void>(null as any);
     }
-}
 
-export class MedleyApiClient {
-    private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
-    private baseUrl: string;
-    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
-
-    constructor(baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
-        this.http = http ? http : window as any;
-        this.baseUrl = baseUrl ?? "";
-    }
-
-    getAll(): Promise<FileResponse> {
+    tagTypesApi_GetAll(): Promise<FileResponse> {
         let url_ = this.baseUrl + "/api/tagtypes";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -1931,11 +1854,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetAll(_response);
+            return this.processTagTypesApi_GetAll(_response);
         });
     }
 
-    protected processGetAll(response: Response): Promise<FileResponse> {
+    protected processTagTypesApi_GetAll(response: Response): Promise<FileResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200 || status === 206) {
@@ -1956,19 +1879,8 @@ export class MedleyApiClient {
         }
         return Promise.resolve<FileResponse>(null as any);
     }
-}
 
-export class MedleyApiClient {
-    private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
-    private baseUrl: string;
-    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
-
-    constructor(baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
-        this.http = http ? http : window as any;
-        this.baseUrl = baseUrl ?? "";
-    }
-
-    getAll(): Promise<FileResponse> {
+    templatesApi_GetAll(): Promise<FileResponse> {
         let url_ = this.baseUrl + "/api/templates";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -1980,11 +1892,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetAll(_response);
+            return this.processTemplatesApi_GetAll(_response);
         });
     }
 
-    protected processGetAll(response: Response): Promise<FileResponse> {
+    protected processTemplatesApi_GetAll(response: Response): Promise<FileResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200 || status === 206) {
@@ -2006,7 +1918,7 @@ export class MedleyApiClient {
         return Promise.resolve<FileResponse>(null as any);
     }
 
-    get(id: string): Promise<FileResponse> {
+    templatesApi_Get(id: string): Promise<FileResponse> {
         let url_ = this.baseUrl + "/api/templates/{id}";
         if (id === undefined || id === null)
             throw new globalThis.Error("The parameter 'id' must be defined.");
@@ -2021,11 +1933,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGet(_response);
+            return this.processTemplatesApi_Get(_response);
         });
     }
 
-    protected processGet(response: Response): Promise<FileResponse> {
+    protected processTemplatesApi_Get(response: Response): Promise<FileResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200 || status === 206) {
@@ -2047,7 +1959,7 @@ export class MedleyApiClient {
         return Promise.resolve<FileResponse>(null as any);
     }
 
-    update(id: string, request: UpdateTemplateRequest): Promise<FileResponse> {
+    templatesApi_Update(id: string, request: UpdateTemplateRequest): Promise<FileResponse> {
         let url_ = this.baseUrl + "/api/templates/{id}";
         if (id === undefined || id === null)
             throw new globalThis.Error("The parameter 'id' must be defined.");
@@ -2066,11 +1978,11 @@ export class MedleyApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processUpdate(_response);
+            return this.processTemplatesApi_Update(_response);
         });
     }
 
-    protected processUpdate(response: Response): Promise<FileResponse> {
+    protected processTemplatesApi_Update(response: Response): Promise<FileResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200 || status === 206) {
