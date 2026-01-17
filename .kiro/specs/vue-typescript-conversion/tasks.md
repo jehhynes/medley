@@ -182,8 +182,8 @@ Commit after each major task is complete.
 
   - [x] 6.7 Commit changes
 
-- [~] 7. Create type guards and validation utilities
-  - [ ] 7.1 Create type guard functions for critical DTOs
+- [-] 7. Create type guards and validation utilities
+  - [x] 7.1 Create type guard functions for critical DTOs
     - Create types/guards.ts
     - Implement isArticle type guard
     - Implement isUserSummary type guard
@@ -207,7 +207,7 @@ Commit after each major task is complete.
     - Test nested object validation
     - _Requirements: 11.5_
   
-  - [ ] 7.4 Create validation error handling utilities
+  - [x] 7.4 Create validation error handling utilities
     - Create types/utils.ts with utility types
     - Add validation error logging function
     - Add graceful error handler wrapper
@@ -221,7 +221,7 @@ Commit after each major task is complete.
     - Verify error is logged and handled gracefully
     - Run 100 iterations
 
-  - [ ] 7.7 Commit changes
+  - [-] 7.7 Commit changes
 
 - [~] 8. Checkpoint - Verify backend and infrastructure
   - Ensure C# project builds successfully with strongly-typed hubs
