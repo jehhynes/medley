@@ -1,4 +1,11 @@
-import { createRouter, createWebHistory } from 'vue-router';
+import { createRouter, createWebHistory, type RouteRecordRaw, type NavigationGuardNext, type RouteLocationNormalized } from 'vue-router';
+
+// Define custom route meta interface
+interface RouteMeta {
+  title?: string;
+  hasLeftSidebar?: boolean;
+  hasRightSidebar?: boolean;
+}
 
 // Lazy-load pages for code splitting
 const Dashboard = () => import('../pages/Dashboard.vue');
@@ -7,7 +14,7 @@ const Fragments = () => import('../pages/Fragments.vue');
 const Articles = () => import('../pages/Articles.vue');
 const AiPrompts = () => import('../pages/AiPrompts.vue');
 
-const routes = [
+const routes: RouteRecordRaw[] = [
   {
     path: '/',
     name: 'dashboard',
@@ -15,7 +22,7 @@ const routes = [
     meta: { 
       title: 'Dashboard',
       hasLeftSidebar: false
-    }
+    } as RouteMeta
   },
   {
     path: '/Sources',
@@ -23,7 +30,7 @@ const routes = [
     component: Sources,
     meta: { 
       title: 'Sources'
-    }
+    } as RouteMeta
   },
   {
     path: '/Fragments',
@@ -31,7 +38,7 @@ const routes = [
     component: Fragments,
     meta: { 
       title: 'Fragments'
-    }
+    } as RouteMeta
   },
   {
     path: '/Articles',
@@ -40,7 +47,7 @@ const routes = [
     meta: { 
       title: 'Articles',
       hasRightSidebar: true
-    }
+    } as RouteMeta
   },
   {
     path: '/Admin/AiPrompts',
@@ -48,7 +55,7 @@ const routes = [
     component: AiPrompts,
     meta: { 
         title: 'AI Prompts'
-    }
+    } as RouteMeta
   }
 ];
 
@@ -57,9 +64,10 @@ const router = createRouter({
   routes
 });
 
-// Update document title on route change
-router.afterEach((to) => {
-  document.title = to.meta.title ? `${to.meta.title} - Medley` : 'Medley';
+// Update document title on route change with typed navigation guard
+router.afterEach((to: RouteLocationNormalized) => {
+  const meta = to.meta as RouteMeta;
+  document.title = meta.title ? `${meta.title} - Medley` : 'Medley';
 });
 
 export default router;
