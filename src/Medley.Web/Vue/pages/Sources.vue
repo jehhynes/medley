@@ -232,9 +232,10 @@
     />
 </template>
 
-<script>
-import infiniteScrollMixin from '../mixins/infiniteScroll.js';
-import { api, createSignalRConnection } from '@/utils/api.js';
+<script setup lang="ts">
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { useRouter } from 'vue-router';
+import { api } from '@/utils/api';
 import { 
   getFragmentCategoryIcon, 
   getIconClass, 
@@ -246,419 +247,429 @@ import {
   getArticleTypes, 
   findInList, 
   showToast 
-} from '@/utils/helpers.js';
-import { getUrlParam, setUrlParam, setupPopStateHandler } from '@/utils/url.js';
-import { useSidebarState } from '@/composables/useSidebarState'
-import { useRouter } from 'vue-router'
+} from '@/utils/helpers';
+import { getUrlParam, setUrlParam, setupPopStateHandler } from '@/utils/url';
+import { useSidebarState } from '@/composables/useSidebarState';
+import { useInfiniteScroll } from '@/composables/useInfiniteScroll';
+import { createAdminHubConnection } from '@/utils/signalr';
+import type { Source, Fragment, Tag } from '@/types/generated/api-client';
+import type { AdminHubConnection } from '@/types/signalr/admin-hub';
 
-export default {
-  name: 'Sources',
-  mixins: [infiniteScrollMixin],
-  setup() {
-    const { leftSidebarVisible } = useSidebarState()
-    const router = useRouter()
-    return { leftSidebarVisible, router }
-  },
-  data() {
-    return {
-      sources: [],
-      selectedSourceId: null,
-      selectedSource: null,
-      loading: false,
-      error: null,
-      searchQuery: '',
-      signalRConnection: null,
-      fragments: [],
-      selectedFragment: null,
-      loadingFragments: false,
-      fragmentsError: null,
-      markdownRenderer: null,
-      tagging: false,
-      detachPopState: null,
-      activeTagFilter: null,
-      // User info from server
-      userDisplayName: window.MedleyUser?.displayName || 'User',
-      userIsAuthenticated: window.MedleyUser?.isAuthenticated || false
-    };
-  },
-  computed: {
-    parsedMetadata() {
-      if (!this.selectedSource || !this.selectedSource.metadataJson) {
-        return null;
-      }
-      try {
-        return JSON.parse(this.selectedSource.metadataJson);
-      } catch (e) {
-        console.error('Failed to parse metadata JSON:', e);
-        return null;
-      }
-    },
-    sortedTags() {
-      if (!this.selectedSource || !this.selectedSource.tags) {
-        return [];
-      }
-      return [...this.selectedSource.tags].sort((a, b) => {
-        const tagTypeA = (a.tagType || '').toLowerCase();
-        const tagTypeB = (b.tagType || '').toLowerCase();
-        return tagTypeA.localeCompare(tagTypeB);
-      });
+// Interfaces
+interface PaginationState {
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+  loadingMore: boolean;
+}
+
+interface TagFilter {
+  tagTypeId: number;
+  value: string;
+  tagType: string;
+}
+
+// Setup composables
+const { leftSidebarVisible } = useSidebarState();
+const router = useRouter();
+
+// Reactive state
+const sources = ref<Source[]>([]);
+const selectedSourceId = ref<string | null>(null);
+const selectedSource = ref<Source | null>(null);
+const loading = ref<boolean>(false);
+const error = ref<string | null>(null);
+const searchQuery = ref<string>('');
+const signalRConnection = ref<AdminHubConnection | null>(null);
+const fragments = ref<Fragment[]>([]);
+const selectedFragment = ref<Fragment | null>(null);
+const loadingFragments = ref<boolean>(false);
+const fragmentsError = ref<string | null>(null);
+const markdownRenderer = ref<any>(null);
+const tagging = ref<boolean>(false);
+const activeTagFilter = ref<TagFilter | null>(null);
+const userDisplayName = ref<string>(window.MedleyUser?.displayName || 'User');
+const userIsAuthenticated = ref<boolean>(window.MedleyUser?.isAuthenticated || false);
+
+const pagination = ref<PaginationState>({
+  page: 0,
+  pageSize: 50,
+  hasMore: true,
+  loadingMore: false
+});
+
+let detachPopState: (() => void) | null = null;
+
+// Use infinite scroll composable
+const {
+  setupInfiniteScroll,
+  resetPagination,
+  updateHasMore
+} = useInfiniteScroll(pagination, loadMoreItems);
+
+// Computed properties
+const parsedMetadata = computed(() => {
+  if (!selectedSource.value || !selectedSource.value.metadataJson) {
+    return null;
+  }
+  try {
+    return JSON.parse(selectedSource.value.metadataJson);
+  } catch (e) {
+    console.error('Failed to parse metadata JSON:', e);
+    return null;
+  }
+});
+
+const sortedTags = computed(() => {
+  if (!selectedSource.value || !selectedSource.value.tags) {
+    return [];
+  }
+  return [...selectedSource.value.tags].sort((a, b) => {
+    const tagTypeA = (a.tagType || '').toLowerCase();
+    const tagTypeB = (b.tagType || '').toLowerCase();
+    return tagTypeA.localeCompare(tagTypeB);
+  });
+});
+
+// Watchers
+watch(parsedMetadata, (newVal) => {
+  if (newVal) {
+    const jsonViewer = (window as any).$refs?.jsonViewer;
+    if (jsonViewer) {
+      jsonViewer.data = newVal;
     }
-  },
-  watch: {
-    parsedMetadata(newVal) {
-      this.$nextTick(() => {
-        if (this.$refs.jsonViewer && newVal) {
-          this.$refs.jsonViewer.data = newVal;
-        }
-      });
-    },
-    selectedSource(newVal) {
-      this.fragments = [];
-      this.selectedFragment = null;
-      this.fragmentsError = null;
+  }
+});
 
-      if (newVal) {
-        this.loadFragments();
-      }
+watch(selectedSource, (newVal) => {
+  fragments.value = [];
+  selectedFragment.value = null;
+  fragmentsError.value = null;
+
+  if (newVal) {
+    loadFragments();
+  }
+});
+
+// Methods
+const loadSources = async (): Promise<void> => {
+  resetPagination();
+  loading.value = true;
+  error.value = null;
+  try {
+    let url = `/api/sources?skip=0&take=${pagination.value.pageSize}`;
+    if (activeTagFilter.value) {
+      url += `&tagTypeId=${activeTagFilter.value.tagTypeId}&value=${encodeURIComponent(activeTagFilter.value.value)}`;
     }
-  },
-  methods: {
-    async loadSources() {
-      this.resetPagination();
-      this.loading = true;
-      this.error = null;
-      try {
-        let url = `/api/sources?skip=0&take=${this.pagination.pageSize}`;
-        if (this.activeTagFilter) {
-          url += `&tagTypeId=${this.activeTagFilter.tagTypeId}&value=${encodeURIComponent(this.activeTagFilter.value)}`;
-        }
-        const sources = await api.get(url);
-        this.sources = sources;
-        this.updateHasMore(sources);
-      } catch (err) {
-        this.error = 'Failed to load sources: ' + err.message;
-        console.error('Error loading sources:', err);
-      } finally {
-        this.loading = false;
-      }
-    },
+    const data = await api.get(url);
+    sources.value = data as Source[];
+    updateHasMore(data as Source[]);
+  } catch (err: any) {
+    error.value = 'Failed to load sources: ' + err.message;
+    console.error('Error loading sources:', err);
+  } finally {
+    loading.value = false;
+  }
+};
 
-    async loadMoreItems() {
-      const skip = this.pagination.page * this.pagination.pageSize;
-      try {
-        let url = `/api/sources?skip=${skip}&take=${this.pagination.pageSize}`;
-        
-        const query = this.searchQuery.trim();
-        if (query.length >= 2) {
-          url += `&query=${encodeURIComponent(query)}`;
-        }
-        
-        if (this.activeTagFilter) {
-          url += `&tagTypeId=${this.activeTagFilter.tagTypeId}&value=${encodeURIComponent(this.activeTagFilter.value)}`;
-        }
-        
-        const sources = await api.get(url);
-        this.sources.push(...sources);
-        return sources;
-      } catch (err) {
-        console.error('Error loading more sources:', err);
-        throw err;
-      }
-    },
-
-    async selectSource(source, replaceState = false) {
-      this.selectedSourceId = source.id;
-
-      // Use Vue Router to update the URL, which will trigger the App.vue watcher
-      if (replaceState) {
-        await this.router.replace({ query: { id: source.id } });
-      } else {
-        await this.router.push({ query: { id: source.id } });
-      }
-
-      try {
-        this.selectedSource = await api.get(`/api/sources/${source.id}`);
-        const sourceIndex = this.sources.findIndex(s => s.id === source.id);
-        if (sourceIndex !== -1 && this.selectedSource.tags) {
-          this.sources[sourceIndex].tags = this.selectedSource.tags;
-        }
-      } catch (err) {
-        console.error('Error loading source:', err);
-        this.selectedSource = null;
-      }
-    },
-
-    async onSearchInput() {
-      const query = this.searchQuery.trim();
-      if (query.length >= 2) {
-        this.resetPagination();
-        try {
-          let url = `/api/sources?query=${encodeURIComponent(query)}&skip=0&take=${this.pagination.pageSize}`;
-          if (this.activeTagFilter) {
-            url += `&tagTypeId=${this.activeTagFilter.tagTypeId}&value=${encodeURIComponent(this.activeTagFilter.value)}`;
-          }
-          const sources = await api.get(url);
-          this.sources = sources;
-          this.updateHasMore(sources);
-        } catch (err) {
-          console.error('Search error:', err);
-        }
-      } else if (query.length === 0) {
-        await this.loadSources();
-      }
-    },
-
-    async filterByTag(tag) {
-      if (this.activeTagFilter && 
-          this.activeTagFilter.tagTypeId === tag.tagTypeId && 
-          this.activeTagFilter.value === tag.value) {
-        await this.clearTagFilter();
-      } else {
-        this.activeTagFilter = {
-          tagTypeId: tag.tagTypeId,
-          value: tag.value,
-          tagType: tag.tagType
-        };
-        this.searchQuery = '';
-        await this.loadSources();
-      }
-    },
-
-    async clearTagFilter() {
-      this.activeTagFilter = null;
-      if (this.searchQuery.trim().length >= 2) {
-        await this.onSearchInput();
-      } else {
-        await this.loadSources();
-      }
-    },
-
-    async extractFragments() {
-      if (!this.selectedSource) return;
-      const sourceId = this.selectedSource.id;
-
-      if (this.fragments.length > 0) {
-        const confirmMessage = `This source already has ${this.fragments.length} fragment(s). ` +
-          'Re-extracting will delete existing fragments. Continue?';
-
-        bootbox.confirm({
-          title: 'Confirm Fragment Extraction',
-          message: confirmMessage,
-          buttons: {
-            confirm: {
-              label: 'Continue',
-              className: 'btn-primary'
-            },
-            cancel: {
-              label: 'Cancel',
-              className: 'btn-secondary'
-            }
-          },
-          callback: async (result) => {
-            if (result) {
-              await this.performExtraction(sourceId);
-            }
-          }
-        });
-      } else {
-        await this.performExtraction(sourceId);
-      }
-    },
-
-    async performExtraction(sourceId) {
-      this.selectedSource.extractionStatus = 'InProgress';
-      const sourceIndex = this.sources.findIndex(s => s.id === sourceId);
-      if (sourceIndex !== -1) {
-        this.sources[sourceIndex].extractionStatus = 'InProgress';
-      }
-
-      try {
-        const response = await api.post(`/api/sources/${sourceId}/extract-fragments`);
-
-        if (!response.success) {
-          showToast('error', response.message || 'Failed to start fragment extraction');
-          this.selectedSource.extractionStatus = 'NotStarted';
-          if (sourceIndex !== -1) {
-            this.sources[sourceIndex].extractionStatus = 'NotStarted';
-          }
-        }
-      } catch (err) {
-        console.error('Fragment extraction error:', err);
-        const errorMessage = err.message || 'Failed to extract fragments. Please try again.';
-        const isClustered = errorMessage.toLowerCase().includes('clustered');
-
-        if (isClustered) {
-          showToast('error', 'Cannot re-extract: Some fragments have been clustered. Please uncluster them first.');
-        } else {
-          showToast('error', errorMessage);
-        }
-
-        this.selectedSource.extractionStatus = 'NotStarted';
-        if (sourceIndex !== -1) {
-          this.sources[sourceIndex].extractionStatus = 'NotStarted';
-        }
-      }
-    },
-
-    async generateTags() {
-      if (!this.selectedSource) return;
-      const sourceId = this.selectedSource.id;
-      this.tagging = true;
-      try {
-        const result = await api.post(`/api/sources/${sourceId}/tag?force=true`);
-        if (!result.success && result.message) {
-          showToast('error', result.message);
-        } else {
-          showToast('success', result.message || 'Tags generated');
-        }
-        try {
-          const updated = await api.get(`/api/sources/${sourceId}`);
-          this.selectedSource = updated;
-        } catch (err) {
-          console.error('Failed to reload source after tagging:', err);
-        }
-      } catch (err) {
-        console.error('Tag generation error:', err);
-        showToast('error', err.message || 'Failed to generate tags. Please try again.');
-      } finally {
-        this.tagging = false;
-      }
-    },
-
-    async loadFragments() {
-      if (!this.selectedSource) return;
-
-      this.loadingFragments = true;
-      this.fragmentsError = null;
-      try {
-        this.fragments = await api.get(`/api/fragments/by-source/${this.selectedSource.id}`);
-      } catch (err) {
-        this.fragmentsError = 'Failed to load fragments: ' + err.message;
-        console.error('Error loading fragments:', err);
-      } finally {
-        this.loadingFragments = false;
-      }
-    },
-
-    selectFragment(fragment) {
-      this.selectedFragment = fragment;
-    },
-
-    closeFragmentModal() {
-      this.selectedFragment = null;
-    },
-
-    getFragmentCategoryIcon(category) {
-      return getFragmentCategoryIcon(category);
-    },
-
-    getIconClass(icon) {
-      return getIconClass(icon);
-    },
-
-    getSourceTypeIcon(type) {
-      return getSourceTypeIcon(type);
-    },
-
-    getConfidenceIcon(confidence) {
-      return getConfidenceIcon(confidence);
-    },
-
-    getConfidenceColor(confidence) {
-      return getConfidenceColor(confidence);
-    },
-
-    formatDate(date) {
-      return formatDate(date);
-    }
-  },
-
-  async mounted() {
-    this.markdownRenderer = initializeMarkdownRenderer();
-
-    // Preload article types for icon display
-    getArticleTypes();
+async function loadMoreItems(): Promise<Source[]> {
+  const skip = pagination.value.page * pagination.value.pageSize;
+  try {
+    let url = `/api/sources?skip=${skip}&take=${pagination.value.pageSize}`;
     
-    await this.loadSources();
-
-    // Setup infinite scroll
-    this.setupInfiniteScroll('.sidebar-content');
-
-    const sourceIdFromUrl = getUrlParam('id');
-    if (sourceIdFromUrl) {
-      const source = findInList(this.sources, sourceIdFromUrl);
-      if (source) {
-        await this.selectSource(source, true);
-      } else {
-        try {
-          const loadedSource = await api.get(`/api/sources/${sourceIdFromUrl}`);
-          this.sources.unshift(loadedSource);
-          this.selectedSource = loadedSource;
-          this.selectedSourceId = sourceIdFromUrl;
-        } catch (err) {
-          console.error('Error loading source from URL:', err);
-          setUrlParam('id', null, true);
-        }
-      }
+    const query = searchQuery.value.trim();
+    if (query.length >= 2) {
+      url += `&query=${encodeURIComponent(query)}`;
     }
+    
+    if (activeTagFilter.value) {
+      url += `&tagTypeId=${activeTagFilter.value.tagTypeId}&value=${encodeURIComponent(activeTagFilter.value.value)}`;
+    }
+    
+    const data = await api.get(url);
+    const newSources = data as Source[];
+    sources.value.push(...newSources);
+    return newSources;
+  } catch (err) {
+    console.error('Error loading more sources:', err);
+    throw err;
+  }
+}
 
-    this.signalRConnection = createSignalRConnection('/adminHub');
+const selectSource = async (source: Source, replaceState = false): Promise<void> => {
+  selectedSourceId.value = source.id;
 
-    this.signalRConnection.on('FragmentExtractionComplete', async (sourceId, fragmentCount, success) => {
-      const sourceIndex = this.sources.findIndex(s => s.id === sourceId);
-      if (sourceIndex !== -1) {
-        try {
-          const updatedSource = await api.get(`/api/sources/${sourceId}`);
-          this.sources.splice(sourceIndex, 1, updatedSource);
-        } catch (err) {
-          console.error('Failed to reload source in list:', err);
-        }
-      }
+  if (replaceState) {
+    await router.replace({ query: { id: source.id } });
+  } else {
+    await router.push({ query: { id: source.id } });
+  }
 
-      if (this.selectedSource && this.selectedSource.id === sourceId) {
-        try {
-          const updatedSource = await api.get(`/api/sources/${sourceId}`);
-          this.selectedSource = updatedSource;
-          if (success) {
-            await this.loadFragments();
-          }
-        } catch (err) {
-          console.error('Failed to reload source:', err);
-        }
-      }
-    });
+  try {
+    const data = await api.get(`/api/sources/${source.id}`);
+    selectedSource.value = data as Source;
+    const sourceIndex = sources.value.findIndex(s => s.id === source.id);
+    if (sourceIndex !== -1 && selectedSource.value.tags) {
+      sources.value[sourceIndex].tags = selectedSource.value.tags;
+    }
+  } catch (err) {
+    console.error('Error loading source:', err);
+    selectedSource.value = null;
+  }
+};
 
+const onSearchInput = async (): Promise<void> => {
+  const query = searchQuery.value.trim();
+  if (query.length >= 2) {
+    resetPagination();
     try {
-      await this.signalRConnection.start();
-      console.log('SignalR connected for fragment notifications');
+      let url = `/api/sources?query=${encodeURIComponent(query)}&skip=0&take=${pagination.value.pageSize}`;
+      if (activeTagFilter.value) {
+        url += `&tagTypeId=${activeTagFilter.value.tagTypeId}&value=${encodeURIComponent(activeTagFilter.value.value)}`;
+      }
+      const data = await api.get(url);
+      sources.value = data as Source[];
+      updateHasMore(data as Source[]);
     } catch (err) {
-      console.error('SignalR connection error:', err);
+      console.error('Search error:', err);
     }
+  } else if (query.length === 0) {
+    await loadSources();
+  }
+};
 
-    this.detachPopState = setupPopStateHandler(async () => {
-      const sourceId = getUrlParam('id');
-      if (sourceId) {
-        const source = findInList(this.sources, sourceId);
-        if (source) {
-          this.selectedSourceId = source.id;
-          this.selectedSource = await api.get(`/api/sources/${source.id}`);
+const filterByTag = async (tag: Tag): Promise<void> => {
+  if (activeTagFilter.value && 
+      activeTagFilter.value.tagTypeId === tag.tagTypeId && 
+      activeTagFilter.value.value === tag.value) {
+    await clearTagFilter();
+  } else {
+    activeTagFilter.value = {
+      tagTypeId: tag.tagTypeId,
+      value: tag.value,
+      tagType: tag.tagType
+    };
+    searchQuery.value = '';
+    await loadSources();
+  }
+};
+
+const clearTagFilter = async (): Promise<void> => {
+  activeTagFilter.value = null;
+  if (searchQuery.value.trim().length >= 2) {
+    await onSearchInput();
+  } else {
+    await loadSources();
+  }
+};
+
+const extractFragments = async (): Promise<void> => {
+  if (!selectedSource.value) return;
+  const sourceId = selectedSource.value.id;
+
+  if (fragments.value.length > 0) {
+    const confirmMessage = `This source already has ${fragments.value.length} fragment(s). ` +
+      'Re-extracting will delete existing fragments. Continue?';
+
+    (window as any).bootbox.confirm({
+      title: 'Confirm Fragment Extraction',
+      message: confirmMessage,
+      buttons: {
+        confirm: {
+          label: 'Continue',
+          className: 'btn-primary'
+        },
+        cancel: {
+          label: 'Cancel',
+          className: 'btn-secondary'
         }
-      } else {
-        this.selectedSourceId = null;
-        this.selectedSource = null;
+      },
+      callback: async (result: boolean) => {
+        if (result) {
+          await performExtraction(sourceId);
+        }
       }
     });
-  },
+  } else {
+    await performExtraction(sourceId);
+  }
+};
 
-  beforeUnmount() {
-    if (this.signalRConnection) {
-      this.signalRConnection.stop();
+const performExtraction = async (sourceId: string): Promise<void> => {
+  if (selectedSource.value) {
+    selectedSource.value.extractionStatus = 'InProgress';
+  }
+  const sourceIndex = sources.value.findIndex(s => s.id === sourceId);
+  if (sourceIndex !== -1) {
+    sources.value[sourceIndex].extractionStatus = 'InProgress';
+  }
+
+  try {
+    const response = await api.post(`/api/sources/${sourceId}/extract-fragments`, {});
+
+    if (!response.success) {
+      showToast('error', response.message || 'Failed to start fragment extraction');
+      if (selectedSource.value) {
+        selectedSource.value.extractionStatus = 'NotStarted';
+      }
+      if (sourceIndex !== -1) {
+        sources.value[sourceIndex].extractionStatus = 'NotStarted';
+      }
     }
-    if (this.detachPopState) {
-      this.detachPopState();
+  } catch (err: any) {
+    console.error('Fragment extraction error:', err);
+    const errorMessage = err.message || 'Failed to extract fragments. Please try again.';
+    const isClustered = errorMessage.toLowerCase().includes('clustered');
+
+    if (isClustered) {
+      showToast('error', 'Cannot re-extract: Some fragments have been clustered. Please uncluster them first.');
+    } else {
+      showToast('error', errorMessage);
+    }
+
+    if (selectedSource.value) {
+      selectedSource.value.extractionStatus = 'NotStarted';
+    }
+    if (sourceIndex !== -1) {
+      sources.value[sourceIndex].extractionStatus = 'NotStarted';
     }
   }
 };
+
+const generateTags = async (): Promise<void> => {
+  if (!selectedSource.value) return;
+  const sourceId = selectedSource.value.id;
+  tagging.value = true;
+  try {
+    const result = await api.post(`/api/sources/${sourceId}/tag?force=true`, {});
+    if (!result.success && result.message) {
+      showToast('error', result.message);
+    } else {
+      showToast('success', result.message || 'Tags generated');
+    }
+    try {
+      const updated = await api.get(`/api/sources/${sourceId}`);
+      selectedSource.value = updated as Source;
+    } catch (err) {
+      console.error('Failed to reload source after tagging:', err);
+    }
+  } catch (err: any) {
+    console.error('Tag generation error:', err);
+    showToast('error', err.message || 'Failed to generate tags. Please try again.');
+  } finally {
+    tagging.value = false;
+  }
+};
+
+const loadFragments = async (): Promise<void> => {
+  if (!selectedSource.value) return;
+
+  loadingFragments.value = true;
+  fragmentsError.value = null;
+  try {
+    const data = await api.get(`/api/fragments/by-source/${selectedSource.value.id}`);
+    fragments.value = data as Fragment[];
+  } catch (err: any) {
+    fragmentsError.value = 'Failed to load fragments: ' + err.message;
+    console.error('Error loading fragments:', err);
+  } finally {
+    loadingFragments.value = false;
+  }
+};
+
+const selectFragment = (fragment: Fragment): void => {
+  selectedFragment.value = fragment;
+};
+
+const closeFragmentModal = (): void => {
+  selectedFragment.value = null;
+};
+
+// Lifecycle hooks
+onMounted(async () => {
+  markdownRenderer.value = initializeMarkdownRenderer();
+
+  getArticleTypes();
+  
+  await loadSources();
+
+  setupInfiniteScroll('.sidebar-content');
+
+  const sourceIdFromUrl = getUrlParam('id');
+  if (sourceIdFromUrl) {
+    const source = findInList(sources.value, sourceIdFromUrl);
+    if (source) {
+      await selectSource(source, true);
+    } else {
+      try {
+        const loadedSource = await api.get(`/api/sources/${sourceIdFromUrl}`) as Source;
+        sources.value.unshift(loadedSource);
+        selectedSource.value = loadedSource;
+        selectedSourceId.value = sourceIdFromUrl;
+      } catch (err) {
+        console.error('Error loading source from URL:', err);
+        setUrlParam('id', null, true);
+      }
+    }
+  }
+
+  signalRConnection.value = createAdminHubConnection();
+
+  signalRConnection.value.on('FragmentExtractionComplete', async (sourceId: string, fragmentCount: number, success: boolean) => {
+    const sourceIndex = sources.value.findIndex(s => s.id === sourceId);
+    if (sourceIndex !== -1) {
+      try {
+        const updatedSource = await api.get(`/api/sources/${sourceId}`) as Source;
+        sources.value.splice(sourceIndex, 1, updatedSource);
+      } catch (err) {
+        console.error('Failed to reload source in list:', err);
+      }
+    }
+
+    if (selectedSource.value && selectedSource.value.id === sourceId) {
+      try {
+        const updatedSource = await api.get(`/api/sources/${sourceId}`) as Source;
+        selectedSource.value = updatedSource;
+        if (success) {
+          await loadFragments();
+        }
+      } catch (err) {
+        console.error('Failed to reload source:', err);
+      }
+    }
+  });
+
+  try {
+    await signalRConnection.value.start();
+    console.log('SignalR connected for fragment notifications');
+  } catch (err) {
+    console.error('SignalR connection error:', err);
+  }
+
+  detachPopState = setupPopStateHandler(async () => {
+    const sourceId = getUrlParam('id');
+    if (sourceId) {
+      const source = findInList(sources.value, sourceId);
+      if (source) {
+        selectedSourceId.value = source.id;
+        const data = await api.get(`/api/sources/${source.id}`);
+        selectedSource.value = data as Source;
+      }
+    } else {
+      selectedSourceId.value = null;
+      selectedSource.value = null;
+    }
+  });
+});
+
+onBeforeUnmount(() => {
+  if (signalRConnection.value) {
+    signalRConnection.value.stop();
+  }
+  if (detachPopState) {
+    detachPopState();
+  }
+});
 </script>
 
 <style scoped>

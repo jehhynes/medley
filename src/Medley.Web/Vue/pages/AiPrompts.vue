@@ -68,119 +68,110 @@
     </div>
 </template>
 
-<script>
-import { api } from '@/utils/api.js';
-import { showToast } from '@/utils/helpers.js';
-import { useSidebarState } from '@/composables/useSidebarState';
+<script setup lang="ts">
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { api } from '@/utils/api';
+import { useSidebarState } from '@/composables/useSidebarState';
+import type { Template } from '@/types/generated/api-client';
 
-export default {
-  name: 'AiPrompts',
-  setup() {
-    const { leftSidebarVisible } = useSidebarState();
-    const router = useRouter();
-    return { leftSidebarVisible, router };
-  },
-  data() {
-    return {
-      templates: [],
-      selectedTemplateId: null,
-      selectedTemplate: null,
-      loading: false,
-      error: null,
-      editingContent: '',
-      isSaving: false,
-      lastSaved: null,
-      // User info from server
-      userDisplayName: window.MedleyUser?.displayName || 'User',
-      userIsAuthenticated: window.MedleyUser?.isAuthenticated || false
-    };
-  },
-  methods: {
-    async loadTemplates() {
-      this.loading = true;
-      this.error = null;
-      try {
-        this.templates = await api.get('/api/templates');
-      } catch (err) {
-        this.error = 'Failed to load templates: ' + err.message;
-        console.error('Error loading templates:', err);
-      } finally {
-        this.loading = false;
-      }
-    },
+// Setup composables
+const { leftSidebarVisible } = useSidebarState();
+const router = useRouter();
 
-    async selectTemplate(template) {
-      try {
-        const fullTemplate = await api.get(`/api/templates/${template.id}`);
-        
-        this.selectedTemplate = fullTemplate;
-        this.selectedTemplateId = template.id;
-        this.editingContent = fullTemplate.content || '';
-        this.lastSaved = fullTemplate.lastModifiedAt ? new Date(fullTemplate.lastModifiedAt) : null;
-        
-        // Use Vue Router to update the URL, which will trigger the App.vue watcher
-        await this.router.push({ query: { id: template.id } });
-      } catch (err) {
-        console.error('Error loading template:', err);
-        this.error = 'Failed to load template: ' + err.message;
-      }
-    },
+// Reactive state
+const templates = ref<Template[]>([]);
+const selectedTemplateId = ref<string | null>(null);
+const selectedTemplate = ref<Template | null>(null);
+const loading = ref<boolean>(false);
+const error = ref<string | null>(null);
+const editingContent = ref<string>('');
+const isSaving = ref<boolean>(false);
+const lastSaved = ref<Date | null>(null);
+const userDisplayName = ref<string>(window.MedleyUser?.displayName || 'User');
+const userIsAuthenticated = ref<boolean>(window.MedleyUser?.isAuthenticated || false);
 
-    async saveTemplate() {
-      if (!this.selectedTemplate || this.isSaving) return;
-
-      this.isSaving = true;
-      try {
-        const updated = await api.put(`/api/templates/${this.selectedTemplate.id}`, {
-          content: this.editingContent
-        });
-
-        this.selectedTemplate = updated;
-        this.lastSaved = new Date();
-      } catch (err) {
-        console.error('Error saving template:', err);
-        alert('Failed to save template: ' + err.message);
-      } finally {
-        this.isSaving = false;
-      }
-    },
-
-    formatTime(date) {
-      if (!date) return '';
-      return new Date(date).toLocaleTimeString();
-    }
-  },
-
-  async mounted() {
-    await this.loadTemplates();
-
-    // Check URL for selected template ID
-    const urlParams = new URLSearchParams(window.location.search);
-    const templateIdFromUrl = urlParams.get('id');
-    if (templateIdFromUrl) {
-      const template = this.templates.find(t => t.id === templateIdFromUrl);
-      if (template) {
-        await this.selectTemplate(template);
-      }
-    } else if (this.templates.length > 0) {
-      // Auto-select first template
-      await this.selectTemplate(this.templates[0]);
-    }
-
-    // Handle browser back/forward
-    window.addEventListener('popstate', async () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const templateId = urlParams.get('id');
-      if (templateId && templateId !== this.selectedTemplateId) {
-        const template = this.templates.find(t => t.id === templateId);
-        if (template) {
-          await this.selectTemplate(template);
-        }
-      }
-    });
+// Methods
+const loadTemplates = async (): Promise<void> => {
+  loading.value = true;
+  error.value = null;
+  try {
+    const data = await api.get('/api/templates');
+    templates.value = data as Template[];
+  } catch (err: any) {
+    error.value = 'Failed to load templates: ' + err.message;
+    console.error('Error loading templates:', err);
+  } finally {
+    loading.value = false;
   }
 };
+
+const selectTemplate = async (template: Template): Promise<void> => {
+  try {
+    const fullTemplate = await api.get(`/api/templates/${template.id}`) as Template;
+    
+    selectedTemplate.value = fullTemplate;
+    selectedTemplateId.value = template.id;
+    editingContent.value = fullTemplate.content || '';
+    lastSaved.value = fullTemplate.lastModifiedAt ? new Date(fullTemplate.lastModifiedAt) : null;
+    
+    await router.push({ query: { id: template.id } });
+  } catch (err: any) {
+    console.error('Error loading template:', err);
+    error.value = 'Failed to load template: ' + err.message;
+  }
+};
+
+const saveTemplate = async (): Promise<void> => {
+  if (!selectedTemplate.value || isSaving.value) return;
+
+  isSaving.value = true;
+  try {
+    const updated = await api.put(`/api/templates/${selectedTemplate.value.id}`, {
+      content: editingContent.value
+    }) as Template;
+
+    selectedTemplate.value = updated;
+    lastSaved.value = new Date();
+  } catch (err: any) {
+    console.error('Error saving template:', err);
+    alert('Failed to save template: ' + err.message);
+  } finally {
+    isSaving.value = false;
+  }
+};
+
+const formatTime = (date: Date | null): string => {
+  if (!date) return '';
+  return new Date(date).toLocaleTimeString();
+};
+
+// Lifecycle hooks
+onMounted(async () => {
+  await loadTemplates();
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const templateIdFromUrl = urlParams.get('id');
+  if (templateIdFromUrl) {
+    const template = templates.value.find(t => t.id === templateIdFromUrl);
+    if (template) {
+      await selectTemplate(template);
+    }
+  } else if (templates.value.length > 0) {
+    await selectTemplate(templates.value[0]);
+  }
+
+  window.addEventListener('popstate', async () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const templateId = urlParams.get('id');
+    if (templateId && templateId !== selectedTemplateId.value) {
+      const template = templates.value.find(t => t.id === templateId);
+      if (template) {
+        await selectTemplate(template);
+      }
+    }
+  });
+});
 </script>
 
 <style scoped>

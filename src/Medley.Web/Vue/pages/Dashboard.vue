@@ -181,367 +181,391 @@
   </div>
 </template>
 
-<script>
+<script setup lang="ts">
+import { ref, onMounted, onBeforeUnmount, nextTick, type Ref } from 'vue';
 import { Chart, registerables } from 'chart.js';
-import { api } from '@/utils/api.js';
-import { getIconClass } from '@/utils/helpers.js';
+import { api } from '@/utils/api';
+import { getIconClass } from '@/utils/helpers';
 
 // Register Chart.js components
 Chart.register(...registerables);
 
-export default {
-  name: 'Dashboard',
-  data() {
-    return {
-      metrics: {
-        totalSources: 0,
-        totalFragments: 0,
-        totalArticles: 0,
-        sourcesByType: [],
-        sourcesByIntegration: [],
-        sourcesByYear: [],
-        sourcesByMonth: [],
-        fragmentsByCategory: [],
-        articlesByType: [],
-        sourcesByTagType: [],
-        fragmentsPendingEmbedding: 0,
-        sourcesPendingSmartTagging: 0,
-        sourcesPendingFragmentGeneration: 0
-      },
-      loading: false,
-      error: null,
-      charts: {},
-      // User info from server
-      userDisplayName: window.MedleyUser?.displayName || 'User',
-      userIsAuthenticated: window.MedleyUser?.isAuthenticated || false
-    };
-  },
-  methods: {
-    async loadMetrics() {
-      this.loading = true;
-      this.error = null;
-      try {
-        this.metrics = await api.get('/api/dashboard/metrics');
-      } catch (err) {
-        this.error = 'Failed to load dashboard metrics: ' + err.message;
-        console.error('Error loading metrics:', err);
-      } finally {
-        this.loading = false;
+// Interfaces
+interface MetricData {
+  totalSources: number;
+  totalFragments: number;
+  totalArticles: number;
+  sourcesByType: Array<{ label: string; count: number }>;
+  sourcesByIntegration: Array<{ label: string; count: number }>;
+  sourcesByYear: Array<{ label: string; count: number; values: Record<string, number> }>;
+  sourcesByMonth: Array<{ label: string; count: number }>;
+  fragmentsByCategory: Array<{ label: string; count: number; icon?: string }>;
+  articlesByType: Array<{ label: string; count: number; icon?: string }>;
+  sourcesByTagType: Array<{ tagTypeName: string; tagCounts: Array<{ label: string; count: number }> }>;
+  fragmentsPendingEmbedding: number;
+  sourcesPendingSmartTagging: number;
+  sourcesPendingFragmentGeneration: number;
+}
+
+// Reactive state
+const metrics = ref<MetricData>({
+  totalSources: 0,
+  totalFragments: 0,
+  totalArticles: 0,
+  sourcesByType: [],
+  sourcesByIntegration: [],
+  sourcesByYear: [],
+  sourcesByMonth: [],
+  fragmentsByCategory: [],
+  articlesByType: [],
+  sourcesByTagType: [],
+  fragmentsPendingEmbedding: 0,
+  sourcesPendingSmartTagging: 0,
+  sourcesPendingFragmentGeneration: 0
+});
+
+const loading = ref<boolean>(false);
+const error = ref<string | null>(null);
+const charts = ref<Record<string, Chart>>({});
+
+const userDisplayName = ref<string>(window.MedleyUser?.displayName || 'User');
+const userIsAuthenticated = ref<boolean>(window.MedleyUser?.isAuthenticated || false);
+
+// Refs for chart canvases
+const sourcesByTypeChart = ref<HTMLCanvasElement | null>(null);
+const sourcesByIntegrationChart = ref<HTMLCanvasElement | null>(null);
+const sourcesByYearChart = ref<HTMLCanvasElement | null>(null);
+const sourcesByMonthChart = ref<HTMLCanvasElement | null>(null);
+const fragmentsByCategoryChart = ref<HTMLCanvasElement | null>(null);
+const articlesByTypeChart = ref<HTMLCanvasElement | null>(null);
+const sourcesByTypeLegend = ref<HTMLDivElement | null>(null);
+const sourcesByIntegrationLegend = ref<HTMLDivElement | null>(null);
+const fragmentsByCategoryLegend = ref<HTMLDivElement | null>(null);
+const articlesByTypeLegend = ref<HTMLDivElement | null>(null);
+
+// Methods
+const loadMetrics = async (): Promise<void> => {
+  loading.value = true;
+  error.value = null;
+  try {
+    const data = await api.get('/api/dashboard/metrics');
+    metrics.value = data as MetricData;
+  } catch (err: any) {
+    error.value = 'Failed to load dashboard metrics: ' + err.message;
+    console.error('Error loading metrics:', err);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const sanitizeId = (str: string): string => {
+  return str.replace(/[^a-zA-Z0-9]/g, '');
+};
+
+const initializeCharts = (): void => {
+  const colors = {
+    primary: [
+      "#3366CC", "#DC3912", "#FF9900", "#109618", "#990099", "#3B3EAC", "#0099C6",
+      "#DD4477", "#66AA00", "#B82E2E", "#316395", "#994499", "#22AA99", "#AAAA11",
+      "#6633CC", "#E67300", "#8B0707", "#329262", "#5574A6", "#651067"
+    ]
+  };
+
+  const defaultOptions: any = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false
       }
-    },
+    }
+  };
 
-    sanitizeId(str) {
-      return str.replace(/[^a-zA-Z0-9]/g, '');
-    },
+  const iconMap: Record<string, string> = {
+    'Meeting': 'bi-camera-video',
+    'Unknown': 'bi-question-circle',
+    'Fellow': 'bi-people',
+    'GitHub': 'bi-github',
+    'Manual': 'bi-person-fill',
+    'Slack': 'bi-slack',
+    'Jira': 'bi-kanban',
+    'Zendesk': 'bi-ticket-perforated',
+    'With Tags': 'bi-tags',
+    'Without Tags': 'bi-tag',
+    'Internal': 'bi-people-fill',
+    'External': 'bi-globe'
+  };
 
-    getIconClass: getIconClass,
+  // Update icon map with fragment categories
+  metrics.value.fragmentsByCategory.forEach(item => {
+    if (item.icon) {
+      iconMap[item.label] = item.icon;
+    }
+  });
 
-    initializeCharts() {
-      const colors = {
-        primary: [
-          "#3366CC", "#DC3912", "#FF9900", "#109618", "#990099", "#3B3EAC", "#0099C6",
-          "#DD4477", "#66AA00", "#B82E2E", "#316395", "#994499", "#22AA99", "#AAAA11",
-          "#6633CC", "#E67300", "#8B0707", "#329262", "#5574A6", "#651067"
-        ]
+  // Update icon map with article types
+  metrics.value.articlesByType.forEach(item => {
+    if (item.icon) {
+      iconMap[item.label] = item.icon;
+    }
+  });
+
+  const generateHtmlLegend = (chart: Chart, container: HTMLDivElement | null): void => {
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    const data = chart.data;
+    if (!data.labels || !data.labels.length || !data.datasets.length) return;
+
+    const dataset = data.datasets[0];
+
+    data.labels.forEach((label, i) => {
+      const hidden = !chart.getDataVisibility(i);
+
+      const badge = document.createElement('span');
+      badge.className = 'badge rounded-pill me-2 mb-2 p-2';
+      badge.style.backgroundColor = (dataset.backgroundColor as string[])[i];
+      badge.style.color = '#fff';
+      badge.style.cursor = 'pointer';
+      badge.style.fontSize = '0.9rem';
+      badge.style.transition = 'all 0.2s';
+
+      if (hidden) {
+        badge.style.textDecoration = 'line-through';
+        badge.style.opacity = '0.5';
+      }
+
+      badge.onclick = () => {
+        chart.toggleDataVisibility(i);
+        chart.update();
+        generateHtmlLegend(chart, container);
       };
 
-      const defaultOptions = {
-        responsive: true,
-        maintainAspectRatio: false,
+      const icon = iconMap[label as string] || 'bi-circle-fill';
+      const iconClass = getIconClass(icon);
+
+      badge.innerHTML = `<i class="${iconClass} me-1"></i>${label}`;
+
+      container.appendChild(badge);
+    });
+  };
+
+  // Sources by Type Chart
+  if (metrics.value.sourcesByType.length > 0 && sourcesByTypeChart.value) {
+    charts.value.sourcesByType = new Chart(sourcesByTypeChart.value, {
+      type: 'doughnut',
+      data: {
+        labels: metrics.value.sourcesByType.map(x => x.label),
+        datasets: [{
+          data: metrics.value.sourcesByType.map(x => x.count),
+          backgroundColor: colors.primary,
+          borderWidth: 0
+        }]
+      },
+      options: defaultOptions
+    });
+    generateHtmlLegend(charts.value.sourcesByType, sourcesByTypeLegend.value);
+  }
+
+  // Sources by Integration Chart
+  if (metrics.value.sourcesByIntegration.length > 0 && sourcesByIntegrationChart.value) {
+    charts.value.sourcesByIntegration = new Chart(sourcesByIntegrationChart.value, {
+      type: 'bar',
+      data: {
+        labels: metrics.value.sourcesByIntegration.map(x => x.label),
+        datasets: [{
+          label: 'Sources',
+          data: metrics.value.sourcesByIntegration.map(x => x.count),
+          backgroundColor: colors.primary,
+          borderRadius: 8,
+          borderSkipped: false
+        }]
+      },
+      options: {
+        ...defaultOptions,
+        plugins: {
+          ...defaultOptions.plugins,
+          legend: {
+            display: false
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              precision: 0
+            }
+          }
+        }
+      }
+    });
+    generateHtmlLegend(charts.value.sourcesByIntegration, sourcesByIntegrationLegend.value);
+  }
+
+  // Sources by Year Chart
+  if (metrics.value.sourcesByYear.length > 0 && sourcesByYearChart.value) {
+    charts.value.sourcesByYear = new Chart(sourcesByYearChart.value, {
+      type: 'bar',
+      data: {
+        labels: metrics.value.sourcesByYear.map(x => x.label),
+        datasets: [
+          {
+            label: 'Internal',
+            data: metrics.value.sourcesByYear.map(x => x.values['Internal'] || 0),
+            backgroundColor: colors.primary[3],
+            borderRadius: 4
+          },
+          {
+            label: 'External',
+            data: metrics.value.sourcesByYear.map(x => x.values['External'] || 0),
+            backgroundColor: colors.primary[1],
+            borderRadius: 4
+          },
+          {
+            label: 'Unknown',
+            data: metrics.value.sourcesByYear.map(x => x.values['Unknown'] || 0),
+            backgroundColor: colors.primary[0],
+            borderRadius: 4
+          }
+        ]
+      },
+      options: {
+        ...defaultOptions,
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top'
+          }
+        },
+        scales: {
+          x: {
+            stacked: true
+          },
+          y: {
+            stacked: true,
+            beginAtZero: true,
+            ticks: {
+              precision: 0
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // Sources by Month Chart
+  if (metrics.value.sourcesByMonth.length > 0 && sourcesByMonthChart.value) {
+    charts.value.sourcesByMonth = new Chart(sourcesByMonthChart.value, {
+      type: 'line',
+      data: {
+        labels: metrics.value.sourcesByMonth.map(x => x.label),
+        datasets: [{
+          label: 'Sources',
+          data: metrics.value.sourcesByMonth.map(x => x.count),
+          borderColor: colors.primary[1],
+          backgroundColor: colors.primary[1] + '20',
+          fill: true,
+          tension: 0.1,
+          pointRadius: 3
+        }]
+      },
+      options: {
+        ...defaultOptions,
         plugins: {
           legend: {
             display: false
           }
         }
-      };
-
-      const iconMap = {
-        'Meeting': 'bi-camera-video',
-        'Unknown': 'bi-question-circle',
-        'Fellow': 'bi-people',
-        'GitHub': 'bi-github',
-        'Manual': 'bi-person-fill',
-        'Slack': 'bi-slack',
-        'Jira': 'bi-kanban',
-        'Zendesk': 'bi-ticket-perforated',
-        'With Tags': 'bi-tags',
-        'Without Tags': 'bi-tag',
-        'Internal': 'bi-people-fill',
-        'External': 'bi-globe'
-      };
-
-      // Update icon map with fragment categories
-      this.metrics.fragmentsByCategory.forEach(item => {
-        if (item.icon) {
-          iconMap[item.label] = item.icon;
-        }
-      });
-
-      // Update icon map with article types
-      this.metrics.articlesByType.forEach(item => {
-        if (item.icon) {
-          iconMap[item.label] = item.icon;
-        }
-      });
-
-      const generateHtmlLegend = (chart, container) => {
-        if (!container) return;
-
-        container.innerHTML = '';
-
-        const data = chart.data;
-        if (!data.labels.length || !data.datasets.length) return;
-
-        const dataset = data.datasets[0];
-
-        data.labels.forEach((label, i) => {
-          const hidden = !chart.getDataVisibility(i);
-
-          const badge = document.createElement('span');
-          badge.className = 'badge rounded-pill me-2 mb-2 p-2';
-          badge.style.backgroundColor = dataset.backgroundColor[i];
-          badge.style.color = '#fff';
-          badge.style.cursor = 'pointer';
-          badge.style.fontSize = '0.9rem';
-          badge.style.transition = 'all 0.2s';
-
-          if (hidden) {
-            badge.style.textDecoration = 'line-through';
-            badge.style.opacity = 0.5;
-          }
-
-          badge.onclick = () => {
-            chart.toggleDataVisibility(i);
-            chart.update();
-            generateHtmlLegend(chart, container);
-          };
-
-          const icon = iconMap[label] || 'bi-circle-fill';
-          const iconClass = getIconClass(icon);
-
-          badge.innerHTML = `<i class="${iconClass} me-1"></i>${label}`;
-
-          container.appendChild(badge);
-        });
-      };
-
-      // Sources by Type Chart
-      if (this.metrics.sourcesByType.length > 0 && this.$refs.sourcesByTypeChart) {
-        this.charts.sourcesByType = new Chart(this.$refs.sourcesByTypeChart, {
-          type: 'doughnut',
-          data: {
-            labels: this.metrics.sourcesByType.map(x => x.label),
-            datasets: [{
-              data: this.metrics.sourcesByType.map(x => x.count),
-              backgroundColor: colors.primary,
-              borderWidth: 0
-            }]
-          },
-          options: defaultOptions
-        });
-        generateHtmlLegend(this.charts.sourcesByType, this.$refs.sourcesByTypeLegend);
       }
-
-      // Sources by Integration Chart
-      if (this.metrics.sourcesByIntegration.length > 0 && this.$refs.sourcesByIntegrationChart) {
-        this.charts.sourcesByIntegration = new Chart(this.$refs.sourcesByIntegrationChart, {
-          type: 'bar',
-          data: {
-            labels: this.metrics.sourcesByIntegration.map(x => x.label),
-            datasets: [{
-              label: 'Sources',
-              data: this.metrics.sourcesByIntegration.map(x => x.count),
-              backgroundColor: colors.primary,
-              borderRadius: 8,
-              borderSkipped: false
-            }]
-          },
-          options: {
-            ...defaultOptions,
-            plugins: {
-              ...defaultOptions.plugins,
-              legend: {
-                display: false
-              }
-            },
-            scales: {
-              y: {
-                beginAtZero: true,
-                ticks: {
-                  precision: 0
-                }
-              }
-            }
-          }
-        });
-        generateHtmlLegend(this.charts.sourcesByIntegration, this.$refs.sourcesByIntegrationLegend);
-      }
-
-      // Sources by Year Chart
-      if (this.metrics.sourcesByYear.length > 0 && this.$refs.sourcesByYearChart) {
-        this.charts.sourcesByYear = new Chart(this.$refs.sourcesByYearChart, {
-          type: 'bar',
-          data: {
-            labels: this.metrics.sourcesByYear.map(x => x.label),
-            datasets: [
-              {
-                label: 'Internal',
-                data: this.metrics.sourcesByYear.map(x => x.values['Internal'] || 0),
-                backgroundColor: colors.primary[3],
-                borderRadius: 4
-              },
-              {
-                label: 'External',
-                data: this.metrics.sourcesByYear.map(x => x.values['External'] || 0),
-                backgroundColor: colors.primary[1],
-                borderRadius: 4
-              },
-              {
-                label: 'Unknown',
-                data: this.metrics.sourcesByYear.map(x => x.values['Unknown'] || 0),
-                backgroundColor: colors.primary[0],
-                borderRadius: 4
-              }
-            ]
-          },
-          options: {
-            ...defaultOptions,
-            plugins: {
-              legend: {
-                display: true,
-                position: 'top'
-              }
-            },
-            scales: {
-              x: {
-                stacked: true
-              },
-              y: {
-                stacked: true,
-                beginAtZero: true,
-                ticks: {
-                  precision: 0
-                }
-              }
-            }
-          }
-        });
-      }
-
-      // Sources by Month Chart
-      if (this.metrics.sourcesByMonth.length > 0 && this.$refs.sourcesByMonthChart) {
-        this.charts.sourcesByMonth = new Chart(this.$refs.sourcesByMonthChart, {
-          type: 'line',
-          data: {
-            labels: this.metrics.sourcesByMonth.map(x => x.label),
-            datasets: [{
-              label: 'Sources',
-              data: this.metrics.sourcesByMonth.map(x => x.count),
-              borderColor: colors.primary[1],
-              backgroundColor: colors.primary[1] + '20',
-              fill: true,
-              tension: 0.1,
-              pointRadius: 3
-            }]
-          },
-          options: {
-            ...defaultOptions,
-            plugins: {
-              legend: {
-                display: false
-              }
-            }
-          }
-        });
-      }
-
-      // Fragments by Category Chart
-      if (this.metrics.fragmentsByCategory.length > 0 && this.$refs.fragmentsByCategoryChart) {
-        this.charts.fragmentsByCategory = new Chart(this.$refs.fragmentsByCategoryChart, {
-          type: 'pie',
-          data: {
-            labels: this.metrics.fragmentsByCategory.map(x => x.label),
-            datasets: [{
-              data: this.metrics.fragmentsByCategory.map(x => x.count),
-              backgroundColor: colors.primary.slice(0, this.metrics.fragmentsByCategory.length),
-              borderWidth: 0
-            }]
-          },
-          options: defaultOptions
-        });
-        generateHtmlLegend(this.charts.fragmentsByCategory, this.$refs.fragmentsByCategoryLegend);
-      }
-
-      // Articles by Type Chart
-      if (this.metrics.articlesByType.length > 0 && this.$refs.articlesByTypeChart) {
-        this.charts.articlesByType = new Chart(this.$refs.articlesByTypeChart, {
-          type: 'pie',
-          data: {
-            labels: this.metrics.articlesByType.map(x => x.label),
-            datasets: [{
-              data: this.metrics.articlesByType.map(x => x.count),
-              backgroundColor: colors.primary.slice(0, this.metrics.articlesByType.length),
-              borderWidth: 0
-            }]
-          },
-          options: defaultOptions
-        });
-        generateHtmlLegend(this.charts.articlesByType, this.$refs.articlesByTypeLegend);
-      }
-
-      // Tag Charts
-      this.metrics.sourcesByTagType.forEach(metric => {
-        const safeId = this.sanitizeId(metric.tagTypeName);
-        const canvasRef = this.$refs['tagChart_' + safeId];
-        
-        if (canvasRef && canvasRef[0] && metric.tagCounts.length > 0) {
-          this.charts['tag_' + safeId] = new Chart(canvasRef[0], {
-            type: 'pie',
-            data: {
-              labels: metric.tagCounts.map(x => x.label),
-              datasets: [{
-                data: metric.tagCounts.map(x => x.count),
-                backgroundColor: colors.primary.slice(0, metric.tagCounts.length),
-                borderWidth: 0
-              }]
-            },
-            options: {
-              ...defaultOptions,
-              plugins: {
-                ...defaultOptions.plugins,
-                legend: {
-                  display: true,
-                  position: 'right'
-                }
-              }
-            }
-          });
-        }
-      });
-    },
-
-    destroyCharts() {
-      Object.values(this.charts).forEach(chart => {
-        if (chart) {
-          chart.destroy();
-        }
-      });
-      this.charts = {};
-    }
-  },
-
-  async mounted() {
-    await this.loadMetrics();
-    
-    this.$nextTick(() => {
-      this.initializeCharts();
     });
-  },
-
-  beforeUnmount() {
-    this.destroyCharts();
   }
+
+  // Fragments by Category Chart
+  if (metrics.value.fragmentsByCategory.length > 0 && fragmentsByCategoryChart.value) {
+    charts.value.fragmentsByCategory = new Chart(fragmentsByCategoryChart.value, {
+      type: 'pie',
+      data: {
+        labels: metrics.value.fragmentsByCategory.map(x => x.label),
+        datasets: [{
+          data: metrics.value.fragmentsByCategory.map(x => x.count),
+          backgroundColor: colors.primary.slice(0, metrics.value.fragmentsByCategory.length),
+          borderWidth: 0
+        }]
+      },
+      options: defaultOptions
+    });
+    generateHtmlLegend(charts.value.fragmentsByCategory, fragmentsByCategoryLegend.value);
+  }
+
+  // Articles by Type Chart
+  if (metrics.value.articlesByType.length > 0 && articlesByTypeChart.value) {
+    charts.value.articlesByType = new Chart(articlesByTypeChart.value, {
+      type: 'pie',
+      data: {
+        labels: metrics.value.articlesByType.map(x => x.label),
+        datasets: [{
+          data: metrics.value.articlesByType.map(x => x.count),
+          backgroundColor: colors.primary.slice(0, metrics.value.articlesByType.length),
+          borderWidth: 0
+        }]
+      },
+      options: defaultOptions
+    });
+    generateHtmlLegend(charts.value.articlesByType, articlesByTypeLegend.value);
+  }
+
+  // Tag Charts
+  metrics.value.sourcesByTagType.forEach(metric => {
+    const safeId = sanitizeId(metric.tagTypeName);
+    const canvasRef = (window as any).$refs?.['tagChart_' + safeId];
+    
+    if (canvasRef && canvasRef[0] && metric.tagCounts.length > 0) {
+      charts.value['tag_' + safeId] = new Chart(canvasRef[0], {
+        type: 'pie',
+        data: {
+          labels: metric.tagCounts.map(x => x.label),
+          datasets: [{
+            data: metric.tagCounts.map(x => x.count),
+            backgroundColor: colors.primary.slice(0, metric.tagCounts.length),
+            borderWidth: 0
+          }]
+        },
+        options: {
+          ...defaultOptions,
+          plugins: {
+            ...defaultOptions.plugins,
+            legend: {
+              display: true,
+              position: 'right'
+            }
+          }
+        }
+      });
+    }
+  });
 };
+
+const destroyCharts = (): void => {
+  Object.values(charts.value).forEach(chart => {
+    if (chart) {
+      chart.destroy();
+    }
+  });
+  charts.value = {};
+};
+
+// Lifecycle hooks
+onMounted(async () => {
+  await loadMetrics();
+  
+  await nextTick();
+  initializeCharts();
+});
+
+onBeforeUnmount(() => {
+  destroyCharts();
+});
 </script>
 
 <style scoped>
