@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using Medley.Application.Hubs;
 using Medley.Application.Hubs.Clients;
 using Medley.Application.Interfaces;
+using Medley.Application.Models.DTOs;
 using Medley.Domain.Entities;
 using Medley.Web.Extensions;
 using Microsoft.AspNetCore.Authorization;
@@ -52,16 +53,18 @@ public class ArticlesApiController : ControllerBase
     /// <summary>
     /// Get all article types
     /// </summary>
+    /// <returns>List of article types</returns>
     [HttpGet("types")]
-    public async Task<IActionResult> GetArticleTypes()
+    [ProducesResponseType(typeof(List<ArticleTypeDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<List<ArticleTypeDto>>> GetArticleTypes()
     {
         var articleTypes = await _articleTypeRepository.Query()
             .OrderBy(at => at.Name)
-            .Select(at => new
+            .Select(at => new ArticleTypeDto
             {
-                at.Id,
-                at.Name,
-                at.Icon
+                Id = at.Id,
+                Name = at.Name,
+                Icon = at.Icon
             })
             .ToListAsync();
 
@@ -71,8 +74,13 @@ public class ArticlesApiController : ControllerBase
     /// <summary>
     /// Get all articles as a tree structure, optionally filtered
     /// </summary>
+    /// <param name="query">Text search query</param>
+    /// <param name="statuses">Filter by article statuses</param>
+    /// <param name="articleTypeIds">Filter by article type IDs</param>
+    /// <returns>Tree structure of articles</returns>
     [HttpGet("tree")]
-    public async Task<IActionResult> GetTree(
+    [ProducesResponseType(typeof(List<ArticleDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<List<ArticleDto>>> GetTree(
         [FromQuery] string? query = null,
         [FromQuery] int[]? statuses = null,
         [FromQuery] Guid[]? articleTypeIds = null)
@@ -154,8 +162,12 @@ public class ArticlesApiController : ControllerBase
     /// <summary>
     /// Get a specific article by ID
     /// </summary>
+    /// <param name="id">Article ID</param>
+    /// <returns>Article details</returns>
     [HttpGet("{id}")]
-    public async Task<IActionResult> Get(Guid id)
+    [ProducesResponseType(typeof(ArticleDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ArticleDto>> Get(Guid id)
     {
         var article = await _articleRepository.Query()
             .Include(a => a.ChildArticles)
@@ -193,8 +205,12 @@ public class ArticlesApiController : ControllerBase
     /// <summary>
     /// Get children of a specific article
     /// </summary>
+    /// <param name="id">Parent article ID</param>
+    /// <returns>List of child articles</returns>
     [HttpGet("{id}/children")]
-    public async Task<IActionResult> GetChildren(Guid id)
+    [ProducesResponseType(typeof(List<ArticleDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<List<ArticleDto>>> GetChildren(Guid id)
     {
         var children = await _articleRepository.Query()
             .Where(a => a.ParentArticleId == id)
@@ -215,8 +231,12 @@ public class ArticlesApiController : ControllerBase
     /// <summary>
     /// Create a new article
     /// </summary>
+    /// <param name="request">Article creation request</param>
+    /// <returns>Created article</returns>
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateArticleRequest request)
+    [ProducesResponseType(typeof(ArticleDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ArticleDto>> Create([FromBody] ArticleCreateRequest request)
     {
         var currentUser = await _medleyContext.GetCurrentUserAsync();
         
@@ -264,8 +284,14 @@ public class ArticlesApiController : ControllerBase
     /// <summary>
     /// Update article metadata (title, type, status)
     /// </summary>
+    /// <param name="id">Article ID</param>
+    /// <param name="request">Metadata update request</param>
+    /// <returns>Updated article</returns>
     [HttpPut("{id}/metadata")]
-    public async Task<IActionResult> UpdateMetadata(Guid id, [FromBody] UpdateArticleMetadataRequest request)
+    [ProducesResponseType(typeof(ArticleDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ArticleDto>> UpdateMetadata(Guid id, [FromBody] ArticleUpdateMetadataRequest request)
     {
         var article = await _articleRepository.GetByIdAsync(id);
         if (article == null)
@@ -314,8 +340,15 @@ public class ArticlesApiController : ControllerBase
     /// <summary>
     /// Update article content
     /// </summary>
+    /// <param name="id">Article ID</param>
+    /// <param name="request">Content update request</param>
+    /// <returns>Version capture response</returns>
     [HttpPut("{id}/content")]
-    public async Task<IActionResult> UpdateContent(Guid id, [FromBody] UpdateArticleContentRequest request)
+    [ProducesResponseType(typeof(VersionCaptureResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<VersionCaptureResponse>> UpdateContent(Guid id, [FromBody] ArticleUpdateContentRequest request)
     {
         var user = await _medleyContext.GetCurrentUserAsync();
         if (user == null)
@@ -393,19 +426,22 @@ public class ArticlesApiController : ControllerBase
             await SendAssignmentNotificationAsync(article);
         }
 
-        return Ok(new
+        return Ok(new VersionCaptureResponse
         {
-            success = true,
-            versionId = capturedVersion.Id,
-            versionNumber = capturedVersion.VersionNumber,
-            isNewVersion = capturedVersion.IsNewVersion
+            VersionId = capturedVersion.Id,
+            VersionNumber = capturedVersion.VersionNumber,
+            IsNewVersion = capturedVersion.IsNewVersion
         });
     }
 
     /// <summary>
     /// Delete an article
     /// </summary>
+    /// <param name="id">Article ID</param>
+    /// <returns>No content</returns>
     [HttpDelete("{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid id)
     {
         var article = await _articleRepository.GetByIdAsync(id);
@@ -422,8 +458,14 @@ public class ArticlesApiController : ControllerBase
     /// <summary>
     /// Move an article to a different parent
     /// </summary>
+    /// <param name="id">Article ID to move</param>
+    /// <param name="request">Move request with new parent ID</param>
+    /// <returns>Success response</returns>
     [HttpPut("{id}/move")]
-    public async Task<IActionResult> Move(Guid id, [FromBody] MoveArticleRequest request)
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Move(Guid id, [FromBody] ArticleMoveRequest request)
     {
         // Get the article to move
         var article = await _articleRepository.Query()
@@ -666,8 +708,12 @@ public class ArticlesApiController : ControllerBase
     /// <summary>
     /// Get version history for an article (all versions - User and AI)
     /// </summary>
+    /// <param name="id">Article ID</param>
+    /// <returns>List of article versions</returns>
     [HttpGet("{id}/versions")]
-    public async Task<IActionResult> GetVersionHistory(Guid id)
+    [ProducesResponseType(typeof(List<ArticleVersionDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<List<ArticleVersionDto>>> GetVersionHistory(Guid id)
     {
         var article = await _articleRepository.GetByIdAsync(id);
         if (article == null)
@@ -683,8 +729,13 @@ public class ArticlesApiController : ControllerBase
     /// <summary>
     /// Get a specific version by ID (User or AI)
     /// </summary>
+    /// <param name="articleId">Article ID</param>
+    /// <param name="versionId">Version ID</param>
+    /// <returns>Version details</returns>
     [HttpGet("{articleId}/versions/{versionId}")]
-    public async Task<IActionResult> GetVersion(Guid articleId, Guid versionId)
+    [ProducesResponseType(typeof(ArticleVersionDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ArticleVersionDto>> GetVersion(Guid articleId, Guid versionId)
     {
         var article = await _articleRepository.GetByIdAsync(articleId);
         if (article == null)
@@ -707,8 +758,13 @@ public class ArticlesApiController : ControllerBase
     /// <summary>
     /// Get HTML diff for a specific version
     /// </summary>
+    /// <param name="articleId">Article ID</param>
+    /// <param name="versionId">Version ID</param>
+    /// <returns>Version comparison with before/after content</returns>
     [HttpGet("{articleId}/versions/{versionId}/diff")]
-    public async Task<IActionResult> GetVersionDiff(Guid articleId, Guid versionId)
+    [ProducesResponseType(typeof(ArticleVersionComparisonDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ArticleVersionComparisonDto>> GetVersionDiff(Guid articleId, Guid versionId)
     {
         var article = await _articleRepository.GetByIdAsync(articleId);
         if (article == null)
@@ -722,19 +778,28 @@ public class ArticlesApiController : ControllerBase
             return NotFound(new { message = "Version not found" });
         }
 
-        return Ok(new 
+        return Ok(new ArticleVersionComparisonDto
         { 
-            beforeContent = comparison.BeforeContent,
-            afterContent = comparison.AfterContent,
-            versionNumber = comparison.VersionNumber
+            VersionId = versionId,
+            VersionNumber = comparison.VersionNumber,
+            BeforeContent = comparison.BeforeContent,
+            AfterContent = comparison.AfterContent
         });
     }
 
     /// <summary>
     /// Accept an AI version by creating a new User version with the AI content
     /// </summary>
+    /// <param name="articleId">Article ID</param>
+    /// <param name="versionId">AI version ID to accept</param>
+    /// <returns>New user version details</returns>
     [HttpPost("{articleId}/versions/{versionId}/accept")]
-    public async Task<IActionResult> AcceptAiVersion(Guid articleId, Guid versionId)
+    [ProducesResponseType(typeof(VersionCaptureResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<VersionCaptureResponse>> AcceptAiVersion(Guid articleId, Guid versionId)
     {
         var article = await _articleRepository.GetByIdAsync(articleId);
         if (article == null)
@@ -763,12 +828,11 @@ public class ArticlesApiController : ControllerBase
                 ));
             });
 
-            return Ok(new
+            return Ok(new VersionCaptureResponse
             {
-                success = true,
-                versionId = newVersion.Id,
-                versionNumber = newVersion.VersionNumber,
-                message = "AI version accepted successfully"
+                VersionId = newVersion.Id,
+                VersionNumber = newVersion.VersionNumber,
+                IsNewVersion = true
             });
         }
         catch (InvalidOperationException ex)
@@ -785,7 +849,15 @@ public class ArticlesApiController : ControllerBase
     /// <summary>
     /// Reject an AI version by marking it as inactive
     /// </summary>
+    /// <param name="articleId">Article ID</param>
+    /// <param name="versionId">AI version ID to reject</param>
+    /// <returns>Success response</returns>
     [HttpPost("{articleId}/versions/{versionId}/reject")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> RejectAiVersion(Guid articleId, Guid versionId)
     {
         var article = await _articleRepository.GetByIdAsync(articleId);
@@ -861,28 +933,3 @@ public class ArticlesApiController : ControllerBase
         });
     }
 }
-
-public class CreateArticleRequest
-{
-    public required string Title { get; set; }
-    public Guid? ParentArticleId { get; set; }
-    public Guid? ArticleTypeId { get; set; }
-}
-
-public class UpdateArticleMetadataRequest
-{
-    public required string Title { get; set; }
-    public Domain.Enums.ArticleStatus? Status { get; set; }
-    public Guid? ArticleTypeId { get; set; }
-}
-
-public class UpdateArticleContentRequest
-{
-    public required string Content { get; set; }
-}
-
-public class MoveArticleRequest
-{
-    public Guid? NewParentArticleId { get; set; }
-}
-

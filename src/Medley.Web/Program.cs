@@ -122,6 +122,14 @@ public partial class Program
             // Configure ExpressiveAnnotations
             builder.Services.AddExpressiveAnnotations();
             
+            // Add OpenAPI/Swagger services
+            builder.Services.AddOpenApiDocument(config =>
+            {
+                config.DocumentName = "v1";
+                config.Title = "Medley API";
+                config.Version = "1.0.0";
+            });
+            
 #if DEBUG
             mvc.AddRazorRuntimeCompilation();
 #endif

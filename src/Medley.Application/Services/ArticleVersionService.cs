@@ -116,7 +116,7 @@ public class ArticleVersionService : IArticleVersionService
         return !string.IsNullOrWhiteSpace(contentAfterH1);
     }
 
-    public async Task<ArticleVersionDto> CaptureUserVersionAsync(
+    public async Task<ArticleVersionServiceDto> CaptureUserVersionAsync(
         Guid articleId, 
         string newContent, 
         string? previousContent, 
@@ -188,7 +188,7 @@ public class ArticleVersionService : IArticleVersionService
             // Get current version ID for status computation
             var article = await _articleRepository.GetByIdAsync(articleId);
             
-            return new ArticleVersionDto
+            return new ArticleVersionServiceDto
             {
                 Id = version.Id,
                 VersionNumber = version.VersionNumber.ToString(),
@@ -339,7 +339,7 @@ public class ArticleVersionService : IArticleVersionService
         return baseVersion;
     }
 
-    public async Task<List<ArticleVersionDto>> GetVersionsAsync(
+    public async Task<List<ArticleVersionServiceDto>> GetVersionsAsync(
         Guid articleId,
         VersionType? versionType = null,
         CancellationToken cancellationToken = default)
@@ -370,7 +370,7 @@ public class ArticleVersionService : IArticleVersionService
             .ToDictionary(g => g.Key, g => g.ToList());
 
         // Sort versions hierarchically and compute status for each
-        var sortedVersions = new List<ArticleVersionDto>();
+        var sortedVersions = new List<ArticleVersionServiceDto>();
         
         foreach (var v in allVersions
             .OrderByDescending(v => v.ParentVersion?.VersionNumber ?? v.VersionNumber)
@@ -379,7 +379,7 @@ public class ArticleVersionService : IArticleVersionService
         {
             var status = await ComputeVersionStatusAsync(v, currentVersionId, aiVersionsByParent, cancellationToken);
             
-            sortedVersions.Add(new ArticleVersionDto
+            sortedVersions.Add(new ArticleVersionServiceDto
             {
                 Id = v.Id,
                 VersionNumber = v.ParentVersion != null 
@@ -401,7 +401,7 @@ public class ArticleVersionService : IArticleVersionService
         return sortedVersions;
     }
 
-    public async Task<ArticleVersionComparisonDto?> GetVersionComparisonAsync(
+    public async Task<ArticleVersionComparisonServiceDto?> GetVersionComparisonAsync(
         Guid versionId,
         CancellationToken cancellationToken = default)
     {
@@ -442,7 +442,7 @@ public class ArticleVersionService : IArticleVersionService
             ? $"{version.ParentVersion.VersionNumber}.{version.VersionNumber}"
             : version.VersionNumber.ToString();
 
-        return new ArticleVersionComparisonDto
+        return new ArticleVersionComparisonServiceDto
         {
             BeforeContent = previousVersion?.ContentSnapshot ?? string.Empty,
             AfterContent = version.ContentSnapshot,
@@ -450,7 +450,7 @@ public class ArticleVersionService : IArticleVersionService
         };
     }
 
-    public async Task<ArticleVersionDto> CreateAiVersionAsync(
+    public async Task<ArticleVersionServiceDto> CreateAiVersionAsync(
         Guid articleId,
         string content,
         string changeMessage,
@@ -518,7 +518,7 @@ public class ArticleVersionService : IArticleVersionService
             _logger.LogInformation("Created AI article version {VersionId} (v{VersionNumber}) for article {ArticleId}",
                 newVersion.Id, versionNumber, articleId);
 
-            return new ArticleVersionDto
+            return new ArticleVersionServiceDto
             {
                 Id = newVersion.Id,
                 VersionNumber = mostRecentUserVersion.VersionNumber + "." + newVersion.VersionNumber,
@@ -542,7 +542,7 @@ public class ArticleVersionService : IArticleVersionService
         }
     }
 
-    public async Task<ArticleVersionDto> AcceptAiVersionAsync(
+    public async Task<ArticleVersionServiceDto> AcceptAiVersionAsync(
         Guid versionId, 
         User user, 
         CancellationToken cancellationToken = default)
@@ -598,7 +598,7 @@ public class ArticleVersionService : IArticleVersionService
                 "Accepted AI version {AiVersionId} for article {ArticleId}, created new User version {UserVersionId}",
                 versionId, article.Id, newUserVersion.Id);
 
-            return new ArticleVersionDto
+            return new ArticleVersionServiceDto
             {
                 Id = newUserVersion.Id,
                 VersionNumber = newUserVersion.VersionNumber.ToString(),

@@ -1,0 +1,2965 @@
+{
+  "x-generator": "NSwag v14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))",
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Medley API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/Dashboard/metrics": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "operationId": "Dashboard_GetMetrics",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardMetrics"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/load-balancer-health-check": {
+      "get": {
+        "tags": [
+          "Home"
+        ],
+        "operationId": "Home_HealthCheck",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/articles/{articleId}/assistant/conversation/{conversationId}": {
+      "get": {
+        "tags": [
+          "ArticleChatApi"
+        ],
+        "operationId": "ArticleChatApi_GetConversation",
+        "parameters": [
+          {
+            "name": "articleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "conversationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid",
+              "nullable": true
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/articles/{articleId}/assistant/conversation": {
+      "post": {
+        "tags": [
+          "ArticleChatApi"
+        ],
+        "operationId": "ArticleChatApi_CreateConversation",
+        "parameters": [
+          {
+            "name": "articleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "schema": {
+              "default": "Agent",
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/ConversationMode"
+                }
+              ]
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/articles/{articleId}/assistant/conversations/{conversationId}/messages": {
+      "get": {
+        "tags": [
+          "ArticleChatApi"
+        ],
+        "operationId": "ArticleChatApi_GetMessages",
+        "parameters": [
+          {
+            "name": "articleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "conversationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 2
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "x-position": 3
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "ArticleChatApi"
+        ],
+        "operationId": "ArticleChatApi_SendMessage",
+        "parameters": [
+          {
+            "name": "articleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "conversationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 2
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendMessageRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 3
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/articles/{articleId}/assistant/history": {
+      "get": {
+        "tags": [
+          "ArticleChatApi"
+        ],
+        "operationId": "ArticleChatApi_GetHistory",
+        "parameters": [
+          {
+            "name": "articleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/articles/{articleId}/assistant/conversations/{conversationId}/complete": {
+      "post": {
+        "tags": [
+          "ArticleChatApi"
+        ],
+        "operationId": "ArticleChatApi_CompleteConversation",
+        "parameters": [
+          {
+            "name": "articleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "conversationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/articles/{articleId}/assistant/conversations/{conversationId}/cancel": {
+      "post": {
+        "tags": [
+          "ArticleChatApi"
+        ],
+        "operationId": "ArticleChatApi_CancelConversation",
+        "parameters": [
+          {
+            "name": "articleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "conversationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/articles/types": {
+      "get": {
+        "tags": [
+          "ArticlesApi"
+        ],
+        "operationId": "ArticlesApi_GetArticleTypes",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ArticleTypeDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/articles/tree": {
+      "get": {
+        "tags": [
+          "ArticlesApi"
+        ],
+        "operationId": "ArticlesApi_GetTree",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 1
+          },
+          {
+            "name": "statuses",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "array",
+              "nullable": true,
+              "items": {
+                "type": "integer",
+                "format": "int32"
+              }
+            },
+            "x-position": 2
+          },
+          {
+            "name": "articleTypeIds",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "array",
+              "nullable": true,
+              "items": {
+                "type": "string",
+                "format": "guid"
+              }
+            },
+            "x-position": 3
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ArticleDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/articles/{id}": {
+      "get": {
+        "tags": [
+          "ArticlesApi"
+        ],
+        "operationId": "ArticlesApi_Get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticleDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "ArticlesApi"
+        ],
+        "operationId": "ArticlesApi_Delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/articles/{id}/children": {
+      "get": {
+        "tags": [
+          "ArticlesApi"
+        ],
+        "operationId": "ArticlesApi_GetChildren",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ArticleDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/articles": {
+      "post": {
+        "tags": [
+          "ArticlesApi"
+        ],
+        "operationId": "ArticlesApi_Create",
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArticleCreateRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticleDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/articles/{id}/metadata": {
+      "put": {
+        "tags": [
+          "ArticlesApi"
+        ],
+        "operationId": "ArticlesApi_UpdateMetadata",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArticleUpdateMetadataRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticleDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/articles/{id}/content": {
+      "put": {
+        "tags": [
+          "ArticlesApi"
+        ],
+        "operationId": "ArticlesApi_UpdateContent",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArticleUpdateContentRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionCaptureResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/articles/{id}/move": {
+      "put": {
+        "tags": [
+          "ArticlesApi"
+        ],
+        "operationId": "ArticlesApi_Move",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArticleMoveRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/articles/{id}/versions": {
+      "get": {
+        "tags": [
+          "ArticlesApi"
+        ],
+        "operationId": "ArticlesApi_GetVersionHistory",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ArticleVersionDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/articles/{articleId}/versions/{versionId}": {
+      "get": {
+        "tags": [
+          "ArticlesApi"
+        ],
+        "operationId": "ArticlesApi_GetVersion",
+        "parameters": [
+          {
+            "name": "articleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticleVersionDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/articles/{articleId}/versions/{versionId}/diff": {
+      "get": {
+        "tags": [
+          "ArticlesApi"
+        ],
+        "operationId": "ArticlesApi_GetVersionDiff",
+        "parameters": [
+          {
+            "name": "articleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticleVersionComparisonDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/articles/{articleId}/versions/{versionId}/accept": {
+      "post": {
+        "tags": [
+          "ArticlesApi"
+        ],
+        "operationId": "ArticlesApi_AcceptAiVersion",
+        "parameters": [
+          {
+            "name": "articleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionCaptureResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/articles/{articleId}/versions/{versionId}/reject": {
+      "post": {
+        "tags": [
+          "ArticlesApi"
+        ],
+        "operationId": "ArticlesApi_RejectAiVersion",
+        "parameters": [
+          {
+            "name": "articleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "versionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/fragments": {
+      "get": {
+        "tags": [
+          "FragmentsApi"
+        ],
+        "operationId": "FragmentsApi_GetAll",
+        "parameters": [
+          {
+            "name": "skip",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 0
+            },
+            "x-position": 1
+          },
+          {
+            "name": "take",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 100
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FragmentDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/fragments/{id}": {
+      "get": {
+        "tags": [
+          "FragmentsApi"
+        ],
+        "operationId": "FragmentsApi_Get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FragmentDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/fragments/by-source/{sourceId}": {
+      "get": {
+        "tags": [
+          "FragmentsApi"
+        ],
+        "operationId": "FragmentsApi_GetBySourceId",
+        "parameters": [
+          {
+            "name": "sourceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FragmentDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/fragments/search": {
+      "get": {
+        "tags": [
+          "FragmentsApi"
+        ],
+        "operationId": "FragmentsApi_Search",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "take",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FragmentSearchResult"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/fragments/titles": {
+      "post": {
+        "tags": [
+          "FragmentsApi"
+        ],
+        "operationId": "FragmentsApi_GetTitles",
+        "requestBody": {
+          "x-name": "ids",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "guid"
+                }
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FragmentTitleDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/articles/{articleId}/plans/active": {
+      "get": {
+        "tags": [
+          "PlanApi"
+        ],
+        "operationId": "PlanApi_GetActivePlan",
+        "parameters": [
+          {
+            "name": "articleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/articles/{articleId}/plans": {
+      "get": {
+        "tags": [
+          "PlanApi"
+        ],
+        "operationId": "PlanApi_GetAllPlans",
+        "parameters": [
+          {
+            "name": "articleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/articles/{articleId}/plans/{planId}": {
+      "get": {
+        "tags": [
+          "PlanApi"
+        ],
+        "operationId": "PlanApi_GetPlan",
+        "parameters": [
+          {
+            "name": "articleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "planId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "PlanApi"
+        ],
+        "operationId": "PlanApi_UpdatePlan",
+        "parameters": [
+          {
+            "name": "articleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "planId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 2
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePlanRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 3
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/articles/{articleId}/plans/{planId}/restore": {
+      "post": {
+        "tags": [
+          "PlanApi"
+        ],
+        "operationId": "PlanApi_RestorePlan",
+        "parameters": [
+          {
+            "name": "articleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "planId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/articles/{articleId}/plans/{planId}/fragments/{fragmentId}/include": {
+      "put": {
+        "tags": [
+          "PlanApi"
+        ],
+        "operationId": "PlanApi_UpdatePlanFragmentInclude",
+        "parameters": [
+          {
+            "name": "articleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "planId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 2
+          },
+          {
+            "name": "fragmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 3
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePlanFragmentIncludeRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 4
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/articles/{articleId}/plans/{planId}/fragments/{fragmentId}/instructions": {
+      "put": {
+        "tags": [
+          "PlanApi"
+        ],
+        "operationId": "PlanApi_UpdatePlanFragmentInstructions",
+        "parameters": [
+          {
+            "name": "articleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "planId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 2
+          },
+          {
+            "name": "fragmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 3
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePlanFragmentInstructionsRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 4
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/articles/{articleId}/plans/{planId}/accept": {
+      "post": {
+        "tags": [
+          "PlanApi"
+        ],
+        "operationId": "PlanApi_AcceptPlan",
+        "parameters": [
+          {
+            "name": "articleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "planId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/articles/{articleId}/plans/{planId}/reject": {
+      "post": {
+        "tags": [
+          "PlanApi"
+        ],
+        "operationId": "PlanApi_RejectPlan",
+        "parameters": [
+          {
+            "name": "articleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "planId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sources": {
+      "get": {
+        "tags": [
+          "SourcesApi"
+        ],
+        "operationId": "SourcesApi_GetAll",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 1
+          },
+          {
+            "name": "tagTypeId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "guid",
+              "nullable": true
+            },
+            "x-position": 2
+          },
+          {
+            "name": "value",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 3
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 0
+            },
+            "x-position": 4
+          },
+          {
+            "name": "take",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 100
+            },
+            "x-position": 5
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SourceSummaryDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sources/{id}": {
+      "get": {
+        "tags": [
+          "SourcesApi"
+        ],
+        "operationId": "SourcesApi_Get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sources/{id}/extract-fragments": {
+      "post": {
+        "tags": [
+          "SourcesApi"
+        ],
+        "operationId": "SourcesApi_ExtractFragments",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/sources/{id}/tag": {
+      "post": {
+        "tags": [
+          "SourcesApi"
+        ],
+        "operationId": "SourcesApi_TagSource",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "force",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/tagtypes": {
+      "get": {
+        "tags": [
+          "TagTypesApi"
+        ],
+        "operationId": "TagTypesApi_GetAll",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/templates": {
+      "get": {
+        "tags": [
+          "TemplatesApi"
+        ],
+        "operationId": "TemplatesApi_GetAll",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/templates/{id}": {
+      "get": {
+        "tags": [
+          "TemplatesApi"
+        ],
+        "operationId": "TemplatesApi_Get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "TemplatesApi"
+        ],
+        "operationId": "TemplatesApi_Update",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTemplateRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "DashboardMetrics": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "totalSources": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sourcesByType": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MetricItem"
+            }
+          },
+          "sourcesByIntegration": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MetricItem"
+            }
+          },
+          "sourcesByYear": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StackedMetricItem"
+            }
+          },
+          "sourcesByMonth": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MetricItem"
+            }
+          },
+          "sourcesByTagType": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TagTypeMetrics"
+            }
+          },
+          "sourcesPendingSmartTagging": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sourcesPendingFragmentGeneration": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalFragments": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "fragmentsByCategory": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MetricItem"
+            }
+          },
+          "fragmentsPendingEmbedding": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalArticles": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "articlesByType": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MetricItem"
+            }
+          }
+        }
+      },
+      "MetricItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "icon": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "StackedMetricItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "values": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        }
+      },
+      "TagTypeMetrics": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tagTypeName": {
+            "type": "string"
+          },
+          "tagCounts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MetricItem"
+            }
+          }
+        }
+      },
+      "ConversationMode": {
+        "type": "string",
+        "description": "",
+        "x-enumNames": [
+          "Agent",
+          "Plan"
+        ],
+        "enum": [
+          "Agent",
+          "Plan"
+        ]
+      },
+      "SendMessageRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "mode": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ConversationMode"
+              }
+            ]
+          }
+        }
+      },
+      "ArticleTypeDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "ArticleDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string",
+            "nullable": true
+          },
+          "content": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "$ref": "#/components/schemas/ArticleStatus"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "parentArticleId": {
+            "type": "string",
+            "format": "guid",
+            "nullable": true
+          },
+          "parentTitle": {
+            "type": "string",
+            "nullable": true
+          },
+          "articleTypeId": {
+            "type": "string",
+            "format": "guid",
+            "nullable": true
+          },
+          "assignedUser": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/UserSummaryDto"
+              }
+            ]
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ArticleDto"
+            }
+          },
+          "currentConversation": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ConversationSummaryDto"
+              }
+            ]
+          },
+          "childrenCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "fragmentsCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "modifiedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "ArticleStatus": {
+        "type": "string",
+        "description": "",
+        "x-enumNames": [
+          "Draft",
+          "Review",
+          "Approved",
+          "Archived"
+        ],
+        "enum": [
+          "Draft",
+          "Review",
+          "Approved",
+          "Archived"
+        ]
+      },
+      "UserSummaryDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "initials": {
+            "type": "string",
+            "nullable": true
+          },
+          "color": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "ConversationSummaryDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "isRunning": {
+            "type": "boolean"
+          },
+          "state": {
+            "$ref": "#/components/schemas/ConversationState"
+          }
+        }
+      },
+      "ConversationState": {
+        "type": "string",
+        "description": "",
+        "x-enumNames": [
+          "Active",
+          "Complete",
+          "Archived"
+        ],
+        "enum": [
+          "Active",
+          "Complete",
+          "Archived"
+        ]
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "additionalProperties": {
+          "nullable": true
+        },
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "instance": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "ArticleCreateRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1
+          },
+          "parentArticleId": {
+            "type": "string",
+            "format": "guid",
+            "nullable": true
+          },
+          "articleTypeId": {
+            "type": "string",
+            "format": "guid",
+            "nullable": true
+          }
+        }
+      },
+      "ArticleUpdateMetadataRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1
+          },
+          "status": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ArticleStatus"
+              }
+            ]
+          },
+          "articleTypeId": {
+            "type": "string",
+            "format": "guid",
+            "nullable": true
+          }
+        }
+      },
+      "VersionCaptureResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "isNewVersion": {
+            "type": "boolean"
+          },
+          "versionId": {
+            "type": "string",
+            "format": "guid"
+          },
+          "versionNumber": {
+            "type": "string"
+          }
+        }
+      },
+      "ArticleUpdateContentRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "content"
+        ],
+        "properties": {
+          "content": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "ArticleMoveRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "newParentArticleId": {
+            "type": "string",
+            "format": "guid",
+            "nullable": true
+          }
+        }
+      },
+      "ArticleVersionDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "articleId": {
+            "type": "string",
+            "format": "guid"
+          },
+          "conversationId": {
+            "type": "string",
+            "format": "guid",
+            "nullable": true
+          },
+          "contentSnapshot": {
+            "type": "string"
+          },
+          "versionNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "createdBy": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/UserSummaryDto"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "modifiedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "versionType": {
+            "$ref": "#/components/schemas/VersionType"
+          },
+          "parentVersionId": {
+            "type": "string",
+            "format": "guid",
+            "nullable": true
+          },
+          "changeMessage": {
+            "type": "string",
+            "nullable": true
+          },
+          "reviewAction": {
+            "$ref": "#/components/schemas/ReviewAction"
+          },
+          "reviewedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "reviewedBy": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/UserSummaryDto"
+              }
+            ]
+          }
+        }
+      },
+      "VersionType": {
+        "type": "string",
+        "description": "",
+        "x-enumNames": [
+          "User",
+          "AI"
+        ],
+        "enum": [
+          "User",
+          "AI"
+        ]
+      },
+      "ReviewAction": {
+        "type": "string",
+        "description": "",
+        "x-enumNames": [
+          "None",
+          "Accepted",
+          "Rejected"
+        ],
+        "enum": [
+          "None",
+          "Accepted",
+          "Rejected"
+        ]
+      },
+      "ArticleVersionComparisonDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "versionId": {
+            "type": "string",
+            "format": "guid"
+          },
+          "versionNumber": {
+            "type": "string"
+          },
+          "beforeContent": {
+            "type": "string"
+          },
+          "afterContent": {
+            "type": "string"
+          }
+        }
+      },
+      "FragmentDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "sourceId": {
+            "type": "string",
+            "format": "guid",
+            "nullable": true
+          },
+          "sourceName": {
+            "type": "string",
+            "nullable": true
+          },
+          "sourceType": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SourceType"
+              }
+            ]
+          },
+          "sourceDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastModifiedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "confidence": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ConfidenceLevel"
+              }
+            ]
+          },
+          "confidenceComment": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "SourceType": {
+        "type": "string",
+        "description": "",
+        "x-enumNames": [
+          "Unknown",
+          "Meeting"
+        ],
+        "enum": [
+          "Unknown",
+          "Meeting"
+        ]
+      },
+      "ConfidenceLevel": {
+        "type": "string",
+        "description": "",
+        "x-enumNames": [
+          "Unclear",
+          "Low",
+          "Medium",
+          "High",
+          "Certain"
+        ],
+        "enum": [
+          "Unclear",
+          "Low",
+          "Medium",
+          "High",
+          "Certain"
+        ]
+      },
+      "FragmentSearchResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "sourceId": {
+            "type": "string",
+            "format": "guid",
+            "nullable": true
+          },
+          "sourceName": {
+            "type": "string",
+            "nullable": true
+          },
+          "sourceType": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SourceType"
+              }
+            ]
+          },
+          "sourceDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "confidence": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ConfidenceLevel"
+              }
+            ]
+          },
+          "confidenceComment": {
+            "type": "string",
+            "nullable": true
+          },
+          "similarity": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "FragmentTitleDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "UpdatePlanRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "instructions": {
+            "type": "string"
+          }
+        }
+      },
+      "UpdatePlanFragmentIncludeRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "include": {
+            "type": "boolean"
+          }
+        }
+      },
+      "UpdatePlanFragmentInstructionsRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "instructions": {
+            "type": "string"
+          }
+        }
+      },
+      "SourceSummaryDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/SourceType"
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "integrationName": {
+            "type": "string"
+          },
+          "fragmentsCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "extractionStatus": {
+            "$ref": "#/components/schemas/ExtractionStatus"
+          }
+        }
+      },
+      "ExtractionStatus": {
+        "type": "string",
+        "description": "",
+        "x-enumNames": [
+          "NotStarted",
+          "InProgress",
+          "Completed",
+          "Failed"
+        ],
+        "enum": [
+          "NotStarted",
+          "InProgress",
+          "Completed",
+          "Failed"
+        ]
+      },
+      "SourceDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "type": {
+            "$ref": "#/components/schemas/SourceType"
+          },
+          "metadataType": {
+            "$ref": "#/components/schemas/SourceMetadataType"
+          },
+          "name": {
+            "type": "string"
+          },
+          "externalId": {
+            "type": "string",
+            "nullable": true
+          },
+          "content": {
+            "type": "string"
+          },
+          "metadataJson": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "isInternal": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "tagsGenerated": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "extractionStatus": {
+            "$ref": "#/components/schemas/ExtractionStatus"
+          },
+          "extractionMessage": {
+            "type": "string",
+            "nullable": true
+          },
+          "integrationName": {
+            "type": "string"
+          },
+          "fragmentsCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SourceTagDto"
+            }
+          }
+        }
+      },
+      "SourceMetadataType": {
+        "type": "string",
+        "description": "",
+        "x-enumNames": [
+          "Unknown",
+          "Collector_GoogleDrive",
+          "Collector_Fellow"
+        ],
+        "enum": [
+          "Unknown",
+          "Collector_GoogleDrive",
+          "Collector_Fellow"
+        ]
+      },
+      "SourceTagDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tagTypeId": {
+            "type": "string",
+            "format": "guid"
+          },
+          "tagType": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "allowedValue": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "UpdateTemplateRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "content": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      }
+    }
+  }
+}

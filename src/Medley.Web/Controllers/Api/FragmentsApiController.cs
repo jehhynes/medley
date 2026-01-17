@@ -1,5 +1,6 @@
 using Medley.Application.Configuration;
 using Medley.Application.Interfaces;
+using Medley.Application.Models.DTOs;
 using Medley.Application.Services;
 using Medley.Domain.Entities;
 using Medley.Domain.Enums;
@@ -42,8 +43,12 @@ public class FragmentsApiController : ControllerBase
     /// <summary>
     /// Get all fragments with pagination
     /// </summary>
+    /// <param name="skip">Number of fragments to skip</param>
+    /// <param name="take">Number of fragments to take</param>
+    /// <returns>List of fragments</returns>
     [HttpGet]
-    public async Task<IActionResult> GetAll([FromQuery] int skip = 0, [FromQuery] int take = 100)
+    [ProducesResponseType(typeof(List<FragmentDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<List<FragmentDto>>> GetAll([FromQuery] int skip = 0, [FromQuery] int take = 100)
     {
         var fragments = await _fragmentRepository.Query()
             .Include(f => f.Source)
@@ -52,19 +57,20 @@ public class FragmentsApiController : ControllerBase
             .ThenBy(f => f.Id) // Deterministic tiebreaker for pagination
             .Skip(skip)
             .Take(take)
-            .Select(f => new
+            .Select(f => new FragmentDto
             {
-                f.Id,
-                f.Title,
-                f.Summary,
-                f.Category,
+                Id = f.Id,
+                Title = f.Title,
+                Summary = f.Summary,
+                Category = f.Category,
+                Content = f.Content,
                 SourceId = f.Source == null ? null : (Guid?)f.Source.Id,
                 SourceName = f.Source == null ? null : (string?)f.Source.Name,
                 SourceType = f.Source == null ? null : (SourceType?)f.Source.Type,
                 SourceDate = f.Source == null ? null : (DateTimeOffset?)f.Source.Date,
-                f.CreatedAt,
-                f.Confidence,
-                f.ConfidenceComment
+                CreatedAt = f.CreatedAt,
+                Confidence = f.Confidence,
+                ConfidenceComment = f.ConfidenceComment
             })
             .ToListAsync();
 
@@ -74,8 +80,12 @@ public class FragmentsApiController : ControllerBase
     /// <summary>
     /// Get a specific fragment by ID
     /// </summary>
+    /// <param name="id">Fragment ID</param>
+    /// <returns>Fragment details</returns>
     [HttpGet("{id}")]
-    public async Task<IActionResult> Get(Guid id)
+    [ProducesResponseType(typeof(FragmentDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<FragmentDto>> Get(Guid id)
     {
         var fragment = await _fragmentRepository.Query()
             .Include(f => f.Source)
@@ -86,46 +96,53 @@ public class FragmentsApiController : ControllerBase
             return NotFound();
         }
 
-        return Ok(new
+        return Ok(new FragmentDto
         {
-            fragment.Id,
-            fragment.Title,
-            fragment.Summary,
-            fragment.Category,
-            fragment.Content,
+            Id = fragment.Id,
+            Title = fragment.Title,
+            Summary = fragment.Summary,
+            Category = fragment.Category,
+            Content = fragment.Content,
             SourceId = fragment.Source == null ? null : (Guid?)fragment.Source.Id,
             SourceName = fragment.Source == null ? null : (string?)fragment.Source.Name,
             SourceType = fragment.Source == null ? null : (SourceType?)fragment.Source.Type,
             SourceDate = fragment.Source == null ? null : (DateTimeOffset?)fragment.Source.Date,
-            fragment.CreatedAt,
-            fragment.LastModifiedAt,
-            fragment.Confidence,
-            fragment.ConfidenceComment
+            CreatedAt = fragment.CreatedAt,
+            LastModifiedAt = fragment.LastModifiedAt,
+            Confidence = fragment.Confidence,
+            ConfidenceComment = fragment.ConfidenceComment
         });
     }
 
     /// <summary>
     /// Get all fragments for a specific source
     /// </summary>
+    /// <param name="sourceId">Source ID</param>
+    /// <returns>List of fragments from the source</returns>
     [HttpGet("by-source/{sourceId}")]
-    public async Task<IActionResult> GetBySourceId(Guid sourceId)
+    [ProducesResponseType(typeof(List<FragmentDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<List<FragmentDto>>> GetBySourceId(Guid sourceId)
     {
         var fragments = await _fragmentRepository.Query()
             .Include(f => f.Source)
             .Where(f => f.Source!.Id == sourceId)
             .OrderByDescending(f => f.CreatedAt)
             .ThenBy(f => f.Id) // Deterministic tiebreaker
-            .Select(f => new
+            .Select(f => new FragmentDto
             {
-                f.Id,
-                f.Title,
-                f.Summary,
-                f.Category,
-                f.Content,
-                f.CreatedAt,
-                f.LastModifiedAt,
-                f.Confidence,
-                f.ConfidenceComment
+                Id = f.Id,
+                Title = f.Title,
+                Summary = f.Summary,
+                Category = f.Category,
+                Content = f.Content,
+                SourceId = f.Source!.Id,
+                SourceName = f.Source.Name,
+                SourceType = f.Source.Type,
+                SourceDate = f.Source.Date,
+                CreatedAt = f.CreatedAt,
+                LastModifiedAt = f.LastModifiedAt,
+                Confidence = f.Confidence,
+                ConfidenceComment = f.ConfidenceComment
             })
             .ToListAsync();
 
@@ -135,8 +152,14 @@ public class FragmentsApiController : ControllerBase
     /// <summary>
     /// Search fragments using semantic similarity (vector search)
     /// </summary>
+    /// <param name="query">Search query text</param>
+    /// <param name="take">Number of results to return</param>
+    /// <returns>List of fragments with similarity scores</returns>
     [HttpGet("search")]
-    public async Task<IActionResult> Search([FromQuery] string query, [FromQuery] int take = 50)
+    [ProducesResponseType(typeof(List<FragmentSearchResult>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<List<FragmentSearchResult>>> Search([FromQuery] string query, [FromQuery] int take = 50)
     {
         if (string.IsNullOrWhiteSpace(query))
         {
@@ -188,19 +211,19 @@ public class FragmentsApiController : ControllerBase
                 .Select(result =>
                 {
                     var fragment = fragmentLookup[result.Fragment.Id];
-                    return new
+                    return new FragmentSearchResult
                     {
-                        fragment.Id,
-                        fragment.Title,
-                        fragment.Summary,
-                        fragment.Category,
+                        Id = fragment.Id,
+                        Title = fragment.Title,
+                        Summary = fragment.Summary,
+                        Category = fragment.Category,
                         SourceId = fragment.Source == null ? null : (Guid?)fragment.Source.Id,
                         SourceName = fragment.Source == null ? null : (string?)fragment.Source.Name,
                         SourceType = fragment.Source == null ? null : (SourceType?)fragment.Source.Type,
                         SourceDate = fragment.Source == null ? null : (DateTimeOffset?)fragment.Source.Date,
-                        fragment.CreatedAt,
-                        fragment.Confidence,
-                        fragment.ConfidenceComment,
+                        CreatedAt = fragment.CreatedAt,
+                        Confidence = fragment.Confidence,
+                        ConfidenceComment = fragment.ConfidenceComment,
                         Similarity = 1 - (result.Distance / 2) // Convert L2 distance to similarity score (0-1)
                     };
                 })
@@ -218,8 +241,13 @@ public class FragmentsApiController : ControllerBase
     /// <summary>
     /// Get titles for multiple fragments by their IDs
     /// </summary>
+    /// <param name="ids">List of fragment IDs</param>
+    /// <returns>List of fragment titles</returns>
     [HttpPost("titles")]
-    public async Task<IActionResult> GetTitles([FromBody] List<Guid> ids)
+    [ProducesResponseType(typeof(List<FragmentTitleDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<List<FragmentTitleDto>>> GetTitles([FromBody] List<Guid> ids)
     {
         if (ids == null || ids.Count == 0)
         {
@@ -230,10 +258,10 @@ public class FragmentsApiController : ControllerBase
         {
             var fragments = await _fragmentRepository.Query()
                 .Where(f => ids.Contains(f.Id))
-                .Select(f => new
+                .Select(f => new FragmentTitleDto
                 {
-                    f.Id,
-                    f.Title
+                    Id = f.Id,
+                    Title = f.Title
                 })
                 .ToListAsync();
 

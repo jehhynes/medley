@@ -1,6 +1,7 @@
 using Hangfire;
 using Medley.Application.Interfaces;
 using Medley.Application.Jobs;
+using Medley.Application.Models.DTOs;
 using Medley.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -39,8 +40,15 @@ public class SourcesApiController : ControllerBase
     /// <summary>
     /// Get all sources, optionally filtered by text search and/or tag
     /// </summary>
+    /// <param name="query">Text search query</param>
+    /// <param name="tagTypeId">Filter by tag type ID</param>
+    /// <param name="value">Filter by tag value</param>
+    /// <param name="skip">Number of sources to skip</param>
+    /// <param name="take">Number of sources to take</param>
+    /// <returns>List of sources</returns>
     [HttpGet]
-    public async Task<IActionResult> GetAll(
+    [ProducesResponseType(typeof(List<SourceSummaryDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<List<SourceSummaryDto>>> GetAll(
         [FromQuery] string? query = null, 
         [FromQuery] Guid? tagTypeId = null, 
         [FromQuery] string? value = null, 
@@ -70,21 +78,15 @@ public class SourcesApiController : ControllerBase
             .ThenBy(s => s.Id) // Deterministic tiebreaker for pagination
             .Skip(skip)
             .Take(take)
-            .Select(s => new
+            .Select(s => new SourceSummaryDto
             {
-                s.Id,
-                s.Name,
-                s.Type,
-                s.Date,
-                s.ExternalId,
+                Id = s.Id,
+                Name = s.Name,
+                Type = s.Type,
+                Date = s.Date,
                 IntegrationName = s.Integration.Name,
-                s.IsInternal,
                 FragmentsCount = s.Fragments.Count,
-                ExtractionStatus = s.ExtractionStatus,
-                ExtractionMessage = s.ExtractionMessage,
-                s.CreatedAt,
-                s.TagsGenerated,
-                Tags = s.Tags.Select(t => new { t.TagTypeId, TagType = t.TagType.Name, t.Value })
+                ExtractionStatus = s.ExtractionStatus
             })
             .ToListAsync();
 
@@ -94,8 +96,12 @@ public class SourcesApiController : ControllerBase
     /// <summary>
     /// Get a specific source by ID
     /// </summary>
+    /// <param name="id">Source ID</param>
+    /// <returns>Source details</returns>
     [HttpGet("{id}")]
-    public async Task<IActionResult> Get(Guid id)
+    [ProducesResponseType(typeof(SourceDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<SourceDto>> Get(Guid id)
     {
         var source = await _sourceRepository.Query()
             .Include(s => s.Integration)
@@ -111,36 +117,42 @@ public class SourcesApiController : ControllerBase
             return NotFound();
         }
 
-        return Ok(new
+        return Ok(new SourceDto
         {
-            source.Id,
-            source.Name,
-            source.Type,
-            source.Date,
-            source.Content,
-            source.MetadataJson,
-            source.ExternalId,
+            Id = source.Id,
+            Name = source.Name,
+            Type = source.Type,
+            MetadataType = source.MetadataType,
+            Date = source.Date,
+            Content = source.Content,
+            MetadataJson = source.MetadataJson,
+            ExternalId = source.ExternalId,
             IntegrationName = source.Integration.Name,
-            source.IsInternal,
+            IsInternal = source.IsInternal,
             FragmentsCount = source.Fragments.Count,
             ExtractionStatus = source.ExtractionStatus,
             ExtractionMessage = source.ExtractionMessage,
-            source.CreatedAt,
-            source.TagsGenerated,
-            Tags = source.Tags.Select(t => new
+            CreatedAt = source.CreatedAt,
+            TagsGenerated = source.TagsGenerated,
+            Tags = source.Tags.Select(t => new SourceTagDto
             {
-                t.TagTypeId,
+                TagTypeId = t.TagTypeId,
                 TagType = t.TagType.Name,
-                t.Value,
+                Value = t.Value,
                 AllowedValue = t.TagOption?.Value
-            })
+            }).ToList()
         });
     }
 
     /// <summary>
     /// Extract fragments from a source using AI
     /// </summary>
+    /// <param name="id">Source ID</param>
+    /// <returns>Job status</returns>
     [HttpPost("{id}/extract-fragments")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> ExtractFragments(Guid id)
     {
         try
@@ -185,9 +197,13 @@ public class SourcesApiController : ControllerBase
     }
 
     /// <summary>
-    /// Trigger smart tagging for a single source.
+    /// Trigger smart tagging for a single source
     /// </summary>
+    /// <param name="id">Source ID</param>
+    /// <param name="force">Force re-tagging even if already tagged</param>
+    /// <returns>Tagging result</returns>
     [HttpPost("{id}/tag")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> TagSource(Guid id, [FromQuery] bool force = false)
     {
         var result = await _taggingService.GenerateTagsAsync(id, force);

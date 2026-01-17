@@ -159,7 +159,7 @@ public class FragmentExtractionService
     }
 }
 
-    private async Task<(List<FragmentDto> Fragments, List<string> Messages)> ProcessSingleContentAsync(
+    private async Task<(List<FragmentExtractionDto> Fragments, List<string> Messages)> ProcessSingleContentAsync(
         string content, 
         string systemPrompt,
         CancellationToken cancellationToken = default)
@@ -172,7 +172,7 @@ public class FragmentExtractionService
                 systemPrompt: systemPrompt,
                 cancellationToken: cancellationToken);
 
-            var fragments = new List<FragmentDto>();
+            var fragments = new List<FragmentExtractionDto>();
             var messages = new List<string>();
 
             if (extractionResponse != null)
@@ -193,7 +193,7 @@ public class FragmentExtractionService
         }
     }
 
-    private async Task<(List<FragmentDto> Fragments, List<string> Messages)> ProcessChunkedContentAsync(
+    private async Task<(List<FragmentExtractionDto> Fragments, List<string> Messages)> ProcessChunkedContentAsync(
         Source source, 
         string systemPrompt,
         CancellationToken cancellationToken = default)
@@ -204,7 +204,7 @@ public class FragmentExtractionService
         if (contentChunks.Count == 0)
         {
             _logger.LogWarning("Chunking service returned no chunks for source {SourceId}", source.Id);
-            return (new List<FragmentDto>(), new List<string>());
+            return (new List<FragmentExtractionDto>(), new List<string>());
         }
 
         // Process all chunks in parallel
@@ -230,7 +230,7 @@ public class FragmentExtractionService
                             ? extractionResponse.Message.Trim() 
                             : null;
 
-                        var fragments = extractionResponse.Fragments ?? new List<FragmentDto>();
+                        var fragments = extractionResponse.Fragments ?? new List<FragmentExtractionDto>();
                         
                         _logger.LogInformation("Extracted {Count} fragments from chunk {ChunkNumber}",
                             fragments.Count, chunkNumber);
@@ -238,7 +238,7 @@ public class FragmentExtractionService
                         return (Fragments: fragments, Message: message, ChunkNumber: chunkNumber);
                     }
 
-                    return (Fragments: new List<FragmentDto>(), Message: (string?)null, ChunkNumber: chunkNumber);
+                    return (Fragments: new List<FragmentExtractionDto>(), Message: (string?)null, ChunkNumber: chunkNumber);
                 }
             }
             catch (Exception ex)
@@ -264,7 +264,7 @@ public class FragmentExtractionService
 
     private async Task<FragmentExtractionResult> SaveFragmentsAndReturnResultAsync(
         Source source,
-        List<FragmentDto> fragmentDtos,
+        List<FragmentExtractionDto> fragmentDtos,
         List<string> messages,
         CancellationToken cancellationToken = default)
     {
@@ -338,15 +338,15 @@ public class FragmentExtractionService
 /// </summary>
 public class FragmentExtractionResponse
 {
-    public List<FragmentDto> Fragments { get; set; } = new();
+    public List<FragmentExtractionDto> Fragments { get; set; } = new();
     [Description("Any comments or information besides fragments goes here.")]
     public string? Message { get; set; }
 }
 
 /// <summary>
-/// DTO for individual fragment from AI response
+/// DTO for individual fragment from AI response (internal to extraction service)
 /// </summary>
-public class FragmentDto
+public class FragmentExtractionDto
 {
     [Required]
     [Description("Clear, descriptive heading")]

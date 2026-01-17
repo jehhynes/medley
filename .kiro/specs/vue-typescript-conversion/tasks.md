@@ -66,8 +66,8 @@ This implementation plan converts the Medley application to use TypeScript acros
     - Update services using IHubContext<AdminHub> to use IHubContext<AdminHub, IAdminClient>
     - _Requirements: 15.3, 15.4, 15.5, 15.6_
 
-- [-] 3. Create and annotate C# DTOs for API controllers
-  - [ ] 3.1 Create DTO classes in Medley.Application/Models/DTOs/
+- [x] 3. Create and annotate C# DTOs for API controllers
+  - [x] 3.1 Create DTO classes in Medley.Application/Models/DTOs/
     - Create ArticleDto, ArticleCreateRequest, ArticleUpdateRequest
     - Create FragmentDto, FragmentSearchResult
     - Create UserDto, UserSummaryDto
@@ -79,7 +79,7 @@ This implementation plan converts the Medley application to use TypeScript acros
     - Add XML documentation comments for OpenAPI generation
     - _Requirements: 17.1, 17.2, 17.5, 17.6_
   
-  - [ ] 3.2 Update API controllers to use strongly-typed DTOs
+  - [x] 3.2 Update API controllers to use strongly-typed DTOs
     - Update ArticlesApiController to use ArticleDto types
     - Update FragmentsApiController to use FragmentDto types
     - Update SourcesApiController to use SourceDto types
@@ -88,7 +88,7 @@ This implementation plan converts the Medley application to use TypeScript acros
     - Add XML documentation comments to all endpoints
     - _Requirements: 17.1, 17.2, 17.3, 17.4, 17.6_
   
-  - [ ] 3.3 Run NSwag generation and verify TypeScript output
+  - [x] 3.3 Run NSwag generation and verify TypeScript output
     - Build the Medley.Web project to trigger NSwag generation
     - Verify Vue/types/generated/api-client.ts is created
     - Verify all DTO interfaces are generated correctly
