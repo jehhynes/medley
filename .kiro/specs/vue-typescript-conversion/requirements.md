@@ -4,6 +4,8 @@
 
 This specification defines the requirements for converting the Medley Vue 3 application from JavaScript to TypeScript. The conversion will introduce strong typing throughout the application, including DTOs that mirror C# backend models, typed SignalR hub connections, and a typed API client layer. The goal is to improve type safety, developer experience, and maintainability while preserving all existing functionality.
 
+Commit after each major task is complete.
+
 ## Glossary
 
 - **DTO**: Data Transfer Object - structures used to transfer data between frontend and backend

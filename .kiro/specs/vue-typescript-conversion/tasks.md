@@ -4,6 +4,8 @@
 
 This implementation plan converts the Medley application to use TypeScript across both frontend and backend. The approach includes setting up NSwag for automatic type generation from C# to TypeScript, creating strongly-typed SignalR hubs in C#, converting the Vue 3 frontend to TypeScript, and ensuring type safety throughout the entire stack.
 
+Commit after each major task is complete.
+
 ## Tasks
 
 - [x] 1. Set up TypeScript infrastructure and NSwag
@@ -114,15 +116,15 @@ This implementation plan converts the Medley application to use TypeScript acros
     - Export all extended types
     - _Requirements: 2.5_
 
-- [ ] 5. Create SignalR hub type definitions
-  - [ ] 5.1 Create ArticleHub TypeScript types
+- [x] 5. Create SignalR hub type definitions
+  - [x] 5.1 Create ArticleHub TypeScript types
     - Create types/signalr/article-hub.ts
     - Define all ArticleHub payload interfaces (ArticleCreatedPayload, ArticleUpdatedPayload, etc.)
     - Define ArticleHubServerMethods interface
     - Define ArticleHubConnection type with typed on() method
     - _Requirements: 3.1, 3.3, 3.6_
   
-  - [ ] 5.2 Create AdminHub TypeScript types and exports
+  - [x] 5.2 Create AdminHub TypeScript types and exports
     - Create types/signalr/admin-hub.ts
     - Define AdminNotificationPayload interface
     - Define AdminHubServerMethods interface
