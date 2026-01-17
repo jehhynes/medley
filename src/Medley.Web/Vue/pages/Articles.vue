@@ -386,30 +386,41 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, provide, onMounted, onBeforeUnmount, nextTick, type Ref } from 'vue';
+/**
+ * Articles Page - TypeScript Composition API Version
+ * 
+ * Main articles management page with:
+ * - Tree/List/MyWork views
+ * - Real-time SignalR updates  
+ * - Article editing with TipTap
+ * - Version history and comparison
+ * - AI assistant integration
+ * - Plan generation and viewing
+ */
+
+import { ref, reactive, computed, provide, onMounted, onBeforeUnmount, nextTick, type Ref } from 'vue';
 import { useRouter } from 'vue-router';
-import * as signalR from '@microsoft/signalr';
+import { HubConnectionState } from '@microsoft/signalr';
 import { api } from '@/utils/api';
+import type { 
+  ArticleDto, 
+  ArticleTypeDto, 
+  ArticleVersionDto,
+  FragmentDto,
+  ArticleUpdateContentRequest,
+  ArticleStatus
+} from '@/types/generated/api-client';
 import { 
   getStatusBadgeClass,
-  getStatusIcon,
-  getStatusColorClass,
   formatDate,
   getArticleTypes,
-  showProcessingSpinner,
-  showUserTurnIndicator,
   showToast
 } from '@/utils/helpers';
 import { getUrlParam } from '@/utils/url';
-import type { 
-  Article, 
-  ArticleType, 
-  Fragment,
-  ArticleVersion,
-  Plan
-} from '@/types/generated/api-client';
-import type { ArticleHubConnection } from '@/types/signalr/article-hub';
 import { createArticleHubConnection } from '@/utils/signalr';
+import type { ArticleHubConnection } from '@/types/signalr/article-hub';
+
+// Composables
 import { useSidebarState } from '@/composables/useSidebarState';
 import { useArticleTree } from '@/composables/useArticleTree';
 import { useMyWork } from '@/composables/useMyWork';
@@ -419,21 +430,40 @@ import { useArticleVersion } from '@/composables/useArticleVersion';
 import { useArticleSignalR } from '@/composables/useArticleSignalR';
 import { useArticleFilter } from '@/composables/useArticleFilter';
 
+// Components
 import FragmentModal from '../components/FragmentModal.vue';
 import VersionViewer from '../components/VersionViewer.vue';
 import MyWorkList from '../components/MyWorkList.vue';
+import ChatPanel from '../components/ChatPanel.vue';
+import VersionsPanel from '../components/VersionsPanel.vue';
+import ArticleTree from '../components/ArticleTree.vue';
+import ArticleList from '../components/ArticleList.vue';
+import TiptapEditor from '../components/TiptapEditor.vue';
+import PlanViewer from '../components/PlanViewer.vue';
+import VerticalMenu from '../components/VerticalMenu.vue';
 
-// Interfaces
-interface ArticleState {
-  list: Article[];
-  selected: Article | null;
+// Global types
+declare const bootbox: any;
+
+// ============================================================================
+// INTERFACES
+// ============================================================================
+
+interface ParentPathItem {
+  id: string;
+  title: string;
+}
+
+interface ArticlesState {
+  list: ArticleDto[];
+  selected: ArticleDto | null;
   selectedId: string | null;
-  types: ArticleType[];
-  typeIconMap: Record<number, string>;
-  typeIndexMap: Record<number, ArticleType>;
+  types: ArticleTypeDto[];
+  typeIconMap: Record<string, string>;
+  typeIndexMap: Record<string, ArticleTypeDto>;
   expandedIds: Set<string>;
-  index: Map<string, Article>;
-  parentPathCache: Map<string, string[]>;
+  index: Map<string, ArticleDto>;
+  parentPathCache: Map<string, ParentPathItem[]>;
 }
 
 interface EditorState {
@@ -456,7 +486,7 @@ interface UIState {
 }
 
 interface VersionState {
-  selected: ArticleVersion | null;
+  selected: ArticleVersionDto | null;
   diffHtml: string | null;
   loadingDiff: boolean;
   diffError: string | null;
@@ -464,7 +494,7 @@ interface VersionState {
 
 interface SignalRState {
   connection: ArticleHubConnection | null;
-  updateQueue: any[];
+  updateQueue: never[]; // Queue handled by useArticleSignalR composable
   processing: boolean;
 }
 
@@ -473,12 +503,64 @@ interface DragState {
   dragOverId: string | null;
 }
 
-// Setup composables
-const { leftSidebarVisible, rightSidebarVisible } = useSidebarState();
-const router = useRouter();
+interface ContentTab {
+  id: string;
+  label: string;
+  closeable: boolean;
+  type: string;
+}
 
-// Reactive state
-const articles = ref<ArticleState>({
+// Component ref types
+interface TiptapEditorRef {
+  hasChanges: boolean;
+  syncHeading: (title: string) => void;
+}
+
+interface ChatPanelRef {
+  loadConversation: (conversationId: string) => Promise<void>;
+}
+
+interface VersionsPanelRef {
+  loadVersions: () => Promise<void>;
+}
+
+// Window types
+interface MedleyUser {
+  displayName?: string;
+  isAuthenticated?: boolean;
+  id?: string;
+}
+
+declare global {
+  interface Window {
+    MedleyUser?: MedleyUser;
+  }
+}
+
+// ============================================================================
+// SETUP
+// ============================================================================
+
+const router = useRouter();
+const { leftSidebarVisible, rightSidebarVisible } = useSidebarState();
+
+// ============================================================================
+// TEMPLATE REFS
+// ============================================================================
+
+const tiptapEditor = ref<TiptapEditorRef | null>(null);
+const chatPanel = ref<ChatPanelRef | null>(null);
+const versionsPanel = ref<VersionsPanelRef | null>(null);
+const titleInput = ref<HTMLInputElement | null>(null);
+const editTitleInput = ref<HTMLInputElement | null>(null);
+const filterSearchInput = ref<HTMLInputElement | null>(null);
+
+// ============================================================================
+// STATE
+// ============================================================================
+
+// Article state
+const articles = reactive<ArticlesState>({
   list: [],
   selected: null,
   selectedId: null,
@@ -490,73 +572,104 @@ const articles = ref<ArticleState>({
   parentPathCache: new Map()
 });
 
+// View mode state
 const viewMode = ref<'tree' | 'list' | 'mywork'>('tree');
 
-const editor = ref<EditorState>({
+// Editor state
+const editor = reactive<EditorState>({
   title: '',
   content: '',
   isSaving: false
 });
 
-const contentTabs = ref<ContentTabsState>({
+// Content tabs state
+const contentTabs = reactive<ContentTabsState>({
   activeTabId: 'editor',
   versionData: null,
   planData: null
 });
 
-const ui = ref<UIState>({
+// UI state
+const ui = reactive<UIState>({
   loading: false,
   error: null,
   sidebarMenuOpen: false,
   activeRightTab: 'assistant'
 });
 
-const version = ref<VersionState>({
+// Version state
+const version = reactive<VersionState>({
   selected: null,
   diffHtml: null,
   loadingDiff: false,
   diffError: null
 });
 
-const signalr = ref<SignalRState>({
+// SignalR state
+const signalr = reactive<SignalRState>({
   connection: null,
   updateQueue: [],
   processing: false
 });
 
-const dragState = ref<DragState>({
+// Drag state
+const dragState = reactive<DragState>({
   draggingArticleId: null,
   dragOverId: null
 });
 
-const userDisplayName = ref<string>(window.MedleyUser?.displayName || 'User');
-const userIsAuthenticated = ref<boolean>(window.MedleyUser?.isAuthenticated || false);
-const currentUserId = ref<string | null>(window.MedleyUser?.id || null);
-const selectedFragment = ref<Fragment | null>(null);
+// User info from server
+const userDisplayName = window.MedleyUser?.displayName ?? 'User';
+const userIsAuthenticated = window.MedleyUser?.isAuthenticated ?? false;
+const currentUserId = window.MedleyUser?.id ?? null;
 
-// Refs for components
-const tiptapEditor = ref<any>(null);
-const chatPanel = ref<any>(null);
-const versionsPanel = ref<any>(null);
-const titleInput = ref<HTMLInputElement | null>(null);
-const editTitleInput = ref<HTMLInputElement | null>(null);
-const filterSearchInput = ref<HTMLInputElement | null>(null);
+// Fragment modal state
+const selectedFragment = ref<FragmentDto | null>(null);
 
 // Provide drag state for child components
 provide('dragState', dragState);
 
-// Use composables for modal and filter functionality
+// ============================================================================
+// COMPOSABLES
+// ============================================================================
+
+// My Work composable - call once at top level
+const { myWorkCount } = useMyWork(
+  computed(() => articles.list),
+  computed(() => currentUserId)
+);
+
+// Article tree operations composable
+const treeOps = useArticleTree({
+  articles: articles,
+  editor: editor
+});
+
+// Article modals composable (create and edit)
 const {
   createModal,
   editModal,
   showCreateArticleModal,
   closeCreateModal,
+  createArticle,
   showEditArticleModal,
   closeEditModal,
-  createArticle,
   updateArticle
-} = useArticleModal(articles, () => loadArticles());
+} = useArticleModal({
+  insertArticleIntoTree: (article: ArticleDto) => treeOps.insertArticleIntoTree(article),
+  updateArticleInTree: (articleId: string, updates: Partial<ArticleDto>) => treeOps.updateArticleInTree(articleId, updates),
+  selectArticle: async (article: ArticleDto, shouldJoinSignalR?: boolean) => {
+    await selectArticle(article, !shouldJoinSignalR);
+  },
+  articlesIndex: articles.index,
+  selectedArticleId: computed(() => articles.selectedId),
+  titleInputRef: titleInput,
+  editTitleInputRef: editTitleInput,
+  tiptapEditorRef: tiptapEditor,
+  closeSidebarMenu: () => { ui.sidebarMenuOpen = false; }
+});
 
+// Filter composable
 const {
   filterModal,
   filters,
@@ -566,52 +679,51 @@ const {
   closeFilterModal,
   applyFilters,
   clearFilters,
-  isStatusSelected,
   toggleStatusFilter,
-  isArticleTypeSelected,
+  isStatusSelected,
   toggleArticleTypeFilter,
-  getArticleTypeIconClass,
-  buildFilterQueryString
-} = useArticleFilter(articles);
+  isArticleTypeSelected,
+  buildFilterQueryString,
+  getArticleTypeIconClass
+} = useArticleFilter({
+  loadArticles: async () => await loadArticles(),
+  searchInputRef: filterSearchInput
+});
 
+// Version composable
 const {
+  handleVersionSelect,
   clearVersionSelection
-} = useArticleVersion(version);
+} = useArticleVersion({
+  openVersionTab: (version) => openVersionTab(version),
+  switchContentTab: (tab) => { contentTabs.activeTabId = tab; },
+  selectedArticleId: computed(() => articles.selectedId)
+});
 
-const {
-  initializeSignalRConnection,
-  disconnectSignalR
-} = useArticleSignalR(signalr, articles, () => loadArticles());
+// SignalR composable (initialized in onMounted)
+let signalRMethods: ReturnType<typeof useArticleSignalR> | null = null;
 
-let handleBeforeUnload: ((event: BeforeUnloadEvent) => void) | null = null;
-// Computed properties
+// ============================================================================
+// COMPUTED PROPERTIES
+// ============================================================================
+
 const hasUnsavedChanges = computed(() => {
   return tiptapEditor.value?.hasChanges || false;
 });
 
-const myWorkCount = computed(() => {
-  const { myWorkCount: count } = useMyWork(
-    computed(() => articles.value.list),
-    computed(() => currentUserId.value)
-  );
-  return count.value;
-});
+const availableTabs = computed<ContentTab[]>(() => {
+  const tabs: ContentTab[] = [{ id: 'editor', label: 'Editor', closeable: false, type: 'editor' }];
 
-const availableTabs = computed(() => {
-  const tabs: Array<{ id: string; label: string; closeable: boolean; type: string }> = [
-    { id: 'editor', label: 'Editor', closeable: false, type: 'editor' }
-  ];
-
-  if (contentTabs.value.versionData) {
+  if (contentTabs.versionData) {
     tabs.push({
       id: 'version',
-      label: `Version ${contentTabs.value.versionData.versionNumber}`,
+      label: `Version ${contentTabs.versionData.versionNumber}`,
       closeable: true,
       type: 'version'
     });
   }
 
-  if (contentTabs.value.planData) {
+  if (contentTabs.planData) {
     tabs.push({
       id: 'plan',
       label: 'Plan',
@@ -623,488 +735,535 @@ const availableTabs = computed(() => {
   return tabs;
 });
 
-// Methods
-const
-    async loadArticles() {
-      this.ui.loading = true;
-      this.ui.error = null;
-      try {
-        const queryString = this.buildFilterQueryString();
-        this.articles.list = await api.get(`/api/articles/tree${queryString}`);
-        
-        // Initialize article tree composable with current state
-        const treeOps = useArticleTree(this);
-        treeOps.buildArticleIndex();
-        treeOps.buildParentPathCache();
-      } catch (err) {
-        this.ui.error = 'Failed to load articles: ' + err.message;
-        console.error('Error loading articles:', err);
-      } finally {
-        this.ui.loading = false;
-      }
-    },
-
-    async loadArticleTypes() {
-      try {
-        this.articles.types = await getArticleTypes();
-
-        this.articles.typeIconMap = {};
-        this.articles.typeIndexMap = {};
-        this.articles.types.forEach(type => {
-          this.articles.typeIconMap[type.id] = type.icon || 'bi-file-text';
-          this.articles.typeIndexMap[type.id] = type;
-        });
-      } catch (err) {
-        console.error('Error loading article types:', err);
-        showToast('error', 'Failed to load article types');
-      }
-    },
-
-    async selectArticle(article, replaceState = false) {
-      if (article.id === this.articles.selectedId) {
-        return;
-      }
-
-      if (this.hasUnsavedChanges) {
-        const shouldProceed = await this.promptUnsavedChanges();
-        if (!shouldProceed) {
-          return;
-        }
-      }
-
-      try {
-        const fullArticle = await api.get(`/api/articles/${article.id}`);
-
-        if (this.articles.selectedId && this.signalr.connection && this.signalr.connection.state === signalR.HubConnectionState.Connected) {
-          await this.signalr.connection.invoke('LeaveArticle', this.articles.selectedId);
-        }
-
-        this.editor.title = fullArticle.title;
-        this.editor.content = fullArticle.content || '';
-        this.articles.selected = fullArticle;
-        this.articles.selectedId = article.id;
-
-        if (this.signalr.connection && this.signalr.connection.state === signalR.HubConnectionState.Connected) {
-          await this.signalr.connection.invoke('JoinArticle', article.id);
-        }
-
-        this.clearVersionSelection();
-        this.clearAllTabs();
-        // Load plan and AI version - load AI version last so it takes priority if both exist
-        await this.loadDraftPlan(article.id);
-        await this.loadLatestAIVersion(article.id);
-        this.expandParents(article.id);
-
-        // Use Vue Router to update the URL, which will trigger the App.vue watcher
-        if (replaceState) {
-          await this.router.replace({ query: { id: article.id } });
-        } else {
-          await this.router.push({ query: { id: article.id } });
-        }
-      } catch (err) {
-        console.error('Error loading article:', err);
-        this.articles.selected = null;
-      }
-    },
-
-
-    toggleExpand(articleId) {
-      if (this.articles.expandedIds.has(articleId)) {
-        this.articles.expandedIds.delete(articleId);
-      } else {
-        this.articles.expandedIds.add(articleId);
-      }
-    },
-
-    expandParents(articleId) {
-      const treeOps = useArticleTree(this);
-      const parents = treeOps.getArticleParents(articleId);
-      if (parents) {
-        parents.forEach(parentId => {
-          this.articles.expandedIds.add(parentId);
-        });
-      }
-    },
-
-    insertArticleIntoTree(article) {
-      const treeOps = useArticleTree(this);
-      treeOps.insertArticleIntoTree(article);
-    },
-
-    updateArticleInTree(articleId, updates) {
-      const treeOps = useArticleTree(this);
-      treeOps.updateArticleInTree(articleId, updates);
-    },
-
-    removeArticleFromTree(articleId) {
-      const treeOps = useArticleTree(this);
-      treeOps.removeArticleFromTree(articleId);
-    },
-
-    moveArticleInTree(articleId, oldParentId, newParentId) {
-      const treeOps = useArticleTree(this);
-      treeOps.moveArticleInTree(articleId, oldParentId, newParentId);
-    },
-
-
-    async saveArticle(retryCount = 0) {
-      if (!this.articles.selected) return;
-
-      this.editor.isSaving = true;
-      try {
-        const response = await api.put(`/api/articles/${this.articles.selected.id}/content`, {
-          content: this.editor.content
-        });
-
-        if (response && response.versionNumber) {
-          console.log(`Article saved - Version ${response.versionNumber} (${response.isNewVersion ? 'new' : 'updated'})`);
-        }
-      } catch (err) {
-        console.error('Error saving article:', err);
-
-        if (retryCount < 3) {
-          const delay = Math.pow(2, retryCount) * 1000;
-          console.log(`Retrying save in ${delay}ms (attempt ${retryCount + 1}/3)...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-          return this.saveArticle(retryCount + 1);
-        }
-
-        console.error('Failed to save article after 3 attempts');
-      } finally {
-        this.editor.isSaving = false;
-      }
-    },
-
-    deleteArticle() {
-      bootbox.confirm({
-        title: 'Delete Article',
-        message: 'Are you sure you want to delete this article?',
-        buttons: {
-          confirm: {
-            label: 'Delete',
-            className: 'btn-danger'
-          },
-          cancel: {
-            label: 'Cancel',
-            className: 'btn-secondary'
-          }
-        },
-        callback: (confirmed) => {
-          if (confirmed) {
-            bootbox.alert({
-              title: 'Delete Article',
-              message: 'Delete functionality coming soon',
-              className: 'bootbox-info'
-            });
-          }
-        }
-      });
-    },
-
-    toggleSidebarMenu() {
-      this.ui.sidebarMenuOpen = !this.ui.sidebarMenuOpen;
-    },
-
-    setActiveRightTab(tab) {
-      this.ui.activeRightTab = tab;
-    },
-
-    formatDate(date) {
-      return formatDate(date);
-    },
-
-    getStatusBadgeClass(status) {
-      return getStatusBadgeClass(status);
-    },
-
-    setViewMode(mode) {
-      this.viewMode = mode;
-      localStorage.setItem('articlesViewMode', mode);
-    },
-
-    toggleViewMode() {
-      const newMode = this.viewMode === 'tree' ? 'list' : 'tree';
-      this.setViewMode(newMode);
-    },
-
-    promptUnsavedChanges() {
-      return new Promise((resolve) => {
-        bootbox.dialog({
-          title: 'Unsaved Changes',
-          message: 'You have unsaved changes. What would you like to do?',
-          buttons: {
-            save: {
-              label: '<i class="bi bi-save"></i> Save Changes',
-              className: 'btn-primary',
-              callback: async () => {
-                await this.saveArticle();
-                resolve(true);
-              }
-            },
-            discard: {
-              label: 'Discard Changes',
-              className: 'btn-outline-danger',
-              callback: () => {
-                resolve(true);
-              }
-            },
-            cancel: {
-              label: 'Cancel',
-              className: 'btn-secondary',
-              callback: () => {
-                resolve(false);
-              }
-            }
-          }
-        });
-      });
-    },
-
-    async moveArticle(sourceArticleId, targetParentId) {
-      const sourceArticle = this.articles.index.get(sourceArticleId);
-      const targetParent = this.articles.index.get(targetParentId);
-
-      if (!sourceArticle || !targetParent) {
-        console.error('Source or target article not found');
-        bootbox.alert({
-          title: 'Move Article',
-          message: 'Could not find source or target article',
-          className: 'bootbox-error'
-        });
-        return;
-      }
-
-      bootbox.confirm({
-        title: 'Move Article',
-        message: `Move <strong>${sourceArticle.title}</strong> under <strong>${targetParent.title}</strong>?`,
-        buttons: {
-          confirm: {
-            label: 'Move',
-            className: 'btn-primary'
-          },
-          cancel: {
-            label: 'Cancel',
-            className: 'btn-secondary'
-          }
-        },
-        callback: async (confirmed) => {
-          if (confirmed) {
-            try {
-              await api.put(`/api/articles/${sourceArticleId}/move`, {
-                newParentArticleId: targetParentId
-              });
-            } catch (err) {
-              bootbox.alert({
-                title: 'Move Article',
-                message: `Failed to move article: ${err.message}`,
-                className: 'bootbox-error'
-              });
-              console.error('Error moving article:', err);
-            }
-          }
-        }
-      });
-    },
-
-
-    switchContentTab(tabId) {
-      this.contentTabs.activeTabId = tabId;
-    },
-
-    closeContentTab(tabId) {
-      if (tabId === 'version') {
-        this.contentTabs.versionData = null;
-        this.contentTabs.activeTabId = 'editor';
-      } else if (tabId === 'plan') {
-        this.contentTabs.planData = null;
-        this.contentTabs.activeTabId = 'editor';
-      }
-    },
-
-    openPlanTab(planId) {
-      this.contentTabs.planData = { planId };
-      this.contentTabs.activeTabId = 'plan';
-    },
-
-    async openVersionTab(version) {
-      // Load version details if we only have the ID
-      let versionDetails = version;
-      if (typeof version === 'string') {
-        try {
-          versionDetails = await api.get(`/api/articles/${this.articles.selectedId}/versions/${version}`);
-        } catch (err) {
-          console.error('Error loading version details:', err);
-          showToast('error', 'Failed to load version');
-          return;
-        }
-      }
-
-      this.contentTabs.versionData = {
-        versionId: versionDetails.id,
-        versionNumber: versionDetails.versionNumber
-      };
-
-      this.contentTabs.activeTabId = 'version';
-    },
-
-    async handleVersionChanged(newVersionId) {
-      // Update the tab data with the new version
-      await this.openVersionTab(newVersionId);
-    },
-
-    async handleVersionAccepted(response) {
-      // Close the version tab
-      this.closeContentTab('version');
-      
-      // Reload the article to get the latest content
-      if (this.articles.selectedId) {
-        try {
-          const fullArticle = await api.get(`/api/articles/${this.articles.selectedId}`);
-          this.editor.content = fullArticle.content || '';
-          this.articles.selected = fullArticle;
-          
-          showToast('success', 'Version accepted successfully');
-        } catch (err) {
-          console.error('Error reloading article:', err);
-          showToast('error', 'Failed to reload article');
-        }
-      }
-    },
-
-    async handleVersionRejected(versionId) {
-      // Close the version tab
-      this.closeContentTab('version');
-      
-      showToast('success', 'Version rejected');
-    },
-
-    async loadDraftPlan(articleId) {
-      try {
-        const response = await api.get(`/api/articles/${articleId}/plans/active`);
-
-        if (response && response.id) {
-          this.openPlanTab(response.id);
-        }
-      } catch (err) {
-        if (err.response && err.response.status === 204) {
-          return;
-        }
-        console.error('Error loading draft plan:', err);
-      }
-    },
-
-    async loadLatestAIVersion(articleId) {
-      // Use composable to find pending AI version by status
-      const versionState = useArticleVersions(computed(() => articleId));
-      
-      // Wait for versions to be loaded if not already
-      if (!versionState.loaded.value) {
-        // Versions will be loaded by VersionsPanel watch handler
-        // Check again after a tick
-        this.$nextTick(() => {
-          if (versionState.pendingAiVersion.value) {
-            this.openVersionTab(versionState.pendingAiVersion.value);
-          }
-        });
-        return;
-      }
-
-      // Use cached data - pendingAiVersion is found by status filter
-      if (versionState.pendingAiVersion.value) {
-        this.openVersionTab(versionState.pendingAiVersion.value);
-      }
-    },
-
-    clearAllTabs() {
-      this.contentTabs.versionData = null;
-      this.contentTabs.planData = null;
-      this.contentTabs.activeTabId = 'editor';
-    },
-
-    async handleOpenFragment(fragmentId) {
-      if (!fragmentId) return;
-
-      try {
-        const fragment = await api.get(`/api/fragments/${fragmentId}`);
-        this.selectedFragment = fragment;
-      } catch (err) {
-        console.error('Error loading fragment:', err);
-        showToast('error', 'Failed to load fragment');
-      }
-    },
-
-    async handleOpenVersion(versionId) {
-      if (!versionId) return;
-
-      try {
-        const version = await api.get(`/api/articles/${this.articles.selectedId}/versions/${versionId}`);
-        this.openVersionTab(version);
-      } catch (err) {
-        console.error('Error loading version:', err);
-        showToast('error', 'Failed to load version');
-      }
-    },
-
-    closeFragmentModal() {
-      this.selectedFragment = null;
-    },
-
-    async handlePlanConversationCreated(conversationId) {
-      // Switch to the assistant tab
-      this.setActiveRightTab('assistant');
-      
-      // Load the new conversation in the chat panel
-      await this.$nextTick();
-      if (this.$refs.chatPanel) {
-        await this.$refs.chatPanel.loadConversation(conversationId);
-      }
-    }
-  },
-
-  async mounted() {
-    const savedViewMode = localStorage.getItem('articlesViewMode');
-    if (savedViewMode && (savedViewMode === 'tree' || savedViewMode === 'list' || savedViewMode === 'mywork')) {
-      this.viewMode = savedViewMode;
-    }
-
-    await this.initializeSignalRConnection();
-
-    await Promise.all([
-      this.loadArticleTypes(),
-      this.loadArticles()
-    ]);
-
-    const treeOps = useArticleTree(this);
-    treeOps.sortArticlesRecursive(this.articles.list);
-
-    const articleIdFromUrl = getUrlParam('id');
-    if (articleIdFromUrl) {
-      const article = this.articles.index.get(articleIdFromUrl);
-      if (article) {
-        await this.selectArticle(article, true);
-      }
-    }
-
-    document.addEventListener('click', () => {
-      this.ui.sidebarMenuOpen = false;
-    });
-
-    this.handleBeforeUnload = (event) => {
-      if (this.hasUnsavedChanges) {
-        event.preventDefault();
-        event.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
-        return event.returnValue;
-      }
-    };
-    window.addEventListener('beforeunload', this.handleBeforeUnload);
-  },
-
-  beforeUnmount() {
-    if (this.handleBeforeUnload) {
-      window.removeEventListener('beforeunload', this.handleBeforeUnload);
-    }
-
-    this.disconnectSignalR();
+// ============================================================================
+// METHODS - Article Loading
+// ============================================================================
+
+const loadArticles = async (): Promise<void> => {
+  ui.loading = true;
+  ui.error = null;
+  try {
+    const queryString = buildFilterQueryString();
+    articles.list = await api.get<ArticleDto[]>(`/api/articles/tree${queryString}`);
+    
+    // Build indexes and caches - explicitly pass the loaded articles
+    treeOps.buildArticleIndex(articles.list);
+    treeOps.buildParentPathCache(articles.list);
+  } catch (err: any) {
+    ui.error = 'Failed to load articles: ' + err.message;
+    console.error('Error loading articles:', err);
+  } finally {
+    ui.loading = false;
   }
 };
+
+const loadArticleTypes = async (): Promise<void> => {
+  try {
+    articles.types = await getArticleTypes();
+
+    articles.typeIconMap = {};
+    articles.typeIndexMap = {};
+    articles.types.forEach(type => {
+      if (type.id) {
+        articles.typeIconMap[type.id] = type.icon || 'bi-file-text';
+        articles.typeIndexMap[type.id] = type;
+      }
+    });
+  } catch (err: any) {
+    console.error('Error loading article types:', err);
+    showToast('error', 'Failed to load article types');
+  }
+};
+
+// ============================================================================
+// METHODS - Article Selection and Navigation
+// ============================================================================
+
+const selectArticle = async (article: ArticleDto, replaceState: boolean = false): Promise<void> => {
+  if (article.id === articles.selectedId) {
+    return;
+  }
+
+  if (hasUnsavedChanges.value) {
+    const shouldProceed = await promptUnsavedChanges();
+    if (!shouldProceed) {
+      return;
+    }
+  }
+
+  try {
+    const fullArticle = await api.get<ArticleDto>(`/api/articles/${article.id}`);
+
+    if (articles.selectedId && signalr.connection && signalr.connection.state === HubConnectionState.Connected) {
+      await signalr.connection.invoke('LeaveArticle', articles.selectedId);
+    }
+
+    editor.title = fullArticle.title ?? '';
+    editor.content = fullArticle.content ?? '';
+    articles.selected = fullArticle;
+    articles.selectedId = article.id ?? null;
+
+    if (signalr.connection && signalr.connection.state === HubConnectionState.Connected && article.id) {
+      await signalr.connection.invoke('JoinArticle', article.id);
+    }
+
+    clearVersionSelection();
+    clearAllTabs();
+    
+    // Only proceed if article has an ID
+    if (article.id) {
+      // Load plan and AI version - load AI version last so it takes priority if both exist
+      await loadDraftPlan(article.id);
+      await loadLatestAIVersion(article.id);
+      expandParents(article.id);
+    }
+
+    // Use Vue Router to update the URL
+    if (replaceState) {
+      await router.replace({ query: { id: article.id } });
+    } else {
+      await router.push({ query: { id: article.id } });
+    }
+  } catch (err: any) {
+    console.error('Error loading article:', err);
+    articles.selected = null;
+  }
+};
+
+const promptUnsavedChanges = (): Promise<boolean> => {
+  return new Promise((resolve) => {
+    bootbox.dialog({
+      title: 'Unsaved Changes',
+      message: 'You have unsaved changes. What would you like to do?',
+      buttons: {
+        save: {
+          label: '<i class="bi bi-save"></i> Save Changes',
+          className: 'btn-primary',
+          callback: async () => {
+            await saveArticle();
+            resolve(true);
+          }
+        },
+        discard: {
+          label: 'Discard Changes',
+          className: 'btn-outline-danger',
+          callback: () => {
+            resolve(true);
+          }
+        },
+        cancel: {
+          label: 'Cancel',
+          className: 'btn-secondary',
+          callback: () => {
+            resolve(false);
+          }
+        }
+      }
+    });
+  });
+};
+
+// ============================================================================
+// METHODS - Tree Operations
+// ============================================================================
+
+const toggleExpand = (articleId: string): void => {
+  if (articles.expandedIds.has(articleId)) {
+    articles.expandedIds.delete(articleId);
+  } else {
+    articles.expandedIds.add(articleId);
+  }
+};
+
+const expandParents = (articleId: string | undefined): void => {
+  if (!articleId) return;
+  
+  const parents = treeOps.getArticleParents(articleId);
+  if (parents) {
+    parents.forEach(parentId => {
+      articles.expandedIds.add(parentId);
+    });
+  }
+};
+
+const insertArticleIntoTree = (article: ArticleDto): void => {
+  treeOps.insertArticleIntoTree(article);
+};
+
+const updateArticleInTree = (articleId: string, updates: Partial<ArticleDto>): void => {
+  treeOps.updateArticleInTree(articleId, updates);
+};
+
+const removeArticleFromTree = (articleId: string): void => {
+  treeOps.removeArticleFromTree(articleId);
+};
+
+const moveArticleInTree = (articleId: string, oldParentId: string | null, newParentId: string | null): void => {
+  treeOps.moveArticleInTree(articleId, oldParentId, newParentId);
+};
+
+const moveArticle = async (sourceArticleId: string, targetParentId: string): Promise<void> => {
+  const sourceArticle = articles.index.get(sourceArticleId);
+  const targetParent = articles.index.get(targetParentId);
+
+  if (!sourceArticle || !targetParent) {
+    console.error('Source or target article not found');
+    bootbox.alert({
+      title: 'Move Article',
+      message: 'Could not find source or target article',
+      className: 'bootbox-error'
+    });
+    return;
+  }
+
+  bootbox.confirm({
+    title: 'Move Article',
+    message: `Move <strong>${sourceArticle.title}</strong> under <strong>${targetParent.title}</strong>?`,
+    buttons: {
+      confirm: {
+        label: 'Move',
+        className: 'btn-primary'
+      },
+      cancel: {
+        label: 'Cancel',
+        className: 'btn-secondary'
+      }
+    },
+    callback: async (confirmed: boolean) => {
+      if (confirmed) {
+        try {
+          await api.put(`/api/articles/${sourceArticleId}/move`, {
+            newParentArticleId: targetParentId
+          });
+        } catch (err: any) {
+          bootbox.alert({
+            title: 'Move Article',
+            message: `Failed to move article: ${err.message}`,
+            className: 'bootbox-error'
+          });
+          console.error('Error moving article:', err);
+        }
+      }
+    }
+  });
+};
+
+// ============================================================================
+// METHODS - Article Saving
+// ============================================================================
+
+const saveArticle = async (retryCount: number = 0): Promise<void> => {
+  if (!articles.selected) return;
+
+  editor.isSaving = true;
+  try {
+    const response = await api.put<ArticleUpdateContentRequest, any>(
+      `/api/articles/${articles.selected.id}/content`,
+      { content: editor.content }
+    );
+
+    if (response && response.versionNumber) {
+      console.log(`Article saved - Version ${response.versionNumber} (${response.isNewVersion ? 'new' : 'updated'})`);
+    }
+  } catch (err: any) {
+    console.error('Error saving article:', err);
+
+    if (retryCount < 3) {
+      const delay = Math.pow(2, retryCount) * 1000;
+      console.log(`Retrying save in ${delay}ms (attempt ${retryCount + 1}/3)...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return saveArticle(retryCount + 1);
+    }
+
+    console.error('Failed to save article after 3 attempts');
+  } finally {
+    editor.isSaving = false;
+  }
+};
+
+// ============================================================================
+// METHODS - Content Tabs
+// ============================================================================
+
+const switchContentTab = (tabId: string): void => {
+  contentTabs.activeTabId = tabId;
+};
+
+const closeContentTab = (tabId: string): void => {
+  if (tabId === 'version') {
+    contentTabs.versionData = null;
+    contentTabs.activeTabId = 'editor';
+  } else if (tabId === 'plan') {
+    contentTabs.planData = null;
+    contentTabs.activeTabId = 'editor';
+  }
+};
+
+const openPlanTab = (planId: string): void => {
+  contentTabs.planData = { planId };
+  contentTabs.activeTabId = 'plan';
+};
+
+const openVersionTab = async (version: ArticleVersionDto | string): Promise<void> => {
+  // Load version details if we only have the ID
+  let versionDetails: ArticleVersionDto;
+  if (typeof version === 'string') {
+    try {
+      versionDetails = await api.get<ArticleVersionDto>(`/api/articles/${articles.selectedId}/versions/${version}`);
+    } catch (err: any) {
+      console.error('Error loading version details:', err);
+      showToast('error', 'Failed to load version');
+      return;
+    }
+  } else {
+    versionDetails = version;
+  }
+
+  contentTabs.versionData = {
+    versionId: versionDetails.id ?? '',
+    versionNumber: versionDetails.versionNumber ?? 0
+  };
+
+  contentTabs.activeTabId = 'version';
+};
+
+const clearAllTabs = (): void => {
+  contentTabs.versionData = null;
+  contentTabs.planData = null;
+  contentTabs.activeTabId = 'editor';
+};
+
+// ============================================================================
+// METHODS - Version Handlers
+// ============================================================================
+
+const handleVersionChanged = async (newVersionId: string): Promise<void> => {
+  // Update the tab data with the new version
+  await openVersionTab(newVersionId);
+};
+
+const handleVersionAccepted = async (response: { versionNumber?: number }): Promise<void> => {
+  // Close the version tab
+  closeContentTab('version');
+  
+  // Reload the article to get the latest content
+  if (articles.selectedId) {
+    try {
+      const fullArticle = await api.get<ArticleDto>(`/api/articles/${articles.selectedId}`);
+      editor.content = fullArticle.content ?? '';
+      articles.selected = fullArticle;
+      
+      showToast('success', 'Version accepted successfully');
+    } catch (err: any) {
+      console.error('Error reloading article:', err);
+      showToast('error', 'Failed to reload article');
+    }
+  }
+};
+
+const handleVersionRejected = async (versionId: string): Promise<void> => {
+  // Close the version tab
+  closeContentTab('version');
+  
+  showToast('success', 'Version rejected');
+};
+
+// ============================================================================
+// METHODS - Plan Loading
+// ============================================================================
+
+const loadDraftPlan = async (articleId: string | undefined): Promise<void> => {
+  if (!articleId) return;
+  
+  try {
+    const response = await api.get<{ id?: string }>(`/api/articles/${articleId}/plans/active`);
+
+    if (response && response.id) {
+      openPlanTab(response.id);
+    }
+  } catch (err: any) {
+    if (err.response && err.response.status === 204) {
+      return;
+    }
+    console.error('Error loading draft plan:', err);
+  }
+};
+
+const loadLatestAIVersion = async (articleId: string | undefined): Promise<void> => {
+  if (!articleId) return;
+  
+  // Use composable to find pending AI version by status
+  const versionState = useArticleVersions(computed(() => articleId));
+  
+  // Wait for versions to be loaded if not already
+  if (!versionState.loaded.value) {
+    // Versions will be loaded by VersionsPanel watch handler
+    // Check again after a tick
+    nextTick(() => {
+      if (versionState.pendingAiVersion.value) {
+        openVersionTab(versionState.pendingAiVersion.value);
+      }
+    });
+    return;
+  }
+
+  // Use cached data - pendingAiVersion is found by status filter
+  if (versionState.pendingAiVersion.value) {
+    openVersionTab(versionState.pendingAiVersion.value);
+  }
+};
+
+const handlePlanConversationCreated = async (conversationId: string): Promise<void> => {
+  // Switch to the assistant tab
+  setActiveRightTab('assistant');
+  
+  // Load the new conversation in the chat panel
+  await nextTick();
+  if (chatPanel.value) {
+    await chatPanel.value.loadConversation(conversationId);
+  }
+};
+
+// ============================================================================
+// METHODS - Fragment Modal
+// ============================================================================
+
+const handleOpenFragment = async (fragmentId: string): Promise<void> => {
+  if (!fragmentId) return;
+
+  try {
+    const fragment = await api.get<FragmentDto>(`/api/fragments/${fragmentId}`);
+    selectedFragment.value = fragment;
+  } catch (err: any) {
+    console.error('Error loading fragment:', err);
+    showToast('error', 'Failed to load fragment');
+  }
+};
+
+const handleOpenVersion = async (versionId: string): Promise<void> => {
+  if (!versionId) return;
+
+  try {
+    const version = await api.get<ArticleVersionDto>(`/api/articles/${articles.selectedId}/versions/${versionId}`);
+    openVersionTab(version);
+  } catch (err: any) {
+    console.error('Error loading version:', err);
+    showToast('error', 'Failed to load version');
+  }
+};
+
+const closeFragmentModal = (): void => {
+  selectedFragment.value = null;
+};
+
+// ============================================================================
+// METHODS - UI Utility
+// ============================================================================
+
+const toggleSidebarMenu = (): void => {
+  ui.sidebarMenuOpen = !ui.sidebarMenuOpen;
+};
+
+const setActiveRightTab = (tab: 'assistant' | 'versions'): void => {
+  ui.activeRightTab = tab;
+};
+
+const setViewMode = (mode: 'tree' | 'list' | 'mywork'): void => {
+  viewMode.value = mode;
+  localStorage.setItem('articlesViewMode', mode);
+};
+
+const toggleViewMode = (): void => {
+  const newMode = viewMode.value === 'tree' ? 'list' : 'tree';
+  setViewMode(newMode);
+};
+
+// ============================================================================
+// LIFECYCLE HOOKS
+// ============================================================================
+
+onMounted(async () => {
+  // Restore saved view mode
+  const savedViewMode = localStorage.getItem('articlesViewMode');
+  if (savedViewMode && (savedViewMode === 'tree' || savedViewMode === 'list' || savedViewMode === 'mywork')) {
+    viewMode.value = savedViewMode;
+  }
+
+  // Initialize SignalR connection
+  signalr.connection = createArticleHubConnection();
+  
+  signalRMethods = useArticleSignalR({
+    insertArticleIntoTree,
+    updateArticleInTree,
+    removeArticleFromTree,
+    moveArticleInTree,
+    openPlanTab,
+    openVersionTab,
+    loadVersions: async () => {
+      if (versionsPanel.value) {
+        await versionsPanel.value.loadVersions();
+      }
+    },
+    selectedArticleId: computed(() => articles.selectedId),
+    articlesIndex: articles.index,
+    clearSelectedArticle: () => {
+      articles.selectedId = null;
+      articles.selected = null;
+      editor.title = '';
+      editor.content = '';
+    }
+  });
+
+  // Start SignalR connection
+  try {
+    await signalr.connection.start();
+    console.log('Connected to ArticleHub');
+  } catch (err: any) {
+    console.error('SignalR connection error:', err);
+  }
+
+  // Load initial data
+  await Promise.all([
+    loadArticleTypes(),
+    loadArticles()
+  ]);
+
+  // Sort articles
+  treeOps.sortArticlesRecursive(articles.list);
+
+  // Select article from URL if present
+  const articleIdFromUrl = getUrlParam('id');
+  if (articleIdFromUrl) {
+    const article = articles.index.get(articleIdFromUrl);
+    if (article) {
+      await selectArticle(article, true);
+    }
+  }
+
+  // Close sidebar menu when clicking outside
+  document.addEventListener('click', () => {
+    ui.sidebarMenuOpen = false;
+  });
+
+  // Handle beforeunload event for unsaved changes
+  const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+    if (hasUnsavedChanges.value) {
+      event.preventDefault();
+      event.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+      return event.returnValue;
+    }
+  };
+  window.addEventListener('beforeunload', handleBeforeUnload);
+
+  // Store cleanup function
+  onBeforeUnmount(() => {
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+    
+    if (signalr.connection) {
+      signalr.connection.stop()
+        .then(() => console.log('Disconnected from ArticleHub'))
+        .catch((err: any) => console.error('Error disconnecting from SignalR:', err));
+    }
+  });
+});
 </script>

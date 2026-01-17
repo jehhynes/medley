@@ -180,12 +180,23 @@ const canReviewVersion = computed<boolean>(() => {
 });
 
 // Watch
-watch(() => props.versionId, () => {
-  loadVersion();
+watch([() => props.articleId, () => props.versionId], ([newArticleId, newVersionId], [oldArticleId, oldVersionId]) => {
+  // If article changed, clear the cache for the old article to force reload
+  if (oldArticleId && newArticleId !== oldArticleId) {
+    versionState.clearCache(oldArticleId);
+  }
+  
+  if (newArticleId && newVersionId) {
+    loadVersion();
+  }
 }, { immediate: true });
 
 // Methods
 async function loadVersion(): Promise<void> {
+  if (!props.articleId || !props.versionId) {
+    return;
+  }
+
   loading.value = true;
   error.value = null;
 
@@ -197,7 +208,7 @@ async function loadVersion(): Promise<void> {
     const foundVersion = versionState.getVersionById(props.versionId);
     
     if (!foundVersion) {
-      throw new Error('Version not found');
+      throw new Error(`Version ${props.versionId} not found`);
     }
     
     version.value = foundVersion as ArticleVersionWithStatus;
@@ -205,7 +216,7 @@ async function loadVersion(): Promise<void> {
     // Load the diff
     await loadVersionDiff();
   } catch (err: any) {
-    console.error('Error loading version:', err);
+    console.error('VersionViewer: Error loading version:', err);
     error.value = err.message || 'Failed to load version';
   } finally {
     loading.value = false;

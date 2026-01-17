@@ -261,7 +261,8 @@
     </div>
 </template>
 
-<script>
+<script setup lang="ts">
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { Editor } from '@tiptap/vue-3';
 import StarterKit from '@tiptap/starter-kit';
 import { Table } from '@tiptap/extension-table';
@@ -271,362 +272,383 @@ import TableHeader from '@tiptap/extension-table-header';
 import { Markdown } from 'tiptap-markdown';
 import Link from '@tiptap/extension-link';
 
-export default {
-    name: 'TiptapEditor',
-    props: {
-        modelValue: {
-            type: String,
-            default: ''
-        },
-        isSaving: {
-            type: Boolean,
-            default: false
-        },
-        autoSave: {
-            type: Boolean,
-            default: false
-        },
-        showSaveButton: {
-            type: Boolean,
-            default: true
-        },
-        showFormatting: {
-            type: Boolean,
-            default: true
-        },
-        readonly: {
-            type: Boolean,
-            default: false
+type AutoSaveState = 'saved' | 'changed' | 'saving';
+type ListType = 'bullet' | 'ordered';
+
+interface Props {
+    modelValue?: string;
+    isSaving?: boolean;
+    autoSave?: boolean;
+    showSaveButton?: boolean;
+    showFormatting?: boolean;
+    readonly?: boolean;
+}
+
+interface Emits {
+    (e: 'update:modelValue', value: string): void;
+    (e: 'save'): void;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+    modelValue: '',
+    isSaving: false,
+    autoSave: false,
+    showSaveButton: true,
+    showFormatting: true,
+    readonly: false
+});
+
+const emit = defineEmits<Emits>();
+
+// Refs
+const editorElement = ref<HTMLElement | null>(null);
+const editor = ref<Editor | null>(null);
+const canUndo = ref(false);
+const canRedo = ref(false);
+const isInTable = ref(false);
+const lastEmittedValue = ref('');
+const originalContent = ref('');
+const showHeadingDropdown = ref(false);
+const showListDropdown = ref(false);
+const showDeleteDropdown = ref(false);
+const autoSaveTimer = ref<number | null>(null);
+const autoSaveState = ref<AutoSaveState>('saved');
+const isBoldActive = ref(false);
+const isItalicActive = ref(false);
+const isCodeActive = ref(false);
+const isLinkActive = ref(false);
+const isBlockquoteActive = ref(false);
+const isCodeBlockActive = ref(false);
+const isBulletListActive = ref(false);
+const isOrderedListActive = ref(false);
+const isParagraphActive = ref(false);
+const isHeading1Active = ref(false);
+const isHeading2Active = ref(false);
+const isHeading3Active = ref(false);
+const isHeading4Active = ref(false);
+
+// Computed
+const isHeadingActive = computed(() => 
+    isHeading1Active.value || isHeading2Active.value || 
+    isHeading3Active.value || isHeading4Active.value
+);
+
+const isListActive = computed(() => 
+    isBulletListActive.value || isOrderedListActive.value
+);
+
+const hasChanges = computed(() => 
+    lastEmittedValue.value !== originalContent.value
+);
+
+const autoSaveIndicatorText = computed(() => {
+    if (autoSaveState.value === 'saving' || autoSaveState.value === 'changed') {
+        return 'Saving...';
+    }
+    return 'Saved';
+});
+
+const autoSaveIconClass = computed(() => {
+    if (autoSaveState.value === 'saving' || autoSaveState.value === 'changed') {
+        return 'far fa-arrows-rotate fa-spin';
+    }
+    return 'far fa-cloud-check';
+});
+
+// Watchers
+watch(() => props.modelValue, (newValue) => {
+    if (!editor.value || editor.value.isDestroyed) return;
+    if (lastEmittedValue.value === (newValue || '')) return;
+
+    editor.value.commands.setContent(newValue || '', false);
+    originalContent.value = newValue || '';
+    lastEmittedValue.value = newValue || '';
+});
+
+watch(() => props.isSaving, (newValue, oldValue) => {
+    if (oldValue === true && newValue === false) {
+        originalContent.value = lastEmittedValue.value;
+        if (props.autoSave) {
+            autoSaveState.value = 'saved';
         }
-    },
-    emits: ['update:modelValue', 'save'],
-    data() {
-        return {
-            editor: null,
-            canUndo: false,
-            canRedo: false,
-            isInTable: false,
-            lastEmittedValue: '',
-            originalContent: '',
-            showHeadingDropdown: false,
-            showListDropdown: false,
-            showDeleteDropdown: false,
-            autoSaveTimer: null,
-            autoSaveState: 'saved',
-            isBoldActive: false,
-            isItalicActive: false,
-            isCodeActive: false,
-            isLinkActive: false,
-            isBlockquoteActive: false,
-            isCodeBlockActive: false,
-            isBulletListActive: false,
-            isOrderedListActive: false,
-            isParagraphActive: false,
-            isHeading1Active: false,
-            isHeading2Active: false,
-            isHeading3Active: false,
-            isHeading4Active: false
-        };
-    },
-    computed: {
-        isHeadingActive() {
-            return this.isHeading1Active || this.isHeading2Active || 
-                   this.isHeading3Active || this.isHeading4Active;
-        },
-        isListActive() {
-            return this.isBulletListActive || this.isOrderedListActive;
-        },
-        hasChanges() {
-            return this.lastEmittedValue !== this.originalContent;
-        },
-        autoSaveIndicatorText() {
-            if (this.autoSaveState === 'saving' || this.autoSaveState === 'changed') {
-                return 'Saving...';
-            }
-            return 'Saved';
-        },
-        autoSaveIconClass() {
-            if (this.autoSaveState === 'saving' || this.autoSaveState === 'changed') {
-                return 'far fa-arrows-rotate fa-spin';
-            }
-            return 'far fa-cloud-check';
-        }
-    },
-    watch: {
-        modelValue: {
-            handler(newValue, oldValue) {
-                if (!this.editor || this.editor.isDestroyed) return;
-                if (this.lastEmittedValue === (newValue || '')) return;
+    }
+});
 
-                this.editor.commands.setContent(newValue || '', false);
-                this.originalContent = newValue || '';
-                this.lastEmittedValue = newValue || '';
-            }
-        },
-        isSaving: {
-            handler(newValue, oldValue) {
-                if (oldValue === true && newValue === false) {
-                    this.originalContent = this.lastEmittedValue;
-                    if (this.autoSave) {
-                        this.autoSaveState = 'saved';
-                    }
-                }
-            }
-        },
-        readonly: {
-            handler(newValue) {
-                if (this.editor && !this.editor.isDestroyed) {
-                    this.editor.setEditable(!newValue);
-                }
-            }
-        }
-    },
-    methods: {
-        toggleBold() { this.editor?.chain().focus().toggleBold().run(); },
-        toggleItalic() { this.editor?.chain().focus().toggleItalic().run(); },
-        toggleCode() { this.editor?.chain().focus().toggleCode().run(); },
-        
-        toggleLink() {
-            if (this.editor?.isActive('link')) {
-                this.editor.chain().focus().unsetLink().run();
-            } else {
-                const url = window.prompt('Enter URL:');
-                if (url) {
-                    this.editor?.chain().focus().setLink({ href: url }).run();
-                }
-            }
-        },
-        
-        toggleHeadingDropdown() {
-            this.showHeadingDropdown = !this.showHeadingDropdown;
-            this.showListDropdown = false;
-            this.showDeleteDropdown = false;
-        },
-        toggleListDropdown() {
-            this.showListDropdown = !this.showListDropdown;
-            this.showHeadingDropdown = false;
-            this.showDeleteDropdown = false;
-        },
-        toggleDeleteDropdown() {
-            this.showDeleteDropdown = !this.showDeleteDropdown;
-            this.showHeadingDropdown = false;
-            this.showListDropdown = false;
-        },
-        closeDropdowns() {
-            this.showHeadingDropdown = false;
-            this.showListDropdown = false;
-            this.showDeleteDropdown = false;
-        },
-        
-        setHeading(level) {
-            this.editor?.chain().focus().toggleHeading({ level }).run();
-            this.closeDropdowns();
-        },
-        setParagraph() {
-            this.editor?.chain().focus().setParagraph().run();
-            this.closeDropdowns();
-        },
-        
-        setList(type) {
-            if (type === 'bullet') {
-                this.editor?.chain().focus().toggleBulletList().run();
-            } else if (type === 'ordered') {
-                this.editor?.chain().focus().toggleOrderedList().run();
-            }
-            this.closeDropdowns();
-        },
-        
-        toggleBlockquote() { this.editor?.chain().focus().toggleBlockquote().run(); },
-        toggleCodeBlock() { this.editor?.chain().focus().toggleCodeBlock().run(); },
-        insertHorizontalRule() { this.editor?.chain().focus().setHorizontalRule().run(); },
+watch(() => props.readonly, (newValue) => {
+    if (editor.value && !editor.value.isDestroyed) {
+        editor.value.setEditable(!newValue);
+    }
+});
 
-        insertTable() {
-            this.editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
-        },
-        addColumnBefore() { this.editor?.chain().focus().addColumnBefore().run(); },
-        addColumnAfter() { this.editor?.chain().focus().addColumnAfter().run(); },
-        addRowBefore() { this.editor?.chain().focus().addRowBefore().run(); },
-        addRowAfter() { this.editor?.chain().focus().addRowAfter().run(); },
-        deleteColumn() { 
-            this.editor?.chain().focus().deleteColumn().run(); 
-            this.closeDropdowns();
-        },
-        deleteRow() { 
-            this.editor?.chain().focus().deleteRow().run(); 
-            this.closeDropdowns();
-        },
-        deleteTable() { 
-            this.editor?.chain().focus().deleteTable().run(); 
-            this.closeDropdowns();
-        },
+// Methods
+const toggleBold = () => editor.value?.chain().focus().toggleBold().run();
+const toggleItalic = () => editor.value?.chain().focus().toggleItalic().run();
+const toggleCode = () => editor.value?.chain().focus().toggleCode().run();
 
-        undo() { this.editor?.chain().focus().undo().run(); },
-        redo() { this.editor?.chain().focus().redo().run(); },
-
-        updateActiveStates() {
-            if (!this.editor) return;
-            this.canUndo = this.editor.can().undo() || false;
-            this.canRedo = this.editor.can().redo() || false;
-            this.isInTable = this.editor.isActive('table') || false;
-            this.isBoldActive = this.editor.isActive('bold') || false;
-            this.isItalicActive = this.editor.isActive('italic') || false;
-            this.isCodeActive = this.editor.isActive('code') || false;
-            this.isLinkActive = this.editor.isActive('link') || false;
-            this.isBlockquoteActive = this.editor.isActive('blockquote') || false;
-            this.isCodeBlockActive = this.editor.isActive('codeBlock') || false;
-            this.isBulletListActive = this.editor.isActive('bulletList') || false;
-            this.isOrderedListActive = this.editor.isActive('orderedList') || false;
-            this.isParagraphActive = this.editor.isActive('paragraph') || false;
-            this.isHeading1Active = this.editor.isActive('heading', { level: 1 }) || false;
-            this.isHeading2Active = this.editor.isActive('heading', { level: 2 }) || false;
-            this.isHeading3Active = this.editor.isActive('heading', { level: 3 }) || false;
-            this.isHeading4Active = this.editor.isActive('heading', { level: 4 }) || false;
-        },
-
-        emitUpdate() {
-            if (!this.editor) return;
-
-            const markdown = this.editor.storage.markdown.getMarkdown();
-            
-            if (markdown !== this.lastEmittedValue) {
-                this.lastEmittedValue = markdown;
-                this.$emit('update:modelValue', markdown);
-                
-                if (this.autoSave) {
-                    this.scheduleAutoSave();
-                }
-            }
-        },
-
-        scheduleAutoSave() {
-            if (this.autoSaveTimer) {
-                clearTimeout(this.autoSaveTimer);
-            }
-            
-            this.autoSaveState = 'changed';
-            
-            this.autoSaveTimer = setTimeout(() => {
-                this.triggerAutoSave();
-            }, 5000);
-        },
-
-        triggerAutoSave() {
-            if (this.autoSaveState === 'changed') {
-                this.autoSaveState = 'saving';
-                this.$emit('save');
-            }
-        },
-
-        handleSave() {
-            this.$emit('save');
-        },
-
-        syncHeading(newTitle) {
-            if (!this.editor) return;
-            
-            let firstH1Pos = null;
-            let firstH1Node = null;
-            
-            this.editor.state.doc.descendants((node, pos) => {
-                if (firstH1Pos === null && node.type.name === 'heading' && node.attrs.level === 1) {
-                    firstH1Pos = pos;
-                    firstH1Node = node;
-                    return false;
-                }
-            });
-
-            if (firstH1Pos !== null && firstH1Node !== null) {
-                const from = firstH1Pos + 1;
-                const to = firstH1Pos + firstH1Node.nodeSize - 1;
-                
-                this.editor.chain()
-                    .focus()
-                    .setTextSelection({ from, to })
-                    .insertContent(newTitle)
-                    .run();
-            }
-        }
-    },
-    mounted() {
-        
-        this.handleClickOutside = (event) => {
-            const toolbar = this.$el.querySelector('.tiptap-toolbar');
-            if (toolbar && !toolbar.contains(event.target)) {
-                this.closeDropdowns();
-            }
-        };
-        document.addEventListener('click', this.handleClickOutside);
-        
-        this.handleKeyDown = (event) => {
-            if ((event.ctrlKey || event.metaKey) && event.key === 's') {
-                event.preventDefault();
-                // Cancel any pending auto-save
-                if (this.autoSaveTimer) {
-                    clearTimeout(this.autoSaveTimer);
-                    this.autoSaveTimer = null;
-                }
-                // Trigger immediate save if there are changes or auto-save is pending
-                if (!this.isSaving && (this.hasChanges || this.autoSaveState === 'changed')) {
-                    if (this.autoSave) {
-                        this.autoSaveState = 'saving';
-                    }
-                    this.handleSave();
-                }
-            }
-        };
-        document.addEventListener('keydown', this.handleKeyDown);
-        
-        this.editor = new Editor({
-            element: this.$refs.editorElement,
-            extensions: [
-                StarterKit.configure({
-                    link: false
-                }),
-                Markdown,
-                Table.configure({
-                    resizable: true,
-                }),
-                TableRow,
-                TableHeader,
-                TableCell,
-                Link.configure({
-                    openOnClick: false,
-                    HTMLAttributes: {
-                        class: 'tiptap-link'
-                    }
-                })
-            ],
-            content: this.modelValue || '',
-            editable: !this.readonly,
-            editorProps: {
-                attributes: {
-                    class: 'tiptap-editor-content markdown-container'
-                }
-            },
-            onUpdate: () => {
-                this.emitUpdate();
-            },
-            onTransaction: () => {
-                this.updateActiveStates();
-            }
-        });
-        
-        this.originalContent = this.modelValue || '';
-        this.lastEmittedValue = this.modelValue || '';
-        this.updateActiveStates();
-    },
-    beforeUnmount() {
-        document.removeEventListener('click', this.handleClickOutside);
-        document.removeEventListener('keydown', this.handleKeyDown);
-        
-        if (this.autoSaveTimer) {
-            clearTimeout(this.autoSaveTimer);
-        }
-        
-        if (this.editor) {
-            this.editor.destroy();
-            this.editor = null;
+const toggleLink = () => {
+    if (editor.value?.isActive('link')) {
+        editor.value.chain().focus().unsetLink().run();
+    } else {
+        const url = window.prompt('Enter URL:');
+        if (url) {
+            editor.value?.chain().focus().setLink({ href: url }).run();
         }
     }
 };
+
+const toggleHeadingDropdown = () => {
+    showHeadingDropdown.value = !showHeadingDropdown.value;
+    showListDropdown.value = false;
+    showDeleteDropdown.value = false;
+};
+
+const toggleListDropdown = () => {
+    showListDropdown.value = !showListDropdown.value;
+    showHeadingDropdown.value = false;
+    showDeleteDropdown.value = false;
+};
+
+const toggleDeleteDropdown = () => {
+    showDeleteDropdown.value = !showDeleteDropdown.value;
+    showHeadingDropdown.value = false;
+    showListDropdown.value = false;
+};
+
+const closeDropdowns = () => {
+    showHeadingDropdown.value = false;
+    showListDropdown.value = false;
+    showDeleteDropdown.value = false;
+};
+
+const setHeading = (level: 1 | 2 | 3 | 4) => {
+    editor.value?.chain().focus().toggleHeading({ level }).run();
+    closeDropdowns();
+};
+
+const setParagraph = () => {
+    editor.value?.chain().focus().setParagraph().run();
+    closeDropdowns();
+};
+
+const setList = (type: ListType) => {
+    if (type === 'bullet') {
+        editor.value?.chain().focus().toggleBulletList().run();
+    } else if (type === 'ordered') {
+        editor.value?.chain().focus().toggleOrderedList().run();
+    }
+    closeDropdowns();
+};
+
+const toggleBlockquote = () => editor.value?.chain().focus().toggleBlockquote().run();
+const toggleCodeBlock = () => editor.value?.chain().focus().toggleCodeBlock().run();
+const insertHorizontalRule = () => editor.value?.chain().focus().setHorizontalRule().run();
+
+const insertTable = () => {
+    editor.value?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+};
+
+const addColumnBefore = () => editor.value?.chain().focus().addColumnBefore().run();
+const addColumnAfter = () => editor.value?.chain().focus().addColumnAfter().run();
+const addRowBefore = () => editor.value?.chain().focus().addRowBefore().run();
+const addRowAfter = () => editor.value?.chain().focus().addRowAfter().run();
+
+const deleteColumn = () => {
+    editor.value?.chain().focus().deleteColumn().run();
+    closeDropdowns();
+};
+
+const deleteRow = () => {
+    editor.value?.chain().focus().deleteRow().run();
+    closeDropdowns();
+};
+
+const deleteTable = () => {
+    editor.value?.chain().focus().deleteTable().run();
+    closeDropdowns();
+};
+
+const undo = () => editor.value?.chain().focus().undo().run();
+const redo = () => editor.value?.chain().focus().redo().run();
+
+const updateActiveStates = () => {
+    if (!editor.value) return;
+    canUndo.value = editor.value.can().undo() || false;
+    canRedo.value = editor.value.can().redo() || false;
+    isInTable.value = editor.value.isActive('table') || false;
+    isBoldActive.value = editor.value.isActive('bold') || false;
+    isItalicActive.value = editor.value.isActive('italic') || false;
+    isCodeActive.value = editor.value.isActive('code') || false;
+    isLinkActive.value = editor.value.isActive('link') || false;
+    isBlockquoteActive.value = editor.value.isActive('blockquote') || false;
+    isCodeBlockActive.value = editor.value.isActive('codeBlock') || false;
+    isBulletListActive.value = editor.value.isActive('bulletList') || false;
+    isOrderedListActive.value = editor.value.isActive('orderedList') || false;
+    isParagraphActive.value = editor.value.isActive('paragraph') || false;
+    isHeading1Active.value = editor.value.isActive('heading', { level: 1 }) || false;
+    isHeading2Active.value = editor.value.isActive('heading', { level: 2 }) || false;
+    isHeading3Active.value = editor.value.isActive('heading', { level: 3 }) || false;
+    isHeading4Active.value = editor.value.isActive('heading', { level: 4 }) || false;
+};
+
+const emitUpdate = () => {
+    if (!editor.value) return;
+
+    const markdown = editor.value.storage.markdown.getMarkdown();
+    
+    if (markdown !== lastEmittedValue.value) {
+        lastEmittedValue.value = markdown;
+        emit('update:modelValue', markdown);
+        
+        if (props.autoSave) {
+            scheduleAutoSave();
+        }
+    }
+};
+
+const scheduleAutoSave = () => {
+    if (autoSaveTimer.value) {
+        clearTimeout(autoSaveTimer.value);
+    }
+    
+    autoSaveState.value = 'changed';
+    
+    autoSaveTimer.value = window.setTimeout(() => {
+        triggerAutoSave();
+    }, 5000);
+};
+
+const triggerAutoSave = () => {
+    if (autoSaveState.value === 'changed') {
+        autoSaveState.value = 'saving';
+        emit('save');
+    }
+};
+
+const handleSave = () => {
+    emit('save');
+};
+
+const syncHeading = (newTitle: string) => {
+    if (!editor.value) return;
+    
+    let firstH1Pos: number | null = null;
+    let firstH1Node: any = null;
+    
+    editor.value.state.doc.descendants((node, pos) => {
+        if (firstH1Pos === null && node.type.name === 'heading' && node.attrs.level === 1) {
+            firstH1Pos = pos;
+            firstH1Node = node;
+            return false;
+        }
+    });
+
+    if (firstH1Pos !== null && firstH1Node !== null) {
+        const from = firstH1Pos + 1;
+        const to = firstH1Pos + firstH1Node.nodeSize - 1;
+        
+        editor.value.chain()
+            .focus()
+            .setTextSelection({ from, to })
+            .insertContent(newTitle)
+            .run();
+    }
+};
+
+// Event handlers
+let handleClickOutside: ((event: MouseEvent) => void) | null = null;
+let handleKeyDown: ((event: KeyboardEvent) => void) | null = null;
+
+// Lifecycle hooks
+onMounted(() => {
+    handleClickOutside = (event: MouseEvent) => {
+        const toolbar = (event.currentTarget as Document).querySelector('.tiptap-toolbar');
+        if (toolbar && !toolbar.contains(event.target as Node)) {
+            closeDropdowns();
+        }
+    };
+    document.addEventListener('click', handleClickOutside);
+    
+    handleKeyDown = (event: KeyboardEvent) => {
+        if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+            event.preventDefault();
+            // Cancel any pending auto-save
+            if (autoSaveTimer.value) {
+                clearTimeout(autoSaveTimer.value);
+                autoSaveTimer.value = null;
+            }
+            // Trigger immediate save if there are changes or auto-save is pending
+            if (!props.isSaving && (hasChanges.value || autoSaveState.value === 'changed')) {
+                if (props.autoSave) {
+                    autoSaveState.value = 'saving';
+                }
+                handleSave();
+            }
+        }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    
+    if (!editorElement.value) return;
+    
+    editor.value = new Editor({
+        element: editorElement.value,
+        extensions: [
+            StarterKit.configure({
+                link: false
+            }),
+            Markdown,
+            Table.configure({
+                resizable: true,
+            }),
+            TableRow,
+            TableHeader,
+            TableCell,
+            Link.configure({
+                openOnClick: false,
+                HTMLAttributes: {
+                    class: 'tiptap-link'
+                }
+            })
+        ],
+        content: props.modelValue || '',
+        editable: !props.readonly,
+        editorProps: {
+            attributes: {
+                class: 'tiptap-editor-content markdown-container'
+            }
+        },
+        onUpdate: () => {
+            emitUpdate();
+        },
+        onTransaction: () => {
+            updateActiveStates();
+        }
+    });
+    
+    originalContent.value = props.modelValue || '';
+    lastEmittedValue.value = props.modelValue || '';
+    updateActiveStates();
+});
+
+onBeforeUnmount(() => {
+    if (handleClickOutside) {
+        document.removeEventListener('click', handleClickOutside);
+    }
+    if (handleKeyDown) {
+        document.removeEventListener('keydown', handleKeyDown);
+    }
+    
+    if (autoSaveTimer.value) {
+        clearTimeout(autoSaveTimer.value);
+    }
+    
+    if (editor.value) {
+        editor.value.destroy();
+        editor.value = null;
+    }
+});
+
+// Expose methods for parent components
+defineExpose({
+    syncHeading
+});
 </script>

@@ -58,19 +58,21 @@ export function useArticleTree(state: ArticleTreeState): UseArticleTreeReturn {
    * @param articles - Array of article objects (defaults to state.articles.list)
    */
   const buildArticleIndex = (articles: ArticleDto[] = state.articles.list): void => {
-    const index = new Map<string, ArticleDto>();
+    // Clear existing index instead of replacing it to maintain reactivity
+    state.articles.index.clear();
+    
     const traverse = (items: ArticleDto[]): void => {
       items.forEach(article => {
         if (article.id) {
-          index.set(article.id, article);
+          state.articles.index.set(article.id, article);
         }
         if (article.children && article.children.length > 0) {
           traverse(article.children);
         }
       });
     };
+    
     traverse(articles);
-    state.articles.index = index;
   };
 
   /**
@@ -84,6 +86,11 @@ export function useArticleTree(state: ArticleTreeState): UseArticleTreeReturn {
     articles: ArticleDto[] = state.articles.list,
     path: ParentPathItem[] = []
   ): void => {
+    // Clear cache when building from root to avoid stale entries
+    if (path.length === 0) {
+      state.articles.parentPathCache.clear();
+    }
+    
     articles.forEach(article => {
       if (article.id) {
         state.articles.parentPathCache.set(article.id, [...path]);

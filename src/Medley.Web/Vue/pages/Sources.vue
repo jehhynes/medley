@@ -214,7 +214,7 @@
           </div>
           <div class="tab-pane" id="metadata-pane" role="tabpanel" aria-labelledby="metadata-tab">
             <div v-if="parsedMetadata">
-              <json-viewer ref="jsonViewer"></json-viewer>
+              <json-viewer :data="parsedMetadata"></json-viewer>
             </div>
             <div v-else class="text-muted">
               No metadata available
@@ -332,15 +332,6 @@ const sortedTags = computed(() => {
 });
 
 // Watchers
-watch(parsedMetadata, (newVal) => {
-  if (newVal) {
-    const jsonViewer = (window as any).$refs?.jsonViewer;
-    if (jsonViewer) {
-      jsonViewer.data = newVal;
-    }
-  }
-});
-
 watch(selectedSource, (newVal) => {
   fragments.value = [];
   selectedFragment.value = null;
