@@ -163,506 +163,562 @@
   </div>
 </template>
 
-<script>
+<script setup lang="ts">
+import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue';
+import * as signalR from '@microsoft/signalr';
 import ToolCallItem from './ToolCallItem.vue';
-import { formatRelativeTime } from '@/utils/helpers.js';
+import { formatRelativeTime } from '@/utils/helpers';
+import type { HubConnection } from '@microsoft/signalr';
+import { ConversationMode } from '@/types/generated/api-client';
+import type {
+  ChatTurnStartedPayload,
+  ChatTurnCompletePayload,
+  ChatMessageStreamingPayload,
+  ChatToolInvokedPayload,
+  ChatToolCompletedPayload,
+  ChatMessageCompletePayload,
+  ChatErrorPayload
+} from '@/types/signalr/article-hub';
 
-export default {
-  name: 'ChatPanel',
-  components: {
-    ToolCallItem
-  },
-  props: {
-    articleId: {
-      type: String,
-      default: null
-    },
-    connection: {
-      type: Object,
-      default: null
+// Chat message role enum
+type ChatMessageRole = 'user' | 'assistant';
+
+// Tool call interface
+interface ToolCall {
+  name: string;
+  callId: string;
+  display: string | null;
+  completed: boolean;
+  isError?: boolean;
+  result?: {
+    ids: string[];
+  };
+  timestamp: string;
+}
+
+// Chat message interface
+interface ChatMessage {
+  id: string;
+  role: ChatMessageRole;
+  text: string;
+  userName?: string | null;
+  createdAt: string;
+  toolCalls?: ToolCall[];
+  isStreaming?: boolean;
+}
+
+// Conversation interface
+interface Conversation {
+  id: string;
+  mode: ConversationMode;
+  implementingPlanId?: string | null;
+  implementingPlanVersion?: number | null;
+}
+
+// Props interface
+interface Props {
+  articleId: string | null;
+  connection: HubConnection | null;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  articleId: null,
+  connection: null
+});
+
+// Emits interface
+interface Emits {
+  (e: 'open-plan', planId: string): void;
+  (e: 'open-fragment', fragmentId: string): void;
+  (e: 'open-version', versionId: string): void;
+}
+
+const emit = defineEmits<Emits>();
+
+// Component state
+const conversationId = ref<string | null>(null);
+const messages = ref<ChatMessage[]>([]);
+const newMessage = ref<string>('');
+const isAiTurn = ref<boolean>(false);
+const error = ref<string | null>(null);
+const isLoading = ref<boolean>(false);
+const expandedMessages = ref<Record<string, boolean>>({});
+const mode = ref<ConversationMode>(ConversationMode.Agent);
+const implementingPlanId = ref<string | null>(null);
+const implementingPlanVersion = ref<number | null>(null);
+
+// Template refs
+const messagesContainer = ref<HTMLElement | null>(null);
+const chatInput = ref<HTMLTextAreaElement | null>(null);
+
+// Computed properties
+const isConnected = computed<boolean>(() => {
+  return !!(props.connection && props.connection.state === signalR.HubConnectionState.Connected);
+});
+
+const hasMessages = computed<boolean>(() => {
+  return messages.value.length > 0;
+});
+
+const canSendMessage = computed<boolean>(() => {
+  return !!(props.articleId &&
+    newMessage.value.trim() !== '' &&
+    !isAiTurn.value);
+});
+
+// Watch for article changes
+watch(() => props.articleId, async (newId, oldId) => {
+  if (newId !== oldId) {
+    reset();
+
+    if (newId) {
+      await loadConversation();
     }
-  },
-  emits: ['open-plan', 'open-fragment', 'open-version'],
-  data() {
-    return {
-      conversationId: null,
-      messages: [],
-      newMessage: '',
-      isAiTurn: false,
-      error: null,
-      isLoading: false,
+  }
+}, { immediate: true });
 
-      expandedMessages: {}, // Track expanded state of intermediate/tool messages
-      mode: 'Agent', // Default mode
-      implementingPlanId: null, // Plan being implemented (if any)
-      implementingPlanVersion: null // Version of the plan being implemented
-    };
-  },
-  computed: {
-    isConnected() {
-      return this.connection && this.connection.state === signalR.HubConnectionState.Connected;
-    },
-    hasMessages() {
-      return this.messages.length > 0;
-    },
-    canSendMessage() {
-      return this.articleId &&
-        this.newMessage.trim() !== '' &&
-        !this.isAiTurn;
+// Watch for connection changes
+watch(() => props.connection, (newConn, oldConn) => {
+  if (oldConn) {
+    removeEventListeners(oldConn);
+  }
+  if (newConn) {
+    setupEventListeners(newConn);
+  }
+}, { immediate: true });
+
+// Watch for new message changes
+watch(newMessage, () => {
+  nextTick(() => {
+    adjustTextareaHeight();
+  });
+});
+
+// Lifecycle hooks
+onBeforeUnmount(() => {
+  if (props.connection) {
+    removeEventListeners(props.connection);
+  }
+});
+
+// Methods
+function setupEventListeners(conn: HubConnection): void {
+  conn.on('ChatTurnStarted', onTurnStarted);
+  conn.on('ChatMessageReceived', onMessageReceived);
+  conn.on('ChatMessageStreaming', onMessageStreaming);
+  conn.on('ChatToolInvoked', onToolInvoked);
+  conn.on('ChatToolCompleted', onToolCompleted);
+  conn.on('ChatMessageComplete', onMessageComplete);
+  conn.on('ChatTurnComplete', onTurnComplete);
+  conn.on('ChatError', onChatError);
+}
+
+function removeEventListeners(conn: HubConnection): void {
+  conn.off('ChatTurnStarted', onTurnStarted);
+  conn.off('ChatMessageReceived', onMessageReceived);
+  conn.off('ChatMessageStreaming', onMessageStreaming);
+  conn.off('ChatToolInvoked', onToolInvoked);
+  conn.off('ChatToolCompleted', onToolCompleted);
+  conn.off('ChatMessageComplete', onMessageComplete);
+  conn.off('ChatTurnComplete', onTurnComplete);
+  conn.off('ChatError', onChatError);
+}
+
+async function loadConversation(conversationIdParam: string | null = null): Promise<void> {
+  if (!props.articleId) return;
+
+  isLoading.value = true;
+  error.value = null;
+
+  try {
+    // Build URL with optional conversationId route parameter
+    const url = conversationIdParam
+      ? `/api/articles/${props.articleId}/assistant/conversation/${conversationIdParam}`
+      : `/api/articles/${props.articleId}/assistant/conversation`;
+
+    const response = await fetch(url);
+
+    if (response.status === 204) {
+      // No active conversation - only valid when not requesting specific conversation
+      if (!conversationIdParam) {
+        conversationId.value = null;
+        messages.value = [];
+        return;
+      }
+      throw new Error('Conversation not found');
     }
-  },
-  watch: {
-    articleId: {
-      immediate: true,
-      async handler(newId, oldId) {
-        if (newId !== oldId) {
-          this.reset();
 
-          if (newId) {
-            this.loadConversation();
-          }
-        }
+    if (response.status === 404) {
+      // 404 - handle based on whether we're loading a specific conversation
+      if (conversationIdParam) {
+        error.value = 'Conversation not found';
+        return;
       }
-    },
-    connection: {
-      immediate: true,
-      handler(newConn, oldConn) {
-        if (oldConn) {
-          this.removeEventListeners(oldConn);
-        }
-        if (newConn) {
-          this.setupEventListeners(newConn);
-        }
-      }
-    },
-    newMessage() {
-      this.$nextTick(() => {
-        this.adjustTextareaHeight();
+      // No active conversation - that's ok (backwards compatibility)
+      conversationId.value = null;
+      messages.value = [];
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error('Failed to load conversation');
+    }
+
+    const conversation: Conversation = await response.json();
+    conversationId.value = conversation.id;
+    mode.value = conversation.mode || ConversationMode.Agent;
+    implementingPlanId.value = conversation.implementingPlanId || null;
+    implementingPlanVersion.value = conversation.implementingPlanVersion || null;
+
+    // Load messages for this conversation
+    await loadMessages();
+  } catch (err) {
+    console.error('Error loading conversation:', err);
+    error.value = (err as Error).message || 'Failed to load conversation';
+  } finally {
+    isLoading.value = false;
+    // Scroll to bottom after loading is complete and DOM is updated
+    nextTick(() => {
+      nextTick(() => {
+        scrollToBottom();
       });
+    });
+  }
+}
+
+async function loadMessages(): Promise<void> {
+  if (!conversationId.value) return;
+
+  try {
+    const response = await fetch(
+      `/api/articles/${props.articleId}/assistant/conversations/${conversationId.value}/messages`
+    );
+
+    if (response.ok) {
+      messages.value = await response.json();
+
+      // Check if the last message is from a user (AI is likely processing)
+      if (messages.value.length > 0) {
+        const lastMessage = messages.value[messages.value.length - 1];
+        if (lastMessage && lastMessage.role === 'user') {
+          isAiTurn.value = true;
+        }
+      }
+    } else {
+      throw new Error('Failed to load messages');
     }
-  },
-  beforeUnmount() {
-    if (this.connection) {
-      this.removeEventListeners(this.connection);
-    }
-  },
-  methods: {
-    setupEventListeners(conn) {
-      conn.on('ChatTurnStarted', this.onTurnStarted);
-      conn.on('ChatMessageReceived', this.onMessageReceived);
-      conn.on('ChatMessageStreaming', this.onMessageStreaming);
-      conn.on('ChatToolInvoked', this.onToolInvoked);
-      conn.on('ChatToolCompleted', this.onToolCompleted);
-      conn.on('ChatMessageComplete', this.onMessageComplete);
-      conn.on('ChatTurnComplete', this.onTurnComplete);
-      conn.on('ChatError', this.onChatError);
-    },
+  } catch (err) {
+    console.error('Error loading messages:', err);
+    error.value = 'Failed to load messages';
+  }
+}
 
-    removeEventListeners(conn) {
-      conn.off('ChatTurnStarted', this.onTurnStarted);
-      conn.off('ChatMessageReceived', this.onMessageReceived);
-      conn.off('ChatMessageStreaming', this.onMessageStreaming);
-      conn.off('ChatToolInvoked', this.onToolInvoked);
-      conn.off('ChatToolCompleted', this.onToolCompleted);
-      conn.off('ChatMessageComplete', this.onMessageComplete);
-      conn.off('ChatTurnComplete', this.onTurnComplete);
-      conn.off('ChatError', this.onChatError);
-    },
+async function sendMessage(): Promise<void> {
+  if (!canSendMessage.value) return;
 
-    async loadConversation(conversationId = null) {
-      if (!this.articleId) return;
+  const messageText = newMessage.value.trim();
+  newMessage.value = '';
+  error.value = null;
 
-      this.isLoading = true;
-      this.error = null;
-
-      try {
-        // Build URL with optional conversationId route parameter
-        const url = conversationId
-          ? `/api/articles/${this.articleId}/assistant/conversation/${conversationId}`
-          : `/api/articles/${this.articleId}/assistant/conversation`;
-
-        const response = await fetch(url);
-
-        if (response.status === 204) {
-          // No active conversation - only valid when not requesting specific conversation
-          if (!conversationId) {
-            this.conversationId = null;
-            this.messages = [];
-            return;
-          }
-          throw new Error('Conversation not found');
+  try {
+    // Create conversation if needed
+    if (!conversationId.value) {
+      const createResponse = await fetch(
+        `/api/articles/${props.articleId}/assistant/conversation?mode=${mode.value}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
         }
-
-        if (response.status === 404) {
-          // 404 - handle based on whether we're loading a specific conversation
-          if (conversationId) {
-            this.error = 'Conversation not found';
-            return;
-          }
-          // No active conversation - that's ok (backwards compatibility)
-          this.conversationId = null;
-          this.messages = [];
-          return;
-        }
-
-        if (!response.ok) {
-          throw new Error('Failed to load conversation');
-        }
-
-        const conversation = await response.json();
-        this.conversationId = conversation.id;
-        this.mode = conversation.mode || 'Agent';
-        this.implementingPlanId = conversation.implementingPlanId || null;
-        this.implementingPlanVersion = conversation.implementingPlanVersion || null;
-
-        // Load messages for this conversation
-        await this.loadMessages();
-      } catch (err) {
-        console.error('Error loading conversation:', err);
-        this.error = err.message || 'Failed to load conversation';
-      } finally {
-        this.isLoading = false;
-        // Scroll to bottom after loading is complete and DOM is updated
-        this.$nextTick(() => {
-          this.$nextTick(() => {
-            this.scrollToBottom();
-          });
-        });
-      }
-    },
-
-    async loadMessages() {
-      if (!this.conversationId) return;
-
-      try {
-        const response = await fetch(
-          `/api/articles/${this.articleId}/assistant/conversations/${this.conversationId}/messages`
-        );
-
-        if (response.ok) {
-          this.messages = await response.json();
-
-          // Check if the last message is from a user (AI is likely processing)
-          if (this.messages.length > 0) {
-            const lastMessage = this.messages[this.messages.length - 1];
-            if (lastMessage.role === 'user') {
-              this.isAiTurn = true;
-            }
-          }
-        } else {
-          throw new Error('Failed to load messages');
-        }
-      } catch (err) {
-        console.error('Error loading messages:', err);
-        this.error = 'Failed to load messages';
-      }
-    },
-
-    async sendMessage() {
-      if (!this.canSendMessage) return;
-
-      const messageText = this.newMessage.trim();
-      this.newMessage = '';
-      this.error = null;
-
-      try {
-        // Create conversation if needed
-        if (!this.conversationId) {
-          const createResponse = await fetch(
-            `/api/articles/${this.articleId}/assistant/conversation?mode=${this.mode}`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' }
-            }
-          );
-
-          if (!createResponse.ok) {
-            throw new Error('Failed to create conversation');
-          }
-
-          const conversation = await createResponse.json();
-          this.conversationId = conversation.id;
-        }
-
-        // Send message to API (message will appear via SignalR broadcast)
-        const response = await fetch(
-          `/api/articles/${this.articleId}/assistant/conversations/${this.conversationId}/messages`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              message: messageText,
-              mode: this.mode
-            })
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error('Failed to send message');
-        }
-
-        // Set AI thinking state
-        this.isAiTurn = true;
-        this.$nextTick(() => this.scrollToBottom());
-
-      } catch (err) {
-        console.error('Error sending message:', err);
-        this.error = 'Failed to send message';
-      }
-    },
-
-    onTurnStarted(data) {
-      if (data.conversationId !== this.conversationId) {
-        return;
-      }
-
-      this.isAiTurn = true;
-      this.$nextTick(() => this.scrollToBottom());
-    },
-
-    onMessageReceived(data) {
-      // Handle user messages broadcast via SignalR
-      if (data.conversationId !== this.conversationId) {
-        return;
-      }
-      
-      // Add user message to list
-      this.messages.push({
-        id: data.id,
-        role: data.role,
-        text: data.text,
-        userName: data.userName,
-        createdAt: data.createdAt
-      });
-
-      this.$nextTick(() => this.scrollToBottom());
-    },
-
-    onMessageStreaming(data) {
-      // Handle streaming text updates
-      if (data.conversationId !== this.conversationId) {
-        return;
-      }
-
-      // Use messageId if provided, otherwise fall back to temporary ID
-      const messageId = data.messageId || 'streaming-temp';
-
-      // Find or create the streaming message by ID
-      let streamingMsg = this.messages.find(m => m.id === messageId && m.isStreaming);
-      if (!streamingMsg) {
-        // Create a new streaming message placeholder
-        streamingMsg = {
-          id: messageId,
-          role: 'assistant',
-          text: '',
-          isStreaming: true,
-          toolCalls: [],
-          userName: null,
-          createdAt: new Date().toISOString()
-        };
-        this.messages.push(streamingMsg);
-      }
-
-      // Append the streamed text
-      streamingMsg.text += data.text;
-      this.$nextTick(() => this.scrollToBottom());
-    },
-
-    onToolInvoked(data) {
-      // Handle tool invocation notifications
-      if (data.conversationId !== this.conversationId) {
-        return;
-      }
-
-      console.log(`AI Agent invoked tool: ${data.toolName}`);
-
-      // Use messageId if provided to associate tool with message
-      const messageId = data.messageId || 'streaming-temp';
-
-      // Find the streaming message and add tool invocation
-      let streamingMsg = this.messages.find(m => m.id === messageId && m.isStreaming);
-      if (!streamingMsg) {
-        // Create a new streaming message if it doesn't exist yet
-        streamingMsg = {
-          id: messageId,
-          role: 'assistant',
-          text: '',
-          isStreaming: true,
-          toolCalls: [],
-          userName: null,
-          createdAt: new Date().toISOString()
-        };
-        this.messages.push(streamingMsg);
-      }
-
-      // Add tool call to the message (pending state)
-      if (!streamingMsg.toolCalls) {
-        streamingMsg.toolCalls = [];
-      }
-
-      streamingMsg.toolCalls.push({
-        name: data.toolName,
-        callId: data.toolCallId,
-        display: data.toolDisplay,
-        completed: false,
-        timestamp: data.timestamp
-      });
-
-      this.$nextTick(() => this.scrollToBottom());
-    },
-
-    onToolCompleted(data) {
-      // Handle tool completion notifications
-      if (data.conversationId !== this.conversationId) {
-        return;
-      }
-
-      console.log(`AI Agent completed tool: ${data.toolName}`);
-
-      // Loop backwards through messages to find the matching tool call by callId
-      // (it will almost always be in the most recent message)
-      for (let i = this.messages.length - 1; i >= 0; i--) {
-        const msg = this.messages[i];
-        if (msg.toolCalls && msg.toolCalls.length > 0) {
-          const toolCall = msg.toolCalls.find(t => t.callId === data.toolCallId);
-          if (toolCall) {
-            toolCall.completed = true;
-            toolCall.isError = data.isError || false;
-            // Store the result with IDs if available
-            if (data.result && data.result.ids) {
-              toolCall.result = {
-                ids: data.result.ids
-              };
-            }
-            break; // Found and updated, stop searching
-          }
-        }
-      }
-
-      this.$nextTick(() => this.scrollToBottom());
-    },
-
-    onMessageComplete(data) {
-      // Verify this is for the current conversation
-      if (data.conversationId !== this.conversationId) {
-        return;
-      }
-
-      // Find the streaming message by ID if it exists
-      const streamingIdx = this.messages.findIndex(m =>
-        m.isStreaming && (m.id === data.id || m.id === 'streaming-temp')
       );
 
-      if (streamingIdx >= 0) {
-        // Update the existing streaming message to be the final version
-        const streamingMsg = this.messages[streamingIdx];
-        this.messages.splice(streamingIdx, 1, {
-          id: data.id,
-          role: data.role,
-          text: data.text,
-          userName: data.userName,
-          createdAt: data.createdAt,
-          toolCalls: streamingMsg.toolCalls || [],
-          isStreaming: false
-        });
-      } else {
-        // No streaming message found, add the complete message
-        this.messages.push({
-          id: data.id,
-          role: data.role,
-          text: data.text,
-          userName: data.userName,
-          createdAt: data.createdAt,
-          toolCalls: [],
-          isStreaming: false
-        });
+      if (!createResponse.ok) {
+        throw new Error('Failed to create conversation');
       }
 
-      this.$nextTick(() => this.scrollToBottom());
-    },
+      const conversation: Conversation = await createResponse.json();
+      conversationId.value = conversation.id;
+    }
 
-    onTurnComplete(data) {
-      // Verify this is for the current conversation
-      if (data.conversationId !== this.conversationId) {
-        return;
+    // Send message to API (message will appear via SignalR broadcast)
+    const response = await fetch(
+      `/api/articles/${props.articleId}/assistant/conversations/${conversationId.value}/messages`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: messageText,
+          mode: mode.value
+        })
       }
+    );
 
-      console.log('Turn complete');
-      this.isAiTurn = false;
-    },
+    if (!response.ok) {
+      throw new Error('Failed to send message');
+    }
 
-    onChatError(data) {
-      if (data.conversationId !== this.conversationId) {
-        return;
-      }
+    // Set AI thinking state
+    isAiTurn.value = true;
+    nextTick(() => scrollToBottom());
 
-      console.error('Chat error:', data);
-      this.error = data.error || 'An error occurred';
-      this.isAiTurn = false;
-    },
+  } catch (err) {
+    console.error('Error sending message:', err);
+    error.value = 'Failed to send message';
+  }
+}
 
-    scrollToBottom() {
-      const container = this.$refs.messagesContainer;
-      if (container) {
-        container.scrollTop = container.scrollHeight;
-      }
-    },
+function onTurnStarted(data: ChatTurnStartedPayload): void {
+  if (data.conversationId !== conversationId.value) {
+    return;
+  }
 
-    reset() {
-      this.conversationId = null;
-      this.messages = [];
-      this.newMessage = '';
-      this.isAiTurn = false;
-      this.error = null;
-      this.expandedMessages = {};
-      this.mode = 'Agent';
-      this.implementingPlanId = null;
-      this.implementingPlanVersion = null;
-    },
+  isAiTurn.value = true;
+  nextTick(() => scrollToBottom());
+}
 
-    toggleMessageExpansion(messageId) {
-      this.expandedMessages[messageId] = !this.expandedMessages[messageId];
-    },
+function onMessageReceived(data: any): void {
+  // Handle user messages broadcast via SignalR
+  if (data.conversationId !== conversationId.value) {
+    return;
+  }
+  
+  // Add user message to list
+  messages.value.push({
+    id: data.id,
+    role: data.role,
+    text: data.text,
+    userName: data.userName,
+    createdAt: data.createdAt
+  });
 
-    formatDate(dateString) {
-      return formatRelativeTime(dateString, { short: true });
-    },
+  nextTick(() => scrollToBottom());
+}
 
-    renderMarkdown(text) {
-      if (!text) return '';
-      // Use marked library to render markdown
-      if (typeof marked !== 'undefined') {
-        return marked.parse(text);
-      }
-      // Fallback to plain text if marked is not available
-      return text.replace(/\n/g, '<br>');
-    },
+function onMessageStreaming(data: ChatMessageStreamingPayload): void {
+  // Handle streaming text updates
+  if (data.conversationId !== conversationId.value) {
+    return;
+  }
 
-    openPlan(planId) {
-      if (!planId) return;
-      this.$emit('open-plan', planId);
-    },
+  // Use messageId if provided, otherwise fall back to temporary ID
+  const messageId = data.messageId || 'streaming-temp';
 
-    async createPlan() {
-      if (!this.articleId || this.isAiTurn) return;
+  // Find or create the streaming message by ID
+  let streamingMsg = messages.value.find(m => m.id === messageId && m.isStreaming);
+  if (!streamingMsg) {
+    // Create a new streaming message placeholder
+    streamingMsg = {
+      id: messageId,
+      role: 'assistant',
+      text: '',
+      isStreaming: true,
+      toolCalls: [],
+      userName: null,
+      createdAt: new Date().toISOString()
+    };
+    messages.value.push(streamingMsg);
+  }
 
-      // Switch to Plan mode
-      this.mode = 'Plan';
+  // Append the streamed text
+  streamingMsg.text += data.text || '';
+  nextTick(() => scrollToBottom());
+}
 
-      // Set the command message
-      this.newMessage = 'Create a plan for improving this article';
+function onToolInvoked(data: ChatToolInvokedPayload): void {
+  // Handle tool invocation notifications
+  if (data.conversationId !== conversationId.value) {
+    return;
+  }
 
-      // Send it using the standard chat flow
-      await this.sendMessage();
-    },
+  console.log(`AI Agent invoked tool: ${data.toolName}`);
 
-    adjustTextareaHeight() {
-      const textarea = this.$refs.chatInput;
-      if (textarea) {
-        textarea.style.height = 'auto';
-        textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+  // Use messageId if provided to associate tool with message
+  const messageId = (data as any).messageId || 'streaming-temp';
+
+  // Find the streaming message and add tool invocation
+  let streamingMsg = messages.value.find(m => m.id === messageId && m.isStreaming);
+  if (!streamingMsg) {
+    // Create a new streaming message if it doesn't exist yet
+    streamingMsg = {
+      id: messageId,
+      role: 'assistant',
+      text: '',
+      isStreaming: true,
+      toolCalls: [],
+      userName: null,
+      createdAt: new Date().toISOString()
+    };
+    messages.value.push(streamingMsg);
+  }
+
+  // Add tool call to the message (pending state)
+  if (!streamingMsg.toolCalls) {
+    streamingMsg.toolCalls = [];
+  }
+
+  streamingMsg.toolCalls.push({
+    name: data.toolName,
+    callId: data.toolCallId,
+    display: data.toolDisplay,
+    completed: false,
+    timestamp: data.timestamp
+  });
+
+  nextTick(() => scrollToBottom());
+}
+
+function onToolCompleted(data: ChatToolCompletedPayload): void {
+  // Handle tool completion notifications
+  if (data.conversationId !== conversationId.value) {
+    return;
+  }
+
+  console.log(`AI Agent completed tool: ${(data as any).toolName}`);
+
+  // Loop backwards through messages to find the matching tool call by callId
+  // (it will almost always be in the most recent message)
+  for (let i = messages.value.length - 1; i >= 0; i--) {
+    const msg = messages.value[i];
+    if (msg && msg.toolCalls && msg.toolCalls.length > 0) {
+      const toolCall = msg.toolCalls.find(t => t.callId === data.toolCallId);
+      if (toolCall) {
+        toolCall.completed = true;
+        toolCall.isError = (data as any).isError || false;
+        // Store the result with IDs if available
+        if ((data as any).result && (data as any).result.ids) {
+          toolCall.result = {
+            ids: (data as any).result.ids
+          };
+        }
+        break; // Found and updated, stop searching
       }
     }
   }
-};
+
+  nextTick(() => scrollToBottom());
+}
+
+function onMessageComplete(data: ChatMessageCompletePayload): void {
+  // Verify this is for the current conversation
+  if (data.conversationId !== conversationId.value) {
+    return;
+  }
+
+  // Find the streaming message by ID if it exists
+  const streamingIdx = messages.value.findIndex(m =>
+    m.isStreaming && (m.id === data.id || m.id === 'streaming-temp')
+  );
+
+  if (streamingIdx >= 0) {
+    // Update the existing streaming message to be the final version
+    const streamingMsg = messages.value[streamingIdx];
+    if (streamingMsg) {
+      messages.value.splice(streamingIdx, 1, {
+        id: data.id,
+        role: (data as any).role,
+        text: (data as any).text || data.content,
+        userName: (data as any).userName,
+        createdAt: (data as any).createdAt || data.timestamp,
+        toolCalls: streamingMsg.toolCalls || [],
+        isStreaming: false
+      });
+    }
+  } else {
+    // No streaming message found, add the complete message
+    messages.value.push({
+      id: data.id,
+      role: (data as any).role || 'assistant',
+      text: (data as any).text || data.content,
+      userName: (data as any).userName,
+      createdAt: (data as any).createdAt || data.timestamp,
+      toolCalls: [],
+      isStreaming: false
+    });
+  }
+
+  nextTick(() => scrollToBottom());
+}
+
+function onTurnComplete(data: ChatTurnCompletePayload): void {
+  // Verify this is for the current conversation
+  if (data.conversationId !== conversationId.value) {
+    return;
+  }
+
+  console.log('Turn complete');
+  isAiTurn.value = false;
+}
+
+function onChatError(data: ChatErrorPayload): void {
+  if (data.conversationId !== conversationId.value) {
+    return;
+  }
+
+  console.error('Chat error:', data);
+  error.value = data.message || 'An error occurred';
+  isAiTurn.value = false;
+}
+
+function scrollToBottom(): void {
+  const container = messagesContainer.value;
+  if (container) {
+    container.scrollTop = container.scrollHeight;
+  }
+}
+
+function reset(): void {
+  conversationId.value = null;
+  messages.value = [];
+  newMessage.value = '';
+  isAiTurn.value = false;
+  error.value = null;
+  expandedMessages.value = {};
+  mode.value = ConversationMode.Agent;
+  implementingPlanId.value = null;
+  implementingPlanVersion.value = null;
+}
+
+function toggleMessageExpansion(messageId: string): void {
+  expandedMessages.value[messageId] = !expandedMessages.value[messageId];
+}
+
+function formatDate(dateString: string): string {
+  return formatRelativeTime(dateString, { short: true });
+}
+
+function renderMarkdown(text: string): string {
+  if (!text) return '';
+  // Use marked library to render markdown
+  if (typeof (window as any).marked !== 'undefined') {
+    return (window as any).marked.parse(text);
+  }
+  // Fallback to plain text if marked is not available
+  return text.replace(/\n/g, '<br>');
+}
+
+function openPlan(planId: string): void {
+  if (!planId) return;
+  emit('open-plan', planId);
+}
+
+async function createPlan(): Promise<void> {
+  if (!props.articleId || isAiTurn.value) return;
+
+  // Switch to Plan mode
+  mode.value = ConversationMode.Plan;
+
+  // Set the command message
+  newMessage.value = 'Create a plan for improving this article';
+
+  // Send it using the standard chat flow
+  await sendMessage();
+}
+
+function adjustTextareaHeight(): void {
+  const textarea = chatInput.value;
+  if (textarea) {
+    textarea.style.height = 'auto';
+    textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+  }
+}
 </script>
+

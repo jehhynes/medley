@@ -52,105 +52,99 @@
   </virtual-scroller>
 </template>
 
-<script>
+<script setup lang="ts">
 import { computed } from 'vue';
 import VirtualScroller from './VirtualScroller.vue';
-import dropdownMixin from '@/mixins/dropdown';
+import { useDropDown } from '@/composables/useDropDown';
 import { useArticleView } from '@/composables/useArticleView';
+import type { ArticleDto, ArticleTypeDto } from '@/types/generated/api-client';
 
-export default {
-  name: 'ArticleList',
-  components: {
-    VirtualScroller
-  },
-  mixins: [dropdownMixin],
-  props: {
-    articles: {
-      type: Array,
-      default: () => []
-    },
-    selectedId: {
-      type: String,
-      default: null
-    },
-    articleTypeIconMap: {
-      type: Object,
-      default: () => ({})
-    },
-    articleTypes: {
-      type: Array,
-      default: () => []
-    }
-  },
-  emits: ['select', 'edit-article'],
-  setup(props, { emit }) {
-    const {
-      selectArticle,
-      getArticleIcon,
-      editArticle,
-      getIconClass,
-      getStatusIcon,
-      getStatusColorClass,
-      showProcessingSpinner,
-      showUserTurnIndicator
-    } = useArticleView(props, emit);
+// Props interface
+interface Props {
+  articles: ArticleDto[];
+  selectedId: string | null;
+  articleTypeIconMap: Record<string, string>;
+  articleTypes: ArticleTypeDto[];
+}
 
-    /**
-     * Flatten the article tree into a sorted list with breadcrumbs.
-     * Note: Filters are applied server-side via API query params, not here.
-     * This just flattens the already-filtered tree from the server.
-     */
-    const flattenedArticles = computed(() => {
-      /**
-       * Recursively flatten articles with breadcrumbs
-       * @param {Array} articles - Articles to flatten
-       * @param {Array} parentPath - Path of parent titles
-       * @returns {Array} Flattened articles with breadcrumbs
-       */
-      const flattenArticles = (articles, parentPath = []) => {
-        let result = [];
-        for (const article of articles) {
-          const breadcrumbs = parentPath.length > 0 
-            ? parentPath.join(' > ') 
-            : null;
+const props = withDefaults(defineProps<Props>(), {
+  articles: () => [],
+  selectedId: null,
+  articleTypeIconMap: () => ({}),
+  articleTypes: () => []
+});
 
-          const articleWithMeta = {
-            ...article,
-            breadcrumbs
-          };
-          result.push(articleWithMeta);
+// Emits interface
+interface Emits {
+  (e: 'select', article: ArticleDto): void;
+  (e: 'edit-article', article: ArticleDto): void;
+}
 
-          if (article.children && article.children.length > 0) {
-            const newPath = [...parentPath, article.title];
-            result = result.concat(flattenArticles(article.children, newPath));
-          }
-        }
-        return result;
+const emit = defineEmits<Emits>();
+
+// Use dropdown composable
+const { handleDropdownClick } = useDropDown();
+
+// Use article view composable
+const {
+  selectArticle,
+  getArticleIcon,
+  editArticle,
+  getIconClass,
+  getStatusIcon,
+  getStatusColorClass,
+  showProcessingSpinner,
+  showUserTurnIndicator
+} = useArticleView(props, emit);
+
+// Article with breadcrumbs metadata
+interface ArticleWithBreadcrumbs extends ArticleDto {
+  breadcrumbs: string | null;
+}
+
+/**
+ * Flatten the article tree into a sorted list with breadcrumbs.
+ * Note: Filters are applied server-side via API query params, not here.
+ * This just flattens the already-filtered tree from the server.
+ */
+const flattenedArticles = computed<ArticleWithBreadcrumbs[]>(() => {
+  /**
+   * Recursively flatten articles with breadcrumbs
+   * @param articles - Articles to flatten
+   * @param parentPath - Path of parent titles
+   * @returns Flattened articles with breadcrumbs
+   */
+  const flattenArticles = (
+    articles: ArticleDto[],
+    parentPath: string[] = []
+  ): ArticleWithBreadcrumbs[] => {
+    let result: ArticleWithBreadcrumbs[] = [];
+    for (const article of articles) {
+      const breadcrumbs = parentPath.length > 0 
+        ? parentPath.join(' > ') 
+        : null;
+
+      const articleWithMeta: ArticleWithBreadcrumbs = {
+        ...article,
+        breadcrumbs
       };
+      result.push(articleWithMeta);
 
-      const flattened = flattenArticles(props.articles);
-      return flattened.sort((a, b) => {
-        return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
-      });
-    });
+      if (article.children && article.children.length > 0) {
+        const newPath = [...parentPath, article.title || ''];
+        result = result.concat(flattenArticles(article.children, newPath));
+      }
+    }
+    return result;
+  };
 
-    return {
-      selectArticle,
-      getArticleIcon,
-      editArticle,
-      getIconClass,
-      getStatusIcon,
-      getStatusColorClass,
-      showProcessingSpinner,
-      showUserTurnIndicator,
-      flattenedArticles
-    };
-  },
-  data() {
-    return {
-      itemHeight: 52, // Height of each article row in pixels
-      buffer: 5 // Number of extra items to render above/below viewport
-    };
-  }
-};
+  const flattened = flattenArticles(props.articles);
+  return flattened.sort((a, b) => {
+    return (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' });
+  });
+});
+
+// Component data
+const itemHeight = 52; // Height of each article row in pixels
+const buffer = 5; // Number of extra items to render above/below viewport
 </script>
