@@ -19,13 +19,13 @@ export default defineConfig({
     
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'Vue/main.js')
+        main: resolve(__dirname, 'Vue/main.ts')
       },
       output: {
         entryFileNames: 'js/[name].js',
         chunkFileNames: 'js/[name]-[hash].js',
         assetFileNames: (assetInfo) => {
-          if (assetInfo.name.endsWith('.css')) {
+          if (assetInfo.name && assetInfo.name.endsWith('.css')) {
             return 'css/[name].[ext]';
           }
           return 'assets/[name]-[hash].[ext]';
@@ -42,5 +42,9 @@ export default defineConfig({
     alias: {
       '@': resolve(__dirname, 'Vue')
     }
+  },
+  
+  esbuild: {
+    target: 'es2020'
   }
 });

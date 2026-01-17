@@ -1,13 +1,14 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using Medley.Application.Hubs.Clients;
 
 namespace Medley.Application.Hubs;
 
 /// <summary>
-/// SignalR hub for real-time administrative notifications
+/// Strongly-typed SignalR hub for real-time administrative notifications
 /// </summary>
 [Authorize(Roles = "Admin")]
-public class AdminHub : Hub
+public class AdminHub : Hub<IAdminClient>
 {
     /// <summary>
     /// Join the admin notifications group for real-time updates

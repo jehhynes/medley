@@ -3,6 +3,7 @@ using Medley.Domain.Enums;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Medley.Application.Hubs;
+using Medley.Application.Hubs.Clients;
 
 namespace Medley.Infrastructure.Services;
 
@@ -11,11 +12,11 @@ namespace Medley.Infrastructure.Services;
 /// </summary>
 public class SignalRNotificationService : INotificationService
 {
-    private readonly IHubContext<AdminHub> _hubContext;
+    private readonly IHubContext<AdminHub, IAdminClient> _hubContext;
     private readonly ILogger<SignalRNotificationService> _logger;
 
     public SignalRNotificationService(
-        IHubContext<AdminHub> hubContext,
+        IHubContext<AdminHub, IAdminClient> hubContext,
         ILogger<SignalRNotificationService> logger)
     {
         _hubContext = hubContext;
@@ -30,7 +31,11 @@ public class SignalRNotificationService : INotificationService
         try
         {
             await _hubContext.Clients.Group("AdminNotifications")
-                .SendAsync("IntegrationStatusUpdate", integrationId, status.ToString(), message ?? string.Empty);
+                .IntegrationStatusUpdate(new IntegrationStatusUpdatePayload(
+                    integrationId,
+                    status.ToString(),
+                    message ?? string.Empty
+                ));
             
             _logger.LogDebug("Sent integration status update for {IntegrationId}: {Status}", 
                 integrationId, status);
@@ -49,7 +54,12 @@ public class SignalRNotificationService : INotificationService
         try
         {
             await _hubContext.Clients.All
-                .SendAsync("FragmentExtractionComplete", sourceId, fragmentCount, success, message ?? string.Empty);
+                .FragmentExtractionComplete(new FragmentExtractionCompletePayload(
+                    sourceId,
+                    fragmentCount,
+                    success,
+                    message ?? string.Empty
+                ));
             
             _logger.LogDebug("Sent fragment extraction complete notification for source {SourceId}: {FragmentCount} fragments, Success: {Success}", 
                 sourceId, fragmentCount, success);

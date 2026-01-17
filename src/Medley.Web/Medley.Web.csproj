@@ -13,6 +13,19 @@
 		<Exec Command="npm run build" />
 	</Target>
 	
+	<!-- NSwag target disabled to prevent infinite build loop -->
+	<!-- Run manually with: dotnet tool run nswag run nswag.json -->
+	<!--
+	<Target Name="NSwag" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug'">
+		<Exec ConsoleToMSBuild="true" ContinueOnError="true" Command="$(NSwagExe_Net80) run nswag.json /variables:Configuration=$(Configuration)">
+			<Output TaskParameter="ExitCode" PropertyName="NSwagExitCode" />
+			<Output TaskParameter="ConsoleOutput" PropertyName="NSwagOutput" />
+		</Exec>
+		<Message Text="$(NSwagOutput)" Condition="'$(NSwagExitCode)' == '0'" Importance="low" />
+		<Error Text="$(NSwagOutput)" Condition="'$(NSwagExitCode)' != '0'" />
+	</Target>
+	-->
+	
   <ItemGroup>
     <InternalsVisibleTo Include="Medley.Tests.Integration" />
   </ItemGroup>
@@ -45,6 +58,11 @@
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.1" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
+    <PackageReference Include="NSwag.AspNetCore" Version="14.6.3" />
+    <PackageReference Include="NSwag.MSBuild" Version="14.6.3">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageReference Include="Hangfire.Core" Version="1.8.22" />
     <PackageReference Include="Hangfire.PostgreSql" Version="1.20.13" />

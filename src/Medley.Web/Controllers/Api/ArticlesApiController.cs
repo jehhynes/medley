@@ -3,6 +3,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Text.RegularExpressions;
 using Medley.Application.Hubs;
+using Medley.Application.Hubs.Clients;
 using Medley.Application.Interfaces;
 using Medley.Domain.Entities;
 using Medley.Web.Extensions;
@@ -22,7 +23,7 @@ public class ArticlesApiController : ControllerBase
     private readonly IRepository<Article> _articleRepository;
     private readonly IRepository<ArticleType> _articleTypeRepository;
     private readonly IRepository<User> _userRepository;
-    private readonly IHubContext<ArticleHub> _hubContext;
+    private readonly IHubContext<ArticleHub, IArticleClient> _hubContext;
     private readonly IArticleVersionService _versionService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMedleyContext _medleyContext;
@@ -32,7 +33,7 @@ public class ArticlesApiController : ControllerBase
         IRepository<Article> articleRepository,
         IRepository<ArticleType> articleTypeRepository,
         IRepository<User> userRepository,
-        IHubContext<ArticleHub> hubContext,
+        IHubContext<ArticleHub, IArticleClient> hubContext,
         IArticleVersionService versionService,
         IUnitOfWork unitOfWork,
         IMedleyContext medleyContext,
@@ -238,18 +239,15 @@ public class ArticlesApiController : ControllerBase
         await _articleRepository.AddAsync(article);
 
         // Register post-commit action to send SignalR notification
-        var notification = new
-        {
-            ArticleId = article.Id,
-            Title = article.Title,
-            ParentArticleId = article.ParentArticleId,
-            ArticleTypeId = article.ArticleTypeId,
-            Timestamp = DateTimeOffset.UtcNow
-        };
-        
         HttpContext.RegisterPostCommitAction(async () =>
         {
-            await _hubContext.Clients.All.SendAsync("ArticleCreated", notification);
+            await _hubContext.Clients.All.ArticleCreated(new ArticleCreatedPayload(
+                article.Id.ToString(),
+                article.Title,
+                article.ParentArticleId?.ToString(),
+                article.ArticleTypeId?.ToString(),
+                DateTimeOffset.UtcNow
+            ));
         });
 
         return CreatedAtAction(nameof(Get), new { id = article.Id }, new
@@ -300,17 +298,14 @@ public class ArticlesApiController : ControllerBase
         
 
         // Register post-commit action to send SignalR notification
-        var notification = new
-        {
-            ArticleId = article.Id,
-            Title = article.Title,
-            ArticleTypeId = article.ArticleTypeId,
-            Timestamp = DateTimeOffset.UtcNow
-        };
-        
         HttpContext.RegisterPostCommitAction(async () =>
         {
-            await _hubContext.Clients.All.SendAsync("ArticleUpdated", notification);
+            await _hubContext.Clients.All.ArticleUpdated(new ArticleUpdatedPayload(
+                article.Id.ToString(),
+                article.Title,
+                article.ArticleTypeId?.ToString(),
+                DateTimeOffset.UtcNow
+            ));
         });
 
         return Ok(article);
@@ -367,35 +362,28 @@ public class ArticlesApiController : ControllerBase
         if (capturedVersion.IsNewVersion)
         {
             // Register post-commit action to send SignalR notification
-            var versionNotification = new
-            {
-                ArticleId = id,
-                VersionId = capturedVersion.Id,
-                VersionNumber = capturedVersion.VersionNumber,
-                CreatedAt = capturedVersion.CreatedAt,
-                Timestamp = DateTimeOffset.UtcNow
-            };
-
             HttpContext.RegisterPostCommitAction(async () =>
             {
-                await _hubContext.Clients.All.SendAsync("VersionCreated", versionNotification);
+                await _hubContext.Clients.All.VersionCreated(new VersionCreatedPayload(
+                    id.ToString(),
+                    capturedVersion.Id.ToString(),
+                    capturedVersion.VersionNumber,
+                    capturedVersion.CreatedAt
+                ));
             });
         }
 
         // Register post-commit action to send SignalR notification (only if title changed)
         if (article.Title != oldTitle)
         {
-            var notification = new
-            {
-                ArticleId = article.Id,
-                Title = article.Title,
-                ArticleTypeId = article.ArticleTypeId,
-                Timestamp = DateTimeOffset.UtcNow
-            };
-            
             HttpContext.RegisterPostCommitAction(async () =>
             {
-                await _hubContext.Clients.All.SendAsync("ArticleUpdated", notification);
+                await _hubContext.Clients.All.ArticleUpdated(new ArticleUpdatedPayload(
+                    article.Id.ToString(),
+                    article.Title,
+                    article.ArticleTypeId?.ToString(),
+                    DateTimeOffset.UtcNow
+                ));
             });
         }
 
@@ -489,17 +477,14 @@ public class ArticlesApiController : ControllerBase
         
 
         // Register post-commit action to send SignalR notification
-        var notification = new
-        {
-            ArticleId = article.Id,
-            OldParentId = oldParentId,
-            NewParentId = request.NewParentArticleId.Value,
-            Timestamp = DateTimeOffset.UtcNow
-        };
-        
         HttpContext.RegisterPostCommitAction(async () =>
         {
-            await _hubContext.Clients.All.SendAsync("ArticleMoved", notification);
+            await _hubContext.Clients.All.ArticleMoved(new ArticleMovedPayload(
+                article.Id.ToString(),
+                oldParentId?.ToString(),
+                request.NewParentArticleId.Value.ToString(),
+                DateTimeOffset.UtcNow
+            ));
         });
 
         return Ok(new 
@@ -768,18 +753,14 @@ public class ArticlesApiController : ControllerBase
             var newVersion = await _versionService.AcceptAiVersionAsync(versionId, currentUser);
 
             // Register post-commit action to send SignalR notification
-            var versionNotification = new
-            {
-                ArticleId = articleId,
-                VersionId = newVersion.Id,
-                VersionNumber = newVersion.VersionNumber,
-                CreatedAt = newVersion.CreatedAt,
-                Timestamp = DateTimeOffset.UtcNow
-            };
-            
             HttpContext.RegisterPostCommitAction(async () =>
             {
-                await _hubContext.Clients.All.SendAsync("VersionCreated", versionNotification);
+                await _hubContext.Clients.All.VersionCreated(new VersionCreatedPayload(
+                    articleId.ToString(),
+                    newVersion.Id.ToString(),
+                    newVersion.VersionNumber,
+                    newVersion.CreatedAt
+                ));
             });
 
             return Ok(new
@@ -867,19 +848,16 @@ public class ArticlesApiController : ControllerBase
     /// </summary>
     private async Task SendAssignmentNotificationAsync(Article article)
     {
-        var notification = new
-        {
-            ArticleId = article.Id.ToString(),
-            UserId = article.AssignedUser?.Id.ToString(),
-            UserName = article.AssignedUser?.FullName,
-            UserInitials = article.AssignedUser?.Initials,
-            UserColor = article.AssignedUser?.Color,
-            Timestamp = DateTimeOffset.UtcNow
-        };
-
         HttpContext.RegisterPostCommitAction(async () =>
         {
-            await _hubContext.Clients.All.SendAsync("ArticleAssignmentChanged", notification);
+            await _hubContext.Clients.All.ArticleAssignmentChanged(new ArticleAssignmentChangedPayload(
+                article.Id.ToString(),
+                article.AssignedUser?.Id.ToString(),
+                article.AssignedUser?.FullName,
+                article.AssignedUser?.Initials,
+                article.AssignedUser?.Color,
+                DateTimeOffset.UtcNow
+            ));
         });
     }
 }

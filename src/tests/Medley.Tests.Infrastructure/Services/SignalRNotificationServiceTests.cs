@@ -1,3 +1,5 @@
+using Medley.Application.Hubs;
+using Medley.Application.Hubs.Clients;
 using Medley.Application.Interfaces;
 using Medley.Domain.Enums;
 using Medley.Infrastructure.Services;
@@ -13,21 +15,22 @@ namespace Medley.Tests.Infrastructure.Services;
 /// </summary>
 public class SignalRNotificationServiceTests
 {
-    private readonly Mock<IHubContext<AdminHub>> _mockHubContext;
-    private readonly Mock<IHubClients> _mockHubClients;
-    private readonly Mock<IClientProxy> _mockClientProxy;
+    private readonly Mock<IHubContext<AdminHub, IAdminClient>> _mockHubContext;
+    private readonly Mock<IHubClients<IAdminClient>> _mockHubClients;
+    private readonly Mock<IAdminClient> _mockClientProxy;
     private readonly Mock<ILogger<SignalRNotificationService>> _mockLogger;
     private readonly SignalRNotificationService _service;
 
     public SignalRNotificationServiceTests()
     {
-        _mockHubContext = new Mock<IHubContext<AdminHub>>();
-        _mockHubClients = new Mock<IHubClients>();
-        _mockClientProxy = new Mock<IClientProxy>();
+        _mockHubContext = new Mock<IHubContext<AdminHub, IAdminClient>>();
+        _mockHubClients = new Mock<IHubClients<IAdminClient>>();
+        _mockClientProxy = new Mock<IAdminClient>();
         _mockLogger = new Mock<ILogger<SignalRNotificationService>>();
 
-        _mockHubContext.Setup(x => x.Clients.Group("IntegrationStatus"))
-            .Returns(_mockClientProxy.Object);
+        _mockHubContext.Setup(x => x.Clients).Returns(_mockHubClients.Object);
+        _mockHubClients.Setup(x => x.Group("AdminNotifications")).Returns(_mockClientProxy.Object);
+        _mockHubClients.Setup(x => x.All).Returns(_mockClientProxy.Object);
 
         _service = new SignalRNotificationService(
             _mockHubContext.Object,
@@ -47,7 +50,10 @@ public class SignalRNotificationServiceTests
 
         // Assert
         _mockClientProxy.Verify(
-            x => x.SendAsync("IntegrationStatusUpdate", integrationId, "Connected", message, CancellationToken.None),
+            x => x.IntegrationStatusUpdate(It.Is<IntegrationStatusUpdatePayload>(p =>
+                p.IntegrationId == integrationId &&
+                p.Status == "Connected" &&
+                p.Message == message)),
             Times.Once);
     }
 
@@ -63,7 +69,10 @@ public class SignalRNotificationServiceTests
 
         // Assert
         _mockClientProxy.Verify(
-            x => x.SendAsync("IntegrationStatusUpdate", integrationId, "Error", string.Empty, CancellationToken.None),
+            x => x.IntegrationStatusUpdate(It.Is<IntegrationStatusUpdatePayload>(p =>
+                p.IntegrationId == integrationId &&
+                p.Status == "Error" &&
+                p.Message == string.Empty)),
             Times.Once);
     }
 
@@ -75,7 +84,7 @@ public class SignalRNotificationServiceTests
         var status = ConnectionStatus.Connected;
         var message = "Test message";
 
-        _mockClientProxy.Setup(x => x.SendAsync(It.IsAny<string>(), It.IsAny<object[]>(), CancellationToken.None))
+        _mockClientProxy.Setup(x => x.IntegrationStatusUpdate(It.IsAny<IntegrationStatusUpdatePayload>()))
             .ThrowsAsync(new Exception("SignalR error"));
 
         // Act
@@ -107,7 +116,53 @@ public class SignalRNotificationServiceTests
 
         // Assert
         _mockClientProxy.Verify(
-            x => x.SendAsync("IntegrationStatusUpdate", integrationId, expectedStatus, message, CancellationToken.None),
+            x => x.IntegrationStatusUpdate(It.Is<IntegrationStatusUpdatePayload>(p =>
+                p.IntegrationId == integrationId &&
+                p.Status == expectedStatus &&
+                p.Message == message)),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task SendFragmentExtractionCompleteAsync_WithValidData_SendsMessage()
+    {
+        // Arrange
+        var sourceId = Guid.NewGuid();
+        var fragmentCount = 42;
+        var success = true;
+        var message = "Extraction complete";
+
+        // Act
+        await _service.SendFragmentExtractionCompleteAsync(sourceId, fragmentCount, success, message);
+
+        // Assert
+        _mockClientProxy.Verify(
+            x => x.FragmentExtractionComplete(It.Is<FragmentExtractionCompletePayload>(p =>
+                p.SourceId == sourceId &&
+                p.FragmentCount == fragmentCount &&
+                p.Success == success &&
+                p.Message == message)),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task SendFragmentExtractionCompleteAsync_WithNullMessage_SendsEmptyMessage()
+    {
+        // Arrange
+        var sourceId = Guid.NewGuid();
+        var fragmentCount = 10;
+        var success = false;
+
+        // Act
+        await _service.SendFragmentExtractionCompleteAsync(sourceId, fragmentCount, success, null);
+
+        // Assert
+        _mockClientProxy.Verify(
+            x => x.FragmentExtractionComplete(It.Is<FragmentExtractionCompletePayload>(p =>
+                p.SourceId == sourceId &&
+                p.FragmentCount == fragmentCount &&
+                p.Success == success &&
+                p.Message == string.Empty)),
             Times.Once);
     }
 }
