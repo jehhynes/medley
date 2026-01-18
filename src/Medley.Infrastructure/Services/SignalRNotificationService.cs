@@ -31,11 +31,12 @@ public class SignalRNotificationService : INotificationService
         try
         {
             await _hubContext.Clients.Group("AdminNotifications")
-                .IntegrationStatusUpdate(new IntegrationStatusUpdatePayload(
-                    integrationId,
-                    status.ToString(),
-                    message ?? string.Empty
-                ));
+                .IntegrationStatusUpdate(new IntegrationStatusUpdatePayload
+                {
+                    IntegrationId = integrationId,
+                    Status = status.ToString(),
+                    Message = message ?? string.Empty
+                });
             
             _logger.LogDebug("Sent integration status update for {IntegrationId}: {Status}", 
                 integrationId, status);
@@ -54,12 +55,13 @@ public class SignalRNotificationService : INotificationService
         try
         {
             await _hubContext.Clients.All
-                .FragmentExtractionComplete(new FragmentExtractionCompletePayload(
-                    sourceId,
-                    fragmentCount,
-                    success,
-                    message ?? string.Empty
-                ));
+                .FragmentExtractionComplete(new FragmentExtractionCompletePayload
+                {
+                    SourceId = sourceId,
+                    FragmentCount = fragmentCount,
+                    Success = success,
+                    Message = message ?? string.Empty
+                });
             
             _logger.LogDebug("Sent fragment extraction complete notification for source {SourceId}: {FragmentCount} fragments, Success: {Success}", 
                 sourceId, fragmentCount, success);

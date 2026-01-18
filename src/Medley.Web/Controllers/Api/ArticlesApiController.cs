@@ -261,13 +261,14 @@ public class ArticlesApiController : ControllerBase
         // Register post-commit action to send SignalR notification
         HttpContext.RegisterPostCommitAction(async () =>
         {
-            await _hubContext.Clients.All.ArticleCreated(new ArticleCreatedPayload(
-                article.Id.ToString(),
-                article.Title,
-                article.ParentArticleId?.ToString(),
-                article.ArticleTypeId?.ToString(),
-                DateTimeOffset.UtcNow
-            ));
+            await _hubContext.Clients.All.ArticleCreated(new ArticleCreatedPayload
+            {
+                ArticleId = article.Id.ToString(),
+                Title = article.Title,
+                ParentArticleId = article.ParentArticleId?.ToString(),
+                ArticleTypeId = article.ArticleTypeId?.ToString(),
+                Timestamp = DateTimeOffset.UtcNow
+            });
         });
 
         return CreatedAtAction(nameof(Get), new { id = article.Id }, new
@@ -326,12 +327,13 @@ public class ArticlesApiController : ControllerBase
         // Register post-commit action to send SignalR notification
         HttpContext.RegisterPostCommitAction(async () =>
         {
-            await _hubContext.Clients.All.ArticleUpdated(new ArticleUpdatedPayload(
-                article.Id.ToString(),
-                article.Title,
-                article.ArticleTypeId?.ToString(),
-                DateTimeOffset.UtcNow
-            ));
+            await _hubContext.Clients.All.ArticleUpdated(new ArticleUpdatedPayload
+            {
+                ArticleId = article.Id.ToString(),
+                Title = article.Title,
+                ArticleTypeId = article.ArticleTypeId?.ToString(),
+                Timestamp = DateTimeOffset.UtcNow
+            });
         });
 
         return Ok(article);
@@ -397,12 +399,13 @@ public class ArticlesApiController : ControllerBase
             // Register post-commit action to send SignalR notification
             HttpContext.RegisterPostCommitAction(async () =>
             {
-                await _hubContext.Clients.All.VersionCreated(new VersionCreatedPayload(
-                    id.ToString(),
-                    capturedVersion.Id.ToString(),
-                    capturedVersion.VersionNumber,
-                    capturedVersion.CreatedAt
-                ));
+                await _hubContext.Clients.All.VersionCreated(new VersionCreatedPayload
+                {
+                    ArticleId = id.ToString(),
+                    VersionId = capturedVersion.Id.ToString(),
+                    VersionNumber = capturedVersion.VersionNumber,
+                    CreatedAt = capturedVersion.CreatedAt
+                });
             });
         }
 
@@ -411,12 +414,13 @@ public class ArticlesApiController : ControllerBase
         {
             HttpContext.RegisterPostCommitAction(async () =>
             {
-                await _hubContext.Clients.All.ArticleUpdated(new ArticleUpdatedPayload(
-                    article.Id.ToString(),
-                    article.Title,
-                    article.ArticleTypeId?.ToString(),
-                    DateTimeOffset.UtcNow
-                ));
+                await _hubContext.Clients.All.ArticleUpdated(new ArticleUpdatedPayload
+                {
+                    ArticleId = article.Id.ToString(),
+                    Title = article.Title,
+                    ArticleTypeId = article.ArticleTypeId?.ToString(),
+                    Timestamp = DateTimeOffset.UtcNow
+                });
             });
         }
 
@@ -521,12 +525,13 @@ public class ArticlesApiController : ControllerBase
         // Register post-commit action to send SignalR notification
         HttpContext.RegisterPostCommitAction(async () =>
         {
-            await _hubContext.Clients.All.ArticleMoved(new ArticleMovedPayload(
-                article.Id.ToString(),
-                oldParentId?.ToString(),
-                request.NewParentArticleId.Value.ToString(),
-                DateTimeOffset.UtcNow
-            ));
+            await _hubContext.Clients.All.ArticleMoved(new ArticleMovedPayload
+            {
+                ArticleId = article.Id.ToString(),
+                OldParentId = oldParentId?.ToString(),
+                NewParentId = request.NewParentArticleId.Value.ToString(),
+                Timestamp = DateTimeOffset.UtcNow
+            });
         });
 
         return Ok(new 
@@ -820,12 +825,13 @@ public class ArticlesApiController : ControllerBase
             // Register post-commit action to send SignalR notification
             HttpContext.RegisterPostCommitAction(async () =>
             {
-                await _hubContext.Clients.All.VersionCreated(new VersionCreatedPayload(
-                    articleId.ToString(),
-                    newVersion.Id.ToString(),
-                    newVersion.VersionNumber,
-                    newVersion.CreatedAt
-                ));
+                await _hubContext.Clients.All.VersionCreated(new VersionCreatedPayload
+                {
+                    ArticleId = articleId.ToString(),
+                    VersionId = newVersion.Id.ToString(),
+                    VersionNumber = newVersion.VersionNumber,
+                    CreatedAt = newVersion.CreatedAt
+                });
             });
 
             return Ok(new VersionCaptureResponse
@@ -922,14 +928,15 @@ public class ArticlesApiController : ControllerBase
     {
         HttpContext.RegisterPostCommitAction(async () =>
         {
-            await _hubContext.Clients.All.ArticleAssignmentChanged(new ArticleAssignmentChangedPayload(
-                article.Id.ToString(),
-                article.AssignedUser?.Id.ToString(),
-                article.AssignedUser?.FullName,
-                article.AssignedUser?.Initials,
-                article.AssignedUser?.Color,
-                DateTimeOffset.UtcNow
-            ));
+            await _hubContext.Clients.All.ArticleAssignmentChanged(new ArticleAssignmentChangedPayload
+            {
+                ArticleId = article.Id.ToString(),
+                UserId = article.AssignedUser?.Id.ToString(),
+                UserName = article.AssignedUser?.FullName,
+                UserInitials = article.AssignedUser?.Initials,
+                UserColor = article.AssignedUser?.Color,
+                Timestamp = DateTimeOffset.UtcNow
+            });
         });
     }
 }

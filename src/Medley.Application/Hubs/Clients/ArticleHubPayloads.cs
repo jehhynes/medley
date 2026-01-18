@@ -3,165 +3,181 @@ namespace Medley.Application.Hubs.Clients;
 /// <summary>
 /// Payload for ArticleCreated event
 /// </summary>
-public record ArticleCreatedPayload(
-    string ArticleId,
-    string Title,
-    string? ParentArticleId,
-    string? ArticleTypeId,
-    DateTimeOffset Timestamp
-);
+public record ArticleCreatedPayload
+{
+    public required string ArticleId { get; init; }
+    public required string Title { get; init; }
+    public string? ParentArticleId { get; init; }
+    public string? ArticleTypeId { get; init; }
+    public required DateTimeOffset Timestamp { get; init; }
+}
 
 /// <summary>
 /// Payload for ArticleUpdated event
 /// </summary>
-public record ArticleUpdatedPayload(
-    string ArticleId,
-    string Title,
-    string? ArticleTypeId,
-    DateTimeOffset Timestamp
-);
+public record ArticleUpdatedPayload
+{
+    public required string ArticleId { get; init; }
+    public required string Title { get; init; }
+    public string? ArticleTypeId { get; init; }
+    public required DateTimeOffset Timestamp { get; init; }
+}
 
 /// <summary>
 /// Payload for ArticleDeleted event
 /// </summary>
-public record ArticleDeletedPayload(
-    string ArticleId,
-    DateTimeOffset Timestamp
-);
+public record ArticleDeletedPayload
+{
+    public required string ArticleId { get; init; }
+    public required DateTimeOffset Timestamp { get; init; }
+}
 
 /// <summary>
 /// Payload for ArticleMoved event
 /// </summary>
-public record ArticleMovedPayload(
-    string ArticleId,
-    string? OldParentId,
-    string? NewParentId,
-    DateTimeOffset Timestamp
-);
+public record ArticleMovedPayload
+{
+    public required string ArticleId { get; init; }
+    public string? OldParentId { get; init; }
+    public string? NewParentId { get; init; }
+    public required DateTimeOffset Timestamp { get; init; }
+}
 
 /// <summary>
 /// Payload for ArticleAssignmentChanged event
 /// </summary>
-public record ArticleAssignmentChangedPayload(
-    string ArticleId,
-    string? UserId,
-    string? UserName,
-    string? UserInitials,
-    string? UserColor,
-    DateTimeOffset Timestamp
-);
+public record ArticleAssignmentChangedPayload
+{
+    public required string ArticleId { get; init; }
+    public string? UserId { get; init; }
+    public string? UserName { get; init; }
+    public string? UserInitials { get; init; }
+    public string? UserColor { get; init; }
+    public required DateTimeOffset Timestamp { get; init; }
+}
 
 /// <summary>
 /// Payload for VersionCreated event
 /// </summary>
-public record VersionCreatedPayload(
-    string ArticleId,
-    string VersionId,
-    string VersionNumber,
-    DateTimeOffset CreatedAt
-);
+public record VersionCreatedPayload
+{
+    public required string ArticleId { get; init; }
+    public required string VersionId { get; init; }
+    public required string VersionNumber { get; init; }
+    public required DateTimeOffset CreatedAt { get; init; }
+}
 
 /// <summary>
 /// Payload for PlanGenerated event
 /// </summary>
-public record PlanGeneratedPayload(
-    string ArticleId,
-    string PlanId,
-    DateTimeOffset Timestamp
-);
+public record PlanGeneratedPayload
+{
+    public required string ArticleId { get; init; }
+    public required string PlanId { get; init; }
+    public required DateTimeOffset Timestamp { get; init; }
+}
 
 /// <summary>
 /// Payload for ArticleVersionCreated event
 /// </summary>
-public record ArticleVersionCreatedPayload(
-    string ArticleId,
-    string VersionId,
-    string VersionNumber,
-    DateTimeOffset Timestamp
-);
+public record ArticleVersionCreatedPayload
+{
+    public required string ArticleId { get; init; }
+    public required string VersionId { get; init; }
+    public required string VersionNumber { get; init; }
+    public required DateTimeOffset Timestamp { get; init; }
+}
 
 /// <summary>
 /// Payload for ChatTurnStarted event
 /// </summary>
-public record ChatTurnStartedPayload(
-    string ConversationId,
-    string ArticleId
-);
+public record ChatTurnStartedPayload
+{
+    public required string ConversationId { get; init; }
+    public required string ArticleId { get; init; }
+}
 
 /// <summary>
 /// Payload for ChatTurnComplete event
 /// </summary>
-public record ChatTurnCompletePayload(
-    string ConversationId,
-    string ArticleId
-);
+public record ChatTurnCompletePayload
+{
+    public required string ConversationId { get; init; }
+    public required string ArticleId { get; init; }
+}
 
 /// <summary>
 /// Payload for ChatMessageStreaming event
 /// </summary>
-public record ChatMessageStreamingPayload(
-    string ConversationId,
-    string ArticleId,
-    string? Text,
-    string? ToolName,
-    string? ToolCallId,
-    string? ToolDisplay,
-    string[]? ToolResultIds,
-    bool? IsError,
-    string? MessageId,
-    DateTimeOffset Timestamp
-);
+public record ChatMessageStreamingPayload
+{
+    public required string ConversationId { get; init; }
+    public required string ArticleId { get; init; }
+    public string? Text { get; init; }
+    public string? ToolName { get; init; }
+    public string? ToolCallId { get; init; }
+    public string? ToolDisplay { get; init; }
+    public string[]? ToolResultIds { get; init; }
+    public bool? IsError { get; init; }
+    public string? MessageId { get; init; }
+    public required DateTimeOffset Timestamp { get; init; }
+}
 
 /// <summary>
 /// Payload for ChatToolInvoked event
 /// </summary>
-public record ChatToolInvokedPayload(
-    string ConversationId,
-    string ArticleId,
-    string ToolName,
-    string ToolCallId,
-    string? ToolDisplay,
-    DateTimeOffset Timestamp
-);
+public record ChatToolInvokedPayload
+{
+    public required string ConversationId { get; init; }
+    public required string ArticleId { get; init; }
+    public required string ToolName { get; init; }
+    public required string ToolCallId { get; init; }
+    public string? ToolDisplay { get; init; }
+    public required DateTimeOffset Timestamp { get; init; }
+}
 
 /// <summary>
 /// Payload for ChatToolCompleted event
 /// </summary>
-public record ChatToolCompletedPayload(
-    string ConversationId,
-    string ArticleId,
-    string ToolCallId,
-    string[]? ToolResultIds,
-    DateTimeOffset Timestamp
-);
+public record ChatToolCompletedPayload
+{
+    public required string ConversationId { get; init; }
+    public required string ArticleId { get; init; }
+    public required string ToolCallId { get; init; }
+    public string[]? ToolResultIds { get; init; }
+    public required DateTimeOffset Timestamp { get; init; }
+}
 
 /// <summary>
 /// Payload for ChatMessageComplete event
 /// </summary>
-public record ChatMessageCompletePayload(
-    string Id,
-    string ConversationId,
-    string ArticleId,
-    string Content,
-    DateTimeOffset Timestamp
-);
+public record ChatMessageCompletePayload
+{
+    public required string Id { get; init; }
+    public required string ConversationId { get; init; }
+    public required string ArticleId { get; init; }
+    public required string Content { get; init; }
+    public required DateTimeOffset Timestamp { get; init; }
+}
 
 /// <summary>
 /// Payload for ChatError event
 /// </summary>
-public record ChatErrorPayload(
-    string ConversationId,
-    string ArticleId,
-    string Message,
-    DateTimeOffset Timestamp
-);
+public record ChatErrorPayload
+{
+    public required string ConversationId { get; init; }
+    public required string ArticleId { get; init; }
+    public required string Message { get; init; }
+    public required DateTimeOffset Timestamp { get; init; }
+}
 
 /// <summary>
 /// Payload for ReceiveMessage event
 /// </summary>
-public record ReceiveMessagePayload(
-    string ArticleId,
-    string UserName,
-    string Message,
-    DateTimeOffset Timestamp
-);
+public record ReceiveMessagePayload
+{
+    public required string ArticleId { get; init; }
+    public required string UserName { get; init; }
+    public required string Message { get; init; }
+    public required DateTimeOffset Timestamp { get; init; }
+}

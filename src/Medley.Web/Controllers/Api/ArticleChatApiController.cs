@@ -350,14 +350,15 @@ public class ArticleChatApiController : ControllerBase
                 // Register assignment notification
                 HttpContext.RegisterPostCommitAction(async () =>
                 {
-                    await _hubContext.Clients.All.ArticleAssignmentChanged(new ArticleAssignmentChangedPayload(
-                        articleId.ToString(),
-                        assignedUser?.Id.ToString(),
-                        assignedUser?.FullName,
-                        assignedUser?.Initials,
-                        assignedUser?.Color,
-                        DateTimeOffset.UtcNow
-                    ));
+                    await _hubContext.Clients.All.ArticleAssignmentChanged(new ArticleAssignmentChangedPayload
+                    {
+                        ArticleId = articleId.ToString(),
+                        UserId = assignedUser?.Id.ToString(),
+                        UserName = assignedUser?.FullName,
+                        UserInitials = assignedUser?.Initials,
+                        UserColor = assignedUser?.Color,
+                        Timestamp = DateTimeOffset.UtcNow
+                    });
                 });
             }
             
