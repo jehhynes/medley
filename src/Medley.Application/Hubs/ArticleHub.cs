@@ -42,12 +42,13 @@ public class ArticleHub : Hub<IArticleClient>
     {
         var userName = Context.User?.Identity?.Name ?? "Anonymous";
         
-        await Clients.Group($"Article_{articleId}").ReceiveMessage(new ReceiveMessagePayload(
-            articleId,
-            userName,
-            message,
-            DateTimeOffset.UtcNow
-        ));
+        await Clients.Group($"Article_{articleId}").ReceiveMessage(new ReceiveMessagePayload
+        {
+            ArticleId = articleId,
+            UserName = userName,
+            Message = message,
+            Timestamp = DateTimeOffset.UtcNow
+        });
     }
 
     /// <summary>
@@ -55,13 +56,14 @@ public class ArticleHub : Hub<IArticleClient>
     /// </summary>
     public async Task NotifyArticleCreated(string articleId, string title, string? parentArticleId)
     {
-        await Clients.All.ArticleCreated(new ArticleCreatedPayload(
-            articleId,
-            title,
-            parentArticleId,
-            null, // ArticleTypeId not provided in this method
-            DateTimeOffset.UtcNow
-        ));
+        await Clients.All.ArticleCreated(new ArticleCreatedPayload
+        {
+            ArticleId = articleId,
+            Title = title,
+            ParentArticleId = parentArticleId,
+            ArticleTypeId = null, // ArticleTypeId not provided in this method
+            Timestamp = DateTimeOffset.UtcNow
+        });
     }
 
     /// <summary>
@@ -69,12 +71,13 @@ public class ArticleHub : Hub<IArticleClient>
     /// </summary>
     public async Task NotifyArticleUpdated(string articleId, string title)
     {
-        await Clients.All.ArticleUpdated(new ArticleUpdatedPayload(
-            articleId,
-            title,
-            null, // ArticleTypeId not provided in this method
-            DateTimeOffset.UtcNow
-        ));
+        await Clients.All.ArticleUpdated(new ArticleUpdatedPayload
+        {
+            ArticleId = articleId,
+            Title = title,
+            ArticleTypeId = null, // ArticleTypeId not provided in this method
+            Timestamp = DateTimeOffset.UtcNow
+        });
     }
 
     /// <summary>
@@ -82,10 +85,11 @@ public class ArticleHub : Hub<IArticleClient>
     /// </summary>
     public async Task NotifyArticleDeleted(string articleId)
     {
-        await Clients.All.ArticleDeleted(new ArticleDeletedPayload(
-            articleId,
-            DateTimeOffset.UtcNow
-        ));
+        await Clients.All.ArticleDeleted(new ArticleDeletedPayload
+        {
+            ArticleId = articleId,
+            Timestamp = DateTimeOffset.UtcNow
+        });
     }
 
     /// <summary>
@@ -93,14 +97,15 @@ public class ArticleHub : Hub<IArticleClient>
     /// </summary>
     public async Task NotifyArticleAssignmentChanged(string articleId, string? userId, string? userName, string? userInitials, string? userColor)
     {
-        await Clients.All.ArticleAssignmentChanged(new ArticleAssignmentChangedPayload(
-            articleId,
-            userId,
-            userName,
-            userInitials,
-            userColor,
-            DateTimeOffset.UtcNow
-        ));
+        await Clients.All.ArticleAssignmentChanged(new ArticleAssignmentChangedPayload
+        {
+            ArticleId = articleId,
+            UserId = userId,
+            UserName = userName,
+            UserInitials = userInitials,
+            UserColor = userColor,
+            Timestamp = DateTimeOffset.UtcNow
+        });
     }
 
     /// <summary>

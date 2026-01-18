@@ -92,10 +92,11 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
 
                 // Notify UI that processing has started
                 await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
-                    .ChatTurnStarted(new ChatTurnStartedPayload(
-                        conversation.Id.ToString(),
-                        conversation.ArticleId.ToString()
-                    ));
+                    .ChatTurnStarted(new ChatTurnStartedPayload
+                    {
+                        ConversationId = conversation.Id.ToString(),
+                        ArticleId = conversation.ArticleId.ToString()
+                    });
 
                 // Process AI response with streaming
                 _logger.LogInformation("Requesting AI response with streaming for conversation {ConversationId}", conversation.Id);
@@ -109,43 +110,46 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                         case Models.StreamUpdateType.TextDelta:
                             // Send incremental text updates
                             await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
-                                .ChatMessageStreaming(new ChatMessageStreamingPayload(
-                                    update.ConversationId.ToString(),
-                                    conversation.ArticleId.ToString(),
-                                    update.Text,
-                                    null,
-                                    null,
-                                    null,
-                                    null,
-                                    null,
-                                    update.MessageId?.ToString(),
-                                    update.Timestamp
-                                ));
+                                .ChatMessageStreaming(new ChatMessageStreamingPayload
+                                {
+                                    ConversationId = update.ConversationId.ToString(),
+                                    ArticleId = conversation.ArticleId.ToString(),
+                                    Text = update.Text,
+                                    ToolName = null,
+                                    ToolCallId = null,
+                                    ToolDisplay = null,
+                                    ToolResultIds = null,
+                                    IsError = null,
+                                    MessageId = update.MessageId?.ToString(),
+                                    Timestamp = update.Timestamp
+                                });
                             break;
 
                         case Models.StreamUpdateType.ToolCall:
                             // Notify about tool invocations
                             await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
-                                .ChatToolInvoked(new ChatToolInvokedPayload(
-                                    update.ConversationId.ToString(),
-                                    conversation.ArticleId.ToString(),
-                                    update.ToolName ?? string.Empty,
-                                    update.ToolCallId ?? string.Empty,
-                                    update.ToolDisplay,
-                                    update.Timestamp
-                                ));
+                                .ChatToolInvoked(new ChatToolInvokedPayload
+                                {
+                                    ConversationId = update.ConversationId.ToString(),
+                                    ArticleId = conversation.ArticleId.ToString(),
+                                    ToolName = update.ToolName ?? string.Empty,
+                                    ToolCallId = update.ToolCallId ?? string.Empty,
+                                    ToolDisplay = update.ToolDisplay,
+                                    Timestamp = update.Timestamp
+                                });
                             break;
 
                         case Models.StreamUpdateType.ToolResult:
                             // Notify about tool results
                             await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
-                                .ChatToolCompleted(new ChatToolCompletedPayload(
-                                    update.ConversationId.ToString(),
-                                    conversation.ArticleId.ToString(),
-                                    update.ToolCallId ?? string.Empty,
-                                    update.ToolResultIds?.Select(id => id.ToString()).ToArray(),
-                                    update.Timestamp
-                                ));
+                                .ChatToolCompleted(new ChatToolCompletedPayload
+                                {
+                                    ConversationId = update.ConversationId.ToString(),
+                                    ArticleId = conversation.ArticleId.ToString(),
+                                    ToolCallId = update.ToolCallId ?? string.Empty,
+                                    ToolResultIds = update.ToolResultIds?.Select(id => id.ToString()).ToArray(),
+                                    Timestamp = update.Timestamp
+                                });
                             break;
 
                         case Models.StreamUpdateType.MessageComplete:
@@ -154,22 +158,24 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                                 conversation.Id, update.MessageId);
 
                             await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
-                                .ChatMessageComplete(new ChatMessageCompletePayload(
-                                    update.MessageId?.ToString() ?? string.Empty,
-                                    conversation.Id.ToString(),
-                                    conversation.ArticleId.ToString(),
-                                    update.Text ?? string.Empty,
-                                    update.Timestamp
-                                ));
+                                .ChatMessageComplete(new ChatMessageCompletePayload
+                                {
+                                    Id = update.MessageId?.ToString() ?? string.Empty,
+                                    ConversationId = conversation.Id.ToString(),
+                                    ArticleId = conversation.ArticleId.ToString(),
+                                    Content = update.Text ?? string.Empty,
+                                    Timestamp = update.Timestamp
+                                });
                             break;
 
                         case Models.StreamUpdateType.TurnComplete:
                             // Send turn complete signal
                             await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
-                                .ChatTurnComplete(new ChatTurnCompletePayload(
-                                    conversation.Id.ToString(),
-                                    conversation.ArticleId.ToString()
-                                ));
+                                .ChatTurnComplete(new ChatTurnCompletePayload
+                                {
+                                    ConversationId = conversation.Id.ToString(),
+                                    ArticleId = conversation.ArticleId.ToString()
+                                });
                             break;
                     }
                 }
@@ -188,11 +194,12 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                             plan.Id, conversation.ArticleId);
 
                         await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
-                            .PlanGenerated(new PlanGeneratedPayload(
-                                conversation.ArticleId.ToString(),
-                                plan.Id.ToString(),
-                                DateTimeOffset.UtcNow
-                            ));
+                            .PlanGenerated(new PlanGeneratedPayload
+                            {
+                                ArticleId = conversation.ArticleId.ToString(),
+                                PlanId = plan.Id.ToString(),
+                                Timestamp = DateTimeOffset.UtcNow
+                            });
                     }
                 }
 
@@ -212,12 +219,13 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                             aiVersion.Id, conversation.ArticleId);
 
                         await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
-                            .ArticleVersionCreated(new ArticleVersionCreatedPayload(
-                                conversation.ArticleId.ToString(),
-                                aiVersion.Id.ToString(),
-                                aiVersion.VersionNumber.ToString(),
-                                DateTimeOffset.UtcNow
-                            ));
+                            .ArticleVersionCreated(new ArticleVersionCreatedPayload
+                            {
+                                ArticleId = conversation.ArticleId.ToString(),
+                                VersionId = aiVersion.Id.ToString(),
+                                VersionNumber = aiVersion.VersionNumber.ToString(),
+                                Timestamp = DateTimeOffset.UtcNow
+                            });
                     }
                 }
 
@@ -258,12 +266,13 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
             }
 
             await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
-                .ChatError(new ChatErrorPayload(
-                    conversationId.ToString(),
-                    conversation.ArticleId.ToString(),
-                    errorMessage,
-                    DateTimeOffset.UtcNow
-                ));
+                .ChatError(new ChatErrorPayload
+                {
+                    ConversationId = conversationId.ToString(),
+                    ArticleId = conversation.ArticleId.ToString(),
+                    Message = errorMessage,
+                    Timestamp = DateTimeOffset.UtcNow
+                });
         }
         catch (Exception ex)
         {
