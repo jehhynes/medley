@@ -11,6 +11,7 @@ namespace Medley.Web.Controllers.Api;
 
 [Route("api/sources")]
 [ApiController]
+[ApiExplorerSettings(GroupName = "api")]
 [Authorize]
 public class SourcesApiController : ControllerBase
 {

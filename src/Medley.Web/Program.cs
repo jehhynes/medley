@@ -128,6 +128,7 @@ public partial class Program
                 config.DocumentName = "v1";
                 config.Title = "Medley API";
                 config.Version = "1.0.0";
+                config.ApiGroupNames = new[] { "api" };
             });
             
 #if DEBUG

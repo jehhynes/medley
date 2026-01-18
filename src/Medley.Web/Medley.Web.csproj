@@ -13,18 +13,15 @@
 		<Exec Command="npm run build" />
 	</Target>
 	
-	<!-- NSwag target disabled to prevent infinite build loop -->
-	<!-- Run manually with: dotnet tool run nswag run nswag.json -->
-	<!--
 	<Target Name="NSwag" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug'">
-		<Exec ConsoleToMSBuild="true" ContinueOnError="true" Command="$(NSwagExe_Net80) run nswag.json /variables:Configuration=$(Configuration)">
+		<Exec ConsoleToMSBuild="true" ContinueOnError="true" Command="$(NSwagExe_Net100) run nswag.json /variables:Configuration=$(Configuration)">
 			<Output TaskParameter="ExitCode" PropertyName="NSwagExitCode" />
 			<Output TaskParameter="ConsoleOutput" PropertyName="NSwagOutput" />
 		</Exec>
 		<Message Text="$(NSwagOutput)" Condition="'$(NSwagExitCode)' == '0'" Importance="low" />
 		<Error Text="$(NSwagOutput)" Condition="'$(NSwagExitCode)' != '0'" />
 	</Target>
-	-->
+	
 	
   <ItemGroup>
     <InternalsVisibleTo Include="Medley.Tests.Integration" />

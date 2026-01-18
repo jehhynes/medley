@@ -9,6 +9,7 @@ namespace Medley.Web.Controllers.Api;
 
 [Route("api/tagtypes")]
 [ApiController]
+[ApiExplorerSettings(GroupName = "api")]
 [Authorize]
 public class TagTypesApiController : ControllerBase
 {

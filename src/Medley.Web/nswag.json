@@ -1,5 +1,5 @@
 {
-  "runtime": "Net80",
+  "runtime": "Net100",
   "defaultVariables": null,
   "documentGenerator": {
     "aspNetCoreToOpenApi": {
@@ -8,11 +8,10 @@
       "configuration": null,
       "runtime": null,
       "targetFramework": null,
-      "noBuild": false,
+      "noBuild": true,
       "verbose": false,
       "workingDirectory": null,
       "requireParametersWithoutDefault": true,
-      "apiGroupNames": null,
       "defaultPropertyNameHandling": "Default",
       "defaultReferenceTypeNullHandling": "Null",
       "defaultDictionaryValueReferenceTypeNullHandling": "NotNull",
@@ -56,7 +55,6 @@
   },
   "codeGenerators": {
     "openApiToTypeScriptClient": {
-      "className": "MedleyApiClient",
       "moduleName": "",
       "namespace": "",
       "typeScriptVersion": 5.0,
@@ -85,7 +83,7 @@
       "useTransformOptionsMethod": false,
       "useTransformResultMethod": false,
       "generateDtoTypes": true,
-      "operationGenerationMode": "SingleClientFromOperationId",
+      "operationGenerationMode": "MultipleClientsFromFirstTagAndOperationName",
       "markOptionalProperties": true,
       "generateCloneMethod": false,
       "typeStyle": "Interface",
@@ -109,8 +107,6 @@
       "inlineNamedAny": false,
       "includeHttpContext": false,
       "templateDirectory": null,
-      "typeNameGeneratorType": null,
-      "propertyNameGeneratorType": null,
       "enumNameGeneratorType": null,
       "serviceHost": null,
       "serviceSchemes": null,

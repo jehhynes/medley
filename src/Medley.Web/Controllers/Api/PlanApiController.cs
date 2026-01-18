@@ -15,6 +15,7 @@ namespace Medley.Web.Controllers.Api;
 [Authorize]
 [Route("api/articles/{articleId}/plans")]
 [ApiController]
+[ApiExplorerSettings(GroupName = "api")]
 public class PlanApiController : ControllerBase
 {
     private readonly IRepository<Plan> _planRepository;
