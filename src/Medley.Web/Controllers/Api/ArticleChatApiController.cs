@@ -20,6 +20,7 @@ namespace Medley.Web.Controllers.Api;
 [Authorize]
 [Route("api/articles/{articleId}/assistant")]
 [ApiController]
+[ApiExplorerSettings(GroupName = "api")]
 public class ArticleChatApiController : ControllerBase
 {
     private readonly IArticleChatService _chatService;

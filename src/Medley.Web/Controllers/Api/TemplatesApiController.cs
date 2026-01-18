@@ -10,6 +10,7 @@ namespace Medley.Web.Controllers.Api;
 
 [Route("api/templates")]
 [ApiController]
+[ApiExplorerSettings(GroupName = "api")]
 [Authorize]
 public class TemplatesApiController : ControllerBase
 {

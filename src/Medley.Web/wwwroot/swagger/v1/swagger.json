@@ -6,47 +6,6 @@
     "version": "1.0.0"
   },
   "paths": {
-    "/api/Dashboard/metrics": {
-      "get": {
-        "tags": [
-          "Dashboard"
-        ],
-        "operationId": "Dashboard_GetMetrics",
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DashboardMetrics"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/load-balancer-health-check": {
-      "get": {
-        "tags": [
-          "Home"
-        ],
-        "operationId": "Home_HealthCheck",
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/octet-stream": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/articles/{articleId}/assistant/conversation/{conversationId}": {
       "get": {
         "tags": [
@@ -1098,6 +1057,26 @@
         }
       }
     },
+    "/api/dashboard/metrics": {
+      "get": {
+        "tags": [
+          "DashboardApi"
+        ],
+        "operationId": "DashboardApi_GetMetrics",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardMetrics"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/fragments": {
       "get": {
         "tags": [
@@ -2057,126 +2036,6 @@
   },
   "components": {
     "schemas": {
-      "DashboardMetrics": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "totalSources": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "sourcesByType": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MetricItem"
-            }
-          },
-          "sourcesByIntegration": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MetricItem"
-            }
-          },
-          "sourcesByYear": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/StackedMetricItem"
-            }
-          },
-          "sourcesByMonth": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MetricItem"
-            }
-          },
-          "sourcesByTagType": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/TagTypeMetrics"
-            }
-          },
-          "sourcesPendingSmartTagging": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "sourcesPendingFragmentGeneration": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "totalFragments": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "fragmentsByCategory": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MetricItem"
-            }
-          },
-          "fragmentsPendingEmbedding": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "totalArticles": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "articlesByType": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MetricItem"
-            }
-          }
-        }
-      },
-      "MetricItem": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "label": {
-            "type": "string"
-          },
-          "count": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "icon": {
-            "type": "string",
-            "nullable": true
-          }
-        }
-      },
-      "StackedMetricItem": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "label": {
-            "type": "string"
-          },
-          "values": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
-        }
-      },
-      "TagTypeMetrics": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "tagTypeName": {
-            "type": "string"
-          },
-          "tagCounts": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MetricItem"
-            }
-          }
-        }
-      },
       "ConversationMode": {
         "type": "string",
         "description": "",
@@ -2605,6 +2464,126 @@
           },
           "afterContent": {
             "type": "string"
+          }
+        }
+      },
+      "DashboardMetrics": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "totalSources": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sourcesByType": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MetricItem"
+            }
+          },
+          "sourcesByIntegration": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MetricItem"
+            }
+          },
+          "sourcesByYear": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StackedMetricItem"
+            }
+          },
+          "sourcesByMonth": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MetricItem"
+            }
+          },
+          "sourcesByTagType": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TagTypeMetrics"
+            }
+          },
+          "sourcesPendingSmartTagging": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sourcesPendingFragmentGeneration": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalFragments": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "fragmentsByCategory": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MetricItem"
+            }
+          },
+          "fragmentsPendingEmbedding": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalArticles": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "articlesByType": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MetricItem"
+            }
+          }
+        }
+      },
+      "MetricItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "icon": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "StackedMetricItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "values": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        }
+      },
+      "TagTypeMetrics": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tagTypeName": {
+            "type": "string"
+          },
+          "tagCounts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MetricItem"
+            }
           }
         }
       },

@@ -14,6 +14,7 @@ namespace Medley.Web.Controllers.Api;
 
 [Route("api/fragments")]
 [ApiController]
+[ApiExplorerSettings(GroupName = "api")]
 [Authorize]
 public class FragmentsApiController : ControllerBase
 {
