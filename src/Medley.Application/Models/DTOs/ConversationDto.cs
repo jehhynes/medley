@@ -92,12 +92,12 @@ public class ConversationSummaryDto
     /// <summary>
     /// Indicates if the conversation is currently running
     /// </summary>
-    public bool IsRunning { get; set; }
+    public required bool IsRunning { get; set; }
 
     /// <summary>
     /// Current state of the conversation
     /// </summary>
-    public ConversationState State { get; set; }
+    public required ConversationState State { get; set; }
 }
 
 /// <summary>
@@ -129,15 +129,10 @@ public class ConversationStatusResponse
     /// <summary>
     /// Current state of the conversation
     /// </summary>
-    public required string State { get; set; }
-
-    /// <summary>
-    /// When this conversation was completed (if applicable)
-    /// </summary>
-    public DateTimeOffset? CompletedAt { get; set; }
+    public required ConversationState State { get; set; }
 
     /// <summary>
     /// Timestamp of the status change
     /// </summary>
-    public DateTimeOffset? Timestamp { get; set; }
+    public required DateTimeOffset Timestamp { get; set; }
 }

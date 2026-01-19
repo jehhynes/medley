@@ -199,9 +199,9 @@ public class ArticleVersionService : IArticleVersionService
                 IsNewVersion = isNewVersion,
                 VersionType = version.VersionType.ToString(),
                 ChangeMessage = version.ChangeMessage,
-                Status = (version.Id == article?.CurrentVersionId 
+                Status = version.Id == article?.CurrentVersionId 
                     ? VersionStatus.CurrentVersion 
-                    : VersionStatus.OldVersion).ToString()
+                    : VersionStatus.OldVersion
             };
         }
         catch (Exception ex)
@@ -391,7 +391,7 @@ public class ArticleVersionService : IArticleVersionService
                 CreatedAt = v.CreatedAt,
                 VersionType = v.VersionType.ToString(),
                 ChangeMessage = v.ChangeMessage,
-                Status = status.ToString(),
+                Status = status,
                 ReviewedAt = v.ReviewedAt,
                 ReviewedById = v.ReviewedById,
                 ReviewedByName = v.ReviewedBy?.FullName
@@ -529,7 +529,7 @@ public class ArticleVersionService : IArticleVersionService
                 IsNewVersion = true,
                 VersionType = newVersion.VersionType.ToString(),
                 ChangeMessage = newVersion.ChangeMessage,
-                Status = VersionStatus.PendingAiVersion.ToString(),
+                Status = VersionStatus.PendingAiVersion,
                 ReviewedAt = null,
                 ReviewedById = null,
                 ReviewedByName = null
@@ -609,7 +609,7 @@ public class ArticleVersionService : IArticleVersionService
                 IsNewVersion = true,
                 VersionType = newUserVersion.VersionType.ToString(),
                 ChangeMessage = newUserVersion.ChangeMessage,
-                Status = VersionStatus.CurrentVersion.ToString()
+                Status = VersionStatus.CurrentVersion
             };
         }
         catch (Exception ex)

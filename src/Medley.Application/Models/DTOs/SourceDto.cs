@@ -15,12 +15,12 @@ public class SourceDto
     /// <summary>
     /// Source type
     /// </summary>
-    public SourceType Type { get; set; }
+    public required SourceType Type { get; set; }
 
     /// <summary>
     /// Type of metadata stored in MetadataJson
     /// </summary>
-    public SourceMetadataType MetadataType { get; set; }
+    public required SourceMetadataType MetadataType { get; set; }
 
     /// <summary>
     /// Source name
@@ -45,7 +45,7 @@ public class SourceDto
     /// <summary>
     /// Date associated with the source (e.g., meeting date)
     /// </summary>
-    public DateTimeOffset Date { get; set; }
+    public required DateTimeOffset Date { get; set; }
 
     /// <summary>
     /// Indicates whether this source is an internal meeting/document
@@ -60,7 +60,7 @@ public class SourceDto
     /// <summary>
     /// Status of fragment extraction for this source
     /// </summary>
-    public ExtractionStatus ExtractionStatus { get; set; }
+    public required ExtractionStatus ExtractionStatus { get; set; }
 
     /// <summary>
     /// Message from the fragment extraction process
@@ -75,17 +75,17 @@ public class SourceDto
     /// <summary>
     /// Number of fragments extracted from this source
     /// </summary>
-    public int FragmentsCount { get; set; }
+    public required int FragmentsCount { get; set; }
 
     /// <summary>
     /// When the source was created
     /// </summary>
-    public DateTimeOffset CreatedAt { get; set; }
+    public required DateTimeOffset CreatedAt { get; set; }
 
     /// <summary>
     /// Tags associated with this source
     /// </summary>
-    public List<SourceTagDto> Tags { get; set; } = new();
+    public required List<SourceTagDto> Tags { get; set; } = new();
 }
 
 /// <summary>
@@ -106,12 +106,12 @@ public class SourceSummaryDto
     /// <summary>
     /// Source type
     /// </summary>
-    public SourceType Type { get; set; }
+    public required SourceType Type { get; set; }
 
     /// <summary>
     /// Date associated with the source
     /// </summary>
-    public DateTimeOffset Date { get; set; }
+    public required DateTimeOffset Date { get; set; }
 
     /// <summary>
     /// Integration name
@@ -121,12 +121,12 @@ public class SourceSummaryDto
     /// <summary>
     /// Number of fragments
     /// </summary>
-    public int FragmentsCount { get; set; }
+    public required int FragmentsCount { get; set; }
 
     /// <summary>
     /// Extraction status
     /// </summary>
-    public ExtractionStatus ExtractionStatus { get; set; }
+    public required ExtractionStatus ExtractionStatus { get; set; }
 }
 
 /// <summary>
@@ -199,10 +199,10 @@ public class TaggingResponse
     /// <summary>
     /// Indicates if this is an internal source
     /// </summary>
-    public bool? IsInternal { get; set; }
+    public required bool? IsInternal { get; set; }
 
     /// <summary>
     /// Number of tags generated
     /// </summary>
-    public int? TagCount { get; set; }
+    public required int TagCount { get; set; }
 }

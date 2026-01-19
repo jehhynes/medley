@@ -82,7 +82,7 @@
                 <div class="d-flex justify-content-between align-items-center gap-3 w-100">
                   <strong>v{{ p.version }}</strong>
                   <span class="text-muted small">{{ formatDate(p.createdAt) }}</span>
-                  <span class="text-muted small">{{ p.createdBy.name }}</span>
+                  <span class="text-muted small">{{ p.createdBy.fullName }}</span>
                 </div>
               </div>
             </div>
@@ -275,7 +275,7 @@ import {
   getConfidenceColor,
   getArticleTypes 
 } from '@/utils/helpers';
-import type { FragmentDto, UserSummaryDto } from '@/types/generated/api-client';
+import type { FragmentDto, UserRef } from '@/types/generated/api-client';
 
 // Declare global types
 declare const bootbox: {
@@ -311,7 +311,7 @@ interface PlanDto {
   instructions: string;
   fragments: PlanFragmentDto[];
   status: string;
-  createdBy: UserSummaryDto;
+  createdBy: UserRef;
   createdAt: Date;
   changesSummary?: string;
 }

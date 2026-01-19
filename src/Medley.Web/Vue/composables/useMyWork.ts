@@ -1,14 +1,14 @@
 import { computed, type Ref, type ComputedRef } from 'vue';
-import type { ArticleDto } from '@/types/generated/api-client';
+import type { ArticleSummaryDto } from '@/types/generated/api-client';
 import { showProcessingSpinner, showUserTurnIndicator } from '@/utils/helpers';
 
 /**
  * Return type for useMyWork composable
  */
 interface UseMyWorkReturn {
-  myWorkArticles: ComputedRef<ArticleDto[]>;
+  myWorkArticles: ComputedRef<ArticleSummaryDto[]>;
   myWorkCount: ComputedRef<number>;
-  getLastActivityDate: (article: ArticleDto) => Date;
+  getLastActivityDate: (article: ArticleSummaryDto) => Date;
 }
 
 /**
@@ -20,7 +20,7 @@ interface UseMyWorkReturn {
  * @returns Computed myWorkArticles and myWorkCount
  */
 export function useMyWork(
-  articles: Ref<ArticleDto[]>,
+  articles: Ref<ArticleSummaryDto[]>,
   currentUserId: Ref<string | null | undefined>
 ): UseMyWorkReturn {
   /**
@@ -28,8 +28,8 @@ export function useMyWork(
    * @param articles - Articles to flatten
    * @returns Flattened articles
    */
-  const flattenAllArticles = (articles: ArticleDto[]): ArticleDto[] => {
-    let result: ArticleDto[] = [];
+  const flattenAllArticles = (articles: ArticleSummaryDto[]): ArticleSummaryDto[] => {
+    let result: ArticleSummaryDto[] = [];
     for (const article of articles) {
       result.push({ ...article });
       if (article.children && article.children.length > 0) {
@@ -44,7 +44,7 @@ export function useMyWork(
    * @param article - Article to get activity date for
    * @returns Latest activity date
    */
-  const getLastActivityDate = (article: ArticleDto): Date => {
+  const getLastActivityDate = (article: ArticleSummaryDto): Date => {
     let latestDate = new Date(article.modifiedAt || article.createdAt || 0);
     
     // Check conversation's last message time if available

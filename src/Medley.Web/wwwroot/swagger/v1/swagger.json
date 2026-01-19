@@ -511,7 +511,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/ArticleDto"
+                    "$ref": "#/components/schemas/ArticleSummaryDto"
                   }
                 }
               }
@@ -602,51 +602,6 @@
         }
       }
     },
-    "/api/articles/{id}/children": {
-      "get": {
-        "tags": [
-          "ArticlesApi"
-        ],
-        "operationId": "ArticlesApi_GetChildren",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "guid"
-            },
-            "x-position": 1
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ArticleDto"
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/articles": {
       "post": {
         "tags": [
@@ -671,7 +626,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ArticleDto"
+                  "$ref": "#/components/schemas/ArticleSummaryDto"
                 }
               }
             }
@@ -1457,7 +1412,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PlanDetailDto"
+                  "$ref": "#/components/schemas/PlanDto"
                 }
               }
             }
@@ -1557,7 +1512,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PlanDetailDto"
+                  "$ref": "#/components/schemas/PlanDto"
                 }
               }
             }
@@ -2595,19 +2550,27 @@
             "format": "guid"
           },
           "state": {
-            "type": "string"
-          },
-          "completedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
+            "$ref": "#/components/schemas/ConversationState"
           },
           "timestamp": {
             "type": "string",
-            "format": "date-time",
-            "nullable": true
+            "format": "date-time"
           }
         }
+      },
+      "ConversationState": {
+        "type": "string",
+        "description": "",
+        "x-enumNames": [
+          "Active",
+          "Complete",
+          "Archived"
+        ],
+        "enum": [
+          "Active",
+          "Complete",
+          "Archived"
+        ]
       },
       "ArticleTypeDto": {
         "type": "object",
@@ -2626,7 +2589,7 @@
           }
         }
       },
-      "ArticleDto": {
+      "ArticleSummaryDto": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
@@ -2637,29 +2600,12 @@
           "title": {
             "type": "string"
           },
-          "summary": {
-            "type": "string",
-            "nullable": true
-          },
-          "content": {
-            "type": "string",
-            "nullable": true
-          },
           "status": {
             "$ref": "#/components/schemas/ArticleStatus"
-          },
-          "publishedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
           },
           "parentArticleId": {
             "type": "string",
             "format": "guid",
-            "nullable": true
-          },
-          "parentTitle": {
-            "type": "string",
             "nullable": true
           },
           "articleTypeId": {
@@ -2678,7 +2624,7 @@
           "children": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/ArticleDto"
+              "$ref": "#/components/schemas/ArticleSummaryDto"
             }
           },
           "currentConversation": {
@@ -2688,14 +2634,6 @@
                 "$ref": "#/components/schemas/ConversationSummaryDto"
               }
             ]
-          },
-          "childrenCount": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "fragmentsCount": {
-            "type": "integer",
-            "format": "int32"
           },
           "createdAt": {
             "type": "string",
@@ -2761,19 +2699,42 @@
           }
         }
       },
-      "ConversationState": {
-        "type": "string",
-        "description": "",
-        "x-enumNames": [
-          "Active",
-          "Complete",
-          "Archived"
-        ],
-        "enum": [
-          "Active",
-          "Complete",
-          "Archived"
-        ]
+      "ArticleDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "$ref": "#/components/schemas/ArticleStatus"
+          },
+          "parentArticleId": {
+            "type": "string",
+            "format": "guid",
+            "nullable": true
+          },
+          "currentConversation": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ConversationSummaryDto"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
       },
       "ArticleCreateRequest": {
         "type": "object",
@@ -2914,9 +2875,6 @@
             "format": "guid",
             "nullable": true
           },
-          "contentSnapshot": {
-            "type": "string"
-          },
           "versionNumber": {
             "type": "integer",
             "format": "int32"
@@ -2925,7 +2883,7 @@
             "nullable": true,
             "oneOf": [
               {
-                "$ref": "#/components/schemas/UserSummaryDto"
+                "$ref": "#/components/schemas/UserRef"
               }
             ]
           },
@@ -2962,9 +2920,30 @@
             "nullable": true,
             "oneOf": [
               {
-                "$ref": "#/components/schemas/UserSummaryDto"
+                "$ref": "#/components/schemas/UserRef"
               }
             ]
+          },
+          "status": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/VersionStatus"
+              }
+            ]
+          }
+        }
+      },
+      "UserRef": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "fullName": {
+            "type": "string"
           }
         }
       },
@@ -2992,6 +2971,26 @@
           "None",
           "Accepted",
           "Rejected"
+        ]
+      },
+      "VersionStatus": {
+        "type": "string",
+        "description": "",
+        "x-enumNames": [
+          "CurrentVersion",
+          "OldVersion",
+          "PendingAiVersion",
+          "AcceptedAiVersion",
+          "RejectedAiVersion",
+          "OldAiVersion"
+        ],
+        "enum": [
+          "CurrentVersion",
+          "OldVersion",
+          "PendingAiVersion",
+          "AcceptedAiVersion",
+          "RejectedAiVersion",
+          "OldAiVersion"
         ]
       },
       "ArticleVersionComparisonDto": {
@@ -3314,7 +3313,7 @@
           }
         }
       },
-      "PlanDetailDto": {
+      "PlanDto": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
@@ -3345,17 +3344,17 @@
             "format": "date-time"
           },
           "createdBy": {
-            "$ref": "#/components/schemas/UserSummaryDto"
+            "$ref": "#/components/schemas/UserRef"
           },
           "fragments": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/PlanFragmentDetailDto"
+              "$ref": "#/components/schemas/PlanFragmentDto"
             }
           }
         }
       },
-      "PlanFragmentDetailDto": {
+      "PlanFragmentDto": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
@@ -3469,7 +3468,7 @@
             "nullable": true
           },
           "createdBy": {
-            "$ref": "#/components/schemas/UserSummaryDto"
+            "$ref": "#/components/schemas/UserRef"
           }
         }
       },
@@ -3699,8 +3698,7 @@
           },
           "tagCount": {
             "type": "integer",
-            "format": "int32",
-            "nullable": true
+            "format": "int32"
           }
         }
       },

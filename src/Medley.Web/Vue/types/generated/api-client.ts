@@ -408,7 +408,7 @@ export class ArticlesApiClient {
         return Promise.resolve<ArticleTypeDto[]>(null as any);
     }
 
-    getTree(query?: string | null | undefined, statuses?: number[] | null | undefined, articleTypeIds?: string[] | null | undefined): Promise<ArticleDto[]> {
+    getTree(query?: string | null | undefined, statuses?: number[] | null | undefined, articleTypeIds?: string[] | null | undefined): Promise<ArticleSummaryDto[]> {
         let url_ = this.baseUrl + "/api/articles/tree?";
         if (query !== undefined && query !== null)
             url_ += "query=" + encodeURIComponent("" + query) + "&";
@@ -430,13 +430,13 @@ export class ArticlesApiClient {
         });
     }
 
-    protected processGetTree(response: Response): Promise<ArticleDto[]> {
+    protected processGetTree(response: Response): Promise<ArticleSummaryDto[]> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ArticleDto[];
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ArticleSummaryDto[];
             return result200;
             });
         } else if (status !== 200 && status !== 204) {
@@ -444,7 +444,7 @@ export class ArticlesApiClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<ArticleDto[]>(null as any);
+        return Promise.resolve<ArticleSummaryDto[]>(null as any);
     }
 
     get(id: string): Promise<ArticleDto> {
@@ -531,49 +531,7 @@ export class ArticlesApiClient {
         return Promise.resolve<ArticleDeleteResponse>(null as any);
     }
 
-    getChildren(id: string): Promise<ArticleDto[]> {
-        let url_ = this.baseUrl + "/api/articles/{id}/children";
-        if (id === undefined || id === null)
-            throw new globalThis.Error("The parameter 'id' must be defined.");
-        url_ = url_.replace("{id}", encodeURIComponent("" + id));
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: RequestInit = {
-            method: "GET",
-            headers: {
-                "Accept": "application/json"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetChildren(_response);
-        });
-    }
-
-    protected processGetChildren(response: Response): Promise<ArticleDto[]> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ArticleDto[];
-            return result200;
-            });
-        } else if (status === 404) {
-            return response.text().then((_responseText) => {
-            let result404: any = null;
-            result404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
-            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<ArticleDto[]>(null as any);
-    }
-
-    create(request: ArticleCreateRequest): Promise<ArticleDto> {
+    create(request: ArticleCreateRequest): Promise<ArticleSummaryDto> {
         let url_ = this.baseUrl + "/api/articles";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -593,13 +551,13 @@ export class ArticlesApiClient {
         });
     }
 
-    protected processCreate(response: Response): Promise<ArticleDto> {
+    protected processCreate(response: Response): Promise<ArticleSummaryDto> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 201) {
             return response.text().then((_responseText) => {
             let result201: any = null;
-            result201 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ArticleDto;
+            result201 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ArticleSummaryDto;
             return result201;
             });
         } else if (status === 400) {
@@ -613,7 +571,7 @@ export class ArticlesApiClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<ArticleDto>(null as any);
+        return Promise.resolve<ArticleSummaryDto>(null as any);
     }
 
     updateMetadata(id: string, request: ArticleUpdateMetadataRequest): Promise<void> {
@@ -1312,7 +1270,7 @@ export class PlanApiClient {
         this.baseUrl = baseUrl ?? "";
     }
 
-    getActivePlan(articleId: string): Promise<PlanDetailDto> {
+    getActivePlan(articleId: string): Promise<PlanDto> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/plans/active";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -1331,13 +1289,13 @@ export class PlanApiClient {
         });
     }
 
-    protected processGetActivePlan(response: Response): Promise<PlanDetailDto> {
+    protected processGetActivePlan(response: Response): Promise<PlanDto> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PlanDetailDto;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PlanDto;
             return result200;
             });
         } else if (status === 204) {
@@ -1355,7 +1313,7 @@ export class PlanApiClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<PlanDetailDto>(null as any);
+        return Promise.resolve<PlanDto>(null as any);
     }
 
     getAllPlans(articleId: string): Promise<PlanSummaryDto[]> {
@@ -1400,7 +1358,7 @@ export class PlanApiClient {
         return Promise.resolve<PlanSummaryDto[]>(null as any);
     }
 
-    getPlan(articleId: string, planId: string): Promise<PlanDetailDto> {
+    getPlan(articleId: string, planId: string): Promise<PlanDto> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/plans/{planId}";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -1422,13 +1380,13 @@ export class PlanApiClient {
         });
     }
 
-    protected processGetPlan(response: Response): Promise<PlanDetailDto> {
+    protected processGetPlan(response: Response): Promise<PlanDto> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PlanDetailDto;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PlanDto;
             return result200;
             });
         } else if (status === 404) {
@@ -1442,7 +1400,7 @@ export class PlanApiClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<PlanDetailDto>(null as any);
+        return Promise.resolve<PlanDto>(null as any);
     }
 
     updatePlan(articleId: string, planId: string, request: UpdatePlanRequest): Promise<PlanActionResponse> {
@@ -2218,9 +2176,14 @@ export interface ConversationHistoryItemDto {
 
 export interface ConversationStatusResponse {
     id?: string;
-    state?: string;
-    completedAt?: Date | null;
-    timestamp?: Date | null;
+    state?: ConversationState;
+    timestamp?: Date;
+}
+
+export enum ConversationState {
+    Active = "Active",
+    Complete = "Complete",
+    Archived = "Archived",
 }
 
 export interface ArticleTypeDto {
@@ -2229,21 +2192,15 @@ export interface ArticleTypeDto {
     icon?: string | null;
 }
 
-export interface ArticleDto {
+export interface ArticleSummaryDto {
     id?: string;
     title?: string;
-    summary?: string | null;
-    content?: string | null;
     status?: ArticleStatus;
-    publishedAt?: Date | null;
     parentArticleId?: string | null;
-    parentTitle?: string | null;
     articleTypeId?: string | null;
     assignedUser?: UserSummaryDto | null;
-    children?: ArticleDto[];
+    children?: ArticleSummaryDto[];
     currentConversation?: ConversationSummaryDto | null;
-    childrenCount?: number;
-    fragmentsCount?: number;
     createdAt?: Date;
     modifiedAt?: Date | null;
 }
@@ -2268,10 +2225,14 @@ export interface ConversationSummaryDto {
     state?: ConversationState;
 }
 
-export enum ConversationState {
-    Active = "Active",
-    Complete = "Complete",
-    Archived = "Archived",
+export interface ArticleDto {
+    id?: string;
+    title?: string;
+    content?: string | null;
+    status?: ArticleStatus;
+    parentArticleId?: string | null;
+    currentConversation?: ConversationSummaryDto | null;
+    createdAt?: Date;
 }
 
 export interface ArticleCreateRequest {
@@ -2315,9 +2276,8 @@ export interface ArticleVersionDto {
     id?: string;
     articleId?: string;
     conversationId?: string | null;
-    contentSnapshot?: string;
     versionNumber?: number;
-    createdBy?: UserSummaryDto | null;
+    createdBy?: UserRef | null;
     createdAt?: Date;
     modifiedAt?: Date | null;
     versionType?: VersionType;
@@ -2325,7 +2285,13 @@ export interface ArticleVersionDto {
     changeMessage?: string | null;
     reviewAction?: ReviewAction;
     reviewedAt?: Date | null;
-    reviewedBy?: UserSummaryDto | null;
+    reviewedBy?: UserRef | null;
+    status?: VersionStatus | null;
+}
+
+export interface UserRef {
+    id?: string;
+    fullName?: string;
 }
 
 export enum VersionType {
@@ -2337,6 +2303,15 @@ export enum ReviewAction {
     None = "None",
     Accepted = "Accepted",
     Rejected = "Rejected",
+}
+
+export enum VersionStatus {
+    CurrentVersion = "CurrentVersion",
+    OldVersion = "OldVersion",
+    PendingAiVersion = "PendingAiVersion",
+    AcceptedAiVersion = "AcceptedAiVersion",
+    RejectedAiVersion = "RejectedAiVersion",
+    OldAiVersion = "OldAiVersion",
 }
 
 export interface ArticleVersionComparisonDto {
@@ -2432,7 +2407,7 @@ export interface FragmentTitleDto {
     title?: string;
 }
 
-export interface PlanDetailDto {
+export interface PlanDto {
     id?: string;
     articleId?: string;
     instructions?: string;
@@ -2440,11 +2415,11 @@ export interface PlanDetailDto {
     version?: number;
     changesSummary?: string | null;
     createdAt?: Date;
-    createdBy?: UserSummaryDto;
-    fragments?: PlanFragmentDetailDto[];
+    createdBy?: UserRef;
+    fragments?: PlanFragmentDto[];
 }
 
-export interface PlanFragmentDetailDto {
+export interface PlanFragmentDto {
     id?: string;
     fragmentId?: string;
     similarityScore?: number;
@@ -2478,7 +2453,7 @@ export interface PlanSummaryDto {
     status?: string;
     createdAt?: Date;
     changesSummary?: string | null;
-    createdBy?: UserSummaryDto;
+    createdBy?: UserRef;
 }
 
 export interface PlanActionResponse {
@@ -2559,7 +2534,7 @@ export interface TaggingResponse {
     skipped?: boolean;
     message?: string;
     isInternal?: boolean | null;
-    tagCount?: number | null;
+    tagCount?: number;
 }
 
 export interface TagTypeDto {

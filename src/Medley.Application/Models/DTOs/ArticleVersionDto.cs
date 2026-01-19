@@ -26,17 +26,17 @@ public class ArticleVersionDto
     /// <summary>
     /// Version number
     /// </summary>
-    public int VersionNumber { get; set; }
+    public required int VersionNumber { get; set; }
 
     /// <summary>
     /// User who created this version
     /// </summary>
-    public UserSummaryDto? CreatedBy { get; set; }
+    public UserRef? CreatedBy { get; set; }
 
     /// <summary>
     /// When this version was created
     /// </summary>
-    public DateTimeOffset CreatedAt { get; set; }
+    public required DateTimeOffset CreatedAt { get; set; }
 
     /// <summary>
     /// When this version was last modified (for draft versions)
@@ -46,7 +46,7 @@ public class ArticleVersionDto
     /// <summary>
     /// Type of version (User or AI draft)
     /// </summary>
-    public VersionType VersionType { get; set; }
+    public required VersionType VersionType { get; set; }
 
     /// <summary>
     /// Parent version ID (for AI versions)
@@ -61,7 +61,7 @@ public class ArticleVersionDto
     /// <summary>
     /// Review action taken on this AI version
     /// </summary>
-    public ReviewAction ReviewAction { get; set; }
+    public required ReviewAction ReviewAction { get; set; }
 
     /// <summary>
     /// When this AI version was reviewed
@@ -71,7 +71,12 @@ public class ArticleVersionDto
     /// <summary>
     /// User who reviewed this version
     /// </summary>
-    public UserSummaryDto? ReviewedBy { get; set; }
+    public UserRef? ReviewedBy { get; set; }
+
+    /// <summary>
+    /// Computed status of this version (CurrentVersion, OldVersion, PendingAiVersion, etc.)
+    /// </summary>
+    public VersionStatus? Status { get; set; }
 }
 
 /// <summary>
@@ -101,30 +106,6 @@ public class ArticleVersionComparisonDto
 }
 
 /// <summary>
-/// Request to accept an AI version
-/// </summary>
-public class AcceptVersionRequest
-{
-    /// <summary>
-    /// Version ID to accept
-    /// </summary>
-    [Required]
-    public required Guid VersionId { get; set; }
-}
-
-/// <summary>
-/// Request to reject an AI version
-/// </summary>
-public class RejectVersionRequest
-{
-    /// <summary>
-    /// Version ID to reject
-    /// </summary>
-    [Required]
-    public required Guid VersionId { get; set; }
-}
-
-/// <summary>
 /// Response from version capture operation
 /// </summary>
 public class VersionCaptureResponse
@@ -132,7 +113,7 @@ public class VersionCaptureResponse
     /// <summary>
     /// Indicates if a new version was created
     /// </summary>
-    public bool IsNewVersion { get; set; }
+    public required bool IsNewVersion { get; set; }
 
     /// <summary>
     /// Version ID (new or existing)

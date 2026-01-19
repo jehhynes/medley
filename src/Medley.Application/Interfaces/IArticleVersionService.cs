@@ -95,7 +95,7 @@ public class ArticleVersionServiceDto
     /// <summary>
     /// Computed status of this version
     /// </summary>
-    public string Status { get; set; } = string.Empty;
+    public Domain.Enums.VersionStatus Status { get; set; }
     
     /// <summary>
     /// When this version was reviewed (for AI versions)
