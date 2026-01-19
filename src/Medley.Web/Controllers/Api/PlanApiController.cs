@@ -66,7 +66,7 @@ public class PlanApiController : ControllerBase
         var article = await _articleRepository.GetByIdAsync(articleId);
         if (article == null)
         {
-            return NotFound(new { error = "Article not found" });
+            return NotFound(new { message = "Article not found" });
         }
 
         var plan = await _planRepository.Query()
@@ -97,7 +97,7 @@ public class PlanApiController : ControllerBase
         var article = await _articleRepository.GetByIdAsync(articleId);
         if (article == null)
         {
-            return NotFound(new { error = "Article not found" });
+            return NotFound(new { message = "Article not found" });
         }
 
         var plans = await _planRepository.Query()
@@ -140,7 +140,7 @@ public class PlanApiController : ControllerBase
 
         if (plan == null)
         {
-            return NotFound(new { error = "Plan not found" });
+            return NotFound(new { message = "Plan not found" });
         }
 
         return Ok(MapPlanToDto(plan));
@@ -161,12 +161,12 @@ public class PlanApiController : ControllerBase
 
         if (planToRestore == null)
         {
-            return NotFound(new { error = "Plan not found" });
+            return NotFound(new { message = "Plan not found" });
         }
 
         if (planToRestore.Status == PlanStatus.Draft)
         {
-            return BadRequest(new { error = "Plan is already active" });
+            return BadRequest(new { message = "Plan is already active" });
         }
 
         // Archive current draft plan (if any)
@@ -200,12 +200,12 @@ public class PlanApiController : ControllerBase
 
         if (plan == null)
         {
-            return NotFound(new { error = "Plan not found" });
+            return NotFound(new { message = "Plan not found" });
         }
 
         if (plan.Status != PlanStatus.Draft)
         {
-            return BadRequest(new { error = "Only draft plans can be updated" });
+            return BadRequest(new { message = "Only draft plans can be updated" });
         }
 
         plan.Instructions = request.Instructions;
@@ -232,12 +232,12 @@ public class PlanApiController : ControllerBase
 
         if (plan == null)
         {
-            return NotFound(new { error = "Plan not found" });
+            return NotFound(new { message = "Plan not found" });
         }
 
         if (plan.Status != PlanStatus.Draft)
         {
-            return BadRequest(new { error = "Only draft plans can be updated" });
+            return BadRequest(new { message = "Only draft plans can be updated" });
         }
 
         var planFragment = await _planFragmentRepository.Query()
@@ -246,7 +246,7 @@ public class PlanApiController : ControllerBase
 
         if (planFragment == null)
         {
-            return NotFound(new { error = "Plan fragment not found" });
+            return NotFound(new { message = "Plan fragment not found" });
         }
 
         planFragment.Include = request.Include;
@@ -273,12 +273,12 @@ public class PlanApiController : ControllerBase
 
         if (plan == null)
         {
-            return NotFound(new { error = "Plan not found" });
+            return NotFound(new { message = "Plan not found" });
         }
 
         if (plan.Status != PlanStatus.Draft)
         {
-            return BadRequest(new { error = "Only draft plans can be updated" });
+            return BadRequest(new { message = "Only draft plans can be updated" });
         }
 
         var planFragment = await _planFragmentRepository.Query()
@@ -287,7 +287,7 @@ public class PlanApiController : ControllerBase
 
         if (planFragment == null)
         {
-            return NotFound(new { error = "Plan fragment not found" });
+            return NotFound(new { message = "Plan fragment not found" });
         }
 
         planFragment.Instructions = request.Instructions;
@@ -311,12 +311,12 @@ public class PlanApiController : ControllerBase
 
         if (plan == null)
         {
-            return NotFound(new { error = "Plan not found" });
+            return NotFound(new { message = "Plan not found" });
         }
 
         if (plan.Status != PlanStatus.Draft)
         {
-            return BadRequest(new { error = "Only draft plans can be accepted" });
+            return BadRequest(new { message = "Only draft plans can be accepted" });
         }
 
         // Get current user ID
@@ -402,12 +402,12 @@ public class PlanApiController : ControllerBase
 
         if (plan == null)
         {
-            return NotFound(new { error = "Plan not found" });
+            return NotFound(new { message = "Plan not found" });
         }
 
         if (plan.Status != PlanStatus.Draft)
         {
-            return BadRequest(new { error = "Only draft plans can be rejected" });
+            return BadRequest(new { message = "Only draft plans can be rejected" });
         }
 
         // Update plan status to Archived
