@@ -1,0 +1,61 @@
+// Main entry point for Vue SPA
+// Creates a single Vue app instance with Vue Router
+
+import type { App as VueApp } from 'vue';
+import type { Router } from 'vue-router';
+
+// Dynamic imports for code splitting
+const { createApp } = await import('vue');
+const { default: App } = await import('./App.vue');
+const { default: router } = await import('./router');
+
+// Import third-party libraries
+const { marked } = await import('marked');
+
+// Import all components
+const { default: TiptapEditor } = await import('../components/TiptapEditor.vue');
+const { default: ArticleList } = await import('../features/articles/components/ArticleList.vue');
+const { default: ArticleTree } = await import('../features/articles/components/ArticleTree.vue');
+const { default: ChatPanel } = await import('../features/articles/components/ChatPanel.vue');
+const { default: FragmentList } = await import('../features/sources/components/FragmentList.vue');
+const { default: FragmentModal } = await import('../features/sources/components/FragmentModal.vue');
+const { default: PlanViewer } = await import('../features/articles/components/PlanViewer.vue');
+const { default: SourceList } = await import('../features/sources/components/SourceList.vue');
+const { default: VerticalMenu } = await import('../components/VerticalMenu.vue');
+const { default: VersionsPanel } = await import('../features/articles/components/VersionsPanel.vue');
+const { default: VirtualScroller } = await import('../components/VirtualScroller.vue');
+
+// Make libraries available globally (for backward compatibility)
+declare global {
+  interface Window {
+    marked: typeof marked;
+  }
+}
+
+window.marked = marked;
+
+// Import json-viewer asynchronously (web component, doesn't need to block)
+import('@alenaksu/json-viewer');
+
+// Create the app with proper typing
+const app: VueApp = createApp(App);
+
+// Register all components globally
+app.component('tiptap-editor', TiptapEditor);
+app.component('article-list', ArticleList);
+app.component('article-tree', ArticleTree);
+app.component('chat-panel', ChatPanel);
+app.component('fragment-list', FragmentList);
+app.component('fragment-modal', FragmentModal);
+app.component('plan-viewer', PlanViewer);
+app.component('source-list', SourceList);
+app.component('vertical-menu', VerticalMenu);
+app.component('versions-panel', VersionsPanel);
+app.component('virtual-scroller', VirtualScroller);
+
+app.use(router as Router);
+
+// Wait for router to be ready before mounting
+router.isReady().then(() => {
+  app.mount('#app');
+});

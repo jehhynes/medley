@@ -110,7 +110,7 @@
       "enumNameGeneratorType": null,
       "serviceHost": null,
       "serviceSchemes": null,
-      "output": "Vue/types/generated/api-client.ts",
+      "output": "Vue/types/api-client.ts",
       "newLineBehavior": "Auto"
     }
   }

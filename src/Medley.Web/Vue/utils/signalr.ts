@@ -4,8 +4,8 @@
  */
 
 import * as signalR from '@microsoft/signalr';
-import type { ArticleHubConnection } from '@/types/signalr/article-hub';
-import type { AdminHubConnection } from '@/types/signalr/admin-hub';
+import type { ArticleHubConnection } from '@/features/articles/types/article-hub';
+import type { AdminHubConnection } from '@/types/admin-hub';
 
 /**
  * Create a typed connection to the ArticleHub
