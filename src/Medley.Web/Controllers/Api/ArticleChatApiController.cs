@@ -77,7 +77,7 @@ public class ArticleChatApiController : ControllerBase
         
         if (article == null)
         {
-            return NotFound(new { error = "Article not found" });
+            return NotFound(new { message = "Article not found" });
         }
 
         ChatConversation? conversation;
@@ -89,13 +89,13 @@ public class ArticleChatApiController : ControllerBase
             
             if (conversation == null)
             {
-                return NotFound(new { error = "Conversation not found" });
+                return NotFound(new { message = "Conversation not found" });
             }
 
             // Verify conversation belongs to this article
             if (conversation.ArticleId != articleId)
             {
-                return NotFound(new { error = "Conversation not found" });
+                return NotFound(new { message = "Conversation not found" });
             }
         }
         else
@@ -143,19 +143,19 @@ public class ArticleChatApiController : ControllerBase
         var article = await _articleRepository.GetByIdAsync(articleId);
         if (article == null)
         {
-            return NotFound(new { error = "Article not found" });
+            return NotFound(new { message = "Article not found" });
         }
   
         // Check if active conversation already exists
         if (article.CurrentConversationId != null)
         {
-            return Conflict(new { error = "An active conversation already exists for this article" });
+            return Conflict(new { message = "An active conversation already exists for this article" });
         }
  
         var userId = _medleyContext.CurrentUserId;
         if (!userId.HasValue)
         {
-            return Unauthorized(new { error = "User ID not found" });
+            return Unauthorized(new { message = "User ID not found" });
         }
         
         var conversation = await _chatService.CreateConversationAsync(articleId, userId.Value, mode);
@@ -187,7 +187,7 @@ public class ArticleChatApiController : ControllerBase
         var conversation = await _chatService.GetConversationAsync(conversationId);
         if (conversation == null || conversation.ArticleId != articleId)
         {
-            return NotFound(new { error = "Conversation not found" });
+            return NotFound(new { message = "Conversation not found" });
         }
 
         var messages = await _chatService.GetConversationMessagesAsync(conversationId, limit);
@@ -310,18 +310,18 @@ public class ArticleChatApiController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(request.Message))
         {
-            return BadRequest(new { error = "Message cannot be empty" });
+            return BadRequest(new { message = "Message cannot be empty" });
         }
 
         var conversation = await _chatService.GetConversationAsync(conversationId);
         if (conversation == null || conversation.ArticleId != articleId)
         {
-            return NotFound(new { error = "Conversation not found" });
+            return NotFound(new { message = "Conversation not found" });
         }
 
         if (conversation.State != ConversationState.Active)
         {
-            return BadRequest(new { error = "Conversation is not active" });
+            return BadRequest(new { message = "Conversation is not active" });
         }
 
         // Update mode if provided
@@ -333,7 +333,7 @@ public class ArticleChatApiController : ControllerBase
         var userId = _medleyContext.CurrentUserId;
         if (!userId.HasValue)
         {
-            return Unauthorized(new { error = "User ID not found" });
+            return Unauthorized(new { message = "User ID not found" });
         }
 
         // Save user message
@@ -451,7 +451,7 @@ public class ArticleChatApiController : ControllerBase
         var article = await _articleRepository.GetByIdAsync(articleId);
         if (article == null)
         {
-            return NotFound(new { error = "Article not found" });
+            return NotFound(new { message = "Article not found" });
         }
 
         var conversations = await _chatService.GetConversationHistoryAsync(articleId);
@@ -477,7 +477,7 @@ public class ArticleChatApiController : ControllerBase
         var conversation = await _chatService.GetConversationAsync(conversationId);
         if (conversation == null || conversation.ArticleId != articleId)
         {
-            return NotFound(new { error = "Conversation not found" });
+            return NotFound(new { message = "Conversation not found" });
         }
 
         await _chatService.CompleteConversationAsync(conversationId);
@@ -523,7 +523,7 @@ public class ArticleChatApiController : ControllerBase
         var conversation = await _chatService.GetConversationAsync(conversationId);
         if (conversation == null || conversation.ArticleId != articleId)
         {
-            return NotFound(new { error = "Conversation not found" });
+            return NotFound(new { message = "Conversation not found" });
         }
 
         await _chatService.CancelConversationAsync(conversationId);
