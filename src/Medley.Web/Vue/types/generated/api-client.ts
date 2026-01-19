@@ -616,7 +616,7 @@ export class ArticlesApiClient {
         return Promise.resolve<ArticleDto>(null as any);
     }
 
-    updateMetadata(id: string, request: ArticleUpdateMetadataRequest): Promise<ArticleDto> {
+    updateMetadata(id: string, request: ArticleUpdateMetadataRequest): Promise<void> {
         let url_ = this.baseUrl + "/api/articles/{id}/metadata";
         if (id === undefined || id === null)
             throw new globalThis.Error("The parameter 'id' must be defined.");
@@ -630,7 +630,6 @@ export class ArticlesApiClient {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
-                "Accept": "application/json"
             }
         };
 
@@ -639,14 +638,12 @@ export class ArticlesApiClient {
         });
     }
 
-    protected processUpdateMetadata(response: Response): Promise<ArticleDto> {
+    protected processUpdateMetadata(response: Response): Promise<void> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
-            let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ArticleDto;
-            return result200;
+            return;
             });
         } else if (status === 400) {
             return response.text().then((_responseText) => {
@@ -665,7 +662,7 @@ export class ArticlesApiClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<ArticleDto>(null as any);
+        return Promise.resolve<void>(null as any);
     }
 
     updateContent(id: string, request: ArticleUpdateContentRequest): Promise<VersionCaptureResponse> {
@@ -2443,8 +2440,36 @@ export interface PlanDetailDto {
     version?: number;
     changesSummary?: string | null;
     createdAt?: Date;
-    createdBy?: any;
-    fragments?: any[];
+    createdBy?: UserSummaryDto;
+    fragments?: PlanFragmentDetailDto[];
+}
+
+export interface PlanFragmentDetailDto {
+    id?: string;
+    fragmentId?: string;
+    similarityScore?: number;
+    include?: boolean;
+    reasoning?: string | null;
+    instructions?: string | null;
+    fragment?: FragmentInPlanDto;
+}
+
+export interface FragmentInPlanDto {
+    id?: string;
+    title?: string;
+    summary?: string;
+    category?: string;
+    content?: string;
+    confidence?: string | null;
+    confidenceComment?: string | null;
+    source?: SourceInPlanDto | null;
+}
+
+export interface SourceInPlanDto {
+    id?: string;
+    name?: string;
+    type?: string;
+    date?: Date;
 }
 
 export interface PlanSummaryDto {
@@ -2453,7 +2478,7 @@ export interface PlanSummaryDto {
     status?: string;
     createdAt?: Date;
     changesSummary?: string | null;
-    createdBy?: any;
+    createdBy?: UserSummaryDto;
 }
 
 export interface PlanActionResponse {

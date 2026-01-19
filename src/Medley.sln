@@ -23,6 +23,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medley.Tests.Application", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medley.Collector", "Medley.Collector\Medley.Collector.csproj", "{076FBD96-907C-46AE-A740-B3BC6DA8BC64}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medley.Analyzers", "Medley.Analyzers\Medley.Analyzers.csproj", "{C4A66382-CA57-266A-1999-F408ECFD4E74}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -139,6 +141,18 @@ Global
 		{076FBD96-907C-46AE-A740-B3BC6DA8BC64}.Release|x64.Build.0 = Release|Any CPU
 		{076FBD96-907C-46AE-A740-B3BC6DA8BC64}.Release|x86.ActiveCfg = Release|Any CPU
 		{076FBD96-907C-46AE-A740-B3BC6DA8BC64}.Release|x86.Build.0 = Release|Any CPU
+		{C4A66382-CA57-266A-1999-F408ECFD4E74}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C4A66382-CA57-266A-1999-F408ECFD4E74}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C4A66382-CA57-266A-1999-F408ECFD4E74}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C4A66382-CA57-266A-1999-F408ECFD4E74}.Debug|x64.Build.0 = Debug|Any CPU
+		{C4A66382-CA57-266A-1999-F408ECFD4E74}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{C4A66382-CA57-266A-1999-F408ECFD4E74}.Debug|x86.Build.0 = Debug|Any CPU
+		{C4A66382-CA57-266A-1999-F408ECFD4E74}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C4A66382-CA57-266A-1999-F408ECFD4E74}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C4A66382-CA57-266A-1999-F408ECFD4E74}.Release|x64.ActiveCfg = Release|Any CPU
+		{C4A66382-CA57-266A-1999-F408ECFD4E74}.Release|x64.Build.0 = Release|Any CPU
+		{C4A66382-CA57-266A-1999-F408ECFD4E74}.Release|x86.ActiveCfg = Release|Any CPU
+		{C4A66382-CA57-266A-1999-F408ECFD4E74}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
