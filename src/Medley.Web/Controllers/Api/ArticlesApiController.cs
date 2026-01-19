@@ -182,23 +182,23 @@ public class ArticlesApiController : ControllerBase
             return NotFound();
         }
 
-        return Ok(new
+        return Ok(new ArticleDto
         {
-            article.Id,
-            article.Title,
+            Id = article.Id,
+            Title = article.Title,
             Content = StripArticleHeader(article.Content),
-            article.Status,
-            article.PublishedAt,
-            article.CreatedAt,
-            article.ParentArticleId,
+            Status = article.Status,
+            PublishedAt = article.PublishedAt,
+            CreatedAt = article.CreatedAt,
+            ParentArticleId = article.ParentArticleId,
             ParentTitle = article.ParentArticle?.Title,
             ChildrenCount = article.ChildArticles.Count,
             FragmentsCount = article.Fragments.Count,
-            CurrentConversation = article.CurrentConversation != null ? new 
+            CurrentConversation = article.CurrentConversation != null ? new ConversationSummaryDto
             { 
-                id = article.CurrentConversation.Id,
-                isRunning = article.CurrentConversation.IsRunning,
-                state = article.CurrentConversation.State.ToString()
+                Id = article.CurrentConversation.Id,
+                IsRunning = article.CurrentConversation.IsRunning,
+                State = article.CurrentConversation.State
             } : null
         });
     }
@@ -215,14 +215,17 @@ public class ArticlesApiController : ControllerBase
     {
         var children = await _articleRepository.Query()
             .Where(a => a.ParentArticleId == id)
+            .Include(a => a.ChildArticles)
+            .Include(a => a.Fragments)
             .OrderBy(a => a.Title)
-            .Select(a => new
+            .Select(a => new ArticleDto
             {
-                a.Id,
-                a.Title,
-                a.Status,
-                a.CreatedAt,
-                ChildrenCount = a.ChildArticles.Count
+                Id = a.Id,
+                Title = a.Title,
+                Status = a.Status,
+                CreatedAt = a.CreatedAt,
+                ChildrenCount = a.ChildArticles.Count,
+                FragmentsCount = a.Fragments.Count
             })
             .ToListAsync();
 
@@ -272,14 +275,16 @@ public class ArticlesApiController : ControllerBase
             });
         });
 
-        return CreatedAtAction(nameof(Get), new { id = article.Id }, new
+        return CreatedAtAction(nameof(Get), new { id = article.Id }, new ArticleDto
         {
-            id = article.Id.ToString(),
-            article.Title,
-            article.Status,
-            article.ParentArticleId,
-            articleTypeId = article.ArticleTypeId,
-            article.CreatedAt
+            Id = article.Id,
+            Title = article.Title,
+            Status = article.Status,
+            ParentArticleId = article.ParentArticleId,
+            ArticleTypeId = article.ArticleTypeId,
+            CreatedAt = article.CreatedAt,
+            ChildrenCount = 0, // New article has no children
+            FragmentsCount = 0  // New article has no fragments
         });
     }
 
@@ -288,12 +293,12 @@ public class ArticlesApiController : ControllerBase
     /// </summary>
     /// <param name="id">Article ID</param>
     /// <param name="request">Metadata update request</param>
-    /// <returns>Updated article</returns>
+    /// <returns>Success response</returns>
     [HttpPut("{id}/metadata")]
-    [ProducesResponseType(typeof(ArticleDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<ArticleDto>> UpdateMetadata(Guid id, [FromBody] ArticleUpdateMetadataRequest request)
+    public async Task<ActionResult> UpdateMetadata(Guid id, [FromBody] ArticleUpdateMetadataRequest request)
     {
         var article = await _articleRepository.GetByIdAsync(id);
         if (article == null)
@@ -337,7 +342,7 @@ public class ArticlesApiController : ControllerBase
             });
         });
 
-        return Ok(article);
+        return Ok();
     }
 
     /// <summary>
@@ -491,7 +496,13 @@ public class ArticlesApiController : ControllerBase
         // Check if moving to the same parent (no-op)
         if (article.ParentArticleId == request.NewParentArticleId.Value)
         {
-            return Ok(new { message = "Article is already under this parent" });
+            return Ok(new ArticleMoveResponse 
+            { 
+                Message = "Article is already under this parent",
+                ArticleId = article.Id,
+                OldParentId = article.ParentArticleId,
+                NewParentId = request.NewParentArticleId.Value
+            });
         }
 
         // Get the new parent article
@@ -594,36 +605,38 @@ public class ArticlesApiController : ControllerBase
     /// <summary>
     /// Helper method to build tree structure
     /// </summary>
-    private List<object> BuildTree(List<Article> allArticles, Guid? parentId)
+    private List<ArticleDto> BuildTree(List<Article> allArticles, Guid? parentId)
     {
         return allArticles
             .Where(a => a.ParentArticleId == parentId)
             .OrderBy(a => a.ArticleType?.Name?.Equals("Index", StringComparison.OrdinalIgnoreCase) == true ? 0 : 1)
             .ThenBy(a => a.Title)
-            .Select(a => new
+            .Select(a => new ArticleDto
             {
-                id = a.Id.ToString(),
-                title = a.Title,
-                status = a.Status,
-                createdAt = a.CreatedAt,
-                modifiedAt = a.CurrentVersion != null ? a.CurrentVersion.ModifiedAt : null,
-                articleTypeId = a.ArticleTypeId,
-                currentConversation = a.CurrentConversation != null ? new 
+                Id = a.Id,
+                Title = a.Title,
+                Status = a.Status,
+                CreatedAt = a.CreatedAt,
+                ModifiedAt = a.CurrentVersion != null ? a.CurrentVersion.ModifiedAt : null,
+                ArticleTypeId = a.ArticleTypeId,
+                CurrentConversation = a.CurrentConversation != null ? new ConversationSummaryDto
                 { 
-                    id = a.CurrentConversation.Id,
-                    isRunning = a.CurrentConversation.IsRunning,
-                    state = a.CurrentConversation.State.ToString()
+                    Id = a.CurrentConversation.Id,
+                    IsRunning = a.CurrentConversation.IsRunning,
+                    State = a.CurrentConversation.State
                 } : null,
-                assignedUser = a.AssignedUser != null ? new
+                AssignedUser = a.AssignedUser != null ? new UserSummaryDto
                 {
-                    id = a.AssignedUser.Id,
-                    fullName = a.AssignedUser.FullName,
-                    initials = a.AssignedUser.Initials,
-                    color = a.AssignedUser.Color
+                    Id = a.AssignedUser.Id,
+                    FullName = a.AssignedUser.FullName ?? a.AssignedUser.Email ?? "Unknown",
+                    Initials = a.AssignedUser.Initials,
+                    Color = a.AssignedUser.Color
                 } : null,
-                children = BuildTree(allArticles, a.Id)
+                Children = BuildTree(allArticles, a.Id),
+                ChildrenCount = a.ChildArticles.Count,
+                FragmentsCount = a.Fragments.Count
             })
-            .ToList<object>();
+            .ToList();
     }
 
     /// <summary>
@@ -729,7 +742,37 @@ public class ArticlesApiController : ControllerBase
 
         // Return all versions (User and AI) - let the client filter as needed
         var versions = await _versionService.GetVersionsAsync(id, versionType: null);
-        return Ok(versions);
+        
+        var versionDtos = versions.Select(v => new ArticleVersionDto
+        {
+            Id = v.Id,
+            ArticleId = id,
+            VersionNumber = int.TryParse(v.VersionNumber.Split('.')[0], out var vn) ? vn : 0,
+            CreatedBy = v.CreatedBy.HasValue ? new UserSummaryDto
+            {
+                Id = v.CreatedBy.Value,
+                FullName = v.CreatedByName ?? v.CreatedByEmail ?? "Unknown",
+                Initials = null,
+                Color = null
+            } : null,
+            CreatedAt = v.CreatedAt,
+            VersionType = Enum.Parse<Domain.Enums.VersionType>(v.VersionType),
+            ChangeMessage = v.ChangeMessage,
+            ReviewAction = string.IsNullOrEmpty(v.Status) ? Domain.Enums.ReviewAction.None : 
+                          v.Status == "Accepted" ? Domain.Enums.ReviewAction.Accepted :
+                          v.Status == "Rejected" ? Domain.Enums.ReviewAction.Rejected :
+                          Domain.Enums.ReviewAction.None,
+            ReviewedAt = v.ReviewedAt,
+            ReviewedBy = v.ReviewedById.HasValue ? new UserSummaryDto
+            {
+                Id = v.ReviewedById.Value,
+                FullName = v.ReviewedByName ?? "Unknown",
+                Initials = null,
+                Color = null
+            } : null
+        }).ToList();
+        
+        return Ok(versionDtos);
     }
 
     /// <summary>
@@ -758,7 +801,39 @@ public class ArticlesApiController : ControllerBase
             return NotFound(new { message = "Version not found" });
         }
 
-        return Ok(version);
+        // Get the full content for this specific version
+        var comparison = await _versionService.GetVersionComparisonAsync(versionId);
+        
+        var versionDto = new ArticleVersionDto
+        {
+            Id = version.Id,
+            ArticleId = articleId,
+            VersionNumber = int.TryParse(version.VersionNumber.Split('.')[0], out var vn) ? vn : 0,
+            CreatedBy = version.CreatedBy.HasValue ? new UserSummaryDto
+            {
+                Id = version.CreatedBy.Value,
+                FullName = version.CreatedByName ?? version.CreatedByEmail ?? "Unknown",
+                Initials = null,
+                Color = null
+            } : null,
+            CreatedAt = version.CreatedAt,
+            VersionType = Enum.Parse<Domain.Enums.VersionType>(version.VersionType),
+            ChangeMessage = version.ChangeMessage,
+            ReviewAction = string.IsNullOrEmpty(version.Status) ? Domain.Enums.ReviewAction.None : 
+                          version.Status == "Accepted" ? Domain.Enums.ReviewAction.Accepted :
+                          version.Status == "Rejected" ? Domain.Enums.ReviewAction.Rejected :
+                          Domain.Enums.ReviewAction.None,
+            ReviewedAt = version.ReviewedAt,
+            ReviewedBy = version.ReviewedById.HasValue ? new UserSummaryDto
+            {
+                Id = version.ReviewedById.Value,
+                FullName = version.ReviewedByName ?? "Unknown",
+                Initials = null,
+                Color = null
+            } : null
+        };
+
+        return Ok(versionDto);
     }
 
     /// <summary>

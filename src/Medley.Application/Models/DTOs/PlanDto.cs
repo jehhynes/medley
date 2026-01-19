@@ -137,12 +137,125 @@ public class PlanDetailDto
     /// <summary>
     /// User who created this plan
     /// </summary>
-    public required object CreatedBy { get; set; }
+    public required UserSummaryDto CreatedBy { get; set; }
 
     /// <summary>
     /// Fragment recommendations for this plan
     /// </summary>
-    public required List<object> Fragments { get; set; } = new();
+    public required List<PlanFragmentDetailDto> Fragments { get; set; } = new();
+}
+
+/// <summary>
+/// Detailed fragment information in a plan
+/// </summary>
+public class PlanFragmentDetailDto
+{
+    /// <summary>
+    /// Plan fragment ID
+    /// </summary>
+    public required Guid Id { get; set; }
+
+    /// <summary>
+    /// Fragment ID
+    /// </summary>
+    public required Guid FragmentId { get; set; }
+
+    /// <summary>
+    /// Similarity score (0-1)
+    /// </summary>
+    public double SimilarityScore { get; set; }
+
+    /// <summary>
+    /// Whether to include this fragment in the implementation
+    /// </summary>
+    public bool Include { get; set; }
+
+    /// <summary>
+    /// AI reasoning for including this fragment
+    /// </summary>
+    public string? Reasoning { get; set; }
+
+    /// <summary>
+    /// Specific instructions for using this fragment
+    /// </summary>
+    public string? Instructions { get; set; }
+
+    /// <summary>
+    /// Fragment details
+    /// </summary>
+    public required FragmentInPlanDto Fragment { get; set; }
+}
+
+/// <summary>
+/// Fragment information within a plan
+/// </summary>
+public class FragmentInPlanDto
+{
+    /// <summary>
+    /// Fragment ID
+    /// </summary>
+    public required Guid Id { get; set; }
+
+    /// <summary>
+    /// Fragment title
+    /// </summary>
+    public required string Title { get; set; }
+
+    /// <summary>
+    /// Fragment summary
+    /// </summary>
+    public required string Summary { get; set; }
+
+    /// <summary>
+    /// Fragment category
+    /// </summary>
+    public required string Category { get; set; }
+
+    /// <summary>
+    /// Fragment content
+    /// </summary>
+    public required string Content { get; set; }
+
+    /// <summary>
+    /// Confidence level
+    /// </summary>
+    public string? Confidence { get; set; }
+
+    /// <summary>
+    /// Confidence comment
+    /// </summary>
+    public string? ConfidenceComment { get; set; }
+
+    /// <summary>
+    /// Source information
+    /// </summary>
+    public SourceInPlanDto? Source { get; set; }
+}
+
+/// <summary>
+/// Source information within a plan fragment
+/// </summary>
+public class SourceInPlanDto
+{
+    /// <summary>
+    /// Source ID
+    /// </summary>
+    public required Guid Id { get; set; }
+
+    /// <summary>
+    /// Source name
+    /// </summary>
+    public required string Name { get; set; }
+
+    /// <summary>
+    /// Source type
+    /// </summary>
+    public required string Type { get; set; }
+
+    /// <summary>
+    /// Source date
+    /// </summary>
+    public DateTimeOffset Date { get; set; }
 }
 
 /// <summary>
@@ -178,7 +291,7 @@ public class PlanSummaryDto
     /// <summary>
     /// User who created this plan
     /// </summary>
-    public required object CreatedBy { get; set; }
+    public required UserSummaryDto CreatedBy { get; set; }
 }
 
 /// <summary>

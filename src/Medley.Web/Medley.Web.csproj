@@ -73,6 +73,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Medley.Application\Medley.Application.csproj" />
     <ProjectReference Include="..\Medley.Infrastructure\Medley.Infrastructure.csproj" />
+    <ProjectReference Include="..\Medley.Analyzers\Medley.Analyzers.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>

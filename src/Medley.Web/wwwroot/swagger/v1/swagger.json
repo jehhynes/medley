@@ -721,14 +721,7 @@
         },
         "responses": {
           "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ArticleDto"
-                }
-              }
-            }
+            "description": ""
           },
           "404": {
             "description": "",
@@ -3351,10 +3344,104 @@
             "type": "string",
             "format": "date-time"
           },
-          "createdBy": {},
+          "createdBy": {
+            "$ref": "#/components/schemas/UserSummaryDto"
+          },
           "fragments": {
             "type": "array",
-            "items": {}
+            "items": {
+              "$ref": "#/components/schemas/PlanFragmentDetailDto"
+            }
+          }
+        }
+      },
+      "PlanFragmentDetailDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "fragmentId": {
+            "type": "string",
+            "format": "guid"
+          },
+          "similarityScore": {
+            "type": "number",
+            "format": "double"
+          },
+          "include": {
+            "type": "boolean"
+          },
+          "reasoning": {
+            "type": "string",
+            "nullable": true
+          },
+          "instructions": {
+            "type": "string",
+            "nullable": true
+          },
+          "fragment": {
+            "$ref": "#/components/schemas/FragmentInPlanDto"
+          }
+        }
+      },
+      "FragmentInPlanDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "confidence": {
+            "type": "string",
+            "nullable": true
+          },
+          "confidenceComment": {
+            "type": "string",
+            "nullable": true
+          },
+          "source": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SourceInPlanDto"
+              }
+            ]
+          }
+        }
+      },
+      "SourceInPlanDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -3381,7 +3468,9 @@
             "type": "string",
             "nullable": true
           },
-          "createdBy": {}
+          "createdBy": {
+            "$ref": "#/components/schemas/UserSummaryDto"
+          }
         }
       },
       "PlanActionResponse": {

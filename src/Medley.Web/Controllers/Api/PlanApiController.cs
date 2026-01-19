@@ -111,10 +111,12 @@ public class PlanApiController : ControllerBase
                 Status = p.Status.ToString(),
                 CreatedAt = p.CreatedAt,
                 ChangesSummary = p.ChangesSummary,
-                CreatedBy = new
+                CreatedBy = new UserSummaryDto
                 {
-                    id = p.CreatedBy.Id,
-                    name = p.CreatedBy.FullName ?? p.CreatedBy.Email
+                    Id = p.CreatedBy.Id,
+                    FullName = p.CreatedBy.FullName ?? p.CreatedBy.Email ?? "Unknown",
+                    Initials = p.CreatedBy.Initials,
+                    Color = p.CreatedBy.Color
                 }
             })
             .ToListAsync();
@@ -416,48 +418,51 @@ public class PlanApiController : ControllerBase
         return Ok(new PlanActionResponse { Success = true, Message = "Plan rejected and archived" });
     }
 
-    private object MapPlanToDto(Plan plan)
+    private PlanDetailDto MapPlanToDto(Plan plan)
     {
-        return new
+        return new PlanDetailDto
         {
-            id = plan.Id,
-            articleId = plan.ArticleId,
-            instructions = plan.Instructions,
-            status = plan.Status.ToString(),
-            version = plan.Version,
-            changesSummary = plan.ChangesSummary,
-            createdAt = plan.CreatedAt,
-            createdBy = new
+            Id = plan.Id,
+            ArticleId = plan.ArticleId,
+            Instructions = plan.Instructions,
+            Status = plan.Status.ToString(),
+            Version = plan.Version,
+            ChangesSummary = plan.ChangesSummary,
+            CreatedAt = plan.CreatedAt,
+            CreatedBy = new UserSummaryDto
             {
-                id = plan.CreatedBy.Id,
-                name = plan.CreatedBy.FullName ?? plan.CreatedBy.Email
+                Id = plan.CreatedBy.Id,
+                FullName = plan.CreatedBy.FullName ?? plan.CreatedBy.Email ?? "Unknown",
+                Initials = plan.CreatedBy.Initials,
+                Color = plan.CreatedBy.Color
             },
-            fragments = plan.PlanFragments
+            Fragments = plan.PlanFragments
                 .OrderByDescending(x => x.SimilarityScore)
                 .ThenBy(x => x.Fragment.Source?.CreatedAt)
-                .ThenBy(x => x.Fragment.CreatedAt).Select(pf => new
+                .ThenBy(x => x.Fragment.CreatedAt)
+                .Select(pf => new PlanFragmentDetailDto
                 {
-                    id = pf.Id,
-                    fragmentId = pf.FragmentId,
-                    similarityScore = pf.SimilarityScore,
-                    include = pf.Include,
-                    reasoning = pf.Reasoning,
-                    instructions = pf.Instructions,
-                    fragment = new
+                    Id = pf.Id,
+                    FragmentId = pf.FragmentId,
+                    SimilarityScore = pf.SimilarityScore,
+                    Include = pf.Include,
+                    Reasoning = pf.Reasoning,
+                    Instructions = pf.Instructions,
+                    Fragment = new FragmentInPlanDto
                     {
-                        id = pf.Fragment.Id,
-                        title = pf.Fragment.Title,
-                        summary = pf.Fragment.Summary,
-                        category = pf.Fragment.Category,
-                        content = pf.Fragment.Content,
-                        confidence = pf.Fragment.Confidence?.ToString(),
-                        confidenceComment = pf.Fragment.ConfidenceComment,
-                        source = pf.Fragment.Source != null ? new
+                        Id = pf.Fragment.Id,
+                        Title = pf.Fragment.Title,
+                        Summary = pf.Fragment.Summary,
+                        Category = pf.Fragment.Category,
+                        Content = pf.Fragment.Content,
+                        Confidence = pf.Fragment.Confidence?.ToString(),
+                        ConfidenceComment = pf.Fragment.ConfidenceComment,
+                        Source = pf.Fragment.Source != null ? new SourceInPlanDto
                         {
-                            id = pf.Fragment.Source.Id,
-                            name = pf.Fragment.Source.Name,
-                            type = pf.Fragment.Source.Type.ToString(),
-                            date = pf.Fragment.Source.Date
+                            Id = pf.Fragment.Source.Id,
+                            Name = pf.Fragment.Source.Name,
+                            Type = pf.Fragment.Source.Type.ToString(),
+                            Date = pf.Fragment.Source.Date
                         } : null
                     }
                 }).ToList()

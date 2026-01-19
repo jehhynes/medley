@@ -24,11 +24,6 @@ public class ArticleVersionDto
     public Guid? ConversationId { get; set; }
 
     /// <summary>
-    /// Full content snapshot at this version
-    /// </summary>
-    public required string ContentSnapshot { get; set; }
-
-    /// <summary>
     /// Version number
     /// </summary>
     public int VersionNumber { get; set; }

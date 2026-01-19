@@ -73,7 +73,7 @@
               <div class="d-flex justify-content-between align-items-center gap-3 w-100">
                 <strong>v{{ v.versionNumber }}</strong>
                 <span class="text-muted small">{{ formatDate(v.createdAt) }}</span>
-                <span class="text-muted small" v-if="v.createdByName">{{ v.createdByName }}</span>
+                <span class="text-muted small" v-if="v.createdBy?.fullName">{{ v.createdBy.fullName }}</span>
               </div>
             </div>
           </div>
@@ -133,8 +133,6 @@ declare const bootbox: {
 // Extended version interface with computed status
 interface ArticleVersionWithStatus extends ArticleVersionDto {
   status?: string;
-  createdByName?: string;
-  createdByEmail?: string;
 }
 
 // Props
@@ -176,7 +174,7 @@ const isAIVersion = computed<boolean>(() => {
 });
 
 const canReviewVersion = computed<boolean>(() => {
-  return version.value?.status === 'PendingAiVersion';
+  return version.value?.versionType === 'AI' && version.value?.reviewAction === 'None';
 });
 
 // Watch
@@ -308,7 +306,7 @@ function getStatusDetails(version: ArticleVersionWithStatus | null): string {
   if (!version) return '';
   
   const status = version.status;
-  const userName = version.createdByName;
+  const userName = version.createdBy?.fullName;
   const date = version.createdAt ? formatDate(version.createdAt) : '';
   
   switch (status) {
