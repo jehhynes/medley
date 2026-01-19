@@ -89,7 +89,7 @@ export interface UseArticleSignalROptions {
   /**
    * Function to insert an article into the tree
    */
-  insertArticleIntoTree: (article: ArticleDto) => void;
+  insertArticleIntoTree: (article: ArticleSummaryDto) => void;
 
   /**
    * Function to update an article in the tree

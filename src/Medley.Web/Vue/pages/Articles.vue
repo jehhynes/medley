@@ -455,8 +455,8 @@ interface ParentPathItem {
 }
 
 interface ArticlesState {
-  list: ArticleDto[];
-  selected: ArticleDto | null;
+  list: ArticleSummaryDto[];
+  selected: ArticleSummaryDto | null;
   selectedId: string | null;
   types: ArticleTypeDto[];
   typeIconMap: Record<string, string>;
@@ -656,9 +656,9 @@ const {
   closeEditModal,
   updateArticle
 } = useArticleModal({
-  insertArticleIntoTree: (article: ArticleDto) => treeOps.insertArticleIntoTree(article),
-  updateArticleInTree: (articleId: string, updates: Partial<ArticleDto>) => treeOps.updateArticleInTree(articleId, updates),
-  selectArticle: async (article: ArticleDto, shouldJoinSignalR?: boolean) => {
+  insertArticleIntoTree: (article: ArticleSummaryDto) => treeOps.insertArticleIntoTree(article),
+  updateArticleInTree: (articleId: string, updates: Partial<ArticleSummaryDto>) => treeOps.updateArticleInTree(articleId, updates),
+  selectArticle: async (article: ArticleSummaryDto, shouldJoinSignalR?: boolean) => {
     await selectArticle(article, !shouldJoinSignalR);
   },
   articlesIndex: articles.index,
@@ -744,7 +744,7 @@ const loadArticles = async (): Promise<void> => {
   ui.error = null;
   try {
     const queryString = buildFilterQueryString();
-    articles.list = await api.get<ArticleDto[]>(`/api/articles/tree${queryString}`);
+    articles.list = await api.get<ArticleSummaryDto[]>(`/api/articles/tree${queryString}`);
     
     // Build indexes and caches - explicitly pass the loaded articles
     treeOps.buildArticleIndex(articles.list);
@@ -779,7 +779,7 @@ const loadArticleTypes = async (): Promise<void> => {
 // METHODS - Article Selection and Navigation
 // ============================================================================
 
-const selectArticle = async (article: ArticleDto, replaceState: boolean = false): Promise<void> => {
+const selectArticle = async (article: ArticleSummaryDto, replaceState: boolean = false): Promise<void> => {
   if (article.id === articles.selectedId) {
     return;
   }
@@ -886,11 +886,11 @@ const expandParents = (articleId: string | undefined): void => {
   }
 };
 
-const insertArticleIntoTree = (article: ArticleDto): void => {
+const insertArticleIntoTree = (article: ArticleSummaryDto): void => {
   treeOps.insertArticleIntoTree(article);
 };
 
-const updateArticleInTree = (articleId: string, updates: Partial<ArticleDto>): void => {
+const updateArticleInTree = (articleId: string, updates: Partial<ArticleSummaryDto>): void => {
   treeOps.updateArticleInTree(articleId, updates);
 };
 

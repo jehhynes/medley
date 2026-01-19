@@ -55,7 +55,7 @@ public class FragmentDto
     /// <summary>
     /// When the fragment was created
     /// </summary>
-    public DateTimeOffset CreatedAt { get; set; }
+    public required DateTimeOffset CreatedAt { get; set; }
 
     /// <summary>
     /// When the fragment was last modified
@@ -121,7 +121,7 @@ public class FragmentSearchResult
     /// <summary>
     /// When the fragment was created
     /// </summary>
-    public DateTimeOffset CreatedAt { get; set; }
+    public required DateTimeOffset CreatedAt { get; set; }
 
     /// <summary>
     /// Confidence level from the AI extraction
@@ -136,18 +136,7 @@ public class FragmentSearchResult
     /// <summary>
     /// Similarity score (0-1, where 1 is most similar)
     /// </summary>
-    public double Similarity { get; set; }
-}
-
-/// <summary>
-/// Request to get titles for multiple fragments
-/// </summary>
-public class FragmentTitlesRequest
-{
-    /// <summary>
-    /// List of fragment IDs to retrieve titles for
-    /// </summary>
-    public required List<Guid> Ids { get; set; }
+    public required double Similarity { get; set; }
 }
 
 /// <summary>

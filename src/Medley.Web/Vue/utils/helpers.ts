@@ -440,7 +440,7 @@ export const findInList = <T extends TreeItem>(
  * @param article - Article to check
  * @returns True if should show spinner
  */
-export const showProcessingSpinner = (article: ArticleDto | null | undefined): boolean => {
+export const showProcessingSpinner = (article: ArticleSummaryDto | null | undefined): boolean => {
   if (!article) return false;
   return article.currentConversation?.isRunning === true;
 };
@@ -451,7 +451,7 @@ export const showProcessingSpinner = (article: ArticleDto | null | undefined): b
  * @param article - Article to check
  * @returns True if should show user turn indicator
  */
-export const showUserTurnIndicator = (article: ArticleDto | null | undefined): boolean => {
+export const showUserTurnIndicator = (article: ArticleSummaryDto | null | undefined): boolean => {
   if (!article || !article.currentConversation) {
     return false;
   }

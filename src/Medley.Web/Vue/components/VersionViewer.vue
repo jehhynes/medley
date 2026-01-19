@@ -130,11 +130,6 @@ declare const bootbox: {
   }) => void;
 };
 
-// Extended version interface with computed status
-interface ArticleVersionWithStatus extends ArticleVersionDto {
-  status?: string;
-}
-
 // Props
 interface Props {
   articleId: string;
@@ -157,7 +152,7 @@ const articleIdRef = computed(() => props.articleId);
 const versionState = useArticleVersions(articleIdRef);
 
 // State
-const version = ref<ArticleVersionWithStatus | null>(null);
+const version = ref<ArticleVersionDto | null>(null);
 const allVersions = ref<ArticleVersionDto[]>([]);
 const loading = ref<boolean>(true);
 const error = ref<string | null>(null);
@@ -209,7 +204,7 @@ async function loadVersion(): Promise<void> {
       throw new Error(`Version ${props.versionId} not found`);
     }
     
-    version.value = foundVersion as ArticleVersionWithStatus;
+    version.value = foundVersion;
     
     // Load the diff
     await loadVersionDiff();
@@ -302,8 +297,8 @@ function getBaseStatusLabel(status: string | undefined): string {
   return labels[status] || status;
 }
 
-function getStatusDetails(version: ArticleVersionWithStatus | null): string {
-  if (!version) return '';
+function getStatusDetails(version: ArticleVersionDto | null): string {
+  if (!version || !version.status) return '';
   
   const status = version.status;
   const userName = version.createdBy?.fullName;

@@ -18,8 +18,8 @@ interface ArticleViewProps {
  * Emits interface for components using this composable
  */
 interface ArticleViewEmits {
-  (e: 'select', article: ArticleDto): void;
-  (e: 'edit-article', article: ArticleDto): void;
+  (e: 'select', article: ArticleSummaryDto): void;
+  (e: 'edit-article', article: ArticleSummaryDto): void;
   (e: 'create-child', parentArticleId: string): void;
 }
 
@@ -27,9 +27,9 @@ interface ArticleViewEmits {
  * Return type for useArticleView composable
  */
 interface UseArticleViewReturn {
-  selectArticle: (article: ArticleDto) => void;
-  getArticleIcon: (article: ArticleDto) => string;
-  editArticle: (article: ArticleDto) => void;
+  selectArticle: (article: ArticleSummaryDto) => void;
+  getArticleIcon: (article: ArticleSummaryDto) => string;
+  editArticle: (article: ArticleSummaryDto) => void;
   createChild: (parentArticleId: string) => void;
   getIconClass: typeof getIconClass;
   getStatusIcon: typeof getStatusIcon;
@@ -56,7 +56,7 @@ export function useArticleView(
    * 
    * @param article - Article to select
    */
-  const selectArticle = (article: ArticleDto): void => {
+  const selectArticle = (article: ArticleSummaryDto): void => {
     emit('select', article);
     // Collapse left sidebar on mobile after selection
     (window as any).MedleySidebar?.collapseLeftSidebar();
@@ -69,7 +69,7 @@ export function useArticleView(
    * @param article - Article object
    * @returns Icon class name
    */
-  const getArticleIcon = (article: ArticleDto): string => {
+  const getArticleIcon = (article: ArticleSummaryDto): string => {
     // Look up icon from dictionary, fallback to bi-file-text
     if (article.articleTypeId && props.articleTypeIconMap[article.articleTypeId]) {
       return props.articleTypeIconMap[article.articleTypeId];
@@ -82,7 +82,7 @@ export function useArticleView(
    * 
    * @param article - Article to edit
    */
-  const editArticle = (article: ArticleDto): void => {
+  const editArticle = (article: ArticleSummaryDto): void => {
     emit('edit-article', article);
   };
 

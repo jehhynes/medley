@@ -31,17 +31,17 @@ export interface UseArticleModalOptions {
   /**
    * Function to insert an article into the tree
    */
-  insertArticleIntoTree: (article: ArticleDto) => void;
+  insertArticleIntoTree: (article: ArticleSummaryDto) => void;
 
   /**
    * Function to update an article in the tree
    */
-  updateArticleInTree: (articleId: string, updates: Partial<ArticleDto>) => void;
+  updateArticleInTree: (articleId: string, updates: Partial<ArticleSummaryDto>) => void;
 
   /**
    * Function to select an article
    */
-  selectArticle: (article: ArticleDto, shouldJoinSignalR?: boolean) => Promise<void>;
+  selectArticle: (article: ArticleSummaryDto, shouldJoinSignalR?: boolean) => Promise<void>;
 
   /**
    * Articles index map

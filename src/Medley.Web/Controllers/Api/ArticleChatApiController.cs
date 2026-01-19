@@ -507,9 +507,8 @@ public class ArticleChatApiController : ControllerBase
         return Ok(new ConversationStatusResponse
         {
             Id = conversationId,
-            State = ConversationState.Complete.ToString(),
-            CompletedAt = completedAt,
-            Timestamp = null
+            State = ConversationState.Complete,
+            Timestamp = completedAt
         });
     }
 
@@ -552,8 +551,7 @@ public class ArticleChatApiController : ControllerBase
         return Ok(new ConversationStatusResponse
         {
             Id = conversationId,
-            State = ConversationState.Archived.ToString(),
-            CompletedAt = null,
+            State = ConversationState.Archived,
             Timestamp = DateTimeOffset.UtcNow
         });
     }

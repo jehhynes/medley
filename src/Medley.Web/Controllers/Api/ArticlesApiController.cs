@@ -80,8 +80,8 @@ public class ArticlesApiController : ControllerBase
     /// <param name="articleTypeIds">Filter by article type IDs</param>
     /// <returns>Tree structure of articles</returns>
     [HttpGet("tree")]
-    [ProducesResponseType(typeof(List<ArticleDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<ArticleDto>>> GetTree(
+    [ProducesResponseType(typeof(List<ArticleSummaryDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<List<ArticleSummaryDto>>> GetTree(
         [FromQuery] string? query = null,
         [FromQuery] int[]? statuses = null,
         [FromQuery] Guid[]? articleTypeIds = null)
@@ -97,7 +97,6 @@ public class ArticlesApiController : ControllerBase
         {
             // Get all articles first (we'll need them for parent resolution)
             var allArticles = await _articleRepository.Query()
-                .Include(a => a.ChildArticles)
                 .Include(a => a.ArticleType)
                 .Include(a => a.CurrentConversation)
                 .Include(a => a.AssignedUser)
@@ -148,7 +147,6 @@ public class ArticlesApiController : ControllerBase
         {
             // No filters, return all articles
             articles = await _articleRepository.Query()
-                .Include(a => a.ChildArticles)
                 .Include(a => a.ArticleType)
                 .Include(a => a.CurrentConversation)
                 .Include(a => a.AssignedUser)
@@ -171,9 +169,7 @@ public class ArticlesApiController : ControllerBase
     public async Task<ActionResult<ArticleDto>> Get(Guid id)
     {
         var article = await _articleRepository.Query()
-            .Include(a => a.ChildArticles)
             .Include(a => a.ParentArticle)
-            .Include(a => a.Fragments)
             .Include(a => a.CurrentConversation)
             .FirstOrDefaultAsync(a => a.Id == id);
 
@@ -188,12 +184,8 @@ public class ArticlesApiController : ControllerBase
             Title = article.Title,
             Content = StripArticleHeader(article.Content),
             Status = article.Status,
-            PublishedAt = article.PublishedAt,
             CreatedAt = article.CreatedAt,
             ParentArticleId = article.ParentArticleId,
-            ParentTitle = article.ParentArticle?.Title,
-            ChildrenCount = article.ChildArticles.Count,
-            FragmentsCount = article.Fragments.Count,
             CurrentConversation = article.CurrentConversation != null ? new ConversationSummaryDto
             { 
                 Id = article.CurrentConversation.Id,
@@ -204,43 +196,14 @@ public class ArticlesApiController : ControllerBase
     }
 
     /// <summary>
-    /// Get children of a specific article
-    /// </summary>
-    /// <param name="id">Parent article ID</param>
-    /// <returns>List of child articles</returns>
-    [HttpGet("{id}/children")]
-    [ProducesResponseType(typeof(List<ArticleDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<List<ArticleDto>>> GetChildren(Guid id)
-    {
-        var children = await _articleRepository.Query()
-            .Where(a => a.ParentArticleId == id)
-            .Include(a => a.ChildArticles)
-            .Include(a => a.Fragments)
-            .OrderBy(a => a.Title)
-            .Select(a => new ArticleDto
-            {
-                Id = a.Id,
-                Title = a.Title,
-                Status = a.Status,
-                CreatedAt = a.CreatedAt,
-                ChildrenCount = a.ChildArticles.Count,
-                FragmentsCount = a.Fragments.Count
-            })
-            .ToListAsync();
-
-        return Ok(children);
-    }
-
-    /// <summary>
     /// Create a new article
     /// </summary>
     /// <param name="request">Article creation request</param>
     /// <returns>Created article</returns>
     [HttpPost]
-    [ProducesResponseType(typeof(ArticleDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ArticleSummaryDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<ArticleDto>> Create([FromBody] ArticleCreateRequest request)
+    public async Task<ActionResult<ArticleSummaryDto>> Create([FromBody] ArticleCreateRequest request)
     {
         var currentUser = await _medleyContext.GetCurrentUserAsync();
         
@@ -275,16 +238,14 @@ public class ArticlesApiController : ControllerBase
             });
         });
 
-        return CreatedAtAction(nameof(Get), new { id = article.Id }, new ArticleDto
+        return CreatedAtAction(nameof(Get), new { id = article.Id }, new ArticleSummaryDto
         {
             Id = article.Id,
             Title = article.Title,
             Status = article.Status,
             ParentArticleId = article.ParentArticleId,
             ArticleTypeId = article.ArticleTypeId,
-            CreatedAt = article.CreatedAt,
-            ChildrenCount = 0, // New article has no children
-            FragmentsCount = 0  // New article has no fragments
+            CreatedAt = article.CreatedAt
         });
     }
 
@@ -479,7 +440,6 @@ public class ArticlesApiController : ControllerBase
     {
         // Get the article to move
         var article = await _articleRepository.Query()
-            .Include(a => a.ChildArticles)
             .FirstOrDefaultAsync(a => a.Id == id);
         
         if (article == null)
@@ -605,15 +565,16 @@ public class ArticlesApiController : ControllerBase
     /// <summary>
     /// Helper method to build tree structure
     /// </summary>
-    private List<ArticleDto> BuildTree(List<Article> allArticles, Guid? parentId)
+    private List<ArticleSummaryDto> BuildTree(List<Article> allArticles, Guid? parentId)
     {
         return allArticles
             .Where(a => a.ParentArticleId == parentId)
             .OrderBy(a => a.ArticleType?.Name?.Equals("Index", StringComparison.OrdinalIgnoreCase) == true ? 0 : 1)
             .ThenBy(a => a.Title)
-            .Select(a => new ArticleDto
+            .Select(a => new ArticleSummaryDto
             {
                 Id = a.Id,
+                ParentArticleId = a.ParentArticleId,
                 Title = a.Title,
                 Status = a.Status,
                 CreatedAt = a.CreatedAt,
@@ -632,9 +593,7 @@ public class ArticlesApiController : ControllerBase
                     Initials = a.AssignedUser.Initials,
                     Color = a.AssignedUser.Color
                 } : null,
-                Children = BuildTree(allArticles, a.Id),
-                ChildrenCount = a.ChildArticles.Count,
-                FragmentsCount = a.Fragments.Count
+                Children = BuildTree(allArticles, a.Id)
             })
             .ToList();
     }
@@ -743,33 +702,29 @@ public class ArticlesApiController : ControllerBase
         // Return all versions (User and AI) - let the client filter as needed
         var versions = await _versionService.GetVersionsAsync(id, versionType: null);
         
-        var versionDtos = versions.Select(v => new ArticleVersionDto
+        var versionDtos = versions.Select(version => new ArticleVersionDto
         {
-            Id = v.Id,
+            Id = version.Id,
             ArticleId = id,
-            VersionNumber = int.TryParse(v.VersionNumber.Split('.')[0], out var vn) ? vn : 0,
-            CreatedBy = v.CreatedBy.HasValue ? new UserSummaryDto
+            VersionNumber = int.TryParse(version.VersionNumber.Split('.')[0], out var vn) ? vn : 0,
+            CreatedBy = version.CreatedBy.HasValue ? new UserRef
             {
-                Id = v.CreatedBy.Value,
-                FullName = v.CreatedByName ?? v.CreatedByEmail ?? "Unknown",
-                Initials = null,
-                Color = null
+                Id = version.CreatedBy.Value,
+                FullName = version.CreatedByName ?? version.CreatedByEmail ?? "Unknown"
             } : null,
-            CreatedAt = v.CreatedAt,
-            VersionType = Enum.Parse<Domain.Enums.VersionType>(v.VersionType),
-            ChangeMessage = v.ChangeMessage,
-            ReviewAction = string.IsNullOrEmpty(v.Status) ? Domain.Enums.ReviewAction.None : 
-                          v.Status == "Accepted" ? Domain.Enums.ReviewAction.Accepted :
-                          v.Status == "Rejected" ? Domain.Enums.ReviewAction.Rejected :
+            CreatedAt = version.CreatedAt,
+            VersionType = Enum.Parse<Domain.Enums.VersionType>(version.VersionType),
+            ChangeMessage = version.ChangeMessage,
+            ReviewAction = version.Status == Domain.Enums.VersionStatus.AcceptedAiVersion ? Domain.Enums.ReviewAction.Accepted :
+                          version.Status == Domain.Enums.VersionStatus.RejectedAiVersion ? Domain.Enums.ReviewAction.Rejected :
                           Domain.Enums.ReviewAction.None,
-            ReviewedAt = v.ReviewedAt,
-            ReviewedBy = v.ReviewedById.HasValue ? new UserSummaryDto
+            ReviewedAt = version.ReviewedAt,
+            ReviewedBy = version.ReviewedById.HasValue ? new UserRef
             {
-                Id = v.ReviewedById.Value,
-                FullName = v.ReviewedByName ?? "Unknown",
-                Initials = null,
-                Color = null
-            } : null
+                Id = version.ReviewedById.Value,
+                FullName = version.ReviewedByName ?? "Unknown"
+            } : null,
+            Status = version.Status
         }).ToList();
         
         return Ok(versionDtos);
@@ -809,28 +764,24 @@ public class ArticlesApiController : ControllerBase
             Id = version.Id,
             ArticleId = articleId,
             VersionNumber = int.TryParse(version.VersionNumber.Split('.')[0], out var vn) ? vn : 0,
-            CreatedBy = version.CreatedBy.HasValue ? new UserSummaryDto
+            CreatedBy = version.CreatedBy.HasValue ? new UserRef
             {
                 Id = version.CreatedBy.Value,
-                FullName = version.CreatedByName ?? version.CreatedByEmail ?? "Unknown",
-                Initials = null,
-                Color = null
+                FullName = version.CreatedByName ?? version.CreatedByEmail ?? "Unknown"
             } : null,
             CreatedAt = version.CreatedAt,
             VersionType = Enum.Parse<Domain.Enums.VersionType>(version.VersionType),
             ChangeMessage = version.ChangeMessage,
-            ReviewAction = string.IsNullOrEmpty(version.Status) ? Domain.Enums.ReviewAction.None : 
-                          version.Status == "Accepted" ? Domain.Enums.ReviewAction.Accepted :
-                          version.Status == "Rejected" ? Domain.Enums.ReviewAction.Rejected :
+            ReviewAction = version.Status == Domain.Enums.VersionStatus.AcceptedAiVersion ? Domain.Enums.ReviewAction.Accepted :
+                          version.Status == Domain.Enums.VersionStatus.RejectedAiVersion ? Domain.Enums.ReviewAction.Rejected :
                           Domain.Enums.ReviewAction.None,
             ReviewedAt = version.ReviewedAt,
-            ReviewedBy = version.ReviewedById.HasValue ? new UserSummaryDto
+            ReviewedBy = version.ReviewedById.HasValue ? new UserRef
             {
                 Id = version.ReviewedById.Value,
-                FullName = version.ReviewedByName ?? "Unknown",
-                Initials = null,
-                Color = null
-            } : null
+                FullName = version.ReviewedByName ?? "Unknown"
+            } : null,
+            Status = version.Status
         };
 
         return Ok(versionDto);

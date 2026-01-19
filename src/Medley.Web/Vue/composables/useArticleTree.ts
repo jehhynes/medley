@@ -1,4 +1,4 @@
-import type { ArticleDto, ArticleTypeDto } from '@/types/generated/api-client';
+import type { ArticleSummaryDto, ArticleTypeDto } from '@/types/generated/api-client';
 
 /**
  * Parent path item for breadcrumb navigation
@@ -13,13 +13,13 @@ interface ParentPathItem {
  */
 interface ArticleTreeState {
   articles: {
-    list: ArticleDto[];
-    index: Map<string, ArticleDto>;
+    list: ArticleSummaryDto[];
+    index: Map<string, ArticleSummaryDto>;
     parentPathCache: Map<string, ParentPathItem[]>;
     typeIndexMap: Record<string, ArticleTypeDto>;
     expandedIds: Set<string>;
     selectedId: string | null;
-    selected: ArticleDto | null;
+    selected: ArticleSummaryDto | null;
   };
   editor: {
     title: string;
@@ -31,14 +31,14 @@ interface ArticleTreeState {
  * Return type for useArticleTree composable
  */
 interface UseArticleTreeReturn {
-  buildArticleIndex: (articles?: ArticleDto[]) => void;
-  buildParentPathCache: (articles?: ArticleDto[], path?: ParentPathItem[]) => void;
-  sortArticles: (articles: ArticleDto[]) => void;
-  sortArticlesRecursive: (articles: ArticleDto[]) => void;
+  buildArticleIndex: (articles?: ArticleSummaryDto[]) => void;
+  buildParentPathCache: (articles?: ArticleSummaryDto[], path?: ParentPathItem[]) => void;
+  sortArticles: (articles: ArticleSummaryDto[]) => void;
+  sortArticlesRecursive: (articles: ArticleSummaryDto[]) => void;
   getArticleParents: (articleId: string) => string[];
-  findParentArray: (articleId: string, articles?: ArticleDto[]) => ArticleDto[] | null;
-  insertArticleIntoTree: (article: ArticleDto) => void;
-  updateArticleInTree: (articleId: string, updates: Partial<ArticleDto>) => void;
+  findParentArray: (articleId: string, articles?: ArticleSummaryDto[]) => ArticleSummaryDto[] | null;
+  insertArticleIntoTree: (article: ArticleSummaryDto) => void;
+  updateArticleInTree: (articleId: string, updates: Partial<ArticleSummaryDto>) => void;
   removeArticleFromTree: (articleId: string) => void;
   moveArticleInTree: (articleId: string, oldParentId: string | null, newParentId: string | null) => void;
 }
@@ -57,11 +57,11 @@ export function useArticleTree(state: ArticleTreeState): UseArticleTreeReturn {
    * 
    * @param articles - Array of article objects (defaults to state.articles.list)
    */
-  const buildArticleIndex = (articles: ArticleDto[] = state.articles.list): void => {
+  const buildArticleIndex = (articles: ArticleSummaryDto[] = state.articles.list): void => {
     // Clear existing index instead of replacing it to maintain reactivity
     state.articles.index.clear();
     
-    const traverse = (items: ArticleDto[]): void => {
+    const traverse = (items: ArticleSummaryDto[]): void => {
       items.forEach(article => {
         if (article.id) {
           state.articles.index.set(article.id, article);
@@ -83,7 +83,7 @@ export function useArticleTree(state: ArticleTreeState): UseArticleTreeReturn {
    * @param path - Current path of parent articles (used in recursion)
    */
   const buildParentPathCache = (
-    articles: ArticleDto[] = state.articles.list,
+    articles: ArticleSummaryDto[] = state.articles.list,
     path: ParentPathItem[] = []
   ): void => {
     // Clear cache when building from root to avoid stale entries
@@ -111,7 +111,7 @@ export function useArticleTree(state: ArticleTreeState): UseArticleTreeReturn {
    * 
    * @param articles - Array of articles to sort
    */
-  const sortArticles = (articles: ArticleDto[]): void => {
+  const sortArticles = (articles: ArticleSummaryDto[]): void => {
     articles.sort((a, b) => {
       const aType = a.articleTypeId ? state.articles.typeIndexMap[a.articleTypeId] : undefined;
       const bType = b.articleTypeId ? state.articles.typeIndexMap[b.articleTypeId] : undefined;
@@ -133,7 +133,7 @@ export function useArticleTree(state: ArticleTreeState): UseArticleTreeReturn {
    * 
    * @param articles - Root array of articles to sort
    */
-  const sortArticlesRecursive = (articles: ArticleDto[]): void => {
+  const sortArticlesRecursive = (articles: ArticleSummaryDto[]): void => {
     sortArticles(articles);
 
     articles.forEach(article => {
@@ -164,8 +164,8 @@ export function useArticleTree(state: ArticleTreeState): UseArticleTreeReturn {
    */
   const findParentArray = (
     articleId: string,
-    articles: ArticleDto[] = state.articles.list
-  ): ArticleDto[] | null => {
+    articles: ArticleSummaryDto[] = state.articles.list
+  ): ArticleSummaryDto[] | null => {
     for (const article of articles) {
       if (article.id === articleId) {
         return articles;
@@ -190,7 +190,7 @@ export function useArticleTree(state: ArticleTreeState): UseArticleTreeReturn {
    * 
    * @param article - Article to insert
    */
-  const insertArticleIntoTree = (article: ArticleDto): void => {
+  const insertArticleIntoTree = (article: ArticleSummaryDto): void => {
     if (!article.id) {
       console.warn('Cannot insert article without ID');
       return;
@@ -287,7 +287,7 @@ export function useArticleTree(state: ArticleTreeState): UseArticleTreeReturn {
   const removeArticleFromTree = (articleId: string): void => {
     const article = state.articles.index.get(articleId);
 
-    const removeFromArray = (articles: ArticleDto[]): boolean => {
+    const removeFromArray = (articles: ArticleSummaryDto[]): boolean => {
       for (let i = 0; i < articles.length; i++) {
         if (articles[i].id === articleId) {
           articles.splice(i, 1);
@@ -304,7 +304,7 @@ export function useArticleTree(state: ArticleTreeState): UseArticleTreeReturn {
 
     removeFromArray(state.articles.list);
 
-    const removeFromCaches = (art: ArticleDto | undefined): void => {
+    const removeFromCaches = (art: ArticleSummaryDto | undefined): void => {
       if (!art || !art.id) return;
       state.articles.index.delete(art.id);
       state.articles.parentPathCache.delete(art.id);
@@ -329,9 +329,9 @@ export function useArticleTree(state: ArticleTreeState): UseArticleTreeReturn {
     oldParentId: string | null,
     newParentId: string | null
   ): void => {
-    let movedArticle: ArticleDto | null = null;
+    let movedArticle: ArticleSummaryDto | null = null;
 
-    const removeFromParent = (articles: ArticleDto[]): boolean => {
+    const removeFromParent = (articles: ArticleSummaryDto[]): boolean => {
       for (let i = 0; i < articles.length; i++) {
         if (articles[i].id === articleId) {
           movedArticle = articles.splice(i, 1)[0];

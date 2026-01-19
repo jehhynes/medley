@@ -58,10 +58,10 @@ public class PlanApiController : ControllerBase
     /// Get the active plan for an article
     /// </summary>
     [HttpGet("active")]
-    [ProducesResponseType(typeof(PlanDetailDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(PlanDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<PlanDetailDto>> GetActivePlan(Guid articleId)
+    public async Task<ActionResult<PlanDto>> GetActivePlan(Guid articleId)
     {
         var article = await _articleRepository.GetByIdAsync(articleId);
         if (article == null)
@@ -111,12 +111,10 @@ public class PlanApiController : ControllerBase
                 Status = p.Status.ToString(),
                 CreatedAt = p.CreatedAt,
                 ChangesSummary = p.ChangesSummary,
-                CreatedBy = new UserSummaryDto
+                CreatedBy = new UserRef
                 {
                     Id = p.CreatedBy.Id,
-                    FullName = p.CreatedBy.FullName ?? p.CreatedBy.Email ?? "Unknown",
-                    Initials = p.CreatedBy.Initials,
-                    Color = p.CreatedBy.Color
+                    FullName = p.CreatedBy.FullName ?? p.CreatedBy.Email ?? "Unknown"
                 }
             })
             .ToListAsync();
@@ -128,9 +126,9 @@ public class PlanApiController : ControllerBase
     /// Get a specific plan by ID
     /// </summary>
     [HttpGet("{planId}")]
-    [ProducesResponseType(typeof(PlanDetailDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(PlanDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<PlanDetailDto>> GetPlan(Guid articleId, Guid planId)
+    public async Task<ActionResult<PlanDto>> GetPlan(Guid articleId, Guid planId)
     {
         var plan = await _planRepository.Query()
             .Where(p => p.Id == planId && p.ArticleId == articleId)
@@ -418,9 +416,9 @@ public class PlanApiController : ControllerBase
         return Ok(new PlanActionResponse { Success = true, Message = "Plan rejected and archived" });
     }
 
-    private PlanDetailDto MapPlanToDto(Plan plan)
+    private PlanDto MapPlanToDto(Plan plan)
     {
-        return new PlanDetailDto
+        return new PlanDto
         {
             Id = plan.Id,
             ArticleId = plan.ArticleId,
@@ -429,18 +427,16 @@ public class PlanApiController : ControllerBase
             Version = plan.Version,
             ChangesSummary = plan.ChangesSummary,
             CreatedAt = plan.CreatedAt,
-            CreatedBy = new UserSummaryDto
+            CreatedBy = new UserRef
             {
                 Id = plan.CreatedBy.Id,
-                FullName = plan.CreatedBy.FullName ?? plan.CreatedBy.Email ?? "Unknown",
-                Initials = plan.CreatedBy.Initials,
-                Color = plan.CreatedBy.Color
+                FullName = plan.CreatedBy.FullName ?? plan.CreatedBy.Email ?? "Unknown"
             },
             Fragments = plan.PlanFragments
                 .OrderByDescending(x => x.SimilarityScore)
                 .ThenBy(x => x.Fragment.Source?.CreatedAt)
                 .ThenBy(x => x.Fragment.CreatedAt)
-                .Select(pf => new PlanFragmentDetailDto
+                .Select(pf => new PlanFragmentDto
                 {
                     Id = pf.Id,
                     FragmentId = pf.FragmentId,
