@@ -1,4 +1,5 @@
 using Medley.Application.Interfaces;
+using Medley.Application.Models.DTOs;
 using Medley.Domain.Entities;
 using Medley.Domain.Enums;
 using Medley.Domain.Extensions;
@@ -32,7 +33,8 @@ public class TemplatesApiController : ControllerBase
     /// Get all templates
     /// </summary>
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    [ProducesResponseType(typeof(List<TemplateListDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<List<TemplateListDto>>> GetAll()
     {
         var templates = await _templateRepository.Query()
             .OrderBy(t => t.Type)
@@ -56,7 +58,9 @@ public class TemplatesApiController : ControllerBase
     /// Get a specific template by ID
     /// </summary>
     [HttpGet("{id}")]
-    public async Task<IActionResult> Get(Guid id)
+    [ProducesResponseType(typeof(TemplateDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<TemplateDto>> Get(Guid id)
     {
         var template = await _templateRepository.GetByIdAsync(id);
 
@@ -82,7 +86,10 @@ public class TemplatesApiController : ControllerBase
     /// Update a template's content
     /// </summary>
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateTemplateRequest request)
+    [ProducesResponseType(typeof(TemplateDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<TemplateDto>> Update(Guid id, [FromBody] UpdateTemplateRequest request)
     {
         try
         {
@@ -123,30 +130,6 @@ public class TemplatesApiController : ControllerBase
             return StatusCode(500, new { message = "Failed to update template" });
         }
     }
-
-}
-
-public class TemplateListDto
-{
-    public Guid Id { get; set; }
-    public required string Name { get; set; }
-    public TemplateType Type { get; set; }
-    public required string TypeName { get; set; }
-    public string? Description { get; set; }
-    public DateTimeOffset CreatedAt { get; set; }
-    public DateTimeOffset? LastModifiedAt { get; set; }
-}
-
-public class TemplateDto
-{
-    public Guid Id { get; set; }
-    public required string Name { get; set; }
-    public TemplateType Type { get; set; }
-    public required string TypeName { get; set; }
-    public string? Description { get; set; }
-    public required string Content { get; set; }
-    public DateTimeOffset CreatedAt { get; set; }
-    public DateTimeOffset? LastModifiedAt { get; set; }
 }
 
 public class UpdateTemplateRequest

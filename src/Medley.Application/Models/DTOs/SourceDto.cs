@@ -154,3 +154,55 @@ public class SourceTagDto
     /// </summary>
     public string? AllowedValue { get; set; }
 }
+
+/// <summary>
+/// Response after extracting fragments from a source
+/// </summary>
+public class FragmentExtractionResponse
+{
+    /// <summary>
+    /// Indicates if the extraction was successful
+    /// </summary>
+    public required bool Success { get; set; }
+
+    /// <summary>
+    /// Background job ID for tracking
+    /// </summary>
+    public string? JobId { get; set; }
+
+    /// <summary>
+    /// Status message
+    /// </summary>
+    public required string Message { get; set; }
+}
+
+/// <summary>
+/// Response after tagging a source
+/// </summary>
+public class TaggingResponse
+{
+    /// <summary>
+    /// Indicates if the tagging was successful
+    /// </summary>
+    public required bool Success { get; set; }
+
+    /// <summary>
+    /// Indicates if the source was skipped
+    /// </summary>
+    public required bool Skipped { get; set; }
+
+    /// <summary>
+    /// Status message
+    /// </summary>
+    public required string Message { get; set; }
+
+    /// <summary>
+    /// Indicates if this is an internal source
+    /// </summary>
+    public bool? IsInternal { get; set; }
+
+    /// <summary>
+    /// Number of tags generated
+    /// </summary>
+    public int? TagCount { get; set; }
+}

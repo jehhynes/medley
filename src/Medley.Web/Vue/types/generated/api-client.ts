@@ -17,7 +17,7 @@ export class ArticleChatApiClient {
         this.baseUrl = baseUrl ?? "";
     }
 
-    getConversation(articleId: string, conversationId: string | null): Promise<FileResponse> {
+    getConversation(articleId: string, conversationId: string | null): Promise<ConversationDto> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/assistant/conversation/{conversationId}";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -30,7 +30,7 @@ export class ArticleChatApiClient {
         let options_: RequestInit = {
             method: "GET",
             headers: {
-                "Accept": "application/octet-stream"
+                "Accept": "application/json"
             }
         };
 
@@ -39,29 +39,34 @@ export class ArticleChatApiClient {
         });
     }
 
-    protected processGetConversation(response: Response): Promise<FileResponse> {
+    protected processGetConversation(response: Response): Promise<ConversationDto> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200 || status === 206) {
-            const contentDisposition = response.headers ? response.headers.get("content-disposition") : undefined;
-            let fileNameMatch = contentDisposition ? /filename\*=(?:(\\?['"])(.*?)\1|(?:[^\s]+'.*?')?([^;\n]*))/g.exec(contentDisposition) : undefined;
-            let fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[3] || fileNameMatch[2] : undefined;
-            if (fileName) {
-                fileName = decodeURIComponent(fileName);
-            } else {
-                fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
-                fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
-            }
-            return response.blob().then(blob => { return { fileName: fileName, data: blob, status: status, headers: _headers }; });
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ConversationDto;
+            return result200;
+            });
+        } else if (status === 204) {
+            return response.text().then((_responseText) => {
+            return throwException("A server side error occurred.", status, _responseText, _headers);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            result404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+            });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<FileResponse>(null as any);
+        return Promise.resolve<ConversationDto>(null as any);
     }
 
-    createConversation(articleId: string, mode?: ConversationMode | undefined): Promise<FileResponse> {
+    createConversation(articleId: string, mode?: ConversationMode | undefined): Promise<ConversationDto> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/assistant/conversation?";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -75,7 +80,7 @@ export class ArticleChatApiClient {
         let options_: RequestInit = {
             method: "POST",
             headers: {
-                "Accept": "application/octet-stream"
+                "Accept": "application/json"
             }
         };
 
@@ -84,29 +89,42 @@ export class ArticleChatApiClient {
         });
     }
 
-    protected processCreateConversation(response: Response): Promise<FileResponse> {
+    protected processCreateConversation(response: Response): Promise<ConversationDto> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200 || status === 206) {
-            const contentDisposition = response.headers ? response.headers.get("content-disposition") : undefined;
-            let fileNameMatch = contentDisposition ? /filename\*=(?:(\\?['"])(.*?)\1|(?:[^\s]+'.*?')?([^;\n]*))/g.exec(contentDisposition) : undefined;
-            let fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[3] || fileNameMatch[2] : undefined;
-            if (fileName) {
-                fileName = decodeURIComponent(fileName);
-            } else {
-                fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
-                fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
-            }
-            return response.blob().then(blob => { return { fileName: fileName, data: blob, status: status, headers: _headers }; });
+        if (status === 201) {
+            return response.text().then((_responseText) => {
+            let result201: any = null;
+            result201 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ConversationDto;
+            return result201;
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            result401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            result404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+            });
+        } else if (status === 409) {
+            return response.text().then((_responseText) => {
+            let result409: any = null;
+            result409 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result409);
+            });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<FileResponse>(null as any);
+        return Promise.resolve<ConversationDto>(null as any);
     }
 
-    getMessages(articleId: string, conversationId: string, limit?: number | null | undefined): Promise<FileResponse> {
+    getMessages(articleId: string, conversationId: string, limit?: number | null | undefined): Promise<ChatMessageDto[]> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/assistant/conversations/{conversationId}/messages?";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -121,7 +139,7 @@ export class ArticleChatApiClient {
         let options_: RequestInit = {
             method: "GET",
             headers: {
-                "Accept": "application/octet-stream"
+                "Accept": "application/json"
             }
         };
 
@@ -130,29 +148,30 @@ export class ArticleChatApiClient {
         });
     }
 
-    protected processGetMessages(response: Response): Promise<FileResponse> {
+    protected processGetMessages(response: Response): Promise<ChatMessageDto[]> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200 || status === 206) {
-            const contentDisposition = response.headers ? response.headers.get("content-disposition") : undefined;
-            let fileNameMatch = contentDisposition ? /filename\*=(?:(\\?['"])(.*?)\1|(?:[^\s]+'.*?')?([^;\n]*))/g.exec(contentDisposition) : undefined;
-            let fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[3] || fileNameMatch[2] : undefined;
-            if (fileName) {
-                fileName = decodeURIComponent(fileName);
-            } else {
-                fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
-                fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
-            }
-            return response.blob().then(blob => { return { fileName: fileName, data: blob, status: status, headers: _headers }; });
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ChatMessageDto[];
+            return result200;
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            result404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+            });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<FileResponse>(null as any);
+        return Promise.resolve<ChatMessageDto[]>(null as any);
     }
 
-    sendMessage(articleId: string, conversationId: string, request: SendMessageRequest): Promise<FileResponse> {
+    sendMessage(articleId: string, conversationId: string, request: SendMessageRequest): Promise<SendMessageResponse> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/assistant/conversations/{conversationId}/messages";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -169,7 +188,7 @@ export class ArticleChatApiClient {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Accept": "application/octet-stream"
+                "Accept": "application/json"
             }
         };
 
@@ -178,29 +197,42 @@ export class ArticleChatApiClient {
         });
     }
 
-    protected processSendMessage(response: Response): Promise<FileResponse> {
+    protected processSendMessage(response: Response): Promise<SendMessageResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200 || status === 206) {
-            const contentDisposition = response.headers ? response.headers.get("content-disposition") : undefined;
-            let fileNameMatch = contentDisposition ? /filename\*=(?:(\\?['"])(.*?)\1|(?:[^\s]+'.*?')?([^;\n]*))/g.exec(contentDisposition) : undefined;
-            let fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[3] || fileNameMatch[2] : undefined;
-            if (fileName) {
-                fileName = decodeURIComponent(fileName);
-            } else {
-                fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
-                fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
-            }
-            return response.blob().then(blob => { return { fileName: fileName, data: blob, status: status, headers: _headers }; });
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as SendMessageResponse;
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            result400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            result401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            result404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+            });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<FileResponse>(null as any);
+        return Promise.resolve<SendMessageResponse>(null as any);
     }
 
-    getHistory(articleId: string): Promise<FileResponse> {
+    getHistory(articleId: string): Promise<ConversationHistoryItemDto[]> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/assistant/history";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -210,7 +242,7 @@ export class ArticleChatApiClient {
         let options_: RequestInit = {
             method: "GET",
             headers: {
-                "Accept": "application/octet-stream"
+                "Accept": "application/json"
             }
         };
 
@@ -219,29 +251,30 @@ export class ArticleChatApiClient {
         });
     }
 
-    protected processGetHistory(response: Response): Promise<FileResponse> {
+    protected processGetHistory(response: Response): Promise<ConversationHistoryItemDto[]> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200 || status === 206) {
-            const contentDisposition = response.headers ? response.headers.get("content-disposition") : undefined;
-            let fileNameMatch = contentDisposition ? /filename\*=(?:(\\?['"])(.*?)\1|(?:[^\s]+'.*?')?([^;\n]*))/g.exec(contentDisposition) : undefined;
-            let fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[3] || fileNameMatch[2] : undefined;
-            if (fileName) {
-                fileName = decodeURIComponent(fileName);
-            } else {
-                fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
-                fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
-            }
-            return response.blob().then(blob => { return { fileName: fileName, data: blob, status: status, headers: _headers }; });
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ConversationHistoryItemDto[];
+            return result200;
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            result404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+            });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<FileResponse>(null as any);
+        return Promise.resolve<ConversationHistoryItemDto[]>(null as any);
     }
 
-    completeConversation(articleId: string, conversationId: string): Promise<FileResponse> {
+    completeConversation(articleId: string, conversationId: string): Promise<ConversationStatusResponse> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/assistant/conversations/{conversationId}/complete";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -254,7 +287,7 @@ export class ArticleChatApiClient {
         let options_: RequestInit = {
             method: "POST",
             headers: {
-                "Accept": "application/octet-stream"
+                "Accept": "application/json"
             }
         };
 
@@ -263,29 +296,30 @@ export class ArticleChatApiClient {
         });
     }
 
-    protected processCompleteConversation(response: Response): Promise<FileResponse> {
+    protected processCompleteConversation(response: Response): Promise<ConversationStatusResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200 || status === 206) {
-            const contentDisposition = response.headers ? response.headers.get("content-disposition") : undefined;
-            let fileNameMatch = contentDisposition ? /filename\*=(?:(\\?['"])(.*?)\1|(?:[^\s]+'.*?')?([^;\n]*))/g.exec(contentDisposition) : undefined;
-            let fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[3] || fileNameMatch[2] : undefined;
-            if (fileName) {
-                fileName = decodeURIComponent(fileName);
-            } else {
-                fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
-                fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
-            }
-            return response.blob().then(blob => { return { fileName: fileName, data: blob, status: status, headers: _headers }; });
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ConversationStatusResponse;
+            return result200;
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            result404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+            });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<FileResponse>(null as any);
+        return Promise.resolve<ConversationStatusResponse>(null as any);
     }
 
-    cancelConversation(articleId: string, conversationId: string): Promise<FileResponse> {
+    cancelConversation(articleId: string, conversationId: string): Promise<ConversationStatusResponse> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/assistant/conversations/{conversationId}/cancel";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -298,7 +332,7 @@ export class ArticleChatApiClient {
         let options_: RequestInit = {
             method: "POST",
             headers: {
-                "Accept": "application/octet-stream"
+                "Accept": "application/json"
             }
         };
 
@@ -307,26 +341,27 @@ export class ArticleChatApiClient {
         });
     }
 
-    protected processCancelConversation(response: Response): Promise<FileResponse> {
+    protected processCancelConversation(response: Response): Promise<ConversationStatusResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200 || status === 206) {
-            const contentDisposition = response.headers ? response.headers.get("content-disposition") : undefined;
-            let fileNameMatch = contentDisposition ? /filename\*=(?:(\\?['"])(.*?)\1|(?:[^\s]+'.*?')?([^;\n]*))/g.exec(contentDisposition) : undefined;
-            let fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[3] || fileNameMatch[2] : undefined;
-            if (fileName) {
-                fileName = decodeURIComponent(fileName);
-            } else {
-                fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
-                fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
-            }
-            return response.blob().then(blob => { return { fileName: fileName, data: blob, status: status, headers: _headers }; });
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ConversationStatusResponse;
+            return result200;
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            result404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+            });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<FileResponse>(null as any);
+        return Promise.resolve<ConversationStatusResponse>(null as any);
     }
 }
 
@@ -454,7 +489,7 @@ export class ArticlesApiClient {
         return Promise.resolve<ArticleDto>(null as any);
     }
 
-    delete(id: string): Promise<void> {
+    delete(id: string): Promise<ArticleDeleteResponse> {
         let url_ = this.baseUrl + "/api/articles/{id}";
         if (id === undefined || id === null)
             throw new globalThis.Error("The parameter 'id' must be defined.");
@@ -464,6 +499,7 @@ export class ArticlesApiClient {
         let options_: RequestInit = {
             method: "DELETE",
             headers: {
+                "Accept": "application/json"
             }
         };
 
@@ -472,12 +508,14 @@ export class ArticlesApiClient {
         });
     }
 
-    protected processDelete(response: Response): Promise<void> {
+    protected processDelete(response: Response): Promise<ArticleDeleteResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 204) {
+        if (status === 200) {
             return response.text().then((_responseText) => {
-            return;
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ArticleDeleteResponse;
+            return result200;
             });
         } else if (status === 404) {
             return response.text().then((_responseText) => {
@@ -490,7 +528,7 @@ export class ArticlesApiClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<void>(null as any);
+        return Promise.resolve<ArticleDeleteResponse>(null as any);
     }
 
     getChildren(id: string): Promise<ArticleDto[]> {
@@ -688,7 +726,7 @@ export class ArticlesApiClient {
         return Promise.resolve<VersionCaptureResponse>(null as any);
     }
 
-    move(id: string, request: ArticleMoveRequest): Promise<void> {
+    move(id: string, request: ArticleMoveRequest): Promise<ArticleMoveResponse> {
         let url_ = this.baseUrl + "/api/articles/{id}/move";
         if (id === undefined || id === null)
             throw new globalThis.Error("The parameter 'id' must be defined.");
@@ -702,6 +740,7 @@ export class ArticlesApiClient {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
+                "Accept": "application/json"
             }
         };
 
@@ -710,12 +749,14 @@ export class ArticlesApiClient {
         });
     }
 
-    protected processMove(response: Response): Promise<void> {
+    protected processMove(response: Response): Promise<ArticleMoveResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
-            return;
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ArticleMoveResponse;
+            return result200;
             });
         } else if (status === 400) {
             return response.text().then((_responseText) => {
@@ -734,7 +775,7 @@ export class ArticlesApiClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<void>(null as any);
+        return Promise.resolve<ArticleMoveResponse>(null as any);
     }
 
     getVersionHistory(id: string): Promise<ArticleVersionDto[]> {
@@ -930,7 +971,7 @@ export class ArticlesApiClient {
         return Promise.resolve<VersionCaptureResponse>(null as any);
     }
 
-    rejectAiVersion(articleId: string, versionId: string): Promise<void> {
+    rejectAiVersion(articleId: string, versionId: string): Promise<VersionActionResponse> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/versions/{versionId}/reject";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -943,6 +984,7 @@ export class ArticlesApiClient {
         let options_: RequestInit = {
             method: "POST",
             headers: {
+                "Accept": "application/json"
             }
         };
 
@@ -951,12 +993,14 @@ export class ArticlesApiClient {
         });
     }
 
-    protected processRejectAiVersion(response: Response): Promise<void> {
+    protected processRejectAiVersion(response: Response): Promise<VersionActionResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
-            return;
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as VersionActionResponse;
+            return result200;
             });
         } else if (status === 400) {
             return response.text().then((_responseText) => {
@@ -985,7 +1029,7 @@ export class ArticlesApiClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<void>(null as any);
+        return Promise.resolve<VersionActionResponse>(null as any);
     }
 }
 
@@ -1271,7 +1315,7 @@ export class PlanApiClient {
         this.baseUrl = baseUrl ?? "";
     }
 
-    getActivePlan(articleId: string): Promise<FileResponse> {
+    getActivePlan(articleId: string): Promise<PlanDetailDto> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/plans/active";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -1281,7 +1325,7 @@ export class PlanApiClient {
         let options_: RequestInit = {
             method: "GET",
             headers: {
-                "Accept": "application/octet-stream"
+                "Accept": "application/json"
             }
         };
 
@@ -1290,29 +1334,34 @@ export class PlanApiClient {
         });
     }
 
-    protected processGetActivePlan(response: Response): Promise<FileResponse> {
+    protected processGetActivePlan(response: Response): Promise<PlanDetailDto> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200 || status === 206) {
-            const contentDisposition = response.headers ? response.headers.get("content-disposition") : undefined;
-            let fileNameMatch = contentDisposition ? /filename\*=(?:(\\?['"])(.*?)\1|(?:[^\s]+'.*?')?([^;\n]*))/g.exec(contentDisposition) : undefined;
-            let fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[3] || fileNameMatch[2] : undefined;
-            if (fileName) {
-                fileName = decodeURIComponent(fileName);
-            } else {
-                fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
-                fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
-            }
-            return response.blob().then(blob => { return { fileName: fileName, data: blob, status: status, headers: _headers }; });
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PlanDetailDto;
+            return result200;
+            });
+        } else if (status === 204) {
+            return response.text().then((_responseText) => {
+            return throwException("A server side error occurred.", status, _responseText, _headers);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            result404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+            });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<FileResponse>(null as any);
+        return Promise.resolve<PlanDetailDto>(null as any);
     }
 
-    getAllPlans(articleId: string): Promise<FileResponse> {
+    getAllPlans(articleId: string): Promise<PlanSummaryDto[]> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/plans";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -1322,7 +1371,7 @@ export class PlanApiClient {
         let options_: RequestInit = {
             method: "GET",
             headers: {
-                "Accept": "application/octet-stream"
+                "Accept": "application/json"
             }
         };
 
@@ -1331,29 +1380,30 @@ export class PlanApiClient {
         });
     }
 
-    protected processGetAllPlans(response: Response): Promise<FileResponse> {
+    protected processGetAllPlans(response: Response): Promise<PlanSummaryDto[]> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200 || status === 206) {
-            const contentDisposition = response.headers ? response.headers.get("content-disposition") : undefined;
-            let fileNameMatch = contentDisposition ? /filename\*=(?:(\\?['"])(.*?)\1|(?:[^\s]+'.*?')?([^;\n]*))/g.exec(contentDisposition) : undefined;
-            let fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[3] || fileNameMatch[2] : undefined;
-            if (fileName) {
-                fileName = decodeURIComponent(fileName);
-            } else {
-                fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
-                fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
-            }
-            return response.blob().then(blob => { return { fileName: fileName, data: blob, status: status, headers: _headers }; });
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PlanSummaryDto[];
+            return result200;
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            result404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+            });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<FileResponse>(null as any);
+        return Promise.resolve<PlanSummaryDto[]>(null as any);
     }
 
-    getPlan(articleId: string, planId: string): Promise<FileResponse> {
+    getPlan(articleId: string, planId: string): Promise<PlanDetailDto> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/plans/{planId}";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -1366,7 +1416,7 @@ export class PlanApiClient {
         let options_: RequestInit = {
             method: "GET",
             headers: {
-                "Accept": "application/octet-stream"
+                "Accept": "application/json"
             }
         };
 
@@ -1375,29 +1425,30 @@ export class PlanApiClient {
         });
     }
 
-    protected processGetPlan(response: Response): Promise<FileResponse> {
+    protected processGetPlan(response: Response): Promise<PlanDetailDto> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200 || status === 206) {
-            const contentDisposition = response.headers ? response.headers.get("content-disposition") : undefined;
-            let fileNameMatch = contentDisposition ? /filename\*=(?:(\\?['"])(.*?)\1|(?:[^\s]+'.*?')?([^;\n]*))/g.exec(contentDisposition) : undefined;
-            let fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[3] || fileNameMatch[2] : undefined;
-            if (fileName) {
-                fileName = decodeURIComponent(fileName);
-            } else {
-                fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
-                fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
-            }
-            return response.blob().then(blob => { return { fileName: fileName, data: blob, status: status, headers: _headers }; });
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PlanDetailDto;
+            return result200;
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            result404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+            });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<FileResponse>(null as any);
+        return Promise.resolve<PlanDetailDto>(null as any);
     }
 
-    updatePlan(articleId: string, planId: string, request: UpdatePlanRequest): Promise<FileResponse> {
+    updatePlan(articleId: string, planId: string, request: UpdatePlanRequest): Promise<PlanActionResponse> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/plans/{planId}";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -1414,7 +1465,7 @@ export class PlanApiClient {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
-                "Accept": "application/octet-stream"
+                "Accept": "application/json"
             }
         };
 
@@ -1423,29 +1474,36 @@ export class PlanApiClient {
         });
     }
 
-    protected processUpdatePlan(response: Response): Promise<FileResponse> {
+    protected processUpdatePlan(response: Response): Promise<PlanActionResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200 || status === 206) {
-            const contentDisposition = response.headers ? response.headers.get("content-disposition") : undefined;
-            let fileNameMatch = contentDisposition ? /filename\*=(?:(\\?['"])(.*?)\1|(?:[^\s]+'.*?')?([^;\n]*))/g.exec(contentDisposition) : undefined;
-            let fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[3] || fileNameMatch[2] : undefined;
-            if (fileName) {
-                fileName = decodeURIComponent(fileName);
-            } else {
-                fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
-                fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
-            }
-            return response.blob().then(blob => { return { fileName: fileName, data: blob, status: status, headers: _headers }; });
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PlanActionResponse;
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            result400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            result404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+            });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<FileResponse>(null as any);
+        return Promise.resolve<PlanActionResponse>(null as any);
     }
 
-    restorePlan(articleId: string, planId: string): Promise<FileResponse> {
+    restorePlan(articleId: string, planId: string): Promise<PlanActionResponse> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/plans/{planId}/restore";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -1458,7 +1516,7 @@ export class PlanApiClient {
         let options_: RequestInit = {
             method: "POST",
             headers: {
-                "Accept": "application/octet-stream"
+                "Accept": "application/json"
             }
         };
 
@@ -1467,29 +1525,36 @@ export class PlanApiClient {
         });
     }
 
-    protected processRestorePlan(response: Response): Promise<FileResponse> {
+    protected processRestorePlan(response: Response): Promise<PlanActionResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200 || status === 206) {
-            const contentDisposition = response.headers ? response.headers.get("content-disposition") : undefined;
-            let fileNameMatch = contentDisposition ? /filename\*=(?:(\\?['"])(.*?)\1|(?:[^\s]+'.*?')?([^;\n]*))/g.exec(contentDisposition) : undefined;
-            let fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[3] || fileNameMatch[2] : undefined;
-            if (fileName) {
-                fileName = decodeURIComponent(fileName);
-            } else {
-                fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
-                fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
-            }
-            return response.blob().then(blob => { return { fileName: fileName, data: blob, status: status, headers: _headers }; });
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PlanActionResponse;
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            result400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            result404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+            });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<FileResponse>(null as any);
+        return Promise.resolve<PlanActionResponse>(null as any);
     }
 
-    updatePlanFragmentInclude(articleId: string, planId: string, fragmentId: string, request: UpdatePlanFragmentIncludeRequest): Promise<FileResponse> {
+    updatePlanFragmentInclude(articleId: string, planId: string, fragmentId: string, request: UpdatePlanFragmentIncludeRequest): Promise<PlanActionResponse> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/plans/{planId}/fragments/{fragmentId}/include";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -1509,7 +1574,7 @@ export class PlanApiClient {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
-                "Accept": "application/octet-stream"
+                "Accept": "application/json"
             }
         };
 
@@ -1518,29 +1583,36 @@ export class PlanApiClient {
         });
     }
 
-    protected processUpdatePlanFragmentInclude(response: Response): Promise<FileResponse> {
+    protected processUpdatePlanFragmentInclude(response: Response): Promise<PlanActionResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200 || status === 206) {
-            const contentDisposition = response.headers ? response.headers.get("content-disposition") : undefined;
-            let fileNameMatch = contentDisposition ? /filename\*=(?:(\\?['"])(.*?)\1|(?:[^\s]+'.*?')?([^;\n]*))/g.exec(contentDisposition) : undefined;
-            let fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[3] || fileNameMatch[2] : undefined;
-            if (fileName) {
-                fileName = decodeURIComponent(fileName);
-            } else {
-                fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
-                fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
-            }
-            return response.blob().then(blob => { return { fileName: fileName, data: blob, status: status, headers: _headers }; });
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PlanActionResponse;
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            result400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            result404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+            });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<FileResponse>(null as any);
+        return Promise.resolve<PlanActionResponse>(null as any);
     }
 
-    updatePlanFragmentInstructions(articleId: string, planId: string, fragmentId: string, request: UpdatePlanFragmentInstructionsRequest): Promise<FileResponse> {
+    updatePlanFragmentInstructions(articleId: string, planId: string, fragmentId: string, request: UpdatePlanFragmentInstructionsRequest): Promise<PlanActionResponse> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/plans/{planId}/fragments/{fragmentId}/instructions";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -1560,7 +1632,7 @@ export class PlanApiClient {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
-                "Accept": "application/octet-stream"
+                "Accept": "application/json"
             }
         };
 
@@ -1569,29 +1641,36 @@ export class PlanApiClient {
         });
     }
 
-    protected processUpdatePlanFragmentInstructions(response: Response): Promise<FileResponse> {
+    protected processUpdatePlanFragmentInstructions(response: Response): Promise<PlanActionResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200 || status === 206) {
-            const contentDisposition = response.headers ? response.headers.get("content-disposition") : undefined;
-            let fileNameMatch = contentDisposition ? /filename\*=(?:(\\?['"])(.*?)\1|(?:[^\s]+'.*?')?([^;\n]*))/g.exec(contentDisposition) : undefined;
-            let fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[3] || fileNameMatch[2] : undefined;
-            if (fileName) {
-                fileName = decodeURIComponent(fileName);
-            } else {
-                fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
-                fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
-            }
-            return response.blob().then(blob => { return { fileName: fileName, data: blob, status: status, headers: _headers }; });
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PlanActionResponse;
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            result400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            result404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+            });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<FileResponse>(null as any);
+        return Promise.resolve<PlanActionResponse>(null as any);
     }
 
-    acceptPlan(articleId: string, planId: string): Promise<FileResponse> {
+    acceptPlan(articleId: string, planId: string): Promise<PlanActionResponse> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/plans/{planId}/accept";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -1604,7 +1683,7 @@ export class PlanApiClient {
         let options_: RequestInit = {
             method: "POST",
             headers: {
-                "Accept": "application/octet-stream"
+                "Accept": "application/json"
             }
         };
 
@@ -1613,29 +1692,42 @@ export class PlanApiClient {
         });
     }
 
-    protected processAcceptPlan(response: Response): Promise<FileResponse> {
+    protected processAcceptPlan(response: Response): Promise<PlanActionResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200 || status === 206) {
-            const contentDisposition = response.headers ? response.headers.get("content-disposition") : undefined;
-            let fileNameMatch = contentDisposition ? /filename\*=(?:(\\?['"])(.*?)\1|(?:[^\s]+'.*?')?([^;\n]*))/g.exec(contentDisposition) : undefined;
-            let fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[3] || fileNameMatch[2] : undefined;
-            if (fileName) {
-                fileName = decodeURIComponent(fileName);
-            } else {
-                fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
-                fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
-            }
-            return response.blob().then(blob => { return { fileName: fileName, data: blob, status: status, headers: _headers }; });
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PlanActionResponse;
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            result400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+            });
+        } else if (status === 401) {
+            return response.text().then((_responseText) => {
+            let result401: any = null;
+            result401 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result401);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            result404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+            });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<FileResponse>(null as any);
+        return Promise.resolve<PlanActionResponse>(null as any);
     }
 
-    rejectPlan(articleId: string, planId: string): Promise<FileResponse> {
+    rejectPlan(articleId: string, planId: string): Promise<PlanActionResponse> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/plans/{planId}/reject";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -1648,7 +1740,7 @@ export class PlanApiClient {
         let options_: RequestInit = {
             method: "POST",
             headers: {
-                "Accept": "application/octet-stream"
+                "Accept": "application/json"
             }
         };
 
@@ -1657,26 +1749,33 @@ export class PlanApiClient {
         });
     }
 
-    protected processRejectPlan(response: Response): Promise<FileResponse> {
+    protected processRejectPlan(response: Response): Promise<PlanActionResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200 || status === 206) {
-            const contentDisposition = response.headers ? response.headers.get("content-disposition") : undefined;
-            let fileNameMatch = contentDisposition ? /filename\*=(?:(\\?['"])(.*?)\1|(?:[^\s]+'.*?')?([^;\n]*))/g.exec(contentDisposition) : undefined;
-            let fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[3] || fileNameMatch[2] : undefined;
-            if (fileName) {
-                fileName = decodeURIComponent(fileName);
-            } else {
-                fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
-                fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
-            }
-            return response.blob().then(blob => { return { fileName: fileName, data: blob, status: status, headers: _headers }; });
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as PlanActionResponse;
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            result400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            result404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+            });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<FileResponse>(null as any);
+        return Promise.resolve<PlanActionResponse>(null as any);
     }
 }
 
@@ -1779,7 +1878,7 @@ export class SourcesApiClient {
         return Promise.resolve<SourceDto>(null as any);
     }
 
-    extractFragments(id: string): Promise<void> {
+    extractFragments(id: string): Promise<FragmentExtractionResponse> {
         let url_ = this.baseUrl + "/api/sources/{id}/extract-fragments";
         if (id === undefined || id === null)
             throw new globalThis.Error("The parameter 'id' must be defined.");
@@ -1789,6 +1888,7 @@ export class SourcesApiClient {
         let options_: RequestInit = {
             method: "POST",
             headers: {
+                "Accept": "application/json"
             }
         };
 
@@ -1797,12 +1897,14 @@ export class SourcesApiClient {
         });
     }
 
-    protected processExtractFragments(response: Response): Promise<void> {
+    protected processExtractFragments(response: Response): Promise<FragmentExtractionResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
-            return;
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as FragmentExtractionResponse;
+            return result200;
             });
         } else if (status === 404) {
             return response.text().then((_responseText) => {
@@ -1819,10 +1921,10 @@ export class SourcesApiClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<void>(null as any);
+        return Promise.resolve<FragmentExtractionResponse>(null as any);
     }
 
-    tagSource(id: string, force?: boolean | undefined): Promise<void> {
+    tagSource(id: string, force?: boolean | undefined): Promise<TaggingResponse> {
         let url_ = this.baseUrl + "/api/sources/{id}/tag?";
         if (id === undefined || id === null)
             throw new globalThis.Error("The parameter 'id' must be defined.");
@@ -1836,6 +1938,7 @@ export class SourcesApiClient {
         let options_: RequestInit = {
             method: "POST",
             headers: {
+                "Accept": "application/json"
             }
         };
 
@@ -1844,19 +1947,21 @@ export class SourcesApiClient {
         });
     }
 
-    protected processTagSource(response: Response): Promise<void> {
+    protected processTagSource(response: Response): Promise<TaggingResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
-            return;
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as TaggingResponse;
+            return result200;
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<void>(null as any);
+        return Promise.resolve<TaggingResponse>(null as any);
     }
 }
 
@@ -1870,14 +1975,14 @@ export class TagTypesApiClient {
         this.baseUrl = baseUrl ?? "";
     }
 
-    getAll(): Promise<FileResponse> {
+    getAll(): Promise<TagTypeDto[]> {
         let url_ = this.baseUrl + "/api/tagtypes";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: RequestInit = {
             method: "GET",
             headers: {
-                "Accept": "application/octet-stream"
+                "Accept": "application/json"
             }
         };
 
@@ -1886,26 +1991,21 @@ export class TagTypesApiClient {
         });
     }
 
-    protected processGetAll(response: Response): Promise<FileResponse> {
+    protected processGetAll(response: Response): Promise<TagTypeDto[]> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200 || status === 206) {
-            const contentDisposition = response.headers ? response.headers.get("content-disposition") : undefined;
-            let fileNameMatch = contentDisposition ? /filename\*=(?:(\\?['"])(.*?)\1|(?:[^\s]+'.*?')?([^;\n]*))/g.exec(contentDisposition) : undefined;
-            let fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[3] || fileNameMatch[2] : undefined;
-            if (fileName) {
-                fileName = decodeURIComponent(fileName);
-            } else {
-                fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
-                fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
-            }
-            return response.blob().then(blob => { return { fileName: fileName, data: blob, status: status, headers: _headers }; });
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as TagTypeDto[];
+            return result200;
+            });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<FileResponse>(null as any);
+        return Promise.resolve<TagTypeDto[]>(null as any);
     }
 }
 
@@ -1919,14 +2019,14 @@ export class TemplatesApiClient {
         this.baseUrl = baseUrl ?? "";
     }
 
-    getAll(): Promise<FileResponse> {
+    getAll(): Promise<TemplateListDto[]> {
         let url_ = this.baseUrl + "/api/templates";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: RequestInit = {
             method: "GET",
             headers: {
-                "Accept": "application/octet-stream"
+                "Accept": "application/json"
             }
         };
 
@@ -1935,29 +2035,24 @@ export class TemplatesApiClient {
         });
     }
 
-    protected processGetAll(response: Response): Promise<FileResponse> {
+    protected processGetAll(response: Response): Promise<TemplateListDto[]> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200 || status === 206) {
-            const contentDisposition = response.headers ? response.headers.get("content-disposition") : undefined;
-            let fileNameMatch = contentDisposition ? /filename\*=(?:(\\?['"])(.*?)\1|(?:[^\s]+'.*?')?([^;\n]*))/g.exec(contentDisposition) : undefined;
-            let fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[3] || fileNameMatch[2] : undefined;
-            if (fileName) {
-                fileName = decodeURIComponent(fileName);
-            } else {
-                fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
-                fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
-            }
-            return response.blob().then(blob => { return { fileName: fileName, data: blob, status: status, headers: _headers }; });
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as TemplateListDto[];
+            return result200;
+            });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<FileResponse>(null as any);
+        return Promise.resolve<TemplateListDto[]>(null as any);
     }
 
-    get(id: string): Promise<FileResponse> {
+    get(id: string): Promise<TemplateDto> {
         let url_ = this.baseUrl + "/api/templates/{id}";
         if (id === undefined || id === null)
             throw new globalThis.Error("The parameter 'id' must be defined.");
@@ -1967,7 +2062,7 @@ export class TemplatesApiClient {
         let options_: RequestInit = {
             method: "GET",
             headers: {
-                "Accept": "application/octet-stream"
+                "Accept": "application/json"
             }
         };
 
@@ -1976,29 +2071,30 @@ export class TemplatesApiClient {
         });
     }
 
-    protected processGet(response: Response): Promise<FileResponse> {
+    protected processGet(response: Response): Promise<TemplateDto> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200 || status === 206) {
-            const contentDisposition = response.headers ? response.headers.get("content-disposition") : undefined;
-            let fileNameMatch = contentDisposition ? /filename\*=(?:(\\?['"])(.*?)\1|(?:[^\s]+'.*?')?([^;\n]*))/g.exec(contentDisposition) : undefined;
-            let fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[3] || fileNameMatch[2] : undefined;
-            if (fileName) {
-                fileName = decodeURIComponent(fileName);
-            } else {
-                fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
-                fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
-            }
-            return response.blob().then(blob => { return { fileName: fileName, data: blob, status: status, headers: _headers }; });
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as TemplateDto;
+            return result200;
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            result404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+            });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<FileResponse>(null as any);
+        return Promise.resolve<TemplateDto>(null as any);
     }
 
-    update(id: string, request: UpdateTemplateRequest): Promise<FileResponse> {
+    update(id: string, request: UpdateTemplateRequest): Promise<TemplateDto> {
         let url_ = this.baseUrl + "/api/templates/{id}";
         if (id === undefined || id === null)
             throw new globalThis.Error("The parameter 'id' must be defined.");
@@ -2012,7 +2108,7 @@ export class TemplatesApiClient {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
-                "Accept": "application/octet-stream"
+                "Accept": "application/json"
             }
         };
 
@@ -2021,27 +2117,53 @@ export class TemplatesApiClient {
         });
     }
 
-    protected processUpdate(response: Response): Promise<FileResponse> {
+    protected processUpdate(response: Response): Promise<TemplateDto> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200 || status === 206) {
-            const contentDisposition = response.headers ? response.headers.get("content-disposition") : undefined;
-            let fileNameMatch = contentDisposition ? /filename\*=(?:(\\?['"])(.*?)\1|(?:[^\s]+'.*?')?([^;\n]*))/g.exec(contentDisposition) : undefined;
-            let fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[3] || fileNameMatch[2] : undefined;
-            if (fileName) {
-                fileName = decodeURIComponent(fileName);
-            } else {
-                fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
-                fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
-            }
-            return response.blob().then(blob => { return { fileName: fileName, data: blob, status: status, headers: _headers }; });
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as TemplateDto;
+            return result200;
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            result404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+            });
+        } else if (status === 500) {
+            return response.text().then((_responseText) => {
+            return throwException("A server side error occurred.", status, _responseText, _headers);
+            });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<FileResponse>(null as any);
+        return Promise.resolve<TemplateDto>(null as any);
     }
+}
+
+export interface ConversationDto {
+    id?: string;
+    state?: string;
+    mode?: string;
+    isRunning?: boolean;
+    createdAt?: Date;
+    createdBy?: string;
+    implementingPlanId?: string | null;
+    implementingPlanVersion?: number | null;
+}
+
+export interface ProblemDetails {
+    type?: string | null;
+    title?: string | null;
+    status?: number | null;
+    detail?: string | null;
+    instance?: string | null;
+
+    [key: string]: any;
 }
 
 export enum ConversationMode {
@@ -2049,9 +2171,59 @@ export enum ConversationMode {
     Plan = "Plan",
 }
 
+export interface ChatMessageDto {
+    id?: string;
+    conversationId?: string;
+    role?: ChatMessageRole;
+    text?: string | null;
+    userName?: string | null;
+    createdAt?: Date;
+    toolCalls?: ToolCallDto[];
+}
+
+export enum ChatMessageRole {
+    User = "User",
+    Assistant = "Assistant",
+    System = "System",
+    Tool = "Tool",
+}
+
+export interface ToolCallDto {
+    callId?: string;
+    name?: string;
+    display?: string | null;
+    completed?: boolean;
+    isError?: boolean;
+    result?: ToolCallResultDto | null;
+}
+
+export interface ToolCallResultDto {
+    ids?: string[];
+}
+
+export interface SendMessageResponse {
+    messageId?: string;
+    conversationId?: string;
+}
+
 export interface SendMessageRequest {
     message?: string;
     mode?: ConversationMode | null;
+}
+
+export interface ConversationHistoryItemDto {
+    id?: string;
+    state?: string;
+    createdAt?: Date;
+    messageCount?: number;
+    completedAt?: Date | null;
+}
+
+export interface ConversationStatusResponse {
+    id?: string;
+    state?: string;
+    completedAt?: Date | null;
+    timestamp?: Date | null;
 }
 
 export interface ArticleTypeDto {
@@ -2105,16 +2277,6 @@ export enum ConversationState {
     Archived = "Archived",
 }
 
-export interface ProblemDetails {
-    type?: string | null;
-    title?: string | null;
-    status?: number | null;
-    detail?: string | null;
-    instance?: string | null;
-
-    [key: string]: any;
-}
-
 export interface ArticleCreateRequest {
     title: string;
     parentArticleId?: string | null;
@@ -2135,6 +2297,17 @@ export interface VersionCaptureResponse {
 
 export interface ArticleUpdateContentRequest {
     content: string;
+}
+
+export interface ArticleDeleteResponse {
+    message?: string;
+}
+
+export interface ArticleMoveResponse {
+    message?: string;
+    articleId?: string;
+    oldParentId?: string | null;
+    newParentId?: string;
 }
 
 export interface ArticleMoveRequest {
@@ -2174,6 +2347,11 @@ export interface ArticleVersionComparisonDto {
     versionNumber?: string;
     beforeContent?: string;
     afterContent?: string;
+}
+
+export interface VersionActionResponse {
+    success?: boolean;
+    message?: string;
 }
 
 export interface DashboardMetrics {
@@ -2257,6 +2435,33 @@ export interface FragmentTitleDto {
     title?: string;
 }
 
+export interface PlanDetailDto {
+    id?: string;
+    articleId?: string;
+    instructions?: string;
+    status?: string;
+    version?: number;
+    changesSummary?: string | null;
+    createdAt?: Date;
+    createdBy?: any;
+    fragments?: any[];
+}
+
+export interface PlanSummaryDto {
+    id?: string;
+    version?: number;
+    status?: string;
+    createdAt?: Date;
+    changesSummary?: string | null;
+    createdBy?: any;
+}
+
+export interface PlanActionResponse {
+    success?: boolean;
+    message?: string | null;
+    conversationId?: string | null;
+}
+
 export interface UpdatePlanRequest {
     instructions?: string;
 }
@@ -2318,15 +2523,67 @@ export interface SourceTagDto {
     allowedValue?: string | null;
 }
 
-export interface UpdateTemplateRequest {
-    content?: string | null;
+export interface FragmentExtractionResponse {
+    success?: boolean;
+    jobId?: string | null;
+    message?: string;
 }
 
-export interface FileResponse {
-    data: Blob;
-    status: number;
-    fileName?: string;
-    headers?: { [name: string]: any };
+export interface TaggingResponse {
+    success?: boolean;
+    skipped?: boolean;
+    message?: string;
+    isInternal?: boolean | null;
+    tagCount?: number | null;
+}
+
+export interface TagTypeDto {
+    id?: string;
+    name?: string;
+    prompt?: string | null;
+    isConstrained?: boolean;
+    scopeUpdateMode?: ScopeUpdateMode;
+    allowedValues?: string[];
+}
+
+export enum ScopeUpdateMode {
+    None = "None",
+    MarkInternalIfUnknown = "MarkInternalIfUnknown",
+    MarkExternalIfUnknown = "MarkExternalIfUnknown",
+}
+
+export interface TemplateListDto {
+    id?: string;
+    name?: string;
+    type?: TemplateType;
+    typeName?: string;
+    description?: string | null;
+    createdAt?: Date;
+    lastModifiedAt?: Date | null;
+}
+
+export enum TemplateType {
+    FragmentExtraction = "FragmentExtraction",
+    OrganizationContext = "OrganizationContext",
+    ConfidenceScoring = "ConfidenceScoring",
+    ArticlePlanCreation = "ArticlePlanCreation",
+    ArticleChat = "ArticleChat",
+    ArticlePlanImplementation = "ArticlePlanImplementation",
+}
+
+export interface TemplateDto {
+    id?: string;
+    name?: string;
+    type?: TemplateType;
+    typeName?: string;
+    description?: string | null;
+    content?: string;
+    createdAt?: Date;
+    lastModifiedAt?: Date | null;
+}
+
+export interface UpdateTemplateRequest {
+    content?: string | null;
 }
 
 export class ApiException extends Error {

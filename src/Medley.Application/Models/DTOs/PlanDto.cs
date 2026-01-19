@@ -93,3 +93,111 @@ public class PlanFragmentDto
     /// </summary>
     public double RelevanceScore { get; set; }
 }
+
+/// <summary>
+/// Detailed plan information with fragments and source details
+/// </summary>
+public class PlanDetailDto
+{
+    /// <summary>
+    /// Unique identifier for the plan
+    /// </summary>
+    public required Guid Id { get; set; }
+
+    /// <summary>
+    /// Article ID this plan is for
+    /// </summary>
+    public required Guid ArticleId { get; set; }
+
+    /// <summary>
+    /// Markdown-formatted instructions from the AI agent
+    /// </summary>
+    public required string Instructions { get; set; }
+
+    /// <summary>
+    /// Current status of the plan
+    /// </summary>
+    public required string Status { get; set; }
+
+    /// <summary>
+    /// Version number of this plan (per article)
+    /// </summary>
+    public required int Version { get; set; }
+
+    /// <summary>
+    /// AI-generated summary of changes from parent plan
+    /// </summary>
+    public string? ChangesSummary { get; set; }
+
+    /// <summary>
+    /// When this plan was created
+    /// </summary>
+    public required DateTimeOffset CreatedAt { get; set; }
+
+    /// <summary>
+    /// User who created this plan
+    /// </summary>
+    public required object CreatedBy { get; set; }
+
+    /// <summary>
+    /// Fragment recommendations for this plan
+    /// </summary>
+    public required List<object> Fragments { get; set; } = new();
+}
+
+/// <summary>
+/// Summary information about a plan (for list views)
+/// </summary>
+public class PlanSummaryDto
+{
+    /// <summary>
+    /// Unique identifier for the plan
+    /// </summary>
+    public required Guid Id { get; set; }
+
+    /// <summary>
+    /// Version number of this plan (per article)
+    /// </summary>
+    public required int Version { get; set; }
+
+    /// <summary>
+    /// Current status of the plan
+    /// </summary>
+    public required string Status { get; set; }
+
+    /// <summary>
+    /// When this plan was created
+    /// </summary>
+    public required DateTimeOffset CreatedAt { get; set; }
+
+    /// <summary>
+    /// AI-generated summary of changes from parent plan
+    /// </summary>
+    public string? ChangesSummary { get; set; }
+
+    /// <summary>
+    /// User who created this plan
+    /// </summary>
+    public required object CreatedBy { get; set; }
+}
+
+/// <summary>
+/// Response after performing an action on a plan
+/// </summary>
+public class PlanActionResponse
+{
+    /// <summary>
+    /// Indicates if the action was successful
+    /// </summary>
+    public required bool Success { get; set; }
+
+    /// <summary>
+    /// Status message
+    /// </summary>
+    public string? Message { get; set; }
+
+    /// <summary>
+    /// ID of the conversation created for implementation (when accepting a plan)
+    /// </summary>
+    public Guid? ConversationId { get; set; }
+}

@@ -445,9 +445,9 @@ public class ArticlesApiController : ControllerBase
     /// <param name="id">Article ID</param>
     /// <returns>No content</returns>
     [HttpDelete("{id}")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ArticleDeleteResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Delete(Guid id)
+    public async Task<ActionResult<ArticleDeleteResponse>> Delete(Guid id)
     {
         var article = await _articleRepository.GetByIdAsync(id);
         if (article == null)
@@ -457,7 +457,7 @@ public class ArticlesApiController : ControllerBase
 
         // Note: This is a simplified delete. In production, you'd want to handle child articles
         // and potentially implement soft delete
-        return Ok(new { message = "Delete functionality to be implemented" });
+        return Ok(new ArticleDeleteResponse { Message = "Delete functionality to be implemented" });
     }
 
     /// <summary>
@@ -467,10 +467,10 @@ public class ArticlesApiController : ControllerBase
     /// <param name="request">Move request with new parent ID</param>
     /// <returns>Success response</returns>
     [HttpPut("{id}/move")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ArticleMoveResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Move(Guid id, [FromBody] ArticleMoveRequest request)
+    public async Task<ActionResult<ArticleMoveResponse>> Move(Guid id, [FromBody] ArticleMoveRequest request)
     {
         // Get the article to move
         var article = await _articleRepository.Query()
@@ -535,12 +535,12 @@ public class ArticlesApiController : ControllerBase
             });
         });
 
-        return Ok(new 
+        return Ok(new ArticleMoveResponse
         { 
-            message = "Article moved successfully",
-            articleId = article.Id,
-            oldParentId = oldParentId,
-            newParentId = request.NewParentArticleId.Value
+            Message = "Article moved successfully",
+            ArticleId = article.Id,
+            OldParentId = oldParentId,
+            NewParentId = request.NewParentArticleId.Value
         });
     }
 
@@ -860,12 +860,12 @@ public class ArticlesApiController : ControllerBase
     /// <param name="versionId">AI version ID to reject</param>
     /// <returns>Success response</returns>
     [HttpPost("{articleId}/versions/{versionId}/reject")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(VersionActionResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> RejectAiVersion(Guid articleId, Guid versionId)
+    public async Task<ActionResult<VersionActionResponse>> RejectAiVersion(Guid articleId, Guid versionId)
     {
         var article = await _articleRepository.GetByIdAsync(articleId);
         if (article == null)
@@ -883,20 +883,20 @@ public class ArticlesApiController : ControllerBase
         {
             await _versionService.RejectAiVersionAsync(versionId, currentUser);
 
-            return Ok(new
+            return Ok(new VersionActionResponse
             {
-                success = true,
-                message = "AI version rejected successfully"
+                Success = true,
+                Message = "AI version rejected successfully"
             });
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new VersionActionResponse { Success = false, Message = ex.Message });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error rejecting AI version {VersionId} for article {ArticleId}", versionId, articleId);
-            return StatusCode(500, new { message = "An error occurred while rejecting the version" });
+            return StatusCode(500, new VersionActionResponse { Success = false, Message = "An error occurred while rejecting the version" });
         }
     }
 

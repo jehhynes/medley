@@ -181,3 +181,37 @@ public record ReceiveMessagePayload
     public required string Message { get; init; }
     public required DateTimeOffset Timestamp { get; init; }
 }
+
+/// <summary>
+/// Payload for ChatMessageReceived event
+/// </summary>
+public record ChatMessageReceivedPayload
+{
+    public required string Id { get; init; }
+    public required string ConversationId { get; init; }
+    public required string Role { get; init; }
+    public required string Text { get; init; }
+    public required string UserName { get; init; }
+    public required DateTimeOffset CreatedAt { get; init; }
+    public required string ArticleId { get; init; }
+}
+
+/// <summary>
+/// Payload for ConversationCompleted event
+/// </summary>
+public record ConversationCompletedPayload
+{
+    public required string ConversationId { get; init; }
+    public required string ArticleId { get; init; }
+    public required DateTimeOffset CompletedAt { get; init; }
+}
+
+/// <summary>
+/// Payload for ConversationCancelled event
+/// </summary>
+public record ConversationCancelledPayload
+{
+    public required string ConversationId { get; init; }
+    public required string ArticleId { get; init; }
+    public required DateTimeOffset Timestamp { get; init; }
+}
