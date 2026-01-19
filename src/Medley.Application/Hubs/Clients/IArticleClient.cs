@@ -84,4 +84,19 @@ public interface IArticleClient
     /// Sends a message to clients in an article's chat room
     /// </summary>
     Task ReceiveMessage(ReceiveMessagePayload payload);
+
+    /// <summary>
+    /// Notifies clients that a chat message was received
+    /// </summary>
+    Task ChatMessageReceived(ChatMessageReceivedPayload payload);
+
+    /// <summary>
+    /// Notifies clients that a conversation was completed
+    /// </summary>
+    Task ConversationCompleted(ConversationCompletedPayload payload);
+
+    /// <summary>
+    /// Notifies clients that a conversation was cancelled
+    /// </summary>
+    Task ConversationCancelled(ConversationCancelledPayload payload);
 }

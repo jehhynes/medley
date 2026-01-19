@@ -23,6 +23,9 @@ export type {
   ChatMessageCompletePayload,
   ChatErrorPayload,
   ReceiveMessagePayload,
+  ChatMessageReceivedPayload,
+  ConversationCompletedPayload,
+  ConversationCancelledPayload,
   ArticleHubServerMethods,
   ArticleHubConnection
 } from './article-hub';

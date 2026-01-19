@@ -4,6 +4,7 @@ using Medley.Application.Hubs;
 using Medley.Application.Hubs.Clients;
 using Medley.Application.Interfaces;
 using Medley.Application.Jobs;
+using Medley.Application.Models.DTOs;
 using Medley.Domain.Entities;
 using Medley.Domain.Enums;
 using Medley.Web.Extensions;
@@ -65,7 +66,10 @@ public class ArticleChatApiController : ControllerBase
     /// Get a conversation for an article (active or by ID)
     /// </summary>
     [HttpGet("conversation/{conversationId?}")]
-    public async Task<IActionResult> GetConversation(Guid articleId, Guid? conversationId = null)
+    [ProducesResponseType(typeof(ConversationDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ConversationDto>> GetConversation(Guid articleId, Guid? conversationId = null)
     {
         var article = await _articleRepository.Query()
             .Include(a => a.CurrentConversation)
@@ -113,16 +117,16 @@ public class ArticleChatApiController : ControllerBase
             planVersion = plan?.Version;
         }
 
-        return Ok(new
+        return Ok(new ConversationDto
         {
-            id = conversation.Id,
-            state = conversation.State.ToString(),
-            mode = conversation.Mode.ToString(),
-            isRunning = conversation.IsRunning,
-            createdAt = conversation.CreatedAt,
-            createdBy = conversation.CreatedByUserId,
-            implementingPlanId = conversation.ImplementingPlanId,
-            implementingPlanVersion = planVersion
+            Id = conversation.Id,
+            State = conversation.State.ToString(),
+            Mode = conversation.Mode.ToString(),
+            IsRunning = conversation.IsRunning,
+            CreatedAt = conversation.CreatedAt,
+            CreatedBy = conversation.CreatedByUserId,
+            ImplementingPlanId = conversation.ImplementingPlanId,
+            ImplementingPlanVersion = planVersion
         });
     }
 
@@ -130,7 +134,11 @@ public class ArticleChatApiController : ControllerBase
     /// Create a new conversation for an article
     /// </summary>
     [HttpPost("conversation")]
-    public async Task<IActionResult> CreateConversation(Guid articleId, [FromQuery] ConversationMode mode = ConversationMode.Agent)
+    [ProducesResponseType(typeof(ConversationDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<ConversationDto>> CreateConversation(Guid articleId, [FromQuery] ConversationMode mode = ConversationMode.Agent)
     {
         var article = await _articleRepository.GetByIdAsync(articleId);
         if (article == null)
@@ -155,12 +163,16 @@ public class ArticleChatApiController : ControllerBase
         return CreatedAtAction(
             nameof(GetConversation),
             new { articleId },
-            new
+            new ConversationDto
             {
-                id = conversation.Id,
-                state = conversation.State.ToString(),
-                mode = conversation.Mode.ToString(),
-                createdAt = conversation.CreatedAt
+                Id = conversation.Id,
+                State = conversation.State.ToString(),
+                Mode = conversation.Mode.ToString(),
+                IsRunning = conversation.IsRunning,
+                CreatedAt = conversation.CreatedAt,
+                CreatedBy = conversation.CreatedByUserId,
+                ImplementingPlanId = conversation.ImplementingPlanId,
+                ImplementingPlanVersion = null
             });
     }
 
@@ -168,7 +180,9 @@ public class ArticleChatApiController : ControllerBase
     /// Get messages for a conversation
     /// </summary>
     [HttpGet("conversations/{conversationId}/messages")]
-    public async Task<IActionResult> GetMessages(Guid articleId, Guid conversationId, [FromQuery] int? limit = null)
+    [ProducesResponseType(typeof(List<ChatMessageDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<List<ChatMessageDto>>> GetMessages(Guid articleId, Guid conversationId, [FromQuery] int? limit = null)
     {
         var conversation = await _chatService.GetConversationAsync(conversationId);
         if (conversation == null || conversation.ArticleId != articleId)
@@ -236,14 +250,13 @@ public class ArticleChatApiController : ControllerBase
         }
 
         // Third: build final result with completion status (exclude Tool messages)
-        var results = new List<object>();
+        var results = new List<ChatMessageDto>();
         foreach (var item in deserializedMessages.Where(item => item.Message.Role != ChatMessageRole.Tool))
         {
-            List<object>? toolCalls = null;
+            List<ToolCallDto> toolCalls = new List<ToolCallDto>();
             
             if (item.AiMessage?.Contents != null)
             {
-                var calls = new List<object>();
                 foreach (var fc in item.AiMessage.Contents.OfType<FunctionCallContent>())
                 {
                     // Get result IDs if this call was completed
@@ -253,31 +266,29 @@ public class ArticleChatApiController : ControllerBase
                     
                     // Check if this call resulted in an error
                     var isError = !string.IsNullOrEmpty(fc.CallId) && erroredCallIds.Contains(fc.CallId);
+                    var completed = !string.IsNullOrEmpty(fc.CallId) && completedCallIds.Contains(fc.CallId);
                     
-                    calls.Add(new {
-                        name = fc.Name,
-                        callId = fc.CallId,
-                        display = await _toolDisplayExtractor.ExtractToolDisplayAsync(fc.Name, fc.Arguments),
-                        completed = !string.IsNullOrEmpty(fc.CallId) && completedCallIds.Contains(fc.CallId),
-                        isError = isError,
-                        result = resultIds != null ? new { ids = resultIds.Select(id => id.ToString()).ToArray() } : null
+                    toolCalls.Add(new ToolCallDto
+                    {
+                        CallId = fc.CallId ?? string.Empty,
+                        Name = fc.Name ?? string.Empty,
+                        Display = await _toolDisplayExtractor.ExtractToolDisplayAsync(fc.Name, fc.Arguments),
+                        Completed = completed,
+                        IsError = isError,
+                        Result = resultIds != null ? new ToolCallResultDto { Ids = resultIds.Select(id => id.ToString()).ToList() } : null
                     });
-                }
-                
-                if (calls.Any())
-                {
-                    toolCalls = calls;
                 }
             }
 
-            results.Add(new
+            results.Add(new ChatMessageDto
             {
-                id = item.Message.Id,
-                role = item.Message.Role.ToString().ToLower(),
-                text = item.Message.Text,
-                userName = item.Message.User?.FullName,
-                createdAt = item.Message.CreatedAt,
-                toolCalls = toolCalls ?? new List<object>()
+                Id = item.Message.Id,
+                ConversationId = conversationId,
+                Role = item.Message.Role,
+                Text = item.Message.Text,
+                UserName = item.Message.User?.FullName,
+                CreatedAt = item.Message.CreatedAt,
+                ToolCalls = toolCalls
             });
         }
 
@@ -288,7 +299,11 @@ public class ArticleChatApiController : ControllerBase
     /// Send a message in a conversation
     /// </summary>
     [HttpPost("conversations/{conversationId}/messages")]
-    public async Task<IActionResult> SendMessage(
+    [ProducesResponseType(typeof(SendMessageResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<SendMessageResponse>> SendMessage(
         Guid articleId,
         Guid conversationId,
         [FromBody] SendMessageRequest request)
@@ -379,19 +394,15 @@ public class ArticleChatApiController : ControllerBase
         {
             try
             {
-                // Note: ChatMessageReceived is not part of IArticleClient interface
-                // This is a custom event that needs to be added to the interface
-                // For now, we'll cast to IClientProxy to maintain functionality
-                var clientProxy = (Microsoft.AspNetCore.SignalR.IClientProxy)_hubContext.Clients.Group($"Article_{articleId}");
-                await clientProxy.SendAsync("ChatMessageReceived", new
+                await _hubContext.Clients.Group($"Article_{articleId}").ChatMessageReceived(new ChatMessageReceivedPayload
                 {
-                    id = userMessage.Id.ToString(),
-                    conversationId = conversationId.ToString(),
-                    role = "user",
-                    text = request.Message,
-                    userName = userName,
-                    createdAt = userMessage.CreatedAt,
-                    articleId = articleId.ToString()
+                    Id = userMessage.Id.ToString(),
+                    ConversationId = conversationId.ToString(),
+                    Role = "user",
+                    Text = request.Message,
+                    UserName = userName,
+                    CreatedAt = userMessage.CreatedAt,
+                    ArticleId = articleId.ToString()
                 });
                 
                 _logger.LogDebug("SignalR notification sent: ChatMessageReceived to group Article_{ArticleId}", articleId);
@@ -422,10 +433,10 @@ public class ArticleChatApiController : ControllerBase
             }
         });
 
-        return Ok(new
+        return Ok(new SendMessageResponse
         {
-            messageId = userMessage.Id,
-            conversationId = conversationId
+            MessageId = userMessage.Id,
+            ConversationId = conversationId
         });
     }
 
@@ -433,7 +444,9 @@ public class ArticleChatApiController : ControllerBase
     /// Get conversation history for an article
     /// </summary>
     [HttpGet("history")]
-    public async Task<IActionResult> GetHistory(Guid articleId)
+    [ProducesResponseType(typeof(List<ConversationHistoryItemDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<List<ConversationHistoryItemDto>>> GetHistory(Guid articleId)
     {
         var article = await _articleRepository.GetByIdAsync(articleId);
         if (article == null)
@@ -443,21 +456,23 @@ public class ArticleChatApiController : ControllerBase
 
         var conversations = await _chatService.GetConversationHistoryAsync(articleId);
 
-        return Ok(conversations.Select(c => new
+        return Ok(conversations.Select(c => new ConversationHistoryItemDto
         {
-            id = c.Id,
-            state = c.State.ToString(),
-            createdAt = c.CreatedAt,
-            messageCount = c.Messages.Count,
-            completedAt = c.CompletedAt
-        }));
+            Id = c.Id,
+            State = c.State.ToString(),
+            CreatedAt = c.CreatedAt,
+            MessageCount = c.Messages.Count,
+            CompletedAt = c.CompletedAt
+        }).ToList());
     }
 
     /// <summary>
     /// Mark a conversation as complete
     /// </summary>
     [HttpPost("conversations/{conversationId}/complete")]
-    public async Task<IActionResult> CompleteConversation(Guid articleId, Guid conversationId)
+    [ProducesResponseType(typeof(ConversationStatusResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ConversationStatusResponse>> CompleteConversation(Guid articleId, Guid conversationId)
     {
         var conversation = await _chatService.GetConversationAsync(conversationId);
         if (conversation == null || conversation.ArticleId != articleId)
@@ -474,15 +489,11 @@ public class ArticleChatApiController : ControllerBase
         {
             try
             {
-                // Note: ConversationCompleted is not part of IArticleClient interface
-                // This is a custom event that needs to be added to the interface
-                // For now, we'll cast to IClientProxy to maintain functionality
-                var clientProxy = (Microsoft.AspNetCore.SignalR.IClientProxy)_hubContext.Clients.Group($"Article_{articleId}");
-                await clientProxy.SendAsync("ConversationCompleted", new
+                await _hubContext.Clients.Group($"Article_{articleId}").ConversationCompleted(new ConversationCompletedPayload
                 {
-                    conversationId = conversationId.ToString(),
-                    articleId = articleId.ToString(),
-                    completedAt = completedAt
+                    ConversationId = conversationId.ToString(),
+                    ArticleId = articleId.ToString(),
+                    CompletedAt = completedAt
                 });
                 
                 _logger.LogDebug("SignalR notification sent: ConversationCompleted to group Article_{ArticleId}", articleId);
@@ -493,11 +504,12 @@ public class ArticleChatApiController : ControllerBase
             }
         });
 
-        return Ok(new
+        return Ok(new ConversationStatusResponse
         {
-            id = conversationId,
-            state = ConversationState.Complete.ToString(),
-            completedAt = completedAt
+            Id = conversationId,
+            State = ConversationState.Complete.ToString(),
+            CompletedAt = completedAt,
+            Timestamp = null
         });
     }
 
@@ -505,7 +517,9 @@ public class ArticleChatApiController : ControllerBase
     /// Cancel a conversation
     /// </summary>
     [HttpPost("conversations/{conversationId}/cancel")]
-    public async Task<IActionResult> CancelConversation(Guid articleId, Guid conversationId)
+    [ProducesResponseType(typeof(ConversationStatusResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ConversationStatusResponse>> CancelConversation(Guid articleId, Guid conversationId)
     {
         var conversation = await _chatService.GetConversationAsync(conversationId);
         if (conversation == null || conversation.ArticleId != articleId)
@@ -520,15 +534,11 @@ public class ArticleChatApiController : ControllerBase
         {
             try
             {
-                // Note: ConversationCancelled is not part of IArticleClient interface
-                // This is a custom event that needs to be added to the interface
-                // For now, we'll cast to IClientProxy to maintain functionality
-                var clientProxy = (Microsoft.AspNetCore.SignalR.IClientProxy)_hubContext.Clients.Group($"Article_{articleId}");
-                await clientProxy.SendAsync("ConversationCancelled", new
+                await _hubContext.Clients.Group($"Article_{articleId}").ConversationCancelled(new ConversationCancelledPayload
                 {
-                    conversationId = conversationId.ToString(),
-                    articleId = articleId.ToString(),
-                    timestamp = DateTimeOffset.UtcNow
+                    ConversationId = conversationId.ToString(),
+                    ArticleId = articleId.ToString(),
+                    Timestamp = DateTimeOffset.UtcNow
                 });
                 
                 _logger.LogDebug("SignalR notification sent: ConversationCancelled to group Article_{ArticleId}", articleId);
@@ -539,10 +549,12 @@ public class ArticleChatApiController : ControllerBase
             }
         });
 
-        return Ok(new
+        return Ok(new ConversationStatusResponse
         {
-            id = conversationId,
-            state = ConversationState.Archived.ToString()
+            Id = conversationId,
+            State = ConversationState.Archived.ToString(),
+            CompletedAt = null,
+            Timestamp = DateTimeOffset.UtcNow
         });
     }
 

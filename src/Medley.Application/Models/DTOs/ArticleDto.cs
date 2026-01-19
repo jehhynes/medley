@@ -178,3 +178,56 @@ public class ArticleTypeDto
     /// </summary>
     public string? Icon { get; set; }
 }
+
+/// <summary>
+/// Response after moving an article
+/// </summary>
+public class ArticleMoveResponse
+{
+    /// <summary>
+    /// Status message
+    /// </summary>
+    public required string Message { get; set; }
+
+    /// <summary>
+    /// ID of the article that was moved
+    /// </summary>
+    public required Guid ArticleId { get; set; }
+
+    /// <summary>
+    /// Previous parent article ID
+    /// </summary>
+    public Guid? OldParentId { get; set; }
+
+    /// <summary>
+    /// New parent article ID
+    /// </summary>
+    public required Guid NewParentId { get; set; }
+}
+
+/// <summary>
+/// Response after deleting an article
+/// </summary>
+public class ArticleDeleteResponse
+{
+    /// <summary>
+    /// Status message
+    /// </summary>
+    public required string Message { get; set; }
+}
+
+/// <summary>
+/// Response after accepting or rejecting a version
+/// </summary>
+public class VersionActionResponse
+{
+    /// <summary>
+    /// Indicates if the action was successful
+    /// </summary>
+    public required bool Success { get; set; }
+
+    /// <summary>
+    /// Status message
+    /// </summary>
+    public required string Message { get; set; }
+}

@@ -183,6 +183,40 @@ export interface ReceiveMessagePayload {
 }
 
 /**
+ * Payload for ChatMessageReceived event
+ * Sent when a chat message is received
+ */
+export interface ChatMessageReceivedPayload {
+  id: string;
+  conversationId: string;
+  role: string;
+  text: string;
+  userName: string;
+  createdAt: string;
+  articleId: string;
+}
+
+/**
+ * Payload for ConversationCompleted event
+ * Sent when a conversation is completed
+ */
+export interface ConversationCompletedPayload {
+  conversationId: string;
+  articleId: string;
+  completedAt: string;
+}
+
+/**
+ * Payload for ConversationCancelled event
+ * Sent when a conversation is cancelled
+ */
+export interface ConversationCancelledPayload {
+  conversationId: string;
+  articleId: string;
+  timestamp: string;
+}
+
+/**
  * Server-to-client methods interface for ArticleHub
  * Defines all methods that the server can call on connected clients
  */
@@ -203,6 +237,9 @@ export interface ArticleHubServerMethods {
   ChatMessageComplete: (payload: ChatMessageCompletePayload) => void;
   ChatError: (payload: ChatErrorPayload) => void;
   ReceiveMessage: (payload: ReceiveMessagePayload) => void;
+  ChatMessageReceived: (payload: ChatMessageReceivedPayload) => void;
+  ConversationCompleted: (payload: ConversationCompletedPayload) => void;
+  ConversationCancelled: (payload: ConversationCancelledPayload) => void;
 }
 
 /**

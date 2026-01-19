@@ -1,6 +1,7 @@
 using Hangfire;
 using Medley.Application.Interfaces;
 using Medley.Application.Jobs;
+using Medley.Application.Models.DTOs;
 using Medley.Application.Services;
 using Medley.Domain.Entities;
 using Medley.Domain.Enums;
@@ -57,7 +58,10 @@ public class PlanApiController : ControllerBase
     /// Get the active plan for an article
     /// </summary>
     [HttpGet("active")]
-    public async Task<IActionResult> GetActivePlan(Guid articleId)
+    [ProducesResponseType(typeof(PlanDetailDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<PlanDetailDto>> GetActivePlan(Guid articleId)
     {
         var article = await _articleRepository.GetByIdAsync(articleId);
         if (article == null)
@@ -86,7 +90,9 @@ public class PlanApiController : ControllerBase
     /// Get all plans for an article (including archived)
     /// </summary>
     [HttpGet]
-    public async Task<IActionResult> GetAllPlans(Guid articleId)
+    [ProducesResponseType(typeof(List<PlanSummaryDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<List<PlanSummaryDto>>> GetAllPlans(Guid articleId)
     {
         var article = await _articleRepository.GetByIdAsync(articleId);
         if (article == null)
@@ -98,14 +104,14 @@ public class PlanApiController : ControllerBase
             .Where(p => p.ArticleId == articleId)
             .Include(p => p.CreatedBy)
             .OrderByDescending(p => p.Version)
-            .Select(p => new
+            .Select(p => new PlanSummaryDto
             {
-                id = p.Id,
-                version = p.Version,
-                status = p.Status.ToString(),
-                createdAt = p.CreatedAt,
-                changesSummary = p.ChangesSummary,
-                createdBy = new
+                Id = p.Id,
+                Version = p.Version,
+                Status = p.Status.ToString(),
+                CreatedAt = p.CreatedAt,
+                ChangesSummary = p.ChangesSummary,
+                CreatedBy = new
                 {
                     id = p.CreatedBy.Id,
                     name = p.CreatedBy.FullName ?? p.CreatedBy.Email
@@ -120,7 +126,9 @@ public class PlanApiController : ControllerBase
     /// Get a specific plan by ID
     /// </summary>
     [HttpGet("{planId}")]
-    public async Task<IActionResult> GetPlan(Guid articleId, Guid planId)
+    [ProducesResponseType(typeof(PlanDetailDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<PlanDetailDto>> GetPlan(Guid articleId, Guid planId)
     {
         var plan = await _planRepository.Query()
             .Where(p => p.Id == planId && p.ArticleId == articleId)
@@ -142,7 +150,10 @@ public class PlanApiController : ControllerBase
     /// Restore an archived plan as the active draft
     /// </summary>
     [HttpPost("{planId}/restore")]
-    public async Task<IActionResult> RestorePlan(Guid articleId, Guid planId)
+    [ProducesResponseType(typeof(PlanActionResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<PlanActionResponse>> RestorePlan(Guid articleId, Guid planId)
     {
         var planToRestore = await _planRepository.Query()
             .Where(p => p.Id == planId && p.ArticleId == articleId)
@@ -171,14 +182,17 @@ public class PlanApiController : ControllerBase
         // Restore the selected plan
         planToRestore.Status = PlanStatus.Draft;
 
-        return Ok(new { success = true, message = "Plan restored successfully" });
+        return Ok(new PlanActionResponse { Success = true, Message = "Plan restored successfully" });
     }
 
     /// <summary>
     /// Update the instructions for a plan
     /// </summary>
     [HttpPut("{planId}")]
-    public async Task<IActionResult> UpdatePlan(Guid articleId, Guid planId, [FromBody] UpdatePlanRequest request)
+    [ProducesResponseType(typeof(PlanActionResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<PlanActionResponse>> UpdatePlan(Guid articleId, Guid planId, [FromBody] UpdatePlanRequest request)
     {
         var plan = await _planRepository.Query()
             .Where(p => p.Id == planId && p.ArticleId == articleId)
@@ -196,14 +210,17 @@ public class PlanApiController : ControllerBase
 
         plan.Instructions = request.Instructions;
 
-        return Ok(new { success = true });
+        return Ok(new PlanActionResponse { Success = true, Message = null });
     }
 
     /// <summary>
     /// Update a plan fragment's include flag
     /// </summary>
     [HttpPut("{planId}/fragments/{fragmentId}/include")]
-    public async Task<IActionResult> UpdatePlanFragmentInclude(
+    [ProducesResponseType(typeof(PlanActionResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<PlanActionResponse>> UpdatePlanFragmentInclude(
         Guid articleId, 
         Guid planId, 
         Guid fragmentId, 
@@ -234,14 +251,17 @@ public class PlanApiController : ControllerBase
 
         planFragment.Include = request.Include;
 
-        return Ok(new { success = true });
+        return Ok(new PlanActionResponse { Success = true, Message = null });
     }
 
     /// <summary>
     /// Update a plan fragment's instructions
     /// </summary>
     [HttpPut("{planId}/fragments/{fragmentId}/instructions")]
-    public async Task<IActionResult> UpdatePlanFragmentInstructions(
+    [ProducesResponseType(typeof(PlanActionResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<PlanActionResponse>> UpdatePlanFragmentInstructions(
         Guid articleId, 
         Guid planId, 
         Guid fragmentId, 
@@ -272,14 +292,18 @@ public class PlanApiController : ControllerBase
 
         planFragment.Instructions = request.Instructions;
 
-        return Ok(new { success = true });
+        return Ok(new PlanActionResponse { Success = true, Message = null });
     }
 
     /// <summary>
     /// Accept a plan and begin AI implementation via conversation
     /// </summary>
     [HttpPost("{planId}/accept")]
-    public async Task<IActionResult> AcceptPlan(Guid articleId, Guid planId)
+    [ProducesResponseType(typeof(PlanActionResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<PlanActionResponse>> AcceptPlan(Guid articleId, Guid planId)
     {
         var plan = await _planRepository.Query()
             .Where(p => p.Id == planId && p.ArticleId == articleId)
@@ -355,11 +379,11 @@ public class PlanApiController : ControllerBase
             }
         });
 
-        return Ok(new 
+        return Ok(new PlanActionResponse
         { 
-            success = true, 
-            conversationId = agentConversation.Id,
-            message = "Plan implementation started"
+            Success = true, 
+            Message = "Plan implementation started",
+            ConversationId = agentConversation.Id
         });
     }
 
@@ -367,7 +391,10 @@ public class PlanApiController : ControllerBase
     /// Reject a plan and archive it
     /// </summary>
     [HttpPost("{planId}/reject")]
-    public async Task<IActionResult> RejectPlan(Guid articleId, Guid planId)
+    [ProducesResponseType(typeof(PlanActionResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<PlanActionResponse>> RejectPlan(Guid articleId, Guid planId)
     {
         var plan = await _planRepository.Query()
             .Where(p => p.Id == planId && p.ArticleId == articleId)
@@ -386,7 +413,7 @@ public class PlanApiController : ControllerBase
         // Update plan status to Archived
         plan.Status = PlanStatus.Archived;
 
-        return Ok(new { success = true, message = "Plan rejected and archived" });
+        return Ok(new PlanActionResponse { Success = true, Message = "Plan rejected and archived" });
     }
 
     private object MapPlanToDto(Plan plan)

@@ -3,7 +3,7 @@ using Medley.Domain.Enums;
 namespace Medley.Application.Models.DTOs;
 
 /// <summary>
-/// Data transfer object for ChatConversation entity
+/// Detailed conversation information (for GetConversation endpoint)
 /// </summary>
 public class ConversationDto
 {
@@ -13,19 +13,29 @@ public class ConversationDto
     public required Guid Id { get; set; }
 
     /// <summary>
-    /// Article ID this conversation is about
-    /// </summary>
-    public required Guid ArticleId { get; set; }
-
-    /// <summary>
     /// Current state of the conversation
     /// </summary>
-    public ConversationState State { get; set; }
+    public required string State { get; set; }
 
     /// <summary>
     /// The mode of this conversation
     /// </summary>
-    public ConversationMode Mode { get; set; }
+    public required string Mode { get; set; }
+
+    /// <summary>
+    /// Indicates if the conversation is currently running (AI is processing)
+    /// </summary>
+    public required bool IsRunning { get; set; }
+
+    /// <summary>
+    /// When this conversation was created
+    /// </summary>
+    public required DateTimeOffset CreatedAt { get; set; }
+
+    /// <summary>
+    /// User ID who created this conversation
+    /// </summary>
+    public required Guid CreatedBy { get; set; }
 
     /// <summary>
     /// The plan this conversation is implementing (if applicable)
@@ -33,29 +43,40 @@ public class ConversationDto
     public Guid? ImplementingPlanId { get; set; }
 
     /// <summary>
-    /// Indicates if the conversation is currently running (AI is processing)
+    /// Version of the plan being implemented (if applicable)
     /// </summary>
-    public bool IsRunning { get; set; }
+    public int? ImplementingPlanVersion { get; set; }
+}
+
+/// <summary>
+/// Conversation history item (for GetHistory endpoint)
+/// </summary>
+public class ConversationHistoryItemDto
+{
+    /// <summary>
+    /// Unique identifier for the conversation
+    /// </summary>
+    public required Guid Id { get; set; }
+
+    /// <summary>
+    /// Current state of the conversation
+    /// </summary>
+    public required string State { get; set; }
 
     /// <summary>
     /// When this conversation was created
     /// </summary>
-    public DateTimeOffset CreatedAt { get; set; }
+    public required DateTimeOffset CreatedAt { get; set; }
+
+    /// <summary>
+    /// Number of messages in the conversation
+    /// </summary>
+    public required int MessageCount { get; set; }
 
     /// <summary>
     /// When this conversation was completed (if applicable)
     /// </summary>
     public DateTimeOffset? CompletedAt { get; set; }
-
-    /// <summary>
-    /// User who created this conversation
-    /// </summary>
-    public required UserSummaryDto CreatedBy { get; set; }
-
-    /// <summary>
-    /// Messages in this conversation
-    /// </summary>
-    public List<ChatMessageDto> Messages { get; set; } = new();
 }
 
 /// <summary>
@@ -77,4 +98,46 @@ public class ConversationSummaryDto
     /// Current state of the conversation
     /// </summary>
     public ConversationState State { get; set; }
+}
+
+/// <summary>
+/// Response after sending a message
+/// </summary>
+public class SendMessageResponse
+{
+    /// <summary>
+    /// ID of the created message
+    /// </summary>
+    public required Guid MessageId { get; set; }
+
+    /// <summary>
+    /// ID of the conversation
+    /// </summary>
+    public required Guid ConversationId { get; set; }
+}
+
+/// <summary>
+/// Response after completing or cancelling a conversation
+/// </summary>
+public class ConversationStatusResponse
+{
+    /// <summary>
+    /// Unique identifier for the conversation
+    /// </summary>
+    public required Guid Id { get; set; }
+
+    /// <summary>
+    /// Current state of the conversation
+    /// </summary>
+    public required string State { get; set; }
+
+    /// <summary>
+    /// When this conversation was completed (if applicable)
+    /// </summary>
+    public DateTimeOffset? CompletedAt { get; set; }
+
+    /// <summary>
+    /// Timestamp of the status change
+    /// </summary>
+    public DateTimeOffset? Timestamp { get; set; }
 }

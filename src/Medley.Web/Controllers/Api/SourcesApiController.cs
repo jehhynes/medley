@@ -151,10 +151,10 @@ public class SourcesApiController : ControllerBase
     /// <param name="id">Source ID</param>
     /// <returns>Job status</returns>
     [HttpPost("{id}/extract-fragments")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(FragmentExtractionResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> ExtractFragments(Guid id)
+    public async Task<ActionResult<FragmentExtractionResponse>> ExtractFragments(Guid id)
     {
         try
         {
@@ -167,10 +167,11 @@ public class SourcesApiController : ControllerBase
             if (!sourceExists)
             {
                 _logger.LogWarning("Source {SourceId} not found", id);
-                return NotFound(new
+                return NotFound(new FragmentExtractionResponse
                 {
-                    success = false,
-                    message = $"Source {id} not found"
+                    Success = false,
+                    JobId = null,
+                    Message = $"Source {id} not found"
                 });
             }
 
@@ -179,20 +180,21 @@ public class SourcesApiController : ControllerBase
 
             _logger.LogInformation("Fragment extraction job {JobId} queued for source {SourceId}", jobId, id);
 
-            return Ok(new
+            return Ok(new FragmentExtractionResponse
             {
-                success = true,
-                jobId,
-                message = "Fragment extraction started. This may take a few minutes."
+                Success = true,
+                JobId = jobId,
+                Message = "Fragment extraction started. This may take a few minutes."
             });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error while queueing fragment extraction for source {SourceId}", id);
-            return StatusCode(500, new
+            return StatusCode(500, new FragmentExtractionResponse
             {
-                success = false,
-                message = "An unexpected error occurred. Please try again."
+                Success = false,
+                JobId = null,
+                Message = "An unexpected error occurred. Please try again."
             });
         }
     }
@@ -204,18 +206,18 @@ public class SourcesApiController : ControllerBase
     /// <param name="force">Force re-tagging even if already tagged</param>
     /// <returns>Tagging result</returns>
     [HttpPost("{id}/tag")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> TagSource(Guid id, [FromQuery] bool force = false)
+    [ProducesResponseType(typeof(TaggingResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<TaggingResponse>> TagSource(Guid id, [FromQuery] bool force = false)
     {
         var result = await _taggingService.GenerateTagsAsync(id, force);
 
-        return Ok(new
+        return Ok(new TaggingResponse
         {
-            success = result.Processed,
-            skipped = !result.Processed,
-            message = result.SkipReason ?? result.Message,
-            isInternal = result.IsInternal,
-            tagCount = result.TagCount
+            Success = result.Processed,
+            Skipped = !result.Processed,
+            Message = result.SkipReason ?? result.Message ?? string.Empty,
+            IsInternal = result.IsInternal,
+            TagCount = result.TagCount
         });
     }
 }

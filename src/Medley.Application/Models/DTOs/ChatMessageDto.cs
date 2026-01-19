@@ -18,14 +18,9 @@ public class ChatMessageDto
     public required Guid ConversationId { get; set; }
 
     /// <summary>
-    /// User who sent the message (null for assistant/system/tool messages)
-    /// </summary>
-    public UserSummaryDto? User { get; set; }
-
-    /// <summary>
     /// Role of the message (User, Assistant, System, Tool)
     /// </summary>
-    public ChatMessageRole Role { get; set; }
+    public required ChatMessageRole Role { get; set; }
 
     /// <summary>
     /// The content of the message
@@ -33,14 +28,19 @@ public class ChatMessageDto
     public string? Text { get; set; }
 
     /// <summary>
+    /// Full name of the user who sent the message (null for assistant/system/tool messages)
+    /// </summary>
+    public string? UserName { get; set; }
+
+    /// <summary>
     /// When this message was created
     /// </summary>
-    public DateTimeOffset CreatedAt { get; set; }
+    public required DateTimeOffset CreatedAt { get; set; }
 
     /// <summary>
     /// Tool calls in this message (if any)
     /// </summary>
-    public List<ToolCallDto> ToolCalls { get; set; } = new();
+    public required List<ToolCallDto> ToolCalls { get; set; } = new();
 }
 
 /// <summary>
@@ -51,7 +51,7 @@ public class ToolCallDto
     /// <summary>
     /// Unique identifier for the tool call
     /// </summary>
-    public required string Id { get; set; }
+    public required string CallId { get; set; }
 
     /// <summary>
     /// Name of the tool that was called
@@ -64,17 +64,28 @@ public class ToolCallDto
     public string? Display { get; set; }
 
     /// <summary>
-    /// Arguments passed to the tool (JSON)
+    /// Indicates if the tool call has been completed
     /// </summary>
-    public string? Arguments { get; set; }
-
-    /// <summary>
-    /// Result from the tool execution
-    /// </summary>
-    public string? Result { get; set; }
+    public required bool Completed { get; set; }
 
     /// <summary>
     /// Indicates if the tool call resulted in an error
     /// </summary>
-    public bool IsError { get; set; }
+    public required bool IsError { get; set; }
+
+    /// <summary>
+    /// Result from the tool execution (if completed)
+    /// </summary>
+    public ToolCallResultDto? Result { get; set; }
+}
+
+/// <summary>
+/// Tool call result information
+/// </summary>
+public class ToolCallResultDto
+{
+    /// <summary>
+    /// IDs of entities created/affected by the tool call
+    /// </summary>
+    public required List<string> Ids { get; set; } = new();
 }
