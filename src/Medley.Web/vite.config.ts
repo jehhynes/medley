@@ -19,7 +19,7 @@ export default defineConfig({
     
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'Vue/main.ts')
+        main: resolve(__dirname, 'Vue/app/main.ts')
       },
       output: {
         entryFileNames: 'js/[name].js',

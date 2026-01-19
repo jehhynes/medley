@@ -36,7 +36,7 @@ import type {
   ConversationState,
   UserSummaryDto,
   ConversationSummaryDto
-} from '@/types/generated/api-client';
+} from '@/types/api-client';
 
 /**
  * API Exception class for typed error handling

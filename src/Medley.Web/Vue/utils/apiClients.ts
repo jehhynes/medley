@@ -11,7 +11,7 @@ import {
   SourcesApiClient,
   TagTypesApiClient,
   TemplatesApiClient
-} from '@/types/generated/api-client';
+} from '@/types/api-client';
 
 /**
  * Singleton instances of all API clients

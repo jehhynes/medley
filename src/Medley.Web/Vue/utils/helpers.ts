@@ -3,7 +3,7 @@
  * TypeScript version with full type safety
  */
 
-import type { ArticleDto, ArticleTypeDto, ArticleStatus } from '@/types/generated/api-client';
+import type { ArticleDto, ArticleTypeDto, ArticleStatus } from '@/types/api-client';
 
 // Global article types cache
 let articleTypes: ArticleTypeDto[] = [];
