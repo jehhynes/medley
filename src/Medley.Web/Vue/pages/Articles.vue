@@ -401,9 +401,10 @@
 import { ref, reactive, computed, provide, onMounted, onBeforeUnmount, nextTick, type Ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { HubConnectionState } from '@microsoft/signalr';
-import { api } from '@/utils/api';
+import { apiClients } from '@/utils/apiClients';
 import type { 
-  ArticleDto, 
+  ArticleDto,
+  ArticleSummaryDto,
   ArticleTypeDto, 
   ArticleVersionDto,
   FragmentDto,
@@ -743,8 +744,16 @@ const loadArticles = async (): Promise<void> => {
   ui.loading = true;
   ui.error = null;
   try {
-    const queryString = buildFilterQueryString();
-    articles.list = await api.get<ArticleSummaryDto[]>(`/api/articles/tree${queryString}`);
+    // Extract filter parameters for NSwag client
+    const query = filters.value.query.trim() || undefined;
+    const statuses = filters.value.statuses.length > 0 
+      ? filters.value.statuses as any as number[] 
+      : undefined;
+    const articleTypeIds = filters.value.articleTypeIds.length > 0 
+      ? filters.value.articleTypeIds 
+      : undefined;
+    
+    articles.list = await apiClients.articles.getTree(query, statuses, articleTypeIds);
     
     // Build indexes and caches - explicitly pass the loaded articles
     treeOps.buildArticleIndex(articles.list);
@@ -792,7 +801,7 @@ const selectArticle = async (article: ArticleSummaryDto, replaceState: boolean =
   }
 
   try {
-    const fullArticle = await api.get<ArticleDto>(`/api/articles/${article.id}`);
+    const fullArticle = await apiClients.articles.get(article.id!);
 
     if (articles.selectedId && signalr.connection && signalr.connection.state === HubConnectionState.Connected) {
       await signalr.connection.invoke('LeaveArticle', articles.selectedId);
@@ -932,7 +941,7 @@ const moveArticle = async (sourceArticleId: string, targetParentId: string): Pro
     callback: async (confirmed: boolean) => {
       if (confirmed) {
         try {
-          await api.put(`/api/articles/${sourceArticleId}/move`, {
+          await apiClients.articles.move(sourceArticleId, {
             newParentArticleId: targetParentId
           });
         } catch (err: any) {
@@ -957,8 +966,8 @@ const saveArticle = async (retryCount: number = 0): Promise<void> => {
 
   editor.isSaving = true;
   try {
-    const response = await api.put<ArticleUpdateContentRequest, any>(
-      `/api/articles/${articles.selected.id}/content`,
+    const response = await apiClients.articles.updateContent(
+      articles.selected.id!,
       { content: editor.content }
     );
 
@@ -1009,7 +1018,7 @@ const openVersionTab = async (version: ArticleVersionDto | string): Promise<void
   let versionDetails: ArticleVersionDto;
   if (typeof version === 'string') {
     try {
-      versionDetails = await api.get<ArticleVersionDto>(`/api/articles/${articles.selectedId}/versions/${version}`);
+      versionDetails = await apiClients.articles.getVersion(articles.selectedId!, version);
     } catch (err: any) {
       console.error('Error loading version details:', err);
       showToast('error', 'Failed to load version');
@@ -1049,7 +1058,7 @@ const handleVersionAccepted = async (response: { versionNumber?: number }): Prom
   // Reload the article to get the latest content
   if (articles.selectedId) {
     try {
-      const fullArticle = await api.get<ArticleDto>(`/api/articles/${articles.selectedId}`);
+      const fullArticle = await apiClients.articles.get(articles.selectedId);
       editor.content = fullArticle.content ?? '';
       articles.selected = fullArticle;
       
@@ -1076,10 +1085,10 @@ const loadDraftPlan = async (articleId: string | undefined): Promise<void> => {
   if (!articleId) return;
   
   try {
-    const response = await api.get<{ id?: string }>(`/api/articles/${articleId}/plans/active`);
+    const plan = await apiClients.plans.getActivePlan(articleId);
 
-    if (response && response.id) {
-      openPlanTab(response.id);
+    if (plan && plan.id) {
+      openPlanTab(plan.id);
     }
   } catch (err: any) {
     if (err.response && err.response.status === 204) {
@@ -1132,7 +1141,7 @@ const handleOpenFragment = async (fragmentId: string): Promise<void> => {
   if (!fragmentId) return;
 
   try {
-    const fragment = await api.get<FragmentDto>(`/api/fragments/${fragmentId}`);
+    const fragment = await apiClients.fragments.get(fragmentId);
     selectedFragment.value = fragment;
   } catch (err: any) {
     console.error('Error loading fragment:', err);
@@ -1144,7 +1153,7 @@ const handleOpenVersion = async (versionId: string): Promise<void> => {
   if (!versionId) return;
 
   try {
-    const version = await api.get<ArticleVersionDto>(`/api/articles/${articles.selectedId}/versions/${versionId}`);
+    const version = await apiClients.articles.getVersion(articles.selectedId!, versionId);
     openVersionTab(version);
   } catch (err: any) {
     console.error('Error loading version:', err);
