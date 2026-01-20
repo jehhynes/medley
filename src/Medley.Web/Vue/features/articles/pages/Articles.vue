@@ -56,8 +56,6 @@
             :articles="articles.list"
             :selected-id="articles.selectedId"
             :expanded-ids="articles.expandedIds"
-            :article-type-icon-map="articles.typeIconMap"
-            :article-types="articles.types"
             @select="selectArticle"
             @toggle-expand="toggleExpand"
             @create-child="showCreateArticleModal"
@@ -69,8 +67,6 @@
             v-cloak
             :articles="articles.list"
             :selected-id="articles.selectedId"
-            :article-type-icon-map="articles.typeIconMap"
-            :article-types="articles.types"
             @select="selectArticle"
             @edit-article="showEditArticleModal"
           ></article-list>
@@ -79,9 +75,6 @@
             v-cloak
             :articles="articles.list"
             :selected-id="articles.selectedId"
-            :article-type-icon-map="articles.typeIconMap"
-            :article-types="articles.types"
-            :current-user-id="currentUserId"
             @select="selectArticle"
             @edit-article="showEditArticleModal"
           ></my-work-list>
@@ -233,7 +226,7 @@
             <div class="mb-3 form-group-overlap">
               <select class="form-select" v-model="createModal.typeId">
                 <option :value="null" disabled>Select article type</option>
-                <option v-for="type in articles.types" :key="type.id" :value="type.id">
+                <option v-for="type in articleTypes" :key="type.id" :value="type.id">
                   {{ type.name }}
                 </option>
               </select>
@@ -273,7 +266,7 @@
             <div class="mb-3 form-group-overlap">
               <select class="form-select" v-model="editModal.typeId">
                 <option :value="null" disabled>Select article type</option>
-                <option v-for="type in articles.types" :key="type.id" :value="type.id">
+                <option v-for="type in articleTypes" :key="type.id" :value="type.id">
                   {{ type.name }}
                 </option>
               </select>
@@ -355,7 +348,7 @@
             <div class="mb-3">
               <label class="form-label fw-semibold">Article Type</label>
               <div class="row g-2">
-                <div v-for="type in articles.types" :key="type.id" class="col-6">
+                <div v-for="type in articleTypes" :key="type.id" class="col-6">
                   <div class="form-check">
                     <input class="form-check-input" type="checkbox" :checked="isArticleTypeSelected(type.id)" @change="toggleArticleTypeFilter(type.id)" :id="'type-' + type.id">
                     <label class="form-check-label" :for="'type-' + type.id">
@@ -386,17 +379,6 @@
 </template>
 
 <script setup lang="ts">
-/**
- * Articles Page - TypeScript Composition API Version
- * 
- * Main articles management page with:
- * - Tree/List/MyWork views
- * - Real-time SignalR updates  
- * - Article editing with TipTap
- * - Version history and comparison
- * - AI assistant integration
- * - Plan generation and viewing
- */
 
 import { ref, reactive, computed, provide, onMounted, onBeforeUnmount, nextTick, type Ref } from 'vue';
 import { useRouter } from 'vue-router';
@@ -405,7 +387,6 @@ import { apiClients } from '@/utils/apiClients';
 import type { 
   ArticleDto,
   ArticleSummaryDto,
-  ArticleTypeDto, 
   ArticleVersionDto,
   FragmentDto,
   ArticleUpdateContentRequest,
@@ -414,7 +395,6 @@ import type {
 import { 
   getStatusBadgeClass,
   formatDate,
-  getArticleTypes,
   showToast
 } from '@/utils/helpers';
 import { getUrlParam } from '@/utils/url';
@@ -430,6 +410,7 @@ import { useArticleModal } from '../composables/useArticleModal';
 import { useVersionViewer } from '../composables/useVersionViewer';
 import { useArticleSignalR } from '../composables/useArticleSignalR';
 import { useArticleFilter } from '../composables/useArticleFilter';
+import { useArticleTypes } from '../composables/useArticleTypes';
 
 // Components
 import FragmentModal from '../../sources/components/FragmentModal.vue';
@@ -459,9 +440,6 @@ interface ArticlesState {
   list: ArticleSummaryDto[];
   selected: ArticleSummaryDto | null;
   selectedId: string | null;
-  types: ArticleTypeDto[];
-  typeIconMap: Record<string, string>;
-  typeIndexMap: Record<string, ArticleTypeDto>;
   expandedIds: Set<string>;
   index: Map<string, ArticleDto>;
   parentPathCache: Map<string, ParentPathItem[]>;
@@ -488,15 +466,10 @@ interface UIState {
 
 interface VersionState {
   selected: ArticleVersionDto | null;
-  diffHtml: string | null;
-  loadingDiff: boolean;
-  diffError: string | null;
 }
 
 interface SignalRState {
   connection: ArticleHubConnection | null;
-  updateQueue: never[]; // Queue handled by useArticleSignalR composable
-  processing: boolean;
 }
 
 interface DragState {
@@ -565,9 +538,6 @@ const articles = reactive<ArticlesState>({
   list: [],
   selected: null,
   selectedId: null,
-  types: [],
-  typeIconMap: {},
-  typeIndexMap: {},
   expandedIds: new Set(),
   index: new Map(),
   parentPathCache: new Map()
@@ -600,17 +570,12 @@ const ui = reactive<UIState>({
 
 // Version state
 const version = reactive<VersionState>({
-  selected: null,
-  diffHtml: null,
-  loadingDiff: false,
-  diffError: null
+  selected: null
 });
 
 // SignalR state
 const signalr = reactive<SignalRState>({
-  connection: null,
-  updateQueue: [],
-  processing: false
+  connection: null
 });
 
 // Drag state
@@ -633,6 +598,9 @@ provide('dragState', dragState);
 // ============================================================================
 // COMPOSABLES
 // ============================================================================
+
+// Article types composable
+const { types: articleTypes, loadArticleTypes } = useArticleTypes();
 
 // My Work composable - call once at top level
 const { myWorkCount } = useMyWork(
@@ -763,24 +731,6 @@ const loadArticles = async (): Promise<void> => {
     console.error('Error loading articles:', err);
   } finally {
     ui.loading = false;
-  }
-};
-
-const loadArticleTypes = async (): Promise<void> => {
-  try {
-    articles.types = await getArticleTypes();
-
-    articles.typeIconMap = {};
-    articles.typeIndexMap = {};
-    articles.types.forEach(type => {
-      if (type.id) {
-        articles.typeIconMap[type.id] = type.icon || 'bi-file-text';
-        articles.typeIndexMap[type.id] = type;
-      }
-    });
-  } catch (err: any) {
-    console.error('Error loading article types:', err);
-    showToast('error', 'Failed to load article types');
   }
 };
 
