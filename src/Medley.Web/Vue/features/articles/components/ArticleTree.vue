@@ -77,13 +77,11 @@ import { useDropDown } from '@/composables/useDropDown';
 import { useArticleView } from '../composables/useArticleView';
 import type { ArticleDto, ArticleTypeDto } from '@/types/api-client';
 
-// Drag state interface
 interface DragState {
   draggingArticleId: string | null;
   dragOverId: string | null;
 }
 
-// Props interface
 interface Props {
   articles: ArticleDto[];
   selectedId: string | null;
@@ -100,7 +98,6 @@ const props = withDefaults(defineProps<Props>(), {
   articleTypes: () => []
 });
 
-// Emits interface
 interface Emits {
   (e: 'select', article: ArticleDto): void;
   (e: 'toggle-expand', articleId: string): void;
@@ -111,16 +108,13 @@ interface Emits {
 
 const emit = defineEmits<Emits>();
 
-// Inject drag state from parent
 const dragState = inject<DragState>('dragState', {
   draggingArticleId: null,
   dragOverId: null
 });
 
-// Use dropdown composable
 const { handleDropdownClick } = useDropDown();
 
-// Use article view composable
 const {
   selectArticle,
   getArticleIcon,
@@ -133,29 +127,21 @@ const {
   showUserTurnIndicator
 } = useArticleView(props, emit);
 
-// Component state
 const dragCounter = ref<number>(0);
 
-// Methods
-const toggleExpand = (articleId: string): void => {
+const toggleExpand = (articleId: string) => {
   emit('toggle-expand', articleId);
 };
 
-const isExpanded = (articleId: string): boolean => {
+const isExpanded = (articleId: string) => {
   return props.expandedIds.has(articleId);
 };
 
-const hasChildren = (article: ArticleDto): boolean => {
+const hasChildren = (article: ArticleDto) => {
   return !!(article.children && article.children.length > 0);
 };
 
-/**
- * Check if an article is of type "Index"
- * Index articles can accept other articles as children via drag and drop.
- * @param article - Article to check
- * @returns True if article is an Index type
- */
-const isIndexType = (article: ArticleDto): boolean => {
+const isIndexType = (article: ArticleDto) => {
   if (!article.articleTypeId) {
     return false;
   }
@@ -163,13 +149,7 @@ const isIndexType = (article: ArticleDto): boolean => {
   return !!(articleType && articleType.name?.toLowerCase() === 'index');
 };
 
-/**
- * Handle drag start event
- * Initiates article drag operation and stores dragging article ID in shared state.
- * @param event - DOM drag event
- * @param article - Article being dragged
- */
-const handleDragStart = (event: DragEvent, article: ArticleDto): void => {
+const handleDragStart = (event: DragEvent, article: ArticleDto) => {
   if (!article.id) return;
   
   dragState.draggingArticleId = article.id;
@@ -177,7 +157,6 @@ const handleDragStart = (event: DragEvent, article: ArticleDto): void => {
     event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.setData('text/plain', article.id);
 
-    // Add a semi-transparent drag image
     const target = event.target as HTMLElement;
     const dragImage = target.cloneNode(true) as HTMLElement;
     dragImage.style.opacity = '0.5';
@@ -185,21 +164,13 @@ const handleDragStart = (event: DragEvent, article: ArticleDto): void => {
   }
 };
 
-/**
- * Handle drag over event
- * Validates drop target (must be Index type, not self) and shows visual feedback.
- * @param event - DOM drag event
- * @param article - Article being dragged over (potential drop target)
- */
-const handleDragOver = (event: DragEvent, article: ArticleDto): void => {
+const handleDragOver = (event: DragEvent, article: ArticleDto) => {
   if (!article.id) return;
   
-  // Don't allow dropping on itself
   if (article.id === dragState.draggingArticleId) {
     return;
   }
 
-  // Only allow dropping on Index type articles
   if (!isIndexType(article)) {
     return;
   }
@@ -210,24 +181,20 @@ const handleDragOver = (event: DragEvent, article: ArticleDto): void => {
     event.dataTransfer.dropEffect = 'move';
   }
 
-  // Set drag over state
   if (dragState.dragOverId !== article.id) {
     dragState.dragOverId = article.id;
     dragCounter.value = 0;
   }
 };
 
-const handleDragLeave = (event: DragEvent, article: ArticleDto): void => {
+const handleDragLeave = (event: DragEvent, article: ArticleDto) => {
   if (!article.id) return;
   
-  // Only clear drag over state if we're actually leaving the element
-  // Use relatedTarget to check if we're entering a child element
   const target = event.currentTarget as HTMLElement;
   const rect = target.getBoundingClientRect();
   const x = event.clientX;
   const y = event.clientY;
 
-  // Check if the mouse is still within the bounds of the element
   if (x < rect.left || x >= rect.right || y < rect.top || y >= rect.bottom) {
     if (dragState.dragOverId === article.id) {
       dragState.dragOverId = null;
@@ -236,18 +203,10 @@ const handleDragLeave = (event: DragEvent, article: ArticleDto): void => {
   }
 };
 
-/**
- * Handle drop event
- * Completes the drag operation by emitting a move-article event to the parent.
- * Validates drop target and clears drag state.
- * @param event - DOM drop event
- * @param targetArticle - Article receiving the drop (new parent)
- */
-const handleDrop = (event: DragEvent, targetArticle: ArticleDto): void => {
+const handleDrop = (event: DragEvent, targetArticle: ArticleDto) => {
   event.preventDefault();
   event.stopPropagation();
 
-  // Clear drag state
   dragState.dragOverId = null;
   dragCounter.value = 0;
 
@@ -256,20 +215,17 @@ const handleDrop = (event: DragEvent, targetArticle: ArticleDto): void => {
     return;
   }
 
-  // Only allow dropping on Index type articles
   if (!isIndexType(targetArticle)) {
     dragState.draggingArticleId = null;
     return;
   }
 
-  // Emit the move event to parent
   emit('move-article', dragState.draggingArticleId, targetArticle.id);
 
   dragState.draggingArticleId = null;
 };
 
-const moveArticle = (sourceId: string, targetId: string): void => {
-  // Propagate the event up the tree
+const moveArticle = (sourceId: string, targetId: string) => {
   emit('move-article', sourceId, targetId);
 };
 </script>

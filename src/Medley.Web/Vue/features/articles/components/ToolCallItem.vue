@@ -74,13 +74,11 @@
 import { ref } from 'vue';
 import type { FragmentTitleDto } from '@/types/api-client';
 
-// Tool result interface
 interface ToolResult {
   ids?: string[];
   [key: string]: any;
 }
 
-// Tool interface
 interface Tool {
   name: string;
   display?: string;
@@ -89,14 +87,12 @@ interface Tool {
   result?: ToolResult;
 }
 
-// Props
 interface Props {
   tool: Tool;
 }
 
 const props = defineProps<Props>();
 
-// Emits
 interface Emits {
   (e: 'open-plan', planId: string): void;
   (e: 'open-fragment', fragmentId: string): void;
@@ -105,24 +101,18 @@ interface Emits {
 
 const emit = defineEmits<Emits>();
 
-// State
 const isExpanded = ref<boolean>(false);
 const fragments = ref<FragmentTitleDto[] | null>(null);
 
-// Methods
 function formatToolName(toolName: string): string {
   if (!toolName) return '';
   
-  // First, split on underscores
   let words = toolName.split('_');
   
-  // Then split each word on uppercase letters (PascalCase/camelCase)
   words = words.flatMap(word => {
-    // Insert space before uppercase letters and split
     return word.replace(/([A-Z])/g, ' $1').trim().split(/\s+/);
   });
   
-  // Capitalize first letter of each word
   return words
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
@@ -151,7 +141,6 @@ function getIdFromResult(result: ToolResult | undefined): string | null {
   if (!result) return null;
   
   try {
-    // Check if result has ids array and return first ID
     if (result.ids && Array.isArray(result.ids) && result.ids.length > 0) {
       return result.ids[0];
     }
@@ -170,21 +159,18 @@ function isMultiResultTool(toolName: string): boolean {
 async function toggleExpansion(): Promise<void> {
   isExpanded.value = !isExpanded.value;
   
-  // Load fragments if expanding and not already loaded
   if (isExpanded.value && fragments.value === null) {
     await loadFragments();
   }
 }
 
 async function loadFragments(): Promise<void> {
-  // If no result or no IDs, set empty array
   if (!props.tool.result || !props.tool.result.ids || props.tool.result.ids.length === 0) {
     fragments.value = [];
     return;
   }
 
   try {
-    // Use the new batch endpoint to load fragment titles
     const response = await fetch('/api/fragments/titles', {
       method: 'POST',
       headers: {

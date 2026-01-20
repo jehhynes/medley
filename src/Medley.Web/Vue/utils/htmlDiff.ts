@@ -1,549 +1,490 @@
-/**
- * HTML Diff utility for comparing HTML content
- * Ported from TypeScript: https://github.com/BenedicteGiraud/html-diff-js/blob/main/src/htmlDiff.ts
- * TypeScript version with full type safety
- */
+/*Adapted from https://github.com/BenedicteGiraud/html-diff-js/blob/main/src/htmlDiff.ts*/
 
-/**
- * Match result interface
- */
-interface Match {
-  startInBefore: number;
-  startInAfter: number;
-  length: number;
-  endInBefore: number;
-  endInAfter: number;
-}
-
-/**
- * Operation interface for diff operations
- */
-interface Operation {
-  action: 'equal' | 'insert' | 'delete' | 'replace';
-  startInBefore: number;
-  endInBefore?: number;
-  startInAfter: number;
-  endInAfter?: number;
-}
-
-/**
- * Type for operation action functions
- */
-type OperationAction = (op: Operation, beforeTokens: string[], afterTokens?: string[]) => string;
-
-/**
- * Check if character is end of tag
- */
-const isEndOfTag = (char: string): boolean => {
-  return char === '>';
+type OperationType = {
+    action: string;
+    startInBefore: number;
+    endInBefore: number | undefined;
+    startInAfter: number;
+    endInAfter: number | undefined;
 };
 
-/**
- * Check if character is start of tag
- */
-const isStartOfTag = (char: string): boolean => {
-  return char === '<';
+type MatchType = {
+    startInBefore: number;
+    startInAfter: number;
+    length: number;
+    endInBefore: number;
+    endInAfter: number;
 };
 
-/**
- * Check if character is whitespace
- */
-const isWhitespace = (char: string): boolean => {
-  return /^\s+$/.test(char);
+const isEndOfTag = (char: string) => {
+    return char === '>';
+};
+const isStartOfTag = (char: string) => {
+    return char === '<';
+};
+const isWhitespace = (char: string) => {
+    return /^\s+$/.test(char);
+};
+const isTag = (token: string) => {
+    return /^\s*<[^>]+>\s*$/.test(token);
+};
+const isntTag = (token: string) => {
+    return !isTag(token);
 };
 
-/**
- * Check if token is a tag
- */
-const isTag = (token: string): boolean => {
-  return /^\s*<[^>]+>\s*$/.test(token);
+const getMatch = (startInBefore1: number, startInAfter1: number, length1: number) => {
+    const endInBefore = startInBefore1 + length1 - 1;
+    const endInAfter = startInAfter1 + length1 - 1;
+    return {
+        startInBefore: startInBefore1,
+        startInAfter: startInAfter1,
+        length: length1,
+        endInBefore,
+        endInAfter,
+    };
 };
-
-/**
- * Check if token is not a tag
- */
-const isntTag = (token: string): boolean => {
-  return !isTag(token);
-};
-
-/**
- * Create a match object
- */
-const getMatch = (startInBefore1: number, startInAfter1: number, length1: number): Match => {
-  const endInBefore = startInBefore1 + length1 - 1;
-  const endInAfter = startInAfter1 + length1 - 1;
-  return {
-    startInBefore: startInBefore1,
-    startInAfter: startInAfter1,
-    length: length1,
-    endInBefore,
-    endInAfter,
-  };
-};
-
-/**
- * Convert HTML string to array of tokens
- */
-const htmlToTokens = (html: string): string[] => {
-  let mode: 'char' | 'tag' | 'whitespace' = 'char';
-  let currentWord = '';
-  const words: string[] = [];
-
-  for (let i = 0; i < html.length; i++) {
-    const char = html[i];
-    if (!char) continue; // Skip if undefined
-
-    switch (mode) {
-      case 'tag':
-        if (isEndOfTag(char)) {
-          currentWord += '>';
-          words.push(currentWord);
-          currentWord = '';
-          if (isWhitespace(char)) {
-            mode = 'whitespace';
-          } else {
-            mode = 'char';
-          }
-        } else {
-          currentWord += char;
+const htmlToTokens = (html: string) => {
+    let char, currentWord, i, len, mode;
+    mode = 'char';
+    currentWord = '';
+    const words = [];
+    for (i = 0, len = html.length; i < len; i++) {
+        char = html[i];
+        switch (mode) {
+            case 'tag':
+                if (isEndOfTag(char)) {
+                    currentWord += '>';
+                    words.push(currentWord);
+                    currentWord = '';
+                    if (isWhitespace(char)) {
+                        mode = 'whitespace';
+                    } else {
+                        mode = 'char';
+                    }
+                } else {
+                    currentWord += char;
+                }
+                break;
+            case 'char':
+                if (isStartOfTag(char)) {
+                    if (currentWord) {
+                        words.push(currentWord);
+                    }
+                    currentWord = '<';
+                    mode = 'tag';
+                } else if (/\s/.test(char)) {
+                    if (currentWord) {
+                        words.push(currentWord);
+                    }
+                    currentWord = char;
+                    mode = 'whitespace';
+                } else if (/[\w\\#@]+/i.test(char)) {
+                    currentWord += char;
+                } else {
+                    if (currentWord) {
+                        words.push(currentWord);
+                    }
+                    currentWord = char;
+                }
+                break;
+            case 'whitespace':
+                if (isStartOfTag(char)) {
+                    if (currentWord) {
+                        words.push(currentWord);
+                    }
+                    currentWord = '<';
+                    mode = 'tag';
+                } else if (isWhitespace(char)) {
+                    currentWord += char;
+                } else {
+                    if (currentWord) {
+                        words.push(currentWord);
+                    }
+                    currentWord = char;
+                    mode = 'char';
+                }
+                break;
+            default:
+                throw new Error(`Unknown mode ${mode}`);
         }
-        break;
-      case 'char':
-        if (isStartOfTag(char)) {
-          if (currentWord) {
-            words.push(currentWord);
-          }
-          currentWord = '<';
-          mode = 'tag';
-        } else if (/\s/.test(char)) {
-          if (currentWord) {
-            words.push(currentWord);
-          }
-          currentWord = char;
-          mode = 'whitespace';
-        } else if (/[\w\\#@]+/i.test(char)) {
-          currentWord += char;
-        } else {
-          if (currentWord) {
-            words.push(currentWord);
-          }
-          currentWord = char;
-        }
-        break;
-      case 'whitespace':
-        if (isStartOfTag(char)) {
-          if (currentWord) {
-            words.push(currentWord);
-          }
-          currentWord = '<';
-          mode = 'tag';
-        } else if (isWhitespace(char)) {
-          currentWord += char;
-        } else {
-          if (currentWord) {
-            words.push(currentWord);
-          }
-          currentWord = char;
-          mode = 'char';
-        }
-        break;
-      default:
-        throw new Error(`Unknown mode ${mode}`);
     }
-  }
-  if (currentWord) {
-    words.push(currentWord);
-  }
-  return words;
+    if (currentWord) {
+        words.push(currentWord);
+    }
+    return words;
 };
-
-/**
- * Find matching block between before and after tokens
- */
 const findMatch = (
-  beforeTokens: string[],
-  indexOfBeforeLocationsInAfterTokens: Record<string, number[]>,
-  startInBefore: number,
-  endInBefore: number,
-  startInAfter: number,
-  endInAfter: number,
-): Match | undefined => {
-  let bestMatchInBefore = startInBefore;
-  let bestMatchInAfter = startInAfter;
-  let bestMatchLength = 0;
-  let matchLengthAt: Record<number, number> = {};
-
-  for (let indexInBefore = startInBefore; indexInBefore < endInBefore; indexInBefore++) {
-    const newMatchLengthAt: Record<number, number> = {};
-    const lookingFor = beforeTokens[indexInBefore];
-    if (!lookingFor) continue; // Skip if undefined
-    const locationsInAfter = indexOfBeforeLocationsInAfterTokens[lookingFor] || [];
-
-    for (const indexInAfter of locationsInAfter) {
-      if (indexInAfter < startInAfter) {
-        continue;
-      }
-      if (indexInAfter >= endInAfter) {
-        break;
-      }
-      const newMatchLength = (matchLengthAt[indexInAfter - 1] || 0) + 1;
-      newMatchLengthAt[indexInAfter] = newMatchLength;
-      if (newMatchLength > bestMatchLength) {
-        bestMatchInBefore = indexInBefore - newMatchLength + 1;
-        bestMatchInAfter = indexInAfter - newMatchLength + 1;
-        bestMatchLength = newMatchLength;
-      }
+    beforeTokens: string[],
+    indexOfBeforeLocationsInAfterTokens: Record<string, number[]>,
+    startInBefore: number,
+    endInBefore: number,
+    startInAfter: number,
+    endInAfter: number,
+) => {
+    let bestMatchInAfter,
+        bestMatchInBefore,
+        bestMatchLength,
+        i,
+        indexInAfter,
+        indexInBefore,
+        j,
+        len,
+        locationsInAfter,
+        lookingFor,
+        match,
+        matchLengthAt,
+        newMatchLength,
+        newMatchLengthAt,
+        ref,
+        ref1;
+    bestMatchInBefore = startInBefore;
+    bestMatchInAfter = startInAfter;
+    bestMatchLength = 0;
+    matchLengthAt = {};
+    for (
+        indexInBefore = i = ref = startInBefore, ref1 = endInBefore;
+        ref <= ref1 ? i < ref1 : i > ref1;
+        indexInBefore = ref <= ref1 ? ++i : --i
+    ) {
+        newMatchLengthAt = {} as Record<number, number>;
+        lookingFor = beforeTokens[indexInBefore];
+        locationsInAfter = indexOfBeforeLocationsInAfterTokens[lookingFor];
+        for (j = 0, len = locationsInAfter.length; j < len; j++) {
+            indexInAfter = locationsInAfter[j];
+            if (indexInAfter < startInAfter) {
+                continue;
+            }
+            if (indexInAfter >= endInAfter) {
+                break;
+            }
+            if (matchLengthAt[indexInAfter - 1] == null) {
+                matchLengthAt[indexInAfter - 1] = 0;
+            }
+            newMatchLength = matchLengthAt[indexInAfter - 1] + 1;
+            newMatchLengthAt[indexInAfter] = newMatchLength;
+            if (newMatchLength > bestMatchLength) {
+                bestMatchInBefore = indexInBefore - newMatchLength + 1;
+                bestMatchInAfter = indexInAfter - newMatchLength + 1;
+                bestMatchLength = newMatchLength;
+            }
+        }
+        matchLengthAt = newMatchLengthAt;
     }
-    matchLengthAt = newMatchLengthAt;
-  }
-
-  if (bestMatchLength !== 0) {
-    return getMatch(bestMatchInBefore, bestMatchInAfter, bestMatchLength);
-  }
-  return undefined;
+    if (bestMatchLength !== 0) {
+        match = getMatch(bestMatchInBefore, bestMatchInAfter, bestMatchLength);
+    }
+    return match;
 };
-
-/**
- * Recursively find matching blocks
- */
 const recursivelyFindMatchingBlocks = (
-  beforeTokens: string[],
-  afterTokens: string[],
-  indexOfBeforeLocationsInAfterTokens: Record<string, number[]>,
-  startInBefore: number,
-  endInBefore: number,
-  startInAfter: number,
-  endInAfter: number,
-  matchingBlocks: Match[],
-): Match[] => {
-  const match = findMatch(
-    beforeTokens,
-    indexOfBeforeLocationsInAfterTokens,
-    startInBefore,
-    endInBefore,
-    startInAfter,
-    endInAfter,
-  );
-  if (match != null) {
-    if (startInBefore < match.startInBefore && startInAfter < match.startInAfter) {
-      recursivelyFindMatchingBlocks(
+    beforeTokens: string[],
+    afterTokens: string[],
+    indexOfBeforeLocationsInAfterTokens: Record<string, number[]>,
+    startInBefore: number,
+    endInBefore: number,
+    startInAfter: number,
+    endInAfter: number,
+    matchingBlocks: MatchType[],
+) => {
+    const match = findMatch(
         beforeTokens,
-        afterTokens,
         indexOfBeforeLocationsInAfterTokens,
         startInBefore,
-        match.startInBefore,
+        endInBefore,
         startInAfter,
-        match.startInAfter,
-        matchingBlocks,
-      );
+        endInAfter,
+    );
+    if (match != null) {
+        if (startInBefore < match.startInBefore && startInAfter < match.startInAfter) {
+            recursivelyFindMatchingBlocks(
+                beforeTokens,
+                afterTokens,
+                indexOfBeforeLocationsInAfterTokens,
+                startInBefore,
+                match.startInBefore,
+                startInAfter,
+                match.startInAfter,
+                matchingBlocks,
+            );
+        }
+        matchingBlocks.push(match);
+        if (match.endInBefore <= endInBefore && match.endInAfter <= endInAfter) {
+            recursivelyFindMatchingBlocks(
+                beforeTokens,
+                afterTokens,
+                indexOfBeforeLocationsInAfterTokens,
+                match.endInBefore + 1,
+                endInBefore,
+                match.endInAfter + 1,
+                endInAfter,
+                matchingBlocks,
+            );
+        }
     }
-    matchingBlocks.push(match);
-    if (match.endInBefore <= endInBefore && match.endInAfter <= endInAfter) {
-      recursivelyFindMatchingBlocks(
+    return matchingBlocks;
+};
+const createIndex = (findThese: string[], inThese: string[]) => {
+    let i, idx, len, token;
+    if (findThese == null) {
+        throw new Error('params must have findThese key');
+    }
+    if (inThese == null) {
+        throw new Error('params must have inThese key');
+    }
+    const index = {} as Record<string, number[]>;
+    const ref = findThese;
+    for (i = 0, len = ref.length; i < len; i++) {
+        token = ref[i];
+        index[token] = [];
+        idx = inThese.indexOf(token);
+        while (idx !== -1) {
+            index[token].push(idx);
+            idx = inThese.indexOf(token, idx + 1);
+        }
+    }
+    return index;
+};
+const findMatchingBlocks = (beforeTokens: string[], afterTokens: string[]) => {
+    const indexOfBeforeLocationsInAfterTokens = createIndex(beforeTokens, afterTokens);
+    return recursivelyFindMatchingBlocks(
         beforeTokens,
         afterTokens,
         indexOfBeforeLocationsInAfterTokens,
-        match.endInBefore + 1,
-        endInBefore,
-        match.endInAfter + 1,
-        endInAfter,
-        matchingBlocks,
-      );
-    }
-  }
-  return matchingBlocks;
+        0,
+        beforeTokens.length,
+        0,
+        afterTokens.length,
+        [],
+    );
 };
 
-/**
- * Create index of token locations
- */
-const createIndex = (findThese: string[], inThese: string[]): Record<string, number[]> => {
-  const index: Record<string, number[]> = {};
-  for (const token of findThese) {
-    index[token] = [];
-    let idx = inThese.indexOf(token);
-    while (idx !== -1) {
-      index[token].push(idx);
-      idx = inThese.indexOf(token, idx + 1);
+const calculateOperations = (beforeTokens: string[], afterTokens: string[]) => {
+    let actionUpToMatchPositions,
+        i,
+        index,
+        j,
+        lastOp,
+        len,
+        match,
+        matchStartsAtCurrentPositionInAfter,
+        matchStartsAtCurrentPositionInBefore,
+        op,
+        positionInAfter,
+        positionInBefore;
+    if (beforeTokens == null) {
+        throw new Error('beforeTokens?');
     }
-  }
-  return index;
-};
-
-/**
- * Find all matching blocks between before and after tokens
- */
-const findMatchingBlocks = (beforeTokens: string[], afterTokens: string[]): Match[] => {
-  const indexOfBeforeLocationsInAfterTokens = createIndex(beforeTokens, afterTokens);
-  return recursivelyFindMatchingBlocks(
-    beforeTokens,
-    afterTokens,
-    indexOfBeforeLocationsInAfterTokens,
-    0,
-    beforeTokens.length,
-    0,
-    afterTokens.length,
-    [],
-  );
-};
-
-/**
- * Calculate diff operations
- */
-const calculateOperations = (beforeTokens: string[], afterTokens: string[]): Operation[] => {
-  let positionInBefore = 0;
-  let positionInAfter = 0;
-  const operations: Operation[] = [];
-  const actionMap: Record<string, 'replace' | 'insert' | 'delete' | 'none'> = {
-    'false,false': 'replace',
-    'true,false': 'insert',
-    'false,true': 'delete',
-    'true,true': 'none',
-  };
-  const matches = findMatchingBlocks(beforeTokens, afterTokens);
-  matches.push(getMatch(beforeTokens.length, afterTokens.length, 0));
-
-  for (const match of matches) {
-    const matchStartsAtCurrentPositionInBefore = positionInBefore === match.startInBefore;
-    const matchStartsAtCurrentPositionInAfter = positionInAfter === match.startInAfter;
-    const actionUpToMatchPositions =
-      actionMap[`${matchStartsAtCurrentPositionInBefore},${matchStartsAtCurrentPositionInAfter}`];
-    if (actionUpToMatchPositions && actionUpToMatchPositions !== 'none') {
-      operations.push({
-        action: actionUpToMatchPositions,
-        startInBefore: positionInBefore,
-        endInBefore: actionUpToMatchPositions !== 'insert' ? match.startInBefore - 1 : undefined,
-        startInAfter: positionInAfter,
-        endInAfter: actionUpToMatchPositions !== 'delete' ? match.startInAfter - 1 : undefined,
-      });
+    if (afterTokens == null) {
+        throw new Error('afterTokens?');
     }
-    if (match.length !== 0) {
-      operations.push({
-        action: 'equal',
-        startInBefore: match.startInBefore,
-        endInBefore: match.endInBefore,
-        startInAfter: match.startInAfter,
-        endInAfter: match.endInAfter,
-      });
-    }
-    positionInBefore = match.endInBefore + 1;
-    positionInAfter = match.endInAfter + 1;
-  }
-
-  const postProcessed: Operation[] = [];
-  let lastOp: Operation = {
-    action: 'equal',
-    startInBefore: 0,
-    startInAfter: 0
-  };
-
-  const isSingleWhitespace = (op: Operation): boolean => {
-    if (op.action !== 'equal') {
-      return false;
-    }
-    if (op.endInBefore === undefined) return false;
-    if (op.endInBefore - op.startInBefore !== 0) {
-      return false;
-    }
-    const token = beforeTokens[op.startInBefore];
-    return token ? /^\s$/.test(token) : false;
-  };
-
-  const isWhitespaceOnly = (op: Operation): boolean => {
-    if (op.action === 'equal') {
-      return false;
-    }
-
-    let tokens: string[] = [];
-
-    if (op.action === 'delete' || op.action === 'replace') {
-      if (op.endInBefore !== undefined && op.endInBefore >= op.startInBefore) {
-        tokens = beforeTokens.slice(op.startInBefore, op.endInBefore + 1);
-      }
-    }
-
-    if (op.action === 'insert' || op.action === 'replace') {
-      if (op.endInAfter !== undefined && op.endInAfter >= op.startInAfter) {
-        const afterTokensSlice = afterTokens.slice(op.startInAfter, op.endInAfter + 1);
-        if (op.action === 'replace') {
-          tokens = tokens.concat(afterTokensSlice);
-        } else {
-          tokens = afterTokensSlice;
+    positionInBefore = positionInAfter = 0;
+    const operations = [];
+    const actionMap = {
+        'false,false': 'replace',
+        'true,false': 'insert',
+        'false,true': 'delete',
+        'true,true': 'none',
+    };
+    const matches = findMatchingBlocks(beforeTokens, afterTokens);
+    matches.push(getMatch(beforeTokens.length, afterTokens.length, 0));
+    for (index = i = 0, len = matches.length; i < len; index = ++i) {
+        match = matches[index];
+        matchStartsAtCurrentPositionInBefore = positionInBefore === match.startInBefore;
+        matchStartsAtCurrentPositionInAfter = positionInAfter === match.startInAfter;
+        actionUpToMatchPositions =
+            actionMap[`${matchStartsAtCurrentPositionInBefore},${matchStartsAtCurrentPositionInAfter}`];
+        if (actionUpToMatchPositions !== 'none') {
+            operations.push({
+                action: actionUpToMatchPositions,
+                startInBefore: positionInBefore,
+                endInBefore: actionUpToMatchPositions !== 'insert' ? match.startInBefore - 1 : undefined,
+                startInAfter: positionInAfter,
+                endInAfter: actionUpToMatchPositions !== 'delete' ? match.startInAfter - 1 : undefined,
+            });
         }
-      }
+        if (match.length !== 0) {
+            operations.push({
+                action: 'equal',
+                startInBefore: match.startInBefore,
+                endInBefore: match.endInBefore,
+                startInAfter: match.startInAfter,
+                endInAfter: match.endInAfter,
+            });
+        }
+        positionInBefore = match.endInBefore + 1;
+        positionInAfter = match.endInAfter + 1;
     }
-
-    if (tokens.length === 0) return false;
-
-    return tokens.every(token => /^\s+$/.test(token));
-  };
-
-  for (const op of operations) {
-    if (
-      (isSingleWhitespace(op) && lastOp.action === 'replace') ||
-      (op.action === 'replace' && lastOp.action === 'replace')
-    ) {
-      lastOp.endInBefore = op.endInBefore;
-      lastOp.endInAfter = op.endInAfter;
-    } else if (isWhitespaceOnly(op)) {
-      continue;
-    } else {
-      postProcessed.push(op);
-      lastOp = op;
+    const postProcessed = [];
+    lastOp = {
+        action: 'none',
+    };
+    const isSingleWhitespace = (op: OperationType) => {
+        if (op.action !== 'equal') {
+            return false;
+        }
+        if (op.endInBefore === undefined) return false;
+        if (op.endInBefore - op.startInBefore !== 0) {
+            return false;
+        }
+        return /^\s$/.test(beforeTokens[op.startInBefore]);
+    };
+    const isWhitespaceOnly = (op: OperationType) => {
+        if (op.action === 'equal') {
+            return false;
+        }
+        
+        let tokens: string[] = [];
+        
+        if (op.action === 'delete' || op.action === 'replace') {
+            if (op.endInBefore !== undefined && op.endInBefore >= op.startInBefore) {
+                tokens = beforeTokens.slice(op.startInBefore, op.endInBefore + 1);
+            }
+        }
+        
+        if (op.action === 'insert' || op.action === 'replace') {
+            if (op.endInAfter !== undefined && op.endInAfter >= op.startInAfter) {
+                const afterTokensSlice = afterTokens.slice(op.startInAfter, op.endInAfter + 1);
+                if (op.action === 'replace') {
+                    tokens = tokens.concat(afterTokensSlice);
+                } else {
+                    tokens = afterTokensSlice;
+                }
+            }
+        }
+        
+        if (tokens.length === 0) return false;
+        
+        return tokens.every(token => /^\s+$/.test(token));
+    };
+    for (j = 0; j < operations.length; j++) {
+        op = operations[j];
+        if (
+            (isSingleWhitespace(op) && lastOp.action === 'replace') ||
+            (op.action === 'replace' && lastOp.action === 'replace')
+        ) {
+            lastOp.endInBefore = op.endInBefore;
+            lastOp.endInAfter = op.endInAfter;
+        } else if (isWhitespaceOnly(op)) {
+            continue;
+        } else {
+            postProcessed.push(op);
+            lastOp = op;
+        }
     }
-  }
-  return postProcessed;
+    return postProcessed;
 };
-
-/**
- * Get consecutive tokens matching predicate
- */
-const consecutiveWhere = (
-  start: number,
-  content: string[],
-  predicate: (token: string) => boolean
-): string[] => {
-  const sliced = content.slice(start);
-  let lastMatchingIndex: number | undefined;
-  for (let index = 0; index < sliced.length; index++) {
-    const token = sliced[index];
-    if (!token) continue; // Skip if undefined
-    const answer = predicate(token);
-    if (answer === true) {
-      lastMatchingIndex = index;
+const consecutiveWhere = (start: number, content: string[], predicate: (token: string) => boolean) => {
+    let answer, i, index, lastMatchingIndex, len, token;
+    content = content.slice(start, +content.length + 1 || 9e9);
+    lastMatchingIndex = void 0;
+    for (index = i = 0, len = content.length; i < len; index = ++i) {
+        token = content[index];
+        answer = predicate(token);
+        if (answer === true) {
+            lastMatchingIndex = index;
+        }
+        if (answer === false) {
+            break;
+        }
     }
-    if (answer === false) {
-      break;
+    if (lastMatchingIndex != null) {
+        return content.slice(0, +lastMatchingIndex + 1 || 9e9);
     }
-  }
-  if (lastMatchingIndex != null) {
-    return sliced.slice(0, lastMatchingIndex + 1);
-  }
-  return [];
+    return [];
 };
-
-/**
- * Wrap content in HTML tag
- */
-const wrap = (tag: string, content: string[]): string => {
-  let rendering = '';
-  let position = 0;
-  const length = content.length;
-
-  while (position < length) {
-    const nonTags = consecutiveWhere(position, content, isntTag);
-    position += nonTags.length;
-    if (nonTags.length !== 0) {
-      const joinedNonTags = nonTags.join('');
-      if (/^\s+$/.test(joinedNonTags)) {
-        rendering += joinedNonTags;
-      } else {
-        rendering += `<${tag}>${joinedNonTags}</${tag}>`;
-      }
+const wrap = (tag: string, content: string[]) => {
+    let nonTags, position, rendering, tags;
+    rendering = '';
+    position = 0;
+    const length = content.length;
+    let whileCondition = true;
+    while (whileCondition) {
+        if (position >= length) {
+            whileCondition = false;
+            break;
+        }
+        nonTags = consecutiveWhere(position, content, isntTag);
+        position += nonTags.length;
+        if (nonTags.length !== 0) {
+            const joinedNonTags = nonTags.join('');
+            if (/^\s+$/.test(joinedNonTags)) {
+                rendering += joinedNonTags;
+            } else {
+                rendering += `<${tag}>${joinedNonTags}</${tag}>`;
+            }
+        }
+        if (position >= length) {
+            whileCondition = false;
+            break;
+        }
+        tags = consecutiveWhere(position, content, isTag);
+        position += tags.length;
+        rendering += tags.join('');
     }
-    if (position >= length) {
-      break;
+    return rendering;
+};
+
+const equalAction = (op: OperationType, beforeTokens: string[]) => {
+    return beforeTokens.slice(op.startInBefore, op.endInBefore === undefined ? 9e9 : op.endInBefore + 1).join('');
+};
+const insertAction = (op: OperationType, _beforeTokens: string[], afterTokens: string[]) => {
+    const val = afterTokens.slice(op.startInAfter, op.endInAfter === undefined ? 9e9 : op.endInAfter + 1);
+    const joined = val.join('');
+    if (/^\s+$/.test(joined)) {
+        return '';
     }
-    const tags = consecutiveWhere(position, content, isTag);
-    position += tags.length;
-    rendering += tags.join('');
-  }
-  return rendering;
+    return wrap('ins', val);
+};
+const deleteAction = (op: OperationType, beforeTokens: string[]) => {
+    const val = beforeTokens.slice(op.startInBefore, op.endInBefore === undefined ? 9e9 : op.endInBefore + 1);
+    const joined = val.join('');
+    if (/^\s+$/.test(joined)) {
+        return '';
+    }
+    return wrap('del', val);
+};
+const replaceAction = (op: OperationType, beforeTokens: string[], afterTokens: string[]) => {
+    return deleteAction(op, beforeTokens) + insertAction(op, beforeTokens, afterTokens);
 };
 
-/**
- * Render equal operation
- */
-const equalAction: OperationAction = (op, beforeTokens) => {
-  return beforeTokens.slice(op.startInBefore, op.endInBefore === undefined ? undefined : op.endInBefore + 1).join('');
+const getOpMap = (action: string) => {
+    switch (action) {
+        case 'equal':
+            return equalAction;
+        case 'insert':
+            return insertAction;
+        case 'delete':
+            return deleteAction;
+        case 'replace':
+            return replaceAction;
+        default:
+            throw new Error(`Unknown action ${action}`);
+    }
 };
 
-/**
- * Render insert operation
- */
-const insertAction: OperationAction = (op, _beforeTokens, afterTokens) => {
-  if (!afterTokens) return '';
-  const val = afterTokens.slice(op.startInAfter, op.endInAfter === undefined ? undefined : op.endInAfter + 1);
-  const joined = val.join('');
-  if (/^\s+$/.test(joined)) {
-    return '';
-  }
-  return wrap('ins', val);
+const renderOperations = (beforeTokens: string[], afterTokens: string[], operations: OperationType[]) => {
+    let i, len, op, rendering;
+    rendering = '';
+    for (i = 0, len = operations.length; i < len; i++) {
+        op = operations[i];
+        rendering += getOpMap(op.action)(op, beforeTokens, afterTokens);
+    }
+    return rendering;
 };
 
-/**
- * Render delete operation
- */
-const deleteAction: OperationAction = (op, beforeTokens) => {
-  const val = beforeTokens.slice(op.startInBefore, op.endInBefore === undefined ? undefined : op.endInBefore + 1);
-  const joined = val.join('');
-  if (/^\s+$/.test(joined)) {
-    return '';
-  }
-  return wrap('del', val);
+export const removeTagAttributes = (html: string) => {
+    return html.replace(/<[^>]+>/g, (tag) => {
+        return tag.replace(/ [^=]+="[^"]+"/g, '');
+    });
 };
 
-/**
- * Render replace operation
- */
-const replaceAction: OperationAction = (op, beforeTokens, afterTokens) => {
-  return deleteAction(op, beforeTokens) + insertAction(op, beforeTokens, afterTokens);
-};
-
-/**
- * Get operation action function
- */
-const getOpMap = (action: Operation['action']): OperationAction => {
-  switch (action) {
-    case 'equal':
-      return equalAction;
-    case 'insert':
-      return insertAction;
-    case 'delete':
-      return deleteAction;
-    case 'replace':
-      return replaceAction;
-    default:
-      throw new Error(`Unknown action ${action}`);
-  }
-};
-
-/**
- * Render all operations
- */
-const renderOperations = (beforeTokens: string[], afterTokens: string[], operations: Operation[]): string => {
-  let rendering = '';
-  for (const op of operations) {
-    rendering += getOpMap(op.action)(op, beforeTokens, afterTokens);
-  }
-  return rendering;
-};
-
-/**
- * Remove all attributes from HTML tags
- * @param html - HTML string
- * @returns HTML with attributes removed
- */
-export const removeTagAttributes = (html: string): string => {
-  return html.replace(/<[^>]+>/g, (tag) => {
-    return tag.replace(/ [^=]+="[^"]+"/g, '');
-  });
-};
-
-/**
- * Generate HTML diff between two HTML strings
- * @param before - Original HTML
- * @param after - Modified HTML
- * @returns HTML with <ins> and <del> tags showing differences
- */
-export const htmlDiff = (before: string, after: string): string => {
-  const beforeWithoutAttributes = removeTagAttributes(before);
-  const afterWithoutAttributes = removeTagAttributes(after);
-  if (beforeWithoutAttributes === afterWithoutAttributes) {
-    return before;
-  }
-  const beforeTokens = htmlToTokens(beforeWithoutAttributes);
-  const afterTokens = htmlToTokens(afterWithoutAttributes);
-  const opsTokens = calculateOperations(beforeTokens, afterTokens);
-  return renderOperations(beforeTokens, afterTokens, opsTokens);
+export const htmlDiff = (before: string, after: string) => {
+    const beforeWithoutAttributes = removeTagAttributes(before);
+    const afterWithoutAttributes = removeTagAttributes(after);
+    if (beforeWithoutAttributes === afterWithoutAttributes) {
+        return before;
+    }
+    const beforeTokens = htmlToTokens(beforeWithoutAttributes);
+    const afterTokens = htmlToTokens(afterWithoutAttributes);
+    const opsTokens = calculateOperations(beforeTokens, afterTokens);
+    return renderOperations(beforeTokens, afterTokens, opsTokens);
 };
