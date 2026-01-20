@@ -59,7 +59,6 @@ public class PlanApiController : ControllerBase
     /// </summary>
     [HttpGet("active")]
     [ProducesResponseType(typeof(PlanDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<PlanDto>> GetActivePlan(Guid articleId)
     {
@@ -80,7 +79,7 @@ public class PlanApiController : ControllerBase
 
         if (plan == null)
         {
-            return NoContent();
+            return Ok(null);
         }
 
         return Ok(MapPlanToDto(plan));
