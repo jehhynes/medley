@@ -17,14 +17,13 @@ export class ArticleChatApiClient {
         this.baseUrl = baseUrl ?? "";
     }
 
-    getConversation(articleId: string, conversationId: string | null): Promise<ConversationDto> {
-        let url_ = this.baseUrl + "/api/articles/{articleId}/assistant/conversation/{conversationId}";
+    getConversation(articleId: string, conversationId?: string | null | undefined): Promise<ConversationDto> {
+        let url_ = this.baseUrl + "/api/articles/{articleId}/assistant/conversation?";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
         url_ = url_.replace("{articleId}", encodeURIComponent("" + articleId));
-        if (conversationId === undefined || conversationId === null)
-            throw new globalThis.Error("The parameter 'conversationId' must be defined.");
-        url_ = url_.replace("{conversationId}", encodeURIComponent("" + conversationId));
+        if (conversationId !== undefined && conversationId !== null)
+            url_ += "conversationId=" + encodeURIComponent("" + conversationId) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: RequestInit = {
