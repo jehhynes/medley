@@ -275,6 +275,7 @@ import {
   getConfidenceColor,
   getArticleTypes 
 } from '@/utils/helpers';
+import { apiClients } from '@/utils/apiClients';
 import type { FragmentDto, UserRef } from '@/types/api-client';
 
 // Declare global types
@@ -393,25 +394,16 @@ async function loadPlan(): Promise<void> {
 
   try {
     // Load all plans for version dropdown
-    const plansResponse = await fetch(`/api/articles/${props.articleId}/plans`);
-    if (plansResponse.ok) {
-      allPlans.value = await plansResponse.json();
-    }
+    allPlans.value = await apiClients.plans.getAllPlans(props.articleId);
 
     // Load active plan
-    const response = await fetch(`/api/articles/${props.articleId}/plans/active`);
-    
-    if (response.status === 204) {
+    try {
+      plan.value = await apiClients.plans.getActivePlan(props.articleId);
+      planInstructions.value = plan.value.instructions || '';
+    } catch (err: any) {
       error.value = 'No active plan found';
       return;
     }
-
-    if (!response.ok) {
-      throw new Error('Failed to load plan');
-    }
-
-    plan.value = await response.json();
-    planInstructions.value = plan.value.instructions || '';
     
     // Auto-expand textareas after plan loads
     nextTick(() => {
@@ -434,13 +426,7 @@ async function loadSpecificPlan(planId: string): Promise<void> {
   error.value = null;
 
   try {
-    const response = await fetch(`/api/articles/${props.articleId}/plans/${planId}`);
-    
-    if (!response.ok) {
-      throw new Error('Failed to load plan');
-    }
-
-    plan.value = await response.json();
+    plan.value = await apiClients.plans.getPlan(props.articleId, planId);
     planInstructions.value = plan.value.instructions || '';
     
     // Auto-expand textareas after plan loads
@@ -498,13 +484,7 @@ async function restorePlan(): Promise<void> {
       if (result) {
         isRestoringPlan.value = true;
         try {
-          const response = await fetch(`/api/articles/${props.articleId}/plans/${plan.value!.id}/restore`, {
-            method: 'POST'
-          });
-
-          if (!response.ok) {
-            throw new Error('Failed to restore plan');
-          }
+          await apiClients.plans.restorePlan(props.articleId, plan.value!.id);
 
           // Reload all plans and show the restored one
           await loadPlan();
@@ -524,19 +504,9 @@ async function savePlan(): Promise<void> {
 
   isSaving.value = true;
   try {
-    const response = await fetch(`/api/articles/${props.articleId}/plans/${plan.value.id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        instructions: planInstructions.value
-      })
+    await apiClients.plans.updatePlan(props.articleId, plan.value.id, {
+      instructions: planInstructions.value
     });
-
-    if (!response.ok) {
-      throw new Error('Failed to save plan');
-    }
 
     // Update the local plan object
     plan.value.instructions = planInstructions.value;
@@ -568,16 +538,7 @@ async function acceptPlan(): Promise<void> {
       if (result) {
         isSaving.value = true;
         try {
-          const response = await fetch(`/api/articles/${props.articleId}/plans/${plan.value!.id}/accept`, {
-            method: 'POST'
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to accept plan');
-          }
-
-          const data = await response.json();
+          const data = await apiClients.plans.acceptPlan(props.articleId, plan.value!.id);
           
           // Emit event to load the new conversation in the chat panel
           if (data.conversationId) {
@@ -614,14 +575,7 @@ async function rejectPlan(): Promise<void> {
       if (result) {
         isSaving.value = true;
         try {
-          const response = await fetch(`/api/articles/${props.articleId}/plans/${plan.value!.id}/reject`, {
-            method: 'POST'
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to reject plan');
-          }
+          await apiClients.plans.rejectPlan(props.articleId, plan.value!.id);
 
           // Close the plan tab after successful rejection
           emit('close-plan');
@@ -649,19 +603,12 @@ async function updateFragmentInclude(planFragment: PlanFragmentDto): Promise<voi
 
   savingFragments.value.add(planFragment.fragmentId);
   try {
-    const response = await fetch(`/api/articles/${props.articleId}/plans/${plan.value!.id}/fragments/${planFragment.fragmentId}/include`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        include: planFragment.include
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to update fragment');
-    }
+    await apiClients.plans.updatePlanFragmentInclude(
+      props.articleId,
+      plan.value!.id,
+      planFragment.fragmentId,
+      { include: planFragment.include }
+    );
   } catch (err: any) {
     console.error('Error updating fragment:', err);
     error.value = 'Failed to update fragment: ' + err.message;
@@ -682,19 +629,12 @@ async function updateFragmentInstructions(planFragment: PlanFragmentDto): Promis
 
   savingFragments.value.add(planFragment.fragmentId);
   try {
-    const response = await fetch(`/api/articles/${props.articleId}/plans/${plan.value!.id}/fragments/${planFragment.fragmentId}/instructions`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        instructions: planFragment.instructions
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to update instructions');
-    }
+    await apiClients.plans.updatePlanFragmentInstructions(
+      props.articleId,
+      plan.value!.id,
+      planFragment.fragmentId,
+      { instructions: planFragment.instructions }
+    );
   } catch (err: any) {
     console.error('Error updating instructions:', err);
     error.value = 'Failed to update instructions: ' + err.message;

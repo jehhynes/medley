@@ -72,6 +72,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { apiClients } from '@/utils/apiClients';
 import type { FragmentTitleDto } from '@/types/api-client';
 
 interface ToolResult {
@@ -171,19 +172,7 @@ async function loadFragments(): Promise<void> {
   }
 
   try {
-    const response = await fetch('/api/fragments/titles', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(props.tool.result.ids)
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to load fragment titles');
-    }
-
-    fragments.value = await response.json();
+    fragments.value = await apiClients.fragments.getTitles(props.tool.result.ids);
   } catch (err) {
     console.error('Error loading tool fragments:', err);
     fragments.value = [];

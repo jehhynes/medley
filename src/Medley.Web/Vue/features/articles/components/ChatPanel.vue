@@ -29,7 +29,7 @@
 
         <template v-for="(msg, index) in messages" :key="msg.id">
           <!-- User message -->
-          <div v-if="msg.role === 'user'" 
+          <div v-if="msg.role === 'User'" 
                class="chat-message chat-message-user">
             <div class="chat-message-header">
               <span class="chat-message-author">{{ msg.userName }}</span>
@@ -154,6 +154,7 @@ import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue';
 import * as signalR from '@microsoft/signalr';
 import ToolCallItem from './ToolCallItem.vue';
 import { formatRelativeTime } from '@/utils/helpers';
+import { apiClients } from '@/utils/apiClients';
 import type { HubConnection } from '@microsoft/signalr';
 import { ConversationMode } from '@/types/api-client';
 import type {
@@ -303,40 +304,28 @@ async function loadConversation(conversationIdParam: string | null = null): Prom
   error.value = null;
 
   try {
-    const url = conversationIdParam
-      ? `/api/articles/${props.articleId}/assistant/conversation/${conversationIdParam}`
-      : `/api/articles/${props.articleId}/assistant/conversation`;
-
-    const response = await fetch(url);
-
-    if (response.status === 204) {
-      if (!conversationIdParam) {
+    if (conversationIdParam) {
+      // Load specific conversation
+      const conversation = await apiClients.articleChat.getConversation(props.articleId, conversationIdParam);
+      conversationId.value = conversation.id;
+      mode.value = conversation.mode || ConversationMode.Agent;
+      implementingPlanId.value = conversation.implementingPlanId || null;
+      implementingPlanVersion.value = conversation.implementingPlanVersion || null;
+    } else {
+      // Load or create default conversation
+      try {
+        const conversation = await apiClients.articleChat.getConversation(props.articleId, null as any);
+        conversationId.value = conversation.id;
+        mode.value = conversation.mode || ConversationMode.Agent;
+        implementingPlanId.value = conversation.implementingPlanId || null;
+        implementingPlanVersion.value = conversation.implementingPlanVersion || null;
+      } catch (err: any) {
+        // No conversation exists yet
         conversationId.value = null;
         messages.value = [];
         return;
       }
-      throw new Error('Conversation not found');
     }
-
-    if (response.status === 404) {
-      if (conversationIdParam) {
-        error.value = 'Conversation not found';
-        return;
-      }
-      conversationId.value = null;
-      messages.value = [];
-      return;
-    }
-
-    if (!response.ok) {
-      throw new Error('Failed to load conversation');
-    }
-
-    const conversation: Conversation = await response.json();
-    conversationId.value = conversation.id;
-    mode.value = conversation.mode || ConversationMode.Agent;
-    implementingPlanId.value = conversation.implementingPlanId || null;
-    implementingPlanVersion.value = conversation.implementingPlanVersion || null;
 
     await loadMessages();
   } catch (err) {
@@ -356,21 +345,13 @@ async function loadMessages(): Promise<void> {
   if (!conversationId.value) return;
 
   try {
-    const response = await fetch(
-      `/api/articles/${props.articleId}/assistant/conversations/${conversationId.value}/messages`
-    );
+    messages.value = await apiClients.articleChat.getMessages(props.articleId!, conversationId.value);
 
-    if (response.ok) {
-      messages.value = await response.json();
-
-      if (messages.value.length > 0) {
-        const lastMessage = messages.value[messages.value.length - 1];
-        if (lastMessage && lastMessage.role === 'user') {
-          isAiTurn.value = true;
-        }
+    if (messages.value.length > 0) {
+      const lastMessage = messages.value[messages.value.length - 1];
+      if (lastMessage && lastMessage.role === 'User') {
+        isAiTurn.value = true;
       }
-    } else {
-      throw new Error('Failed to load messages');
     }
   } catch (err) {
     console.error('Error loading messages:', err);
@@ -387,37 +368,14 @@ async function sendMessage(): Promise<void> {
 
   try {
     if (!conversationId.value) {
-      const createResponse = await fetch(
-        `/api/articles/${props.articleId}/assistant/conversation?mode=${mode.value}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
-        }
-      );
-
-      if (!createResponse.ok) {
-        throw new Error('Failed to create conversation');
-      }
-
-      const conversation: Conversation = await createResponse.json();
+      const conversation = await apiClients.articleChat.createConversation(props.articleId!, mode.value);
       conversationId.value = conversation.id;
     }
 
-    const response = await fetch(
-      `/api/articles/${props.articleId}/assistant/conversations/${conversationId.value}/messages`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: messageText,
-          mode: mode.value
-        })
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error('Failed to send message');
-    }
+    await apiClients.articleChat.sendMessage(props.articleId!, conversationId.value, {
+      message: messageText,
+      mode: mode.value
+    });
 
     isAiTurn.value = true;
     nextTick(() => scrollToBottom());
