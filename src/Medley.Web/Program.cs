@@ -37,7 +37,12 @@ public partial class Program
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
             // Add SignalR
-            builder.Services.AddSignalR();
+            builder.Services.AddSignalR()
+                .AddJsonProtocol(options =>
+                {
+                    // Serialize enums as strings instead of integers for better client compatibility
+                    options.PayloadSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+                });
 
             // Add HttpContextAccessor for accessing HttpContext in services
             builder.Services.AddHttpContextAccessor();

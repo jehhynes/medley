@@ -1,3 +1,5 @@
+using Medley.Domain.Enums;
+
 namespace Medley.Application.Hubs.Clients;
 
 /// <summary>
@@ -5,10 +7,10 @@ namespace Medley.Application.Hubs.Clients;
 /// </summary>
 public record ArticleCreatedPayload
 {
-    public required string ArticleId { get; init; }
+    public required Guid ArticleId { get; init; }
     public required string Title { get; init; }
-    public string? ParentArticleId { get; init; }
-    public string? ArticleTypeId { get; init; }
+    public Guid? ParentArticleId { get; init; }
+    public Guid? ArticleTypeId { get; init; }
     public required DateTimeOffset Timestamp { get; init; }
 }
 
@@ -17,9 +19,9 @@ public record ArticleCreatedPayload
 /// </summary>
 public record ArticleUpdatedPayload
 {
-    public required string ArticleId { get; init; }
+    public required Guid ArticleId { get; init; }
     public required string Title { get; init; }
-    public string? ArticleTypeId { get; init; }
+    public Guid? ArticleTypeId { get; init; }
     public required DateTimeOffset Timestamp { get; init; }
 }
 
@@ -28,7 +30,7 @@ public record ArticleUpdatedPayload
 /// </summary>
 public record ArticleDeletedPayload
 {
-    public required string ArticleId { get; init; }
+    public required Guid ArticleId { get; init; }
     public required DateTimeOffset Timestamp { get; init; }
 }
 
@@ -37,9 +39,9 @@ public record ArticleDeletedPayload
 /// </summary>
 public record ArticleMovedPayload
 {
-    public required string ArticleId { get; init; }
-    public string? OldParentId { get; init; }
-    public string? NewParentId { get; init; }
+    public required Guid ArticleId { get; init; }
+    public Guid? OldParentId { get; init; }
+    public Guid? NewParentId { get; init; }
     public required DateTimeOffset Timestamp { get; init; }
 }
 
@@ -48,8 +50,8 @@ public record ArticleMovedPayload
 /// </summary>
 public record ArticleAssignmentChangedPayload
 {
-    public required string ArticleId { get; init; }
-    public string? UserId { get; init; }
+    public required Guid ArticleId { get; init; }
+    public Guid? UserId { get; init; }
     public string? UserName { get; init; }
     public string? UserInitials { get; init; }
     public string? UserColor { get; init; }
@@ -61,8 +63,8 @@ public record ArticleAssignmentChangedPayload
 /// </summary>
 public record VersionCreatedPayload
 {
-    public required string ArticleId { get; init; }
-    public required string VersionId { get; init; }
+    public required Guid ArticleId { get; init; }
+    public required Guid VersionId { get; init; }
     public required string VersionNumber { get; init; }
     public required DateTimeOffset CreatedAt { get; init; }
 }
@@ -72,8 +74,8 @@ public record VersionCreatedPayload
 /// </summary>
 public record PlanGeneratedPayload
 {
-    public required string ArticleId { get; init; }
-    public required string PlanId { get; init; }
+    public required Guid ArticleId { get; init; }
+    public required Guid PlanId { get; init; }
     public required DateTimeOffset Timestamp { get; init; }
 }
 
@@ -82,8 +84,8 @@ public record PlanGeneratedPayload
 /// </summary>
 public record ArticleVersionCreatedPayload
 {
-    public required string ArticleId { get; init; }
-    public required string VersionId { get; init; }
+    public required Guid ArticleId { get; init; }
+    public required Guid VersionId { get; init; }
     public required string VersionNumber { get; init; }
     public required DateTimeOffset Timestamp { get; init; }
 }
@@ -93,8 +95,8 @@ public record ArticleVersionCreatedPayload
 /// </summary>
 public record ChatTurnStartedPayload
 {
-    public required string ConversationId { get; init; }
-    public required string ArticleId { get; init; }
+    public required Guid ConversationId { get; init; }
+    public required Guid ArticleId { get; init; }
 }
 
 /// <summary>
@@ -102,8 +104,8 @@ public record ChatTurnStartedPayload
 /// </summary>
 public record ChatTurnCompletePayload
 {
-    public required string ConversationId { get; init; }
-    public required string ArticleId { get; init; }
+    public required Guid ConversationId { get; init; }
+    public required Guid ArticleId { get; init; }
 }
 
 /// <summary>
@@ -111,15 +113,16 @@ public record ChatTurnCompletePayload
 /// </summary>
 public record ChatMessageStreamingPayload
 {
-    public required string ConversationId { get; init; }
-    public required string ArticleId { get; init; }
+    public required Guid ConversationId { get; init; }
+    public required Guid ArticleId { get; init; }
+    public required ChatMessageRole Role { get; init; }
     public string? Text { get; init; }
     public string? ToolName { get; init; }
     public string? ToolCallId { get; init; }
     public string? ToolDisplay { get; init; }
-    public string[]? ToolResultIds { get; init; }
+    public Guid[]? ToolResultIds { get; init; }
     public bool? IsError { get; init; }
-    public string? MessageId { get; init; }
+    public Guid? MessageId { get; init; }
     public required DateTimeOffset Timestamp { get; init; }
 }
 
@@ -128,8 +131,8 @@ public record ChatMessageStreamingPayload
 /// </summary>
 public record ChatToolInvokedPayload
 {
-    public required string ConversationId { get; init; }
-    public required string ArticleId { get; init; }
+    public required Guid ConversationId { get; init; }
+    public required Guid ArticleId { get; init; }
     public required string ToolName { get; init; }
     public required string ToolCallId { get; init; }
     public string? ToolDisplay { get; init; }
@@ -141,10 +144,10 @@ public record ChatToolInvokedPayload
 /// </summary>
 public record ChatToolCompletedPayload
 {
-    public required string ConversationId { get; init; }
-    public required string ArticleId { get; init; }
+    public required Guid ConversationId { get; init; }
+    public required Guid ArticleId { get; init; }
     public required string ToolCallId { get; init; }
-    public string[]? ToolResultIds { get; init; }
+    public Guid[]? ToolResultIds { get; init; }
     public required DateTimeOffset Timestamp { get; init; }
 }
 
@@ -153,9 +156,10 @@ public record ChatToolCompletedPayload
 /// </summary>
 public record ChatMessageCompletePayload
 {
-    public required string Id { get; init; }
-    public required string ConversationId { get; init; }
-    public required string ArticleId { get; init; }
+    public required Guid Id { get; init; }
+    public required Guid ConversationId { get; init; }
+    public required Guid ArticleId { get; init; }
+    public required ChatMessageRole Role { get; init; }
     public required string Content { get; init; }
     public required DateTimeOffset Timestamp { get; init; }
 }
@@ -165,19 +169,8 @@ public record ChatMessageCompletePayload
 /// </summary>
 public record ChatErrorPayload
 {
-    public required string ConversationId { get; init; }
-    public required string ArticleId { get; init; }
-    public required string Message { get; init; }
-    public required DateTimeOffset Timestamp { get; init; }
-}
-
-/// <summary>
-/// Payload for ReceiveMessage event
-/// </summary>
-public record ReceiveMessagePayload
-{
-    public required string ArticleId { get; init; }
-    public required string UserName { get; init; }
+    public required Guid ConversationId { get; init; }
+    public required Guid ArticleId { get; init; }
     public required string Message { get; init; }
     public required DateTimeOffset Timestamp { get; init; }
 }
@@ -187,13 +180,13 @@ public record ReceiveMessagePayload
 /// </summary>
 public record ChatMessageReceivedPayload
 {
-    public required string Id { get; init; }
-    public required string ConversationId { get; init; }
-    public required string Role { get; init; }
+    public required Guid Id { get; init; }
+    public required Guid ConversationId { get; init; }
+    public required ChatMessageRole Role { get; init; }
     public required string Text { get; init; }
     public required string UserName { get; init; }
     public required DateTimeOffset CreatedAt { get; init; }
-    public required string ArticleId { get; init; }
+    public required Guid ArticleId { get; init; }
 }
 
 /// <summary>
@@ -201,8 +194,8 @@ public record ChatMessageReceivedPayload
 /// </summary>
 public record ConversationCompletedPayload
 {
-    public required string ConversationId { get; init; }
-    public required string ArticleId { get; init; }
+    public required Guid ConversationId { get; init; }
+    public required Guid ArticleId { get; init; }
     public required DateTimeOffset CompletedAt { get; init; }
 }
 
@@ -211,7 +204,7 @@ public record ConversationCompletedPayload
 /// </summary>
 public record ConversationCancelledPayload
 {
-    public required string ConversationId { get; init; }
-    public required string ArticleId { get; init; }
+    public required Guid ConversationId { get; init; }
+    public required Guid ArticleId { get; init; }
     public required DateTimeOffset Timestamp { get; init; }
 }

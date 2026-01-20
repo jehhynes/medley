@@ -94,8 +94,8 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                 await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
                     .ChatTurnStarted(new ChatTurnStartedPayload
                     {
-                        ConversationId = conversation.Id.ToString(),
-                        ArticleId = conversation.ArticleId.ToString()
+                        ConversationId = conversation.Id,
+                        ArticleId = conversation.ArticleId
                     });
 
                 // Process AI response with streaming
@@ -112,15 +112,16 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                             await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
                                 .ChatMessageStreaming(new ChatMessageStreamingPayload
                                 {
-                                    ConversationId = update.ConversationId.ToString(),
-                                    ArticleId = conversation.ArticleId.ToString(),
+                                    ConversationId = update.ConversationId,
+                                    ArticleId = conversation.ArticleId,
+                                    Role = ChatMessageRole.Assistant,
                                     Text = update.Text,
                                     ToolName = null,
                                     ToolCallId = null,
                                     ToolDisplay = null,
                                     ToolResultIds = null,
                                     IsError = null,
-                                    MessageId = update.MessageId?.ToString(),
+                                    MessageId = update.MessageId,
                                     Timestamp = update.Timestamp
                                 });
                             break;
@@ -130,8 +131,8 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                             await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
                                 .ChatToolInvoked(new ChatToolInvokedPayload
                                 {
-                                    ConversationId = update.ConversationId.ToString(),
-                                    ArticleId = conversation.ArticleId.ToString(),
+                                    ConversationId = update.ConversationId,
+                                    ArticleId = conversation.ArticleId,
                                     ToolName = update.ToolName ?? string.Empty,
                                     ToolCallId = update.ToolCallId ?? string.Empty,
                                     ToolDisplay = update.ToolDisplay,
@@ -144,10 +145,10 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                             await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
                                 .ChatToolCompleted(new ChatToolCompletedPayload
                                 {
-                                    ConversationId = update.ConversationId.ToString(),
-                                    ArticleId = conversation.ArticleId.ToString(),
+                                    ConversationId = update.ConversationId,
+                                    ArticleId = conversation.ArticleId,
                                     ToolCallId = update.ToolCallId ?? string.Empty,
-                                    ToolResultIds = update.ToolResultIds?.Select(id => id.ToString()).ToArray(),
+                                    ToolResultIds = update.ToolResultIds?.ToArray(),
                                     Timestamp = update.Timestamp
                                 });
                             break;
@@ -160,9 +161,10 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                             await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
                                 .ChatMessageComplete(new ChatMessageCompletePayload
                                 {
-                                    Id = update.MessageId?.ToString() ?? string.Empty,
-                                    ConversationId = conversation.Id.ToString(),
-                                    ArticleId = conversation.ArticleId.ToString(),
+                                    Id = update.MessageId ?? Guid.Empty,
+                                    ConversationId = conversation.Id,
+                                    ArticleId = conversation.ArticleId,
+                                    Role = ChatMessageRole.Assistant,
                                     Content = update.Text ?? string.Empty,
                                     Timestamp = update.Timestamp
                                 });
@@ -173,8 +175,8 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                             await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
                                 .ChatTurnComplete(new ChatTurnCompletePayload
                                 {
-                                    ConversationId = conversation.Id.ToString(),
-                                    ArticleId = conversation.ArticleId.ToString()
+                                    ConversationId = conversation.Id,
+                                    ArticleId = conversation.ArticleId
                                 });
                             break;
                     }
@@ -196,8 +198,8 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                         await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
                             .PlanGenerated(new PlanGeneratedPayload
                             {
-                                ArticleId = conversation.ArticleId.ToString(),
-                                PlanId = plan.Id.ToString(),
+                                ArticleId = conversation.ArticleId,
+                                PlanId = plan.Id,
                                 Timestamp = DateTimeOffset.UtcNow
                             });
                     }
@@ -221,8 +223,8 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                         await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
                             .ArticleVersionCreated(new ArticleVersionCreatedPayload
                             {
-                                ArticleId = conversation.ArticleId.ToString(),
-                                VersionId = aiVersion.Id.ToString(),
+                                ArticleId = conversation.ArticleId,
+                                VersionId = aiVersion.Id,
                                 VersionNumber = aiVersion.VersionNumber.ToString(),
                                 Timestamp = DateTimeOffset.UtcNow
                             });
@@ -268,8 +270,8 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
             await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
                 .ChatError(new ChatErrorPayload
                 {
-                    ConversationId = conversationId.ToString(),
-                    ArticleId = conversation.ArticleId.ToString(),
+                    ConversationId = conversationId,
+                    ArticleId = conversation.ArticleId,
                     Message = errorMessage,
                     Timestamp = DateTimeOffset.UtcNow
                 });

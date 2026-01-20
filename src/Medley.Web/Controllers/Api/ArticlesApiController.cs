@@ -230,10 +230,10 @@ public class ArticlesApiController : ControllerBase
         {
             await _hubContext.Clients.All.ArticleCreated(new ArticleCreatedPayload
             {
-                ArticleId = article.Id.ToString(),
+                ArticleId = article.Id,
                 Title = article.Title,
-                ParentArticleId = article.ParentArticleId?.ToString(),
-                ArticleTypeId = article.ArticleTypeId?.ToString(),
+                ParentArticleId = article.ParentArticleId,
+                ArticleTypeId = article.ArticleTypeId,
                 Timestamp = DateTimeOffset.UtcNow
             });
         });
@@ -296,9 +296,9 @@ public class ArticlesApiController : ControllerBase
         {
             await _hubContext.Clients.All.ArticleUpdated(new ArticleUpdatedPayload
             {
-                ArticleId = article.Id.ToString(),
+                ArticleId = article.Id,
                 Title = article.Title,
-                ArticleTypeId = article.ArticleTypeId?.ToString(),
+                ArticleTypeId = article.ArticleTypeId,
                 Timestamp = DateTimeOffset.UtcNow
             });
         });
@@ -368,8 +368,8 @@ public class ArticlesApiController : ControllerBase
             {
                 await _hubContext.Clients.All.VersionCreated(new VersionCreatedPayload
                 {
-                    ArticleId = id.ToString(),
-                    VersionId = capturedVersion.Id.ToString(),
+                    ArticleId = id,
+                    VersionId = capturedVersion.Id,
                     VersionNumber = capturedVersion.VersionNumber,
                     CreatedAt = capturedVersion.CreatedAt
                 });
@@ -383,9 +383,9 @@ public class ArticlesApiController : ControllerBase
             {
                 await _hubContext.Clients.All.ArticleUpdated(new ArticleUpdatedPayload
                 {
-                    ArticleId = article.Id.ToString(),
+                    ArticleId = article.Id,
                     Title = article.Title,
-                    ArticleTypeId = article.ArticleTypeId?.ToString(),
+                    ArticleTypeId = article.ArticleTypeId,
                     Timestamp = DateTimeOffset.UtcNow
                 });
             });
@@ -499,9 +499,9 @@ public class ArticlesApiController : ControllerBase
         {
             await _hubContext.Clients.All.ArticleMoved(new ArticleMovedPayload
             {
-                ArticleId = article.Id.ToString(),
-                OldParentId = oldParentId?.ToString(),
-                NewParentId = request.NewParentArticleId.Value.ToString(),
+                ArticleId = article.Id,
+                OldParentId = oldParentId,
+                NewParentId = request.NewParentArticleId.Value,
                 Timestamp = DateTimeOffset.UtcNow
             });
         });
@@ -854,8 +854,8 @@ public class ArticlesApiController : ControllerBase
             {
                 await _hubContext.Clients.All.VersionCreated(new VersionCreatedPayload
                 {
-                    ArticleId = articleId.ToString(),
-                    VersionId = newVersion.Id.ToString(),
+                    ArticleId = articleId,
+                    VersionId = newVersion.Id,
                     VersionNumber = newVersion.VersionNumber,
                     CreatedAt = newVersion.CreatedAt
                 });
@@ -957,8 +957,8 @@ public class ArticlesApiController : ControllerBase
         {
             await _hubContext.Clients.All.ArticleAssignmentChanged(new ArticleAssignmentChangedPayload
             {
-                ArticleId = article.Id.ToString(),
-                UserId = article.AssignedUser?.Id.ToString(),
+                ArticleId = article.Id,
+                UserId = article.AssignedUser?.Id,
                 UserName = article.AssignedUser?.FullName,
                 UserInitials = article.AssignedUser?.Initials,
                 UserColor = article.AssignedUser?.Color,

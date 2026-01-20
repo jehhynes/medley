@@ -36,31 +36,15 @@ public class ArticleHub : Hub<IArticleClient>
     }
 
     /// <summary>
-    /// Send a chat message to an article's room
-    /// </summary>
-    public async Task SendMessage(string articleId, string message)
-    {
-        var userName = Context.User?.Identity?.Name ?? "Anonymous";
-        
-        await Clients.Group($"Article_{articleId}").ReceiveMessage(new ReceiveMessagePayload
-        {
-            ArticleId = articleId,
-            UserName = userName,
-            Message = message,
-            Timestamp = DateTimeOffset.UtcNow
-        });
-    }
-
-    /// <summary>
     /// Notify all connected clients that an article was created
     /// </summary>
     public async Task NotifyArticleCreated(string articleId, string title, string? parentArticleId)
     {
         await Clients.All.ArticleCreated(new ArticleCreatedPayload
         {
-            ArticleId = articleId,
+            ArticleId = Guid.Parse(articleId),
             Title = title,
-            ParentArticleId = parentArticleId,
+            ParentArticleId = parentArticleId != null ? Guid.Parse(parentArticleId) : null,
             ArticleTypeId = null, // ArticleTypeId not provided in this method
             Timestamp = DateTimeOffset.UtcNow
         });
@@ -73,7 +57,7 @@ public class ArticleHub : Hub<IArticleClient>
     {
         await Clients.All.ArticleUpdated(new ArticleUpdatedPayload
         {
-            ArticleId = articleId,
+            ArticleId = Guid.Parse(articleId),
             Title = title,
             ArticleTypeId = null, // ArticleTypeId not provided in this method
             Timestamp = DateTimeOffset.UtcNow
@@ -87,7 +71,7 @@ public class ArticleHub : Hub<IArticleClient>
     {
         await Clients.All.ArticleDeleted(new ArticleDeletedPayload
         {
-            ArticleId = articleId,
+            ArticleId = Guid.Parse(articleId),
             Timestamp = DateTimeOffset.UtcNow
         });
     }
@@ -99,8 +83,8 @@ public class ArticleHub : Hub<IArticleClient>
     {
         await Clients.All.ArticleAssignmentChanged(new ArticleAssignmentChangedPayload
         {
-            ArticleId = articleId,
-            UserId = userId,
+            ArticleId = Guid.Parse(articleId),
+            UserId = userId != null ? Guid.Parse(userId) : null,
             UserName = userName,
             UserInitials = userInitials,
             UserColor = userColor,

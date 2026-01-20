@@ -367,8 +367,8 @@ public class ArticleChatApiController : ControllerBase
                 {
                     await _hubContext.Clients.All.ArticleAssignmentChanged(new ArticleAssignmentChangedPayload
                     {
-                        ArticleId = articleId.ToString(),
-                        UserId = assignedUser?.Id.ToString(),
+                        ArticleId = articleId,
+                        UserId = assignedUser?.Id,
                         UserName = assignedUser?.FullName,
                         UserInitials = assignedUser?.Initials,
                         UserColor = assignedUser?.Color,
@@ -395,13 +395,13 @@ public class ArticleChatApiController : ControllerBase
             {
                 await _hubContext.Clients.Group($"Article_{articleId}").ChatMessageReceived(new ChatMessageReceivedPayload
                 {
-                    Id = userMessage.Id.ToString(),
-                    ConversationId = conversationId.ToString(),
-                    Role = "user",
+                    Id = userMessage.Id,
+                    ConversationId = conversationId,
+                    Role = ChatMessageRole.User,
                     Text = request.Message,
                     UserName = userName,
                     CreatedAt = userMessage.CreatedAt,
-                    ArticleId = articleId.ToString()
+                    ArticleId = articleId
                 });
                 
                 _logger.LogDebug("SignalR notification sent: ChatMessageReceived to group Article_{ArticleId}", articleId);
@@ -490,8 +490,8 @@ public class ArticleChatApiController : ControllerBase
             {
                 await _hubContext.Clients.Group($"Article_{articleId}").ConversationCompleted(new ConversationCompletedPayload
                 {
-                    ConversationId = conversationId.ToString(),
-                    ArticleId = articleId.ToString(),
+                    ConversationId = conversationId,
+                    ArticleId = articleId,
                     CompletedAt = completedAt
                 });
                 
@@ -534,8 +534,8 @@ public class ArticleChatApiController : ControllerBase
             {
                 await _hubContext.Clients.Group($"Article_{articleId}").ConversationCancelled(new ConversationCancelledPayload
                 {
-                    ConversationId = conversationId.ToString(),
-                    ArticleId = articleId.ToString(),
+                    ConversationId = conversationId,
+                    ArticleId = articleId,
                     Timestamp = DateTimeOffset.UtcNow
                 });
                 
