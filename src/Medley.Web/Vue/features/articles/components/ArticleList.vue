@@ -57,20 +57,16 @@ import { computed } from 'vue';
 import VirtualScroller from '@/components/VirtualScroller.vue';
 import { useDropDown } from '@/composables/useDropDown';
 import { useArticleView } from '../composables/useArticleView';
-import type { ArticleDto, ArticleTypeDto } from '@/types/api-client';
+import type { ArticleDto } from '@/types/api-client';
 
 interface Props {
   articles: ArticleDto[];
   selectedId: string | null;
-  articleTypeIconMap: Record<string, string>;
-  articleTypes: ArticleTypeDto[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
   articles: () => [],
-  selectedId: null,
-  articleTypeIconMap: () => ({}),
-  articleTypes: () => []
+  selectedId: null
 });
 
 interface Emits {

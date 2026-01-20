@@ -58,8 +58,6 @@
         :articles="article.children"
         :selected-id="selectedId"
         :expanded-ids="expandedIds"
-        :article-type-icon-map="articleTypeIconMap"
-        :article-types="articleTypes"
         @select="selectArticle"
         @toggle-expand="toggleExpand"
         @create-child="createChild"
@@ -75,7 +73,8 @@
 import { ref, inject } from 'vue';
 import { useDropDown } from '@/composables/useDropDown';
 import { useArticleView } from '../composables/useArticleView';
-import type { ArticleDto, ArticleTypeDto } from '@/types/api-client';
+import { useArticleTypes } from '../composables/useArticleTypes';
+import type { ArticleDto } from '@/types/api-client';
 
 interface DragState {
   draggingArticleId: string | null;
@@ -86,17 +85,15 @@ interface Props {
   articles: ArticleDto[];
   selectedId: string | null;
   expandedIds: Set<string>;
-  articleTypeIconMap: Record<string, string>;
-  articleTypes: ArticleTypeDto[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
   articles: () => [],
   selectedId: null,
-  expandedIds: () => new Set(),
-  articleTypeIconMap: () => ({}),
-  articleTypes: () => []
+  expandedIds: () => new Set()
 });
+
+const { types: articleTypes } = useArticleTypes();
 
 interface Emits {
   (e: 'select', article: ArticleDto): void;
@@ -145,7 +142,7 @@ const isIndexType = (article: ArticleDto) => {
   if (!article.articleTypeId) {
     return false;
   }
-  const articleType = props.articleTypes.find(t => t.id === article.articleTypeId);
+  const articleType = articleTypes.value.find(t => t.id === article.articleTypeId);
   return !!(articleType && articleType.name?.toLowerCase() === 'index');
 };
 

@@ -69,18 +69,15 @@ import type { ArticleDto } from '@/types/api-client';
 interface Props {
   articles: ArticleDto[];
   selectedId?: string | null;
-  articleTypeIconMap?: Record<string, string>;
-  articleTypes?: any[];
-  currentUserId?: string | null;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   articles: () => [],
-  selectedId: null,
-  articleTypeIconMap: () => ({}),
-  articleTypes: () => [],
-  currentUserId: null
+  selectedId: null
 });
+
+// Get current user ID from window
+const currentUserId = window.MedleyUser?.id ?? null;
 
 interface Emits {
   (e: 'select', article: ArticleDto): void;
@@ -102,7 +99,7 @@ const {
 
 const { myWorkArticles, getLastActivityDate } = useMyWork(
   toRef(props, 'articles'),
-  toRef(props, 'currentUserId')
+  ref(currentUserId)
 );
 
 const { handleDropdownClick } = useDropDown();

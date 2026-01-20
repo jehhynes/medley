@@ -6,9 +6,10 @@ import {
   showProcessingSpinner, 
   showUserTurnIndicator 
 } from '@/utils/helpers';
+import { useArticleTypes } from './useArticleTypes';
 
 interface ArticleViewProps {
-  articleTypeIconMap: Record<string, string>;
+  // Props interface kept for compatibility but no longer requires articleTypeIconMap
 }
 
 interface ArticleViewEmits {
@@ -19,14 +20,16 @@ interface ArticleViewEmits {
 
 /** Shared article view logic for ArticleTree, ArticleList, and MyWorkList */
 export function useArticleView(props: ArticleViewProps, emit: ArticleViewEmits) {
+  const { typeIconMap } = useArticleTypes();
+
   const selectArticle = (article: ArticleSummaryDto) => {
     emit('select', article);
     (window as any).MedleySidebar?.collapseLeftSidebar();
   };
 
   const getArticleIcon = (article: ArticleSummaryDto) => {
-    return article.articleTypeId && props.articleTypeIconMap[article.articleTypeId]
-      ? props.articleTypeIconMap[article.articleTypeId]
+    return article.articleTypeId && typeIconMap.value[article.articleTypeId]
+      ? typeIconMap.value[article.articleTypeId]
       : 'bi-file-text';
   };
 
