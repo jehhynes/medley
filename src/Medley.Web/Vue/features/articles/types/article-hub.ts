@@ -69,6 +69,7 @@ export interface ChatTurnCompletePayload {
 export interface ChatMessageStreamingPayload {
   conversationId: string;
   articleId: string;
+  role: string;
   text: string | null;
   toolName: string | null;
   toolCallId: string | null;
@@ -100,6 +101,7 @@ export interface ChatMessageCompletePayload {
   id: string;
   conversationId: string;
   articleId: string;
+  role: string;
   content: string;
   timestamp: string;
 }
@@ -107,13 +109,6 @@ export interface ChatMessageCompletePayload {
 export interface ChatErrorPayload {
   conversationId: string;
   articleId: string;
-  message: string;
-  timestamp: string;
-}
-
-export interface ReceiveMessagePayload {
-  articleId: string;
-  userName: string;
   message: string;
   timestamp: string;
 }
@@ -156,7 +151,6 @@ export interface ArticleHubServerMethods {
   ChatToolCompleted: (payload: ChatToolCompletedPayload) => void;
   ChatMessageComplete: (payload: ChatMessageCompletePayload) => void;
   ChatError: (payload: ChatErrorPayload) => void;
-  ReceiveMessage: (payload: ReceiveMessagePayload) => void;
   ChatMessageReceived: (payload: ChatMessageReceivedPayload) => void;
   ConversationCompleted: (payload: ConversationCompletedPayload) => void;
   ConversationCancelled: (payload: ConversationCancelledPayload) => void;

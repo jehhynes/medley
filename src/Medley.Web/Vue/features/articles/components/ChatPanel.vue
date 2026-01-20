@@ -29,7 +29,7 @@
 
         <template v-for="(msg, index) in messages" :key="msg.id">
           <!-- User message -->
-          <div v-if="msg.role === 'User'" 
+          <div v-if="msg.role === ChatMessageRole.User" 
                class="chat-message chat-message-user">
             <div class="chat-message-header">
               <span class="chat-message-author">{{ msg.userName }}</span>
@@ -156,7 +156,7 @@ import ToolCallItem from './ToolCallItem.vue';
 import { formatRelativeTime } from '@/utils/helpers';
 import { apiClients } from '@/utils/apiClients';
 import type { HubConnection } from '@microsoft/signalr';
-import { ConversationMode } from '@/types/api-client';
+import { ConversationMode, ChatMessageRole, type ChatMessageDto } from '@/types/api-client';
 import type {
   ChatTurnStartedPayload,
   ChatTurnCompletePayload,
@@ -165,29 +165,9 @@ import type {
   ChatToolCompletedPayload,
   ChatMessageCompletePayload,
   ChatErrorPayload
-} from '@/types/signalr/article-hub';
+} from '../types/article-hub';
 
-type ChatMessageRole = 'user' | 'assistant';
-
-interface ToolCall {
-  name: string;
-  callId: string;
-  display: string | null;
-  completed: boolean;
-  isError?: boolean;
-  result?: {
-    ids: string[];
-  };
-  timestamp: string;
-}
-
-interface ChatMessage {
-  id: string;
-  role: ChatMessageRole;
-  text: string;
-  userName?: string | null;
-  createdAt: string;
-  toolCalls?: ToolCall[];
+interface ChatMessage extends ChatMessageDto {
   isStreaming?: boolean;
 }
 
@@ -345,11 +325,16 @@ async function loadMessages(): Promise<void> {
   if (!conversationId.value) return;
 
   try {
-    messages.value = await apiClients.articleChat.getMessages(props.articleId!, conversationId.value);
+    const apiMessages = await apiClients.articleChat.getMessages(props.articleId!, conversationId.value);
+    
+    messages.value = apiMessages.map(msg => ({
+      ...msg,
+      isStreaming: false
+    }));
 
     if (messages.value.length > 0) {
       const lastMessage = messages.value[messages.value.length - 1];
-      if (lastMessage && lastMessage.role === 'User') {
+      if (lastMessage && lastMessage.role === ChatMessageRole.User) {
         isAiTurn.value = true;
       }
     }
@@ -422,17 +407,17 @@ function onMessageStreaming(data: ChatMessageStreamingPayload) {
   if (!streamingMsg) {
     streamingMsg = {
       id: messageId,
-      role: 'assistant',
+      role: data.role as ChatMessageRole,
       text: '',
       isStreaming: true,
       toolCalls: [],
       userName: null,
-      createdAt: new Date().toISOString()
+      createdAt: new Date()
     };
     messages.value.push(streamingMsg);
   }
 
-  streamingMsg.text += data.text || '';
+  streamingMsg.text = (streamingMsg.text || '') + (data.text || '');
   nextTick(() => scrollToBottom());
 }
 
@@ -449,12 +434,12 @@ function onToolInvoked(data: ChatToolInvokedPayload) {
   if (!streamingMsg) {
     streamingMsg = {
       id: messageId,
-      role: 'assistant',
+      role: ChatMessageRole.Assistant,
       text: '',
       isStreaming: true,
       toolCalls: [],
       userName: null,
-      createdAt: new Date().toISOString()
+      createdAt: new Date()
     };
     messages.value.push(streamingMsg);
   }
@@ -467,8 +452,7 @@ function onToolInvoked(data: ChatToolInvokedPayload) {
     name: data.toolName,
     callId: data.toolCallId,
     display: data.toolDisplay,
-    completed: false,
-    timestamp: data.timestamp
+    completed: false
   });
 
   nextTick(() => scrollToBottom());
@@ -479,7 +463,7 @@ function onToolCompleted(data: ChatToolCompletedPayload) {
     return;
   }
 
-  console.log(`AI Agent completed tool: ${(data as any).toolName}`);
+  console.log(`AI Agent completed tool with callId: ${data.toolCallId}`);
 
   for (let i = messages.value.length - 1; i >= 0; i--) {
     const msg = messages.value[i];
@@ -487,10 +471,9 @@ function onToolCompleted(data: ChatToolCompletedPayload) {
       const toolCall = msg.toolCalls.find(t => t.callId === data.toolCallId);
       if (toolCall) {
         toolCall.completed = true;
-        toolCall.isError = (data as any).isError || false;
-        if ((data as any).result && (data as any).result.ids) {
+        if (data.toolResultIds && data.toolResultIds.length > 0) {
           toolCall.result = {
-            ids: (data as any).result.ids
+            ids: data.toolResultIds
           };
         }
         break;
@@ -515,10 +498,10 @@ function onMessageComplete(data: ChatMessageCompletePayload) {
     if (streamingMsg) {
       messages.value.splice(streamingIdx, 1, {
         id: data.id,
-        role: (data as any).role,
-        text: (data as any).text || data.content,
+        role: data.role as ChatMessageRole,
+        text: data.content,
         userName: (data as any).userName,
-        createdAt: (data as any).createdAt || data.timestamp,
+        createdAt: new Date(data.timestamp),
         toolCalls: streamingMsg.toolCalls || [],
         isStreaming: false
       });
@@ -526,10 +509,10 @@ function onMessageComplete(data: ChatMessageCompletePayload) {
   } else {
     messages.value.push({
       id: data.id,
-      role: (data as any).role || 'assistant',
-      text: (data as any).text || data.content,
+      role: data.role as ChatMessageRole,
+      text: data.content,
       userName: (data as any).userName,
-      createdAt: (data as any).createdAt || data.timestamp,
+      createdAt: new Date(data.timestamp),
       toolCalls: [],
       isStreaming: false
     });
@@ -580,8 +563,10 @@ function toggleMessageExpansion(messageId: string): void {
   expandedMessages.value[messageId] = !expandedMessages.value[messageId];
 }
 
-function formatDate(dateString: string): string {
-  return formatRelativeTime(dateString, { short: true });
+function formatDate(date: Date | string | undefined): string {
+  if (!date) return '';
+  const dateStr = date instanceof Date ? date.toISOString() : date;
+  return formatRelativeTime(dateStr, { short: true });
 }
 
 function renderMarkdown(text: string): string {

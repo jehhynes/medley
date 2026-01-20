@@ -81,11 +81,6 @@ public interface IArticleClient
     Task ChatError(ChatErrorPayload payload);
 
     /// <summary>
-    /// Sends a message to clients in an article's chat room
-    /// </summary>
-    Task ReceiveMessage(ReceiveMessagePayload payload);
-
-    /// <summary>
     /// Notifies clients that a chat message was received
     /// </summary>
     Task ChatMessageReceived(ChatMessageReceivedPayload payload);
