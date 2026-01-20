@@ -65,10 +65,10 @@ public class ArticleChatApiController : ControllerBase
     /// <summary>
     /// Get a conversation for an article (active or by ID)
     /// </summary>
-    [HttpGet("conversation/{conversationId?}")]
+    [HttpGet("conversation")]
     [ProducesResponseType(typeof(ConversationDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<ConversationDto>> GetConversation(Guid articleId, Guid? conversationId = null)
+    public async Task<ActionResult<ConversationDto>> GetConversation(Guid articleId, [FromQuery] Guid? conversationId = null)
     {
         var article = await _articleRepository.Query()
             .Include(a => a.CurrentConversation)
