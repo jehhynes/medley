@@ -30,7 +30,8 @@ const routes: RouteRecordRaw[] = [
     component: Sources,
     meta: { 
       title: 'Sources'
-    } as RouteMeta
+    } as RouteMeta,
+    props: route => ({ id: route.query.id })
   },
   {
     path: '/Fragments',
@@ -38,7 +39,8 @@ const routes: RouteRecordRaw[] = [
     component: Fragments,
     meta: { 
       title: 'Fragments'
-    } as RouteMeta
+    } as RouteMeta,
+    props: route => ({ id: route.query.id })
   },
   {
     path: '/Articles',
@@ -47,7 +49,8 @@ const routes: RouteRecordRaw[] = [
     meta: { 
       title: 'Articles',
       hasRightSidebar: true
-    } as RouteMeta
+    } as RouteMeta,
+    props: route => ({ id: route.query.id })
   },
   {
     path: '/Admin/AiPrompts',

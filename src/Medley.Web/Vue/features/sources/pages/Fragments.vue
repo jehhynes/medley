@@ -125,8 +125,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { fragmentsClient } from '@/utils/apiClients';
 import { 
   getFragmentCategoryIcon, 
@@ -140,7 +140,6 @@ import {
   showToast,
   debounce
 } from '@/utils/helpers';
-import { getUrlParam, setUrlParam, setupPopStateHandler } from '@/utils/url';
 import { useSidebarState } from '@/composables/useSidebarState';
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll';
 import type { FragmentDto } from '@/types/api-client';
@@ -156,6 +155,7 @@ interface PaginationState {
 // Setup composables
 const { leftSidebarVisible } = useSidebarState();
 const router = useRouter();
+const route = useRoute();
 
 // Reactive state
 const fragments = ref<FragmentDto[]>([]);
@@ -178,7 +178,6 @@ const pagination = ref<PaginationState>({
 });
 
 let searchDebounced: (() => void) | null = null;
-let detachPopState: (() => void) | null = null;
 
 // Use infinite scroll composable
 const {
@@ -294,7 +293,7 @@ onMounted(async () => {
 
   setupInfiniteScroll('.sidebar-content');
 
-  const fragmentIdFromUrl = getUrlParam('id');
+  const fragmentIdFromUrl = route.query.id as string | undefined;
   if (fragmentIdFromUrl) {
     const fragment = findInList(fragments.value, fragmentIdFromUrl);
     if (fragment) {
@@ -307,30 +306,32 @@ onMounted(async () => {
         selectedFragmentId.value = fragmentIdFromUrl;
       } catch (err) {
         console.error('Error loading fragment from URL:', err);
-        setUrlParam('id', null, true);
+        await router.replace({ query: {} });
       }
     }
   }
+});
 
-  detachPopState = setupPopStateHandler(async () => {
-    const fragmentId = getUrlParam('id');
-    if (fragmentId) {
-      const fragment = findInList(fragments.value, fragmentId);
-      if (fragment) {
-        selectedFragmentId.value = fragment.id!;
+// Watch for route changes (browser back/forward)
+watch(() => route.query.id, async (newId) => {
+  if (newId && typeof newId === 'string') {
+    const fragment = findInList(fragments.value, newId);
+    if (fragment) {
+      selectedFragmentId.value = fragment.id!;
+      try {
         selectedFragment.value = await fragmentsClient.get(fragment.id!);
+      } catch (err) {
+        console.error('Error loading fragment:', err);
       }
-    } else {
-      selectedFragmentId.value = null;
-      selectedFragment.value = null;
     }
-  });
+  } else {
+    selectedFragmentId.value = null;
+    selectedFragment.value = null;
+  }
 });
 
 onBeforeUnmount(() => {
-  if (detachPopState) {
-    detachPopState();
-  }
+  // Cleanup if needed
 });
 </script>
 

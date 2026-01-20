@@ -234,7 +234,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { sourcesClient, fragmentsClient } from '@/utils/apiClients';
 import { 
   getFragmentCategoryIcon, 
@@ -248,7 +248,6 @@ import {
   findInList, 
   showToast 
 } from '@/utils/helpers';
-import { getUrlParam, setUrlParam, setupPopStateHandler } from '@/utils/url';
 import { useSidebarState } from '@/composables/useSidebarState';
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll';
 import { createAdminHubConnection } from '@/utils/signalr';
@@ -272,6 +271,7 @@ interface TagFilter {
 // Setup composables
 const { leftSidebarVisible } = useSidebarState();
 const router = useRouter();
+const route = useRoute();
 
 // Reactive state
 const sources = ref<SourceDto[]>([]);
@@ -297,8 +297,6 @@ const pagination = ref<PaginationState>({
   hasMore: true,
   loadingMore: false
 });
-
-let detachPopState: (() => void) | null = null;
 
 // Use infinite scroll composable
 const {
@@ -592,7 +590,7 @@ onMounted(async () => {
 
   setupInfiniteScroll('.sidebar-content');
 
-  const sourceIdFromUrl = getUrlParam('id');
+  const sourceIdFromUrl = route.query.id as string | undefined;
   if (sourceIdFromUrl) {
     const source = findInList(sources.value, sourceIdFromUrl);
     if (source) {
@@ -605,7 +603,7 @@ onMounted(async () => {
         selectedSourceId.value = sourceIdFromUrl;
       } catch (err) {
         console.error('Error loading source from URL:', err);
-        setUrlParam('id', null, true);
+        await router.replace({ query: {} });
       }
     }
   }
@@ -641,28 +639,29 @@ onMounted(async () => {
   } catch (err) {
     console.error('SignalR connection error:', err);
   }
+});
 
-  detachPopState = setupPopStateHandler(async () => {
-    const sourceId = getUrlParam('id');
-    if (sourceId) {
-      const source = findInList(sources.value, sourceId);
-      if (source) {
-        selectedSourceId.value = source.id!;
+// Watch for route changes (browser back/forward)
+watch(() => route.query.id, async (newId) => {
+  if (newId && typeof newId === 'string') {
+    const source = findInList(sources.value, newId);
+    if (source) {
+      selectedSourceId.value = source.id!;
+      try {
         selectedSource.value = await sourcesClient.get(source.id!);
+      } catch (err) {
+        console.error('Error loading source:', err);
       }
-    } else {
-      selectedSourceId.value = null;
-      selectedSource.value = null;
     }
-  });
+  } else {
+    selectedSourceId.value = null;
+    selectedSource.value = null;
+  }
 });
 
 onBeforeUnmount(() => {
   if (signalRConnection.value) {
     signalRConnection.value.stop();
-  }
-  if (detachPopState) {
-    detachPopState();
   }
 });
 </script>
