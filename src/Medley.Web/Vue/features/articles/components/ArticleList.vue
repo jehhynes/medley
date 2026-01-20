@@ -59,7 +59,6 @@ import { useDropDown } from '@/composables/useDropDown';
 import { useArticleView } from '../composables/useArticleView';
 import type { ArticleDto, ArticleTypeDto } from '@/types/api-client';
 
-// Props interface
 interface Props {
   articles: ArticleDto[];
   selectedId: string | null;
@@ -74,7 +73,6 @@ const props = withDefaults(defineProps<Props>(), {
   articleTypes: () => []
 });
 
-// Emits interface
 interface Emits {
   (e: 'select', article: ArticleDto): void;
   (e: 'edit-article', article: ArticleDto): void;
@@ -82,10 +80,8 @@ interface Emits {
 
 const emit = defineEmits<Emits>();
 
-// Use dropdown composable
 const { handleDropdownClick } = useDropDown();
 
-// Use article view composable
 const {
   selectArticle,
   getArticleIcon,
@@ -97,23 +93,11 @@ const {
   showUserTurnIndicator
 } = useArticleView(props, emit);
 
-// Article with breadcrumbs metadata
 interface ArticleWithBreadcrumbs extends ArticleDto {
   breadcrumbs: string | null;
 }
 
-/**
- * Flatten the article tree into a sorted list with breadcrumbs.
- * Note: Filters are applied server-side via API query params, not here.
- * This just flattens the already-filtered tree from the server.
- */
 const flattenedArticles = computed<ArticleWithBreadcrumbs[]>(() => {
-  /**
-   * Recursively flatten articles with breadcrumbs
-   * @param articles - Articles to flatten
-   * @param parentPath - Path of parent titles
-   * @returns Flattened articles with breadcrumbs
-   */
   const flattenArticles = (
     articles: ArticleDto[],
     parentPath: string[] = []
@@ -144,7 +128,6 @@ const flattenedArticles = computed<ArticleWithBreadcrumbs[]>(() => {
   });
 });
 
-// Component data
 const itemHeight = 52; // Height of each article row in pixels
 const buffer = 5; // Number of extra items to render above/below viewport
 </script>

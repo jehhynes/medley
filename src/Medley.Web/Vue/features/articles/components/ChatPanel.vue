@@ -12,20 +12,6 @@
     </div>
 
     <template v-else>
-      <!-- Plan Implementation Indicator -->
-      <!--<div v-if="implementingPlanId" class="alert alert-info m-3 mb-0 d-flex align-items-center">
-        <i class="bi bi-gear-fill me-2"></i>
-        <div class="flex-grow-1">
-          <strong>Implementing Plan v{{ implementingPlanVersion }}</strong>
-          <div class="small">The AI is working to implement your improvement plan.</div>
-        </div>
-        <a :href="`/articles/${articleId}/plans/${implementingPlanId}`" 
-           class="btn btn-sm btn-outline-primary"
-           target="_blank">
-          <i class="bi bi-box-arrow-up-right me-1"></i>
-          View Plan
-        </a>
-      </div>-->
 
       <div class="chat-messages" ref="messagesContainer">
         <div v-if="!hasMessages && !isAiTurn" class="empty-state" v-cloak>
@@ -180,10 +166,8 @@ import type {
   ChatErrorPayload
 } from '@/types/signalr/article-hub';
 
-// Chat message role enum
 type ChatMessageRole = 'user' | 'assistant';
 
-// Tool call interface
 interface ToolCall {
   name: string;
   callId: string;
@@ -196,7 +180,6 @@ interface ToolCall {
   timestamp: string;
 }
 
-// Chat message interface
 interface ChatMessage {
   id: string;
   role: ChatMessageRole;
@@ -207,7 +190,6 @@ interface ChatMessage {
   isStreaming?: boolean;
 }
 
-// Conversation interface
 interface Conversation {
   id: string;
   mode: ConversationMode;
@@ -215,7 +197,6 @@ interface Conversation {
   implementingPlanVersion?: number | null;
 }
 
-// Props interface
 interface Props {
   articleId: string | null;
   connection: HubConnection | null;
@@ -226,7 +207,6 @@ const props = withDefaults(defineProps<Props>(), {
   connection: null
 });
 
-// Emits interface
 interface Emits {
   (e: 'open-plan', planId: string): void;
   (e: 'open-fragment', fragmentId: string): void;
@@ -235,7 +215,6 @@ interface Emits {
 
 const emit = defineEmits<Emits>();
 
-// Component state
 const conversationId = ref<string | null>(null);
 const messages = ref<ChatMessage[]>([]);
 const newMessage = ref<string>('');
@@ -247,11 +226,9 @@ const mode = ref<ConversationMode>(ConversationMode.Agent);
 const implementingPlanId = ref<string | null>(null);
 const implementingPlanVersion = ref<number | null>(null);
 
-// Template refs
 const messagesContainer = ref<HTMLElement | null>(null);
 const chatInput = ref<HTMLTextAreaElement | null>(null);
 
-// Computed properties
 const isConnected = computed<boolean>(() => {
   return !!(props.connection && props.connection.state === signalR.HubConnectionState.Connected);
 });
@@ -266,7 +243,6 @@ const canSendMessage = computed<boolean>(() => {
     !isAiTurn.value);
 });
 
-// Watch for article changes
 watch(() => props.articleId, async (newId, oldId) => {
   if (newId !== oldId) {
     reset();
@@ -277,7 +253,6 @@ watch(() => props.articleId, async (newId, oldId) => {
   }
 }, { immediate: true });
 
-// Watch for connection changes
 watch(() => props.connection, (newConn, oldConn) => {
   if (oldConn) {
     removeEventListeners(oldConn);
@@ -287,22 +262,19 @@ watch(() => props.connection, (newConn, oldConn) => {
   }
 }, { immediate: true });
 
-// Watch for new message changes
 watch(newMessage, () => {
   nextTick(() => {
     adjustTextareaHeight();
   });
 });
 
-// Lifecycle hooks
 onBeforeUnmount(() => {
   if (props.connection) {
     removeEventListeners(props.connection);
   }
 });
 
-// Methods
-function setupEventListeners(conn: HubConnection): void {
+function setupEventListeners(conn: HubConnection) {
   conn.on('ChatTurnStarted', onTurnStarted);
   conn.on('ChatMessageReceived', onMessageReceived);
   conn.on('ChatMessageStreaming', onMessageStreaming);
@@ -313,7 +285,7 @@ function setupEventListeners(conn: HubConnection): void {
   conn.on('ChatError', onChatError);
 }
 
-function removeEventListeners(conn: HubConnection): void {
+function removeEventListeners(conn: HubConnection) {
   conn.off('ChatTurnStarted', onTurnStarted);
   conn.off('ChatMessageReceived', onMessageReceived);
   conn.off('ChatMessageStreaming', onMessageStreaming);
@@ -331,7 +303,6 @@ async function loadConversation(conversationIdParam: string | null = null): Prom
   error.value = null;
 
   try {
-    // Build URL with optional conversationId route parameter
     const url = conversationIdParam
       ? `/api/articles/${props.articleId}/assistant/conversation/${conversationIdParam}`
       : `/api/articles/${props.articleId}/assistant/conversation`;
@@ -339,7 +310,6 @@ async function loadConversation(conversationIdParam: string | null = null): Prom
     const response = await fetch(url);
 
     if (response.status === 204) {
-      // No active conversation - only valid when not requesting specific conversation
       if (!conversationIdParam) {
         conversationId.value = null;
         messages.value = [];
@@ -349,12 +319,10 @@ async function loadConversation(conversationIdParam: string | null = null): Prom
     }
 
     if (response.status === 404) {
-      // 404 - handle based on whether we're loading a specific conversation
       if (conversationIdParam) {
         error.value = 'Conversation not found';
         return;
       }
-      // No active conversation - that's ok (backwards compatibility)
       conversationId.value = null;
       messages.value = [];
       return;
@@ -370,14 +338,12 @@ async function loadConversation(conversationIdParam: string | null = null): Prom
     implementingPlanId.value = conversation.implementingPlanId || null;
     implementingPlanVersion.value = conversation.implementingPlanVersion || null;
 
-    // Load messages for this conversation
     await loadMessages();
   } catch (err) {
     console.error('Error loading conversation:', err);
     error.value = (err as Error).message || 'Failed to load conversation';
   } finally {
     isLoading.value = false;
-    // Scroll to bottom after loading is complete and DOM is updated
     nextTick(() => {
       nextTick(() => {
         scrollToBottom();
@@ -397,7 +363,6 @@ async function loadMessages(): Promise<void> {
     if (response.ok) {
       messages.value = await response.json();
 
-      // Check if the last message is from a user (AI is likely processing)
       if (messages.value.length > 0) {
         const lastMessage = messages.value[messages.value.length - 1];
         if (lastMessage && lastMessage.role === 'user') {
@@ -421,7 +386,6 @@ async function sendMessage(): Promise<void> {
   error.value = null;
 
   try {
-    // Create conversation if needed
     if (!conversationId.value) {
       const createResponse = await fetch(
         `/api/articles/${props.articleId}/assistant/conversation?mode=${mode.value}`,
@@ -439,7 +403,6 @@ async function sendMessage(): Promise<void> {
       conversationId.value = conversation.id;
     }
 
-    // Send message to API (message will appear via SignalR broadcast)
     const response = await fetch(
       `/api/articles/${props.articleId}/assistant/conversations/${conversationId.value}/messages`,
       {
@@ -456,7 +419,6 @@ async function sendMessage(): Promise<void> {
       throw new Error('Failed to send message');
     }
 
-    // Set AI thinking state
     isAiTurn.value = true;
     nextTick(() => scrollToBottom());
 
@@ -466,7 +428,7 @@ async function sendMessage(): Promise<void> {
   }
 }
 
-function onTurnStarted(data: ChatTurnStartedPayload): void {
+function onTurnStarted(data: ChatTurnStartedPayload) {
   if (data.conversationId !== conversationId.value) {
     return;
   }
@@ -475,13 +437,11 @@ function onTurnStarted(data: ChatTurnStartedPayload): void {
   nextTick(() => scrollToBottom());
 }
 
-function onMessageReceived(data: any): void {
-  // Handle user messages broadcast via SignalR
+function onMessageReceived(data: any) {
   if (data.conversationId !== conversationId.value) {
     return;
   }
   
-  // Add user message to list
   messages.value.push({
     id: data.id,
     role: data.role,
@@ -493,19 +453,15 @@ function onMessageReceived(data: any): void {
   nextTick(() => scrollToBottom());
 }
 
-function onMessageStreaming(data: ChatMessageStreamingPayload): void {
-  // Handle streaming text updates
+function onMessageStreaming(data: ChatMessageStreamingPayload) {
   if (data.conversationId !== conversationId.value) {
     return;
   }
 
-  // Use messageId if provided, otherwise fall back to temporary ID
   const messageId = data.messageId || 'streaming-temp';
 
-  // Find or create the streaming message by ID
   let streamingMsg = messages.value.find(m => m.id === messageId && m.isStreaming);
   if (!streamingMsg) {
-    // Create a new streaming message placeholder
     streamingMsg = {
       id: messageId,
       role: 'assistant',
@@ -518,26 +474,21 @@ function onMessageStreaming(data: ChatMessageStreamingPayload): void {
     messages.value.push(streamingMsg);
   }
 
-  // Append the streamed text
   streamingMsg.text += data.text || '';
   nextTick(() => scrollToBottom());
 }
 
-function onToolInvoked(data: ChatToolInvokedPayload): void {
-  // Handle tool invocation notifications
+function onToolInvoked(data: ChatToolInvokedPayload) {
   if (data.conversationId !== conversationId.value) {
     return;
   }
 
   console.log(`AI Agent invoked tool: ${data.toolName}`);
 
-  // Use messageId if provided to associate tool with message
   const messageId = (data as any).messageId || 'streaming-temp';
 
-  // Find the streaming message and add tool invocation
   let streamingMsg = messages.value.find(m => m.id === messageId && m.isStreaming);
   if (!streamingMsg) {
-    // Create a new streaming message if it doesn't exist yet
     streamingMsg = {
       id: messageId,
       role: 'assistant',
@@ -550,7 +501,6 @@ function onToolInvoked(data: ChatToolInvokedPayload): void {
     messages.value.push(streamingMsg);
   }
 
-  // Add tool call to the message (pending state)
   if (!streamingMsg.toolCalls) {
     streamingMsg.toolCalls = [];
   }
@@ -566,16 +516,13 @@ function onToolInvoked(data: ChatToolInvokedPayload): void {
   nextTick(() => scrollToBottom());
 }
 
-function onToolCompleted(data: ChatToolCompletedPayload): void {
-  // Handle tool completion notifications
+function onToolCompleted(data: ChatToolCompletedPayload) {
   if (data.conversationId !== conversationId.value) {
     return;
   }
 
   console.log(`AI Agent completed tool: ${(data as any).toolName}`);
 
-  // Loop backwards through messages to find the matching tool call by callId
-  // (it will almost always be in the most recent message)
   for (let i = messages.value.length - 1; i >= 0; i--) {
     const msg = messages.value[i];
     if (msg && msg.toolCalls && msg.toolCalls.length > 0) {
@@ -583,13 +530,12 @@ function onToolCompleted(data: ChatToolCompletedPayload): void {
       if (toolCall) {
         toolCall.completed = true;
         toolCall.isError = (data as any).isError || false;
-        // Store the result with IDs if available
         if ((data as any).result && (data as any).result.ids) {
           toolCall.result = {
             ids: (data as any).result.ids
           };
         }
-        break; // Found and updated, stop searching
+        break;
       }
     }
   }
@@ -597,19 +543,16 @@ function onToolCompleted(data: ChatToolCompletedPayload): void {
   nextTick(() => scrollToBottom());
 }
 
-function onMessageComplete(data: ChatMessageCompletePayload): void {
-  // Verify this is for the current conversation
+function onMessageComplete(data: ChatMessageCompletePayload) {
   if (data.conversationId !== conversationId.value) {
     return;
   }
 
-  // Find the streaming message by ID if it exists
   const streamingIdx = messages.value.findIndex(m =>
     m.isStreaming && (m.id === data.id || m.id === 'streaming-temp')
   );
 
   if (streamingIdx >= 0) {
-    // Update the existing streaming message to be the final version
     const streamingMsg = messages.value[streamingIdx];
     if (streamingMsg) {
       messages.value.splice(streamingIdx, 1, {
@@ -623,7 +566,6 @@ function onMessageComplete(data: ChatMessageCompletePayload): void {
       });
     }
   } else {
-    // No streaming message found, add the complete message
     messages.value.push({
       id: data.id,
       role: (data as any).role || 'assistant',
@@ -638,8 +580,7 @@ function onMessageComplete(data: ChatMessageCompletePayload): void {
   nextTick(() => scrollToBottom());
 }
 
-function onTurnComplete(data: ChatTurnCompletePayload): void {
-  // Verify this is for the current conversation
+function onTurnComplete(data: ChatTurnCompletePayload) {
   if (data.conversationId !== conversationId.value) {
     return;
   }
@@ -648,7 +589,7 @@ function onTurnComplete(data: ChatTurnCompletePayload): void {
   isAiTurn.value = false;
 }
 
-function onChatError(data: ChatErrorPayload): void {
+function onChatError(data: ChatErrorPayload) {
   if (data.conversationId !== conversationId.value) {
     return;
   }

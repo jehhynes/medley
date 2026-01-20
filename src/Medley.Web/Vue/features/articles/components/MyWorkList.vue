@@ -66,7 +66,6 @@ import { useMyWork } from '../composables/useMyWork';
 import { formatRelativeTime } from '@/utils/helpers';
 import type { ArticleDto } from '@/types/api-client';
 
-// Props
 interface Props {
   articles: ArticleDto[];
   selectedId?: string | null;
@@ -83,7 +82,6 @@ const props = withDefaults(defineProps<Props>(), {
   currentUserId: null
 });
 
-// Emits
 interface Emits {
   (e: 'select', article: ArticleDto): void;
   (e: 'edit-article', article: ArticleDto): void;
@@ -91,7 +89,6 @@ interface Emits {
 
 const emit = defineEmits<Emits>();
 
-// Composables
 const {
   selectArticle,
   getArticleIcon,
@@ -110,11 +107,9 @@ const { myWorkArticles, getLastActivityDate } = useMyWork(
 
 const { handleDropdownClick } = useDropDown();
 
-// State
 const itemHeight = ref<number>(52); // Height of each article row in pixels
 const buffer = ref<number>(5); // Number of extra items to render above/below viewport
 
-// Methods
 function needsSeparator(index: number): boolean {
   if (index === 0) return false; // No separator before first item
   
@@ -124,8 +119,6 @@ function needsSeparator(index: number): boolean {
   const currentIsAiProcessing = showProcessingSpinner(currentArticle);
   const previousIsAiProcessing = showProcessingSpinner(previousArticle);
   
-  // Show separator when we transition to AI processing items
-  // (previous was not AI processing, current is AI processing)
   return !previousIsAiProcessing && currentIsAiProcessing;
 }
 

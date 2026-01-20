@@ -4,14 +4,8 @@ import { debounce } from '@/utils/helpers';
 import type { ArticleHubConnection } from '../types/article-hub';
 import type { ArticleDto, UserSummaryDto } from '@/types/api-client';
 
-/**
- * Maximum number of updates to queue before dropping oldest
- */
 const MAX_QUEUE_SIZE = 100;
 
-/**
- * SignalR queue update types
- */
 type SignalRUpdateType = 
   | 'ArticleCreated'
   | 'ArticleUpdated'
@@ -19,33 +13,21 @@ type SignalRUpdateType =
   | 'ArticleDeleted'
   | 'ArticleMoved';
 
-/**
- * Base interface for SignalR queue updates
- */
 interface SignalRQueueUpdateBase {
   type: SignalRUpdateType;
 }
 
-/**
- * Article created update
- */
 interface ArticleCreatedUpdate extends SignalRQueueUpdateBase {
   type: 'ArticleCreated';
   article: ArticleDto;
 }
 
-/**
- * Article updated update
- */
 interface ArticleUpdatedUpdate extends SignalRQueueUpdateBase {
   type: 'ArticleUpdated';
   articleId: string;
   updates: Partial<ArticleDto>;
 }
 
-/**
- * Article assignment changed update
- */
 interface ArticleAssignmentChangedUpdate extends SignalRQueueUpdateBase {
   type: 'ArticleAssignmentChanged';
   articleId: string;
@@ -54,17 +36,11 @@ interface ArticleAssignmentChangedUpdate extends SignalRQueueUpdateBase {
   };
 }
 
-/**
- * Article deleted update
- */
 interface ArticleDeletedUpdate extends SignalRQueueUpdateBase {
   type: 'ArticleDeleted';
   articleId: string;
 }
 
-/**
- * Article moved update
- */
 interface ArticleMovedUpdate extends SignalRQueueUpdateBase {
   type: 'ArticleMoved';
   articleId: string;
@@ -72,9 +48,6 @@ interface ArticleMovedUpdate extends SignalRQueueUpdateBase {
   newParentId: string | null;
 }
 
-/**
- * Union type for all SignalR queue updates
- */
 export type SignalRQueueUpdate =
   | ArticleCreatedUpdate
   | ArticleUpdatedUpdate
@@ -82,87 +55,22 @@ export type SignalRQueueUpdate =
   | ArticleDeletedUpdate
   | ArticleMovedUpdate;
 
-/**
- * Options for useArticleSignalR composable
- */
 export interface UseArticleSignalROptions {
-  /**
-   * Function to insert an article into the tree
-   */
   insertArticleIntoTree: (article: ArticleSummaryDto) => void;
-
-  /**
-   * Function to update an article in the tree
-   */
   updateArticleInTree: (articleId: string, updates: Partial<ArticleDto>) => void;
-
-  /**
-   * Function to remove an article from the tree
-   */
   removeArticleFromTree: (articleId: string) => void;
-
-  /**
-   * Function to move an article in the tree
-   */
   moveArticleInTree: (articleId: string, oldParentId: string | null, newParentId: string | null) => void;
-
-  /**
-   * Function to open a plan tab
-   */
   openPlanTab?: (planId: string) => void;
-
-  /**
-   * Function to open a version tab
-   */
   openVersionTab?: (version: { id: string; versionNumber: number; createdAt: string }) => void;
-
-  /**
-   * Function to reload versions
-   */
   loadVersions?: () => Promise<void>;
-
-  /**
-   * Function to rebuild My Work list cache
-   */
   rebuildMyWorkListCache?: () => void;
-
-  /**
-   * Current selected article ID
-   */
   selectedArticleId: Ref<string | null>;
-
-  /**
-   * Articles index map
-   */
   articlesIndex: Map<string, ArticleDto>;
-
-  /**
-   * Function to clear selected article
-   */
   clearSelectedArticle?: () => void;
 }
 
-/**
- * Return type for useArticleSignalR composable
- */
-interface UseArticleSignalRReturn {
-  connection: Ref<ArticleHubConnection | null>;
-  updateQueue: Ref<SignalRQueueUpdate[]>;
-  processing: Ref<boolean>;
-  initializeConnection: () => Promise<void>;
-  disconnectConnection: () => Promise<void>;
-  joinArticle: (articleId: string) => Promise<void>;
-  leaveArticle: (articleId: string) => Promise<void>;
-}
-
-/**
- * Composable for managing ArticleHub SignalR connection and real-time updates.
- * Handles connection lifecycle, event subscriptions, and update queue processing.
- * 
- * @param options - Configuration options for SignalR connection
- * @returns SignalR connection state and control methods
- */
-export function useArticleSignalR(options: UseArticleSignalROptions): UseArticleSignalRReturn {
+/** Manages ArticleHub SignalR connection and real-time updates with batched queue processing */
+export function useArticleSignalR(options: UseArticleSignalROptions) {
   const connection = ref<ArticleHubConnection | null>(null);
   const updateQueue = ref<SignalRQueueUpdate[]>([]);
   const processing = ref<boolean>(false);

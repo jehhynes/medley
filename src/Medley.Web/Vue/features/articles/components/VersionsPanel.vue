@@ -54,7 +54,6 @@ import { formatRelativeTime } from '@/utils/helpers';
 import { useVersionsState } from '../composables/useVersionsState';
 import type { ArticleVersionDto } from '@/types/api-client';
 
-// Props
 interface Props {
   articleId: string | null;
   selectedVersionId?: string | null;
@@ -65,23 +64,19 @@ const props = withDefaults(defineProps<Props>(), {
   selectedVersionId: null
 });
 
-// Emits
 interface Emits {
   (e: 'select-version', version: ArticleVersionDto): void;
 }
 
 const emit = defineEmits<Emits>();
 
-// Composable
 const articleIdRef = computed(() => props.articleId);
 const versionState = useVersionsState(articleIdRef);
 
-// Computed
 const userVersions = computed(() => versionState.userVersions.value);
 const loading = computed(() => versionState.loading.value);
 const error = computed(() => versionState.error.value);
 
-// Watch
 watch(() => props.articleId, async (newArticleId) => {
   if (newArticleId) {
     await loadVersions();
@@ -90,7 +85,6 @@ watch(() => props.articleId, async (newArticleId) => {
   }
 }, { immediate: true });
 
-// Methods
 async function loadVersions(): Promise<void> {
   if (!props.articleId) return;
   
@@ -110,7 +104,6 @@ async function loadVersions(): Promise<void> {
 
 function selectVersion(version: ArticleVersionDto): void {
   emit('select-version', version);
-  // Collapse right sidebar on mobile after selection
   (window as any).MedleySidebar?.collapseRightSidebar();
 }
 

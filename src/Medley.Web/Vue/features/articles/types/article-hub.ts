@@ -1,9 +1,5 @@
 import type { HubConnection } from '@microsoft/signalr';
 
-/**
- * Payload for ArticleCreated event
- * Sent when a new article is created
- */
 export interface ArticleCreatedPayload {
   articleId: string;
   title: string;
@@ -12,10 +8,6 @@ export interface ArticleCreatedPayload {
   timestamp: string;
 }
 
-/**
- * Payload for ArticleUpdated event
- * Sent when an article is updated
- */
 export interface ArticleUpdatedPayload {
   articleId: string;
   title: string;
@@ -23,19 +15,11 @@ export interface ArticleUpdatedPayload {
   timestamp: string;
 }
 
-/**
- * Payload for ArticleDeleted event
- * Sent when an article is deleted
- */
 export interface ArticleDeletedPayload {
   articleId: string;
   timestamp: string;
 }
 
-/**
- * Payload for ArticleMoved event
- * Sent when an article is moved to a different parent
- */
 export interface ArticleMovedPayload {
   articleId: string;
   oldParentId: string | null;
@@ -43,10 +27,6 @@ export interface ArticleMovedPayload {
   timestamp: string;
 }
 
-/**
- * Payload for ArticleAssignmentChanged event
- * Sent when an article's assigned user changes
- */
 export interface ArticleAssignmentChangedPayload {
   articleId: string;
   userId: string | null;
@@ -56,10 +36,6 @@ export interface ArticleAssignmentChangedPayload {
   timestamp: string;
 }
 
-/**
- * Payload for VersionCreated event
- * Sent when a new version is created
- */
 export interface VersionCreatedPayload {
   articleId: string;
   versionId: string;
@@ -67,20 +43,12 @@ export interface VersionCreatedPayload {
   createdAt: string;
 }
 
-/**
- * Payload for PlanGenerated event
- * Sent when an improvement plan is generated
- */
 export interface PlanGeneratedPayload {
   articleId: string;
   planId: string;
   timestamp: string;
 }
 
-/**
- * Payload for ArticleVersionCreated event
- * Sent when a new article version is created
- */
 export interface ArticleVersionCreatedPayload {
   articleId: string;
   versionId: string;
@@ -88,28 +56,16 @@ export interface ArticleVersionCreatedPayload {
   timestamp: string;
 }
 
-/**
- * Payload for ChatTurnStarted event
- * Sent when a chat turn starts
- */
 export interface ChatTurnStartedPayload {
   conversationId: string;
   articleId: string;
 }
 
-/**
- * Payload for ChatTurnComplete event
- * Sent when a chat turn completes
- */
 export interface ChatTurnCompletePayload {
   conversationId: string;
   articleId: string;
 }
 
-/**
- * Payload for ChatMessageStreaming event
- * Sent for each text chunk as the AI generates a response
- */
 export interface ChatMessageStreamingPayload {
   conversationId: string;
   articleId: string;
@@ -123,10 +79,6 @@ export interface ChatMessageStreamingPayload {
   timestamp: string;
 }
 
-/**
- * Payload for ChatToolInvoked event
- * Sent when the AI agent invokes a tool/function
- */
 export interface ChatToolInvokedPayload {
   conversationId: string;
   articleId: string;
@@ -136,10 +88,6 @@ export interface ChatToolInvokedPayload {
   timestamp: string;
 }
 
-/**
- * Payload for ChatToolCompleted event
- * Sent when a tool invocation completes
- */
 export interface ChatToolCompletedPayload {
   conversationId: string;
   articleId: string;
@@ -148,10 +96,6 @@ export interface ChatToolCompletedPayload {
   timestamp: string;
 }
 
-/**
- * Payload for ChatMessageComplete event
- * Sent when the AI response is complete and saved to database
- */
 export interface ChatMessageCompletePayload {
   id: string;
   conversationId: string;
@@ -160,10 +104,6 @@ export interface ChatMessageCompletePayload {
   timestamp: string;
 }
 
-/**
- * Payload for ChatError event
- * Sent when an error occurs during chat processing
- */
 export interface ChatErrorPayload {
   conversationId: string;
   articleId: string;
@@ -171,10 +111,6 @@ export interface ChatErrorPayload {
   timestamp: string;
 }
 
-/**
- * Payload for ReceiveMessage event
- * Sent when a message is received in an article's chat room
- */
 export interface ReceiveMessagePayload {
   articleId: string;
   userName: string;
@@ -182,10 +118,6 @@ export interface ReceiveMessagePayload {
   timestamp: string;
 }
 
-/**
- * Payload for ChatMessageReceived event
- * Sent when a chat message is received
- */
 export interface ChatMessageReceivedPayload {
   id: string;
   conversationId: string;
@@ -196,30 +128,18 @@ export interface ChatMessageReceivedPayload {
   articleId: string;
 }
 
-/**
- * Payload for ConversationCompleted event
- * Sent when a conversation is completed
- */
 export interface ConversationCompletedPayload {
   conversationId: string;
   articleId: string;
   completedAt: string;
 }
 
-/**
- * Payload for ConversationCancelled event
- * Sent when a conversation is cancelled
- */
 export interface ConversationCancelledPayload {
   conversationId: string;
   articleId: string;
   timestamp: string;
 }
 
-/**
- * Server-to-client methods interface for ArticleHub
- * Defines all methods that the server can call on connected clients
- */
 export interface ArticleHubServerMethods {
   ArticleCreated: (payload: ArticleCreatedPayload) => void;
   ArticleUpdated: (payload: ArticleUpdatedPayload) => void;
@@ -242,10 +162,7 @@ export interface ArticleHubServerMethods {
   ConversationCancelled: (payload: ConversationCancelledPayload) => void;
 }
 
-/**
- * Typed hub connection for ArticleHub
- * Provides compile-time type safety for event handlers
- */
+/** Typed hub connection with compile-time type safety for event handlers */
 export type ArticleHubConnection = HubConnection & {
   on<K extends keyof ArticleHubServerMethods>(
     methodName: K,

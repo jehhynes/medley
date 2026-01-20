@@ -1,25 +1,14 @@
-/**
- * Shared utility functions for Medley Vue apps
- * TypeScript version with full type safety
- */
-
 import type { ArticleDto, ArticleTypeDto, ArticleStatus } from '@/types/api-client';
 
-// Global article types cache
 let articleTypes: ArticleTypeDto[] = [];
 let articleTypesLoaded = false;
 let articleTypesPromise: Promise<ArticleTypeDto[]> | null = null;
 
-/**
- * Get article types (loads from API on first call and caches)
- * @returns Promise resolving to article types array
- */
 export const getArticleTypes = async (): Promise<ArticleTypeDto[]> => {
   if (articleTypesLoaded) {
     return articleTypes;
   }
 
-  // If already loading, return the existing promise
   if (articleTypesPromise) {
     return articleTypesPromise;
   }
@@ -45,33 +34,17 @@ export const getArticleTypes = async (): Promise<ArticleTypeDto[]> => {
   return articleTypesPromise;
 };
 
-/**
- * Options for formatting relative time
- */
 export interface RelativeTimeOptions {
-  /** Use short format (e.g., "2m ago" vs "2 minutes ago") */
   short?: boolean;
-  /** Include time in fallback date format for old dates */
   includeTime?: boolean;
 }
 
-/**
- * Formats a date string into a readable date (no time)
- * @param dateString - ISO date string
- * @returns Formatted date string
- */
 export const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return 'N/A';
   const date = new Date(dateString);
   return date.toLocaleDateString();
 };
 
-/**
- * Formats a date as relative time (e.g., "2 minutes ago", "3h ago")
- * @param dateInput - Date string or Date object
- * @param options - Formatting options
- * @returns Relative time string
- */
 export const formatRelativeTime = (
   dateInput: string | Date | null | undefined,
   options: RelativeTimeOptions = {}
@@ -87,12 +60,10 @@ export const formatRelativeTime = (
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
-  // Just now
   if (diffMinutes < 1) {
     return 'Just now';
   }
 
-  // Minutes
   if (diffMinutes < 60) {
     if (short) {
       return `${diffMinutes}m ago`;
@@ -100,7 +71,6 @@ export const formatRelativeTime = (
     return `${diffMinutes} minute${diffMinutes === 1 ? '' : 's'} ago`;
   }
 
-  // Hours
   if (diffHours < 24) {
     if (short) {
       return `${diffHours}h ago`;
@@ -108,7 +78,6 @@ export const formatRelativeTime = (
     return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
   }
 
-  // Days (within a week)
   if (diffDays < 7) {
     if (short) {
       return `${diffDays}d ago`;
@@ -116,7 +85,6 @@ export const formatRelativeTime = (
     return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
   }
 
-  // Older dates - show formatted date
   if (includeTime) {
     return date.toLocaleDateString([], {
       year: 'numeric',
@@ -130,11 +98,6 @@ export const formatRelativeTime = (
   return date.toLocaleDateString();
 };
 
-/**
- * Returns Bootstrap badge class for article status
- * @param status - Article status
- * @returns Bootstrap badge class
- */
 export const getStatusBadgeClass = (status: ArticleStatus | string | null | undefined): string => {
   const classes: Record<string, string> = {
     'Draft': 'bg-secondary',
@@ -145,11 +108,6 @@ export const getStatusBadgeClass = (status: ArticleStatus | string | null | unde
   return classes[status as string] || 'bg-secondary';
 };
 
-/**
- * Copies text to clipboard
- * @param text - Text to copy
- * @returns Promise resolving to true if successful
- */
 export const copyToClipboard = async (text: string): Promise<boolean> => {
   try {
     await navigator.clipboard.writeText(text);
@@ -160,12 +118,6 @@ export const copyToClipboard = async (text: string): Promise<boolean> => {
   }
 };
 
-/**
- * Debounce helper - delays function execution until after wait time has elapsed
- * @param func - Function to debounce
- * @param wait - Wait time in milliseconds
- * @returns Debounced function
- */
 export const debounce = <T extends (...args: any[]) => any>(
   func: T,
   wait: number
@@ -181,11 +133,6 @@ export const debounce = <T extends (...args: any[]) => any>(
   };
 };
 
-/**
- * Get icon class from icon name
- * @param icon - Icon name
- * @returns Full icon class
- */
 export const getIconClass = (icon: string | null | undefined): string => {
   if (!icon) {
     return 'bi bi-file-text';
@@ -199,21 +146,11 @@ export const getIconClass = (icon: string | null | undefined): string => {
   return 'bi bi-file-text';
 };
 
-/**
- * Normalize text for comparison (removes non-alphabetic characters and converts to lowercase)
- * @param str - String to normalize
- * @returns Normalized string
- */
 const normalizeText = (str: string | null | undefined): string => {
   if (!str) return '';
   return str.replace(/[^a-zA-Z]/g, '').toLowerCase();
 };
 
-/**
- * Get icon for fragment category
- * @param category - Fragment category
- * @returns Icon class
- */
 export const getFragmentCategoryIcon = (category: string | null | undefined): string => {
   if (!category) {
     return 'bi-file-text';
@@ -229,7 +166,6 @@ export const getFragmentCategoryIcon = (category: string | null | undefined): st
     return hardcodedIcons[normalizedCategory];
   }
 
-  // Use cached types (will be empty array if not loaded yet)
   if (Array.isArray(articleTypes) && articleTypes.length > 0) {
     const matchingType = articleTypes.find(
       at => at.name && normalizeText(at.name) === normalizedCategory
@@ -243,11 +179,6 @@ export const getFragmentCategoryIcon = (category: string | null | undefined): st
   return 'bi-file-text';
 };
 
-/**
- * Get icon for source type
- * @param type - Source type
- * @returns Icon class
- */
 export const getSourceTypeIcon = (type: string | null | undefined): string => {
   const icons: Record<string, string> = {
     'Meeting': 'bi-camera-video',
@@ -260,11 +191,6 @@ export const getSourceTypeIcon = (type: string | null | undefined): string => {
   return icons[type || ''] || 'bi-file-earmark';
 };
 
-/**
- * Get icon for confidence level
- * @param confidence - Confidence level
- * @returns Icon class
- */
 export const getConfidenceIcon = (confidence: string | null | undefined): string => {
   if (!confidence) return 'fa-ban';
   const level = confidence.toString().toLowerCase();
@@ -278,11 +204,6 @@ export const getConfidenceIcon = (confidence: string | null | undefined): string
   }
 };
 
-/**
- * Get color for confidence level
- * @param confidence - Confidence level
- * @returns CSS color value
- */
 export const getConfidenceColor = (confidence: string | null | undefined): string => {
   if (!confidence) return 'var(--bs-secondary)';
   const level = confidence.toString().toLowerCase();
@@ -296,11 +217,6 @@ export const getConfidenceColor = (confidence: string | null | undefined): strin
   }
 };
 
-/**
- * Get icon for article status
- * @param status - Article status
- * @returns Icon class
- */
 export const getStatusIcon = (status: ArticleStatus | string | null | undefined): string => {
   const iconMap: Record<string, string> = {
     'Draft': 'fa fa-pen-circle',
@@ -311,11 +227,6 @@ export const getStatusIcon = (status: ArticleStatus | string | null | undefined)
   return iconMap[status as string] || 'bi-circle';
 };
 
-/**
- * Get color class for article status
- * @param status - Article status
- * @returns Bootstrap color class
- */
 export const getStatusColorClass = (status: ArticleStatus | string | null | undefined): string => {
   const colorMap: Record<string, string> = {
     'Draft': 'text-secondary',
@@ -326,10 +237,6 @@ export const getStatusColorClass = (status: ArticleStatus | string | null | unde
   return colorMap[status as string] || 'text-secondary';
 };
 
-/**
- * Initialize markdown renderer
- * @returns Marked instance or null if not available
- */
 export const initializeMarkdownRenderer = (): any | null => {
   if (typeof (window as any).marked !== 'undefined') {
     return (window as any).marked;
@@ -338,10 +245,6 @@ export const initializeMarkdownRenderer = (): any | null => {
   return null;
 };
 
-/**
- * Ensure toast container exists in DOM
- * @returns Toast container element
- */
 const ensureToastContainer = (): HTMLElement => {
   let container = document.getElementById('toast-container');
   if (!container) {
@@ -354,16 +257,8 @@ const ensureToastContainer = (): HTMLElement => {
   return container;
 };
 
-/**
- * Toast notification types
- */
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
-/**
- * Show toast notification
- * @param type - Toast type (success, error, warning, info)
- * @param message - Toast message
- */
 export const showToast = (type: ToastType, message: string): void => {
   ensureToastContainer();
 
@@ -388,21 +283,11 @@ export const showToast = (type: ToastType, message: string): void => {
   }
 };
 
-/**
- * Generic tree item interface
- */
 export interface TreeItem {
   id: string;
   [key: string]: any;
 }
 
-/**
- * Recursively finds an item in a tree structure by ID
- * @param items - Array of items to search
- * @param id - ID to search for
- * @param childrenKey - Key name for children array (default: 'children')
- * @returns Found item or null
- */
 export const findInTree = <T extends TreeItem>(
   items: T[] | null | undefined,
   id: string,
@@ -420,12 +305,6 @@ export const findInTree = <T extends TreeItem>(
   return null;
 };
 
-/**
- * Finds an item in a flat list by ID
- * @param items - Array of items to search
- * @param id - ID to search for
- * @returns Found item or null
- */
 export const findInList = <T extends TreeItem>(
   items: T[] | null | undefined,
   id: string
@@ -434,23 +313,11 @@ export const findInList = <T extends TreeItem>(
   return items.find(i => i && i.id === id) || null;
 };
 
-/**
- * Check if article should show processing spinner
- * Priority: Always show if conversation is processing
- * @param article - Article to check
- * @returns True if should show spinner
- */
 export const showProcessingSpinner = (article: ArticleSummaryDto | null | undefined): boolean => {
   if (!article) return false;
   return article.currentConversation?.isRunning === true;
 };
 
-/**
- * Check if article should show user turn indicator
- * Only show if conversation is active (not processing) and article status is not Approved or Archived
- * @param article - Article to check
- * @returns True if should show user turn indicator
- */
 export const showUserTurnIndicator = (article: ArticleSummaryDto | null | undefined): boolean => {
   if (!article || !article.currentConversation) {
     return false;
@@ -460,7 +327,6 @@ export const showUserTurnIndicator = (article: ArticleSummaryDto | null | undefi
     return false;
   }
 
-  // Only show if status is not Approved or Archived
   const status = article.status?.toLowerCase();
   return status !== 'approved' && status !== 'archived';
 };

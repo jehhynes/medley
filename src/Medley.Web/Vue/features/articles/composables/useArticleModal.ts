@@ -2,9 +2,6 @@ import { ref, nextTick, type Ref } from 'vue';
 import { apiClients } from '@/utils/apiClients';
 import type { ArticleDto, ArticleSummaryDto } from '@/types/api-client';
 
-/**
- * Create modal state interface
- */
 export interface CreateModalState {
   visible: boolean;
   title: string;
@@ -13,9 +10,6 @@ export interface CreateModalState {
   isSubmitting: boolean;
 }
 
-/**
- * Edit modal state interface
- */
 export interface EditModalState {
   visible: boolean;
   articleId: string | null;
@@ -24,80 +18,20 @@ export interface EditModalState {
   isSubmitting: boolean;
 }
 
-/**
- * Options for useArticleModal composable
- */
 export interface UseArticleModalOptions {
-  /**
-   * Function to insert an article into the tree
-   */
   insertArticleIntoTree: (article: ArticleSummaryDto) => void;
-
-  /**
-   * Function to update an article in the tree
-   */
   updateArticleInTree: (articleId: string, updates: Partial<ArticleSummaryDto>) => void;
-
-  /**
-   * Function to select an article
-   */
   selectArticle: (article: ArticleSummaryDto, shouldJoinSignalR?: boolean) => Promise<void>;
-
-  /**
-   * Articles index map
-   */
   articlesIndex: Map<string, ArticleDto>;
-
-  /**
-   * Current selected article ID
-   */
   selectedArticleId: Ref<string | null>;
-
-  /**
-   * Optional ref to the title input element for auto-focus
-   */
   titleInputRef?: Ref<HTMLInputElement | null>;
-
-  /**
-   * Optional ref to the edit title input element for auto-focus
-   */
   editTitleInputRef?: Ref<HTMLInputElement | null>;
-
-  /**
-   * Optional ref to the TipTap editor for syncing heading
-   */
   tiptapEditorRef?: Ref<{ syncHeading: (title: string) => void } | null>;
-
-  /**
-   * Optional function to close sidebar menu
-   */
   closeSidebarMenu?: () => void;
 }
 
-/**
- * Return type for useArticleModal composable
- */
-interface UseArticleModalReturn {
-  createModal: Ref<CreateModalState>;
-  editModal: Ref<EditModalState>;
-  validateArticleForm: (title: string | null | undefined, typeId: string | null | undefined) => boolean;
-  showCreateArticleModal: (parentArticleId: string | null) => void;
-  closeCreateModal: () => void;
-  createArticle: () => Promise<void>;
-  showEditArticleModal: (article: ArticleDto) => void;
-  closeEditModal: () => void;
-  updateArticle: () => Promise<void>;
-}
-
-/**
- * Composable for article create and edit modal management.
- * Handles modal state, validation, and API operations.
- * 
- * @param options - Configuration options for article modals
- * @returns Modal state and control methods
- */
-export function useArticleModal(options: UseArticleModalOptions): UseArticleModalReturn {
-  // Create modal state
+/** Manages article create and edit modal state and operations */
+export function useArticleModal(options: UseArticleModalOptions) {
   const createModal = ref<CreateModalState>({
     visible: false,
     title: '',
@@ -106,7 +40,6 @@ export function useArticleModal(options: UseArticleModalOptions): UseArticleModa
     isSubmitting: false
   });
 
-  // Edit modal state
   const editModal = ref<EditModalState>({
     visible: false,
     articleId: null,
@@ -115,12 +48,6 @@ export function useArticleModal(options: UseArticleModalOptions): UseArticleModa
     isSubmitting: false
   });
 
-  /**
-   * Validate article form inputs
-   * @param title - Article title
-   * @param typeId - Article type ID
-   * @returns True if validation passes
-   */
   const validateArticleForm = (
     title: string | null | undefined,
     typeId: string | null | undefined
@@ -144,11 +71,7 @@ export function useArticleModal(options: UseArticleModalOptions): UseArticleModa
     return true;
   };
 
-  /**
-   * Show the create article modal
-   * @param parentArticleId - ID of parent article (null for root)
-   */
-  const showCreateArticleModal = (parentArticleId: string | null): void => {
+  const showCreateArticleModal = (parentArticleId: string | null) => {
     options.closeSidebarMenu?.();
     createModal.value.parentId = parentArticleId;
     createModal.value.title = '';
@@ -162,20 +85,14 @@ export function useArticleModal(options: UseArticleModalOptions): UseArticleModa
     });
   };
 
-  /**
-   * Close the create modal
-   */
-  const closeCreateModal = (): void => {
+  const closeCreateModal = () => {
     createModal.value.visible = false;
     createModal.value.title = '';
     createModal.value.typeId = null;
     createModal.value.parentId = null;
   };
 
-  /**
-   * Create a new article
-   */
-  const createArticle = async (): Promise<void> => {
+  const createArticle = async () => {
     if (!validateArticleForm(createModal.value.title, createModal.value.typeId)) {
       return;
     }
@@ -190,10 +107,8 @@ export function useArticleModal(options: UseArticleModalOptions): UseArticleModa
 
       closeCreateModal();
 
-      // Insert the new article into the tree surgically
       options.insertArticleIntoTree(response);
 
-      // Auto-select the newly created article
       if (response?.id) {
         const newArticle = options.articlesIndex.get(response.id);
         if (newArticle) {
@@ -212,11 +127,7 @@ export function useArticleModal(options: UseArticleModalOptions): UseArticleModa
     }
   };
 
-  /**
-   * Show the edit article modal
-   * @param article - Article to edit
-   */
-  const showEditArticleModal = (article: ArticleDto): void => {
+  const showEditArticleModal = (article: ArticleDto) => {
     editModal.value.articleId = article.id || null;
     editModal.value.title = article.title || '';
     editModal.value.typeId = article.articleTypeId || null;
@@ -229,20 +140,14 @@ export function useArticleModal(options: UseArticleModalOptions): UseArticleModa
     });
   };
 
-  /**
-   * Close the edit modal
-   */
-  const closeEditModal = (): void => {
+  const closeEditModal = () => {
     editModal.value.visible = false;
     editModal.value.articleId = null;
     editModal.value.title = '';
     editModal.value.typeId = null;
   };
 
-  /**
-   * Update an existing article
-   */
-  const updateArticle = async (): Promise<void> => {
+  const updateArticle = async () => {
     if (!validateArticleForm(editModal.value.title, editModal.value.typeId)) {
       return;
     }
@@ -259,13 +164,11 @@ export function useArticleModal(options: UseArticleModalOptions): UseArticleModa
         articleTypeId: editModal.value.typeId
       });
 
-      // Update the article in the tree surgically
       options.updateArticleInTree(editModal.value.articleId, {
         title: editModal.value.title,
         articleTypeId: editModal.value.typeId
       });
 
-      // If the article is currently selected, sync the first H1 in the editor
       if (options.selectedArticleId.value === editModal.value.articleId) {
         options.tiptapEditorRef?.value?.syncHeading(editModal.value.title);
       }
