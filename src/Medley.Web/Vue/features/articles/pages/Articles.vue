@@ -398,7 +398,6 @@ import {
   showToast
 } from '@/utils/helpers';
 import { getUrlParam } from '@/utils/url';
-import { createArticleHubConnection } from '@/utils/signalr';
 import type { ArticleHubConnection } from '../types/article-hub';
 
 // Composables
@@ -1155,9 +1154,7 @@ onMounted(async () => {
     viewMode.value = savedViewMode;
   }
 
-  // Initialize SignalR connection
-  signalr.connection = createArticleHubConnection();
-  
+  // Initialize SignalR composable
   signalRMethods = useArticleSignalR({
     insertArticleIntoTree,
     updateArticleInTree,
@@ -1180,9 +1177,10 @@ onMounted(async () => {
     }
   });
 
-  // Start SignalR connection
+  // Initialize and start SignalR connection
   try {
-    await signalr.connection.start();
+    await signalRMethods.initializeConnection();
+    signalr.connection = signalRMethods.connection.value;
     console.log('Connected to ArticleHub');
   } catch (err: any) {
     console.error('SignalR connection error:', err);

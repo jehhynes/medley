@@ -63,7 +63,6 @@ export interface UseArticleSignalROptions {
   openPlanTab?: (planId: string) => void;
   openVersionTab?: (version: { id: string; versionNumber: number; createdAt: string }) => void;
   loadVersions?: () => Promise<void>;
-  rebuildMyWorkListCache?: () => void;
   selectedArticleId: Ref<string | null>;
   articlesIndex: Map<string, ArticleDto>;
   clearSelectedArticle?: () => void;
@@ -286,9 +285,6 @@ export function useArticleSignalR(options: UseArticleSignalROptions) {
           article.currentConversation.isRunning = true;
           article.currentConversation.id = data.conversationId;
         }
-        
-        // Rebuild My Work cache since conversation status changed
-        options.rebuildMyWorkListCache?.();
       }
     });
 
@@ -297,9 +293,6 @@ export function useArticleSignalR(options: UseArticleSignalROptions) {
       const article = options.articlesIndex.get(options.selectedArticleId.value || '');
       if (article?.currentConversation) {
         article.currentConversation.isRunning = false;
-        
-        // Rebuild My Work cache since conversation status changed
-        options.rebuildMyWorkListCache?.();
       }
     });
 
