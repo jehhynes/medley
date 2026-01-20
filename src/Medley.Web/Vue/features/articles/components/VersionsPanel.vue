@@ -111,4 +111,9 @@ function formatDate(dateString: Date | undefined): string {
   if (!dateString) return '';
   return formatRelativeTime(dateString, { short: false, includeTime: true });
 }
+
+// Expose methods to parent component
+defineExpose({
+  loadVersions
+});
 </script>
