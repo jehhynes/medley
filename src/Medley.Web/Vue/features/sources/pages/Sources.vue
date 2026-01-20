@@ -235,7 +235,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
-import { api } from '@/utils/api';
+import { sourcesClient, fragmentsClient } from '@/utils/apiClients';
 import { 
   getFragmentCategoryIcon, 
   getIconClass, 
@@ -252,7 +252,7 @@ import { getUrlParam, setUrlParam, setupPopStateHandler } from '@/utils/url';
 import { useSidebarState } from '@/composables/useSidebarState';
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll';
 import { createAdminHubConnection } from '@/utils/signalr';
-import type { Source, Fragment, Tag } from '@/types/api-client';
+import type { SourceDto, FragmentDto, TagDto } from '@/types/api-client';
 import type { AdminHubConnection } from '@/types/admin-hub';
 
 // Interfaces
@@ -274,15 +274,15 @@ const { leftSidebarVisible } = useSidebarState();
 const router = useRouter();
 
 // Reactive state
-const sources = ref<Source[]>([]);
+const sources = ref<SourceDto[]>([]);
 const selectedSourceId = ref<string | null>(null);
-const selectedSource = ref<Source | null>(null);
+const selectedSource = ref<SourceDto | null>(null);
 const loading = ref<boolean>(false);
 const error = ref<string | null>(null);
 const searchQuery = ref<string>('');
 const signalRConnection = ref<AdminHubConnection | null>(null);
-const fragments = ref<Fragment[]>([]);
-const selectedFragment = ref<Fragment | null>(null);
+const fragments = ref<FragmentDto[]>([]);
+const selectedFragment = ref<FragmentDto | null>(null);
 const loadingFragments = ref<boolean>(false);
 const fragmentsError = ref<string | null>(null);
 const markdownRenderer = ref<any>(null);
@@ -348,13 +348,16 @@ const loadSources = async (): Promise<void> => {
   loading.value = true;
   error.value = null;
   try {
-    let url = `/api/sources?skip=0&take=${pagination.value.pageSize}`;
+    let tagTypeId: string | undefined;
+    let value: string | undefined;
+    
     if (activeTagFilter.value) {
-      url += `&tagTypeId=${activeTagFilter.value.tagTypeId}&value=${encodeURIComponent(activeTagFilter.value.value)}`;
+      tagTypeId = activeTagFilter.value.tagTypeId.toString();
+      value = activeTagFilter.value.value;
     }
-    const data = await api.get(url);
-    sources.value = data as Source[];
-    updateHasMore(data as Source[]);
+    
+    sources.value = await sourcesClient.getAll(undefined, tagTypeId, value, 0, pagination.value.pageSize);
+    updateHasMore(sources.value);
   } catch (err: any) {
     error.value = 'Failed to load sources: ' + err.message;
     console.error('Error loading sources:', err);
@@ -363,22 +366,25 @@ const loadSources = async (): Promise<void> => {
   }
 };
 
-async function loadMoreItems(): Promise<Source[]> {
+async function loadMoreItems(): Promise<SourceDto[]> {
   const skip = pagination.value.page * pagination.value.pageSize;
   try {
-    let url = `/api/sources?skip=${skip}&take=${pagination.value.pageSize}`;
-    
     const query = searchQuery.value.trim();
-    if (query.length >= 2) {
-      url += `&query=${encodeURIComponent(query)}`;
-    }
+    let tagTypeId: string | undefined;
+    let value: string | undefined;
     
     if (activeTagFilter.value) {
-      url += `&tagTypeId=${activeTagFilter.value.tagTypeId}&value=${encodeURIComponent(activeTagFilter.value.value)}`;
+      tagTypeId = activeTagFilter.value.tagTypeId.toString();
+      value = activeTagFilter.value.value;
     }
     
-    const data = await api.get(url);
-    const newSources = data as Source[];
+    const newSources = await sourcesClient.getAll(
+      query.length >= 2 ? query : undefined,
+      tagTypeId,
+      value,
+      skip,
+      pagination.value.pageSize
+    );
     sources.value.push(...newSources);
     return newSources;
   } catch (err) {
@@ -387,8 +393,8 @@ async function loadMoreItems(): Promise<Source[]> {
   }
 }
 
-const selectSource = async (source: Source, replaceState = false): Promise<void> => {
-  selectedSourceId.value = source.id;
+const selectSource = async (source: SourceDto, replaceState = false): Promise<void> => {
+  selectedSourceId.value = source.id!;
 
   if (replaceState) {
     await router.replace({ query: { id: source.id } });
@@ -397,8 +403,7 @@ const selectSource = async (source: Source, replaceState = false): Promise<void>
   }
 
   try {
-    const data = await api.get(`/api/sources/${source.id}`);
-    selectedSource.value = data as Source;
+    selectedSource.value = await sourcesClient.get(source.id!);
     const sourceIndex = sources.value.findIndex(s => s.id === source.id);
     if (sourceIndex !== -1 && selectedSource.value.tags) {
       sources.value[sourceIndex].tags = selectedSource.value.tags;
@@ -414,13 +419,16 @@ const onSearchInput = async (): Promise<void> => {
   if (query.length >= 2) {
     resetPagination();
     try {
-      let url = `/api/sources?query=${encodeURIComponent(query)}&skip=0&take=${pagination.value.pageSize}`;
+      let tagTypeId: string | undefined;
+      let value: string | undefined;
+      
       if (activeTagFilter.value) {
-        url += `&tagTypeId=${activeTagFilter.value.tagTypeId}&value=${encodeURIComponent(activeTagFilter.value.value)}`;
+        tagTypeId = activeTagFilter.value.tagTypeId.toString();
+        value = activeTagFilter.value.value;
       }
-      const data = await api.get(url);
-      sources.value = data as Source[];
-      updateHasMore(data as Source[]);
+      
+      sources.value = await sourcesClient.getAll(query, tagTypeId, value, 0, pagination.value.pageSize);
+      updateHasMore(sources.value);
     } catch (err) {
       console.error('Search error:', err);
     }
@@ -429,16 +437,16 @@ const onSearchInput = async (): Promise<void> => {
   }
 };
 
-const filterByTag = async (tag: Tag): Promise<void> => {
+const filterByTag = async (tag: TagDto): Promise<void> => {
   if (activeTagFilter.value && 
       activeTagFilter.value.tagTypeId === tag.tagTypeId && 
       activeTagFilter.value.value === tag.value) {
     await clearTagFilter();
   } else {
     activeTagFilter.value = {
-      tagTypeId: tag.tagTypeId,
-      value: tag.value,
-      tagType: tag.tagType
+      tagTypeId: tag.tagTypeId!,
+      value: tag.value!,
+      tagType: tag.tagType!
     };
     searchQuery.value = '';
     await loadSources();
@@ -496,7 +504,7 @@ const performExtraction = async (sourceId: string): Promise<void> => {
   }
 
   try {
-    const response = await api.post(`/api/sources/${sourceId}/extract-fragments`, {});
+    const response = await sourcesClient.extractFragments(sourceId);
 
     if (!response.success) {
       showToast('error', response.message || 'Failed to start fragment extraction');
@@ -529,18 +537,17 @@ const performExtraction = async (sourceId: string): Promise<void> => {
 
 const generateTags = async (): Promise<void> => {
   if (!selectedSource.value) return;
-  const sourceId = selectedSource.value.id;
+  const sourceId = selectedSource.value.id!;
   tagging.value = true;
   try {
-    const result = await api.post(`/api/sources/${sourceId}/tag?force=true`, {});
+    const result = await sourcesClient.tagSource(sourceId, true);
     if (!result.success && result.message) {
       showToast('error', result.message);
     } else {
       showToast('success', result.message || 'Tags generated');
     }
     try {
-      const updated = await api.get(`/api/sources/${sourceId}`);
-      selectedSource.value = updated as Source;
+      selectedSource.value = await sourcesClient.get(sourceId);
     } catch (err) {
       console.error('Failed to reload source after tagging:', err);
     }
@@ -558,8 +565,7 @@ const loadFragments = async (): Promise<void> => {
   loadingFragments.value = true;
   fragmentsError.value = null;
   try {
-    const data = await api.get(`/api/fragments/by-source/${selectedSource.value.id}`);
-    fragments.value = data as Fragment[];
+    fragments.value = await fragmentsClient.getBySourceId(selectedSource.value.id!);
   } catch (err: any) {
     fragmentsError.value = 'Failed to load fragments: ' + err.message;
     console.error('Error loading fragments:', err);
@@ -568,7 +574,7 @@ const loadFragments = async (): Promise<void> => {
   }
 };
 
-const selectFragment = (fragment: Fragment): void => {
+const selectFragment = (fragment: FragmentDto): void => {
   selectedFragment.value = fragment;
 };
 
@@ -593,7 +599,7 @@ onMounted(async () => {
       await selectSource(source, true);
     } else {
       try {
-        const loadedSource = await api.get(`/api/sources/${sourceIdFromUrl}`) as Source;
+        const loadedSource = await sourcesClient.get(sourceIdFromUrl);
         sources.value.unshift(loadedSource);
         selectedSource.value = loadedSource;
         selectedSourceId.value = sourceIdFromUrl;
@@ -610,7 +616,7 @@ onMounted(async () => {
     const sourceIndex = sources.value.findIndex(s => s.id === sourceId);
     if (sourceIndex !== -1) {
       try {
-        const updatedSource = await api.get(`/api/sources/${sourceId}`) as Source;
+        const updatedSource = await sourcesClient.get(sourceId);
         sources.value.splice(sourceIndex, 1, updatedSource);
       } catch (err) {
         console.error('Failed to reload source in list:', err);
@@ -619,8 +625,7 @@ onMounted(async () => {
 
     if (selectedSource.value && selectedSource.value.id === sourceId) {
       try {
-        const updatedSource = await api.get(`/api/sources/${sourceId}`) as Source;
-        selectedSource.value = updatedSource;
+        selectedSource.value = await sourcesClient.get(sourceId);
         if (success) {
           await loadFragments();
         }
@@ -642,9 +647,8 @@ onMounted(async () => {
     if (sourceId) {
       const source = findInList(sources.value, sourceId);
       if (source) {
-        selectedSourceId.value = source.id;
-        const data = await api.get(`/api/sources/${source.id}`);
-        selectedSource.value = data as Source;
+        selectedSourceId.value = source.id!;
+        selectedSource.value = await sourcesClient.get(source.id!);
       }
     } else {
       selectedSourceId.value = null;

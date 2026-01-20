@@ -127,7 +127,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
-import { api } from '@/utils/api';
+import { fragmentsClient } from '@/utils/apiClients';
 import { 
   getFragmentCategoryIcon, 
   getIconClass, 
@@ -143,7 +143,7 @@ import {
 import { getUrlParam, setUrlParam, setupPopStateHandler } from '@/utils/url';
 import { useSidebarState } from '@/composables/useSidebarState';
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll';
-import type { Fragment } from '@/types/api-client';
+import type { FragmentDto } from '@/types/api-client';
 
 // Interfaces
 interface PaginationState {
@@ -158,9 +158,9 @@ const { leftSidebarVisible } = useSidebarState();
 const router = useRouter();
 
 // Reactive state
-const fragments = ref<Fragment[]>([]);
+const fragments = ref<FragmentDto[]>([]);
 const selectedFragmentId = ref<string | null>(null);
-const selectedFragment = ref<Fragment | null>(null);
+const selectedFragment = ref<FragmentDto | null>(null);
 const loading = ref<boolean>(false);
 const searching = ref<boolean>(false);
 const error = ref<string | null>(null);
@@ -206,9 +206,8 @@ const loadFragments = async (): Promise<void> => {
   loading.value = true;
   error.value = null;
   try {
-    const data = await api.get(`/api/fragments?skip=0&take=${pagination.value.pageSize}`);
-    fragments.value = data as Fragment[];
-    updateHasMore(data as Fragment[]);
+    fragments.value = await fragmentsClient.getAll(0, pagination.value.pageSize);
+    updateHasMore(fragments.value);
   } catch (err: any) {
     error.value = 'Failed to load fragments: ' + err.message;
     console.error('Error loading fragments:', err);
@@ -217,8 +216,8 @@ const loadFragments = async (): Promise<void> => {
   }
 };
 
-const selectFragment = async (fragment: Fragment, replaceState = false): Promise<void> => {
-  selectedFragmentId.value = fragment.id;
+const selectFragment = async (fragment: FragmentDto, replaceState = false): Promise<void> => {
+  selectedFragmentId.value = fragment.id!;
   showConfidenceComment.value = false;
 
   if (replaceState) {
@@ -228,8 +227,7 @@ const selectFragment = async (fragment: Fragment, replaceState = false): Promise
   }
 
   try {
-    const data = await api.get(`/api/fragments/${fragment.id}`);
-    selectedFragment.value = data as Fragment;
+    selectedFragment.value = await fragmentsClient.get(fragment.id!);
   } catch (err) {
     console.error('Error loading fragment:', err);
     selectedFragment.value = null;
@@ -252,8 +250,7 @@ const performSearch = async (): Promise<void> => {
     resetPagination();
     searching.value = true;
     try {
-      const data = await api.get(`/api/fragments/search?query=${encodeURIComponent(query)}&take=100`);
-      fragments.value = data as Fragment[];
+      fragments.value = await fragmentsClient.search(query, 100);
       pagination.value.hasMore = false;
     } catch (err: any) {
       console.error('Search error:', err);
@@ -266,7 +263,7 @@ const performSearch = async (): Promise<void> => {
   }
 };
 
-async function loadMoreItems(): Promise<Fragment[]> {
+async function loadMoreItems(): Promise<FragmentDto[]> {
   const query = searchQuery.value.trim();
   if (query.length >= 2) {
     return [];
@@ -274,8 +271,7 @@ async function loadMoreItems(): Promise<Fragment[]> {
   
   const skip = pagination.value.page * pagination.value.pageSize;
   try {
-    const data = await api.get(`/api/fragments?skip=${skip}&take=${pagination.value.pageSize}`);
-    const newFragments = data as Fragment[];
+    const newFragments = await fragmentsClient.getAll(skip, pagination.value.pageSize);
     fragments.value.push(...newFragments);
     return newFragments;
   } catch (err) {
@@ -305,7 +301,7 @@ onMounted(async () => {
       await selectFragment(fragment, true);
     } else {
       try {
-        const loadedFragment = await api.get(`/api/fragments/${fragmentIdFromUrl}`) as Fragment;
+        const loadedFragment = await fragmentsClient.get(fragmentIdFromUrl);
         fragments.value.unshift(loadedFragment);
         selectedFragment.value = loadedFragment;
         selectedFragmentId.value = fragmentIdFromUrl;
@@ -321,9 +317,8 @@ onMounted(async () => {
     if (fragmentId) {
       const fragment = findInList(fragments.value, fragmentId);
       if (fragment) {
-        selectedFragmentId.value = fragment.id;
-        const data = await api.get(`/api/fragments/${fragment.id}`);
-        selectedFragment.value = data as Fragment;
+        selectedFragmentId.value = fragment.id!;
+        selectedFragment.value = await fragmentsClient.get(fragment.id!);
       }
     } else {
       selectedFragmentId.value = null;

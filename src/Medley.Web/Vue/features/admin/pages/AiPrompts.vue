@@ -71,18 +71,18 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { api } from '@/utils/api';
+import { templatesClient } from '@/utils/apiClients';
 import { useSidebarState } from '@/composables/useSidebarState';
-import type { Template } from '@/types/api-client';
+import type { TemplateDto } from '@/types/api-client';
 
 // Setup composables
 const { leftSidebarVisible } = useSidebarState();
 const router = useRouter();
 
 // Reactive state
-const templates = ref<Template[]>([]);
+const templates = ref<TemplateDto[]>([]);
 const selectedTemplateId = ref<string | null>(null);
-const selectedTemplate = ref<Template | null>(null);
+const selectedTemplate = ref<TemplateDto | null>(null);
 const loading = ref<boolean>(false);
 const error = ref<string | null>(null);
 const editingContent = ref<string>('');
@@ -96,8 +96,7 @@ const loadTemplates = async (): Promise<void> => {
   loading.value = true;
   error.value = null;
   try {
-    const data = await api.get('/api/templates');
-    templates.value = data as Template[];
+    templates.value = await templatesClient.getAll();
   } catch (err: any) {
     error.value = 'Failed to load templates: ' + err.message;
     console.error('Error loading templates:', err);
@@ -106,12 +105,12 @@ const loadTemplates = async (): Promise<void> => {
   }
 };
 
-const selectTemplate = async (template: Template): Promise<void> => {
+const selectTemplate = async (template: TemplateDto): Promise<void> => {
   try {
-    const fullTemplate = await api.get(`/api/templates/${template.id}`) as Template;
+    const fullTemplate = await templatesClient.get(template.id!);
     
     selectedTemplate.value = fullTemplate;
-    selectedTemplateId.value = template.id;
+    selectedTemplateId.value = template.id!;
     editingContent.value = fullTemplate.content || '';
     lastSaved.value = fullTemplate.lastModifiedAt ? new Date(fullTemplate.lastModifiedAt) : null;
     
@@ -127,9 +126,9 @@ const saveTemplate = async (): Promise<void> => {
 
   isSaving.value = true;
   try {
-    const updated = await api.put(`/api/templates/${selectedTemplate.value.id}`, {
+    const updated = await templatesClient.update(selectedTemplate.value.id!, {
       content: editingContent.value
-    }) as Template;
+    });
 
     selectedTemplate.value = updated;
     lastSaved.value = new Date();

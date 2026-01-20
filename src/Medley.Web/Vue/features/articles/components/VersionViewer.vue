@@ -103,7 +103,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
-import { api } from '@/utils/api';
+import { articlesClient } from '@/utils/apiClients';
 import { htmlDiff } from '@/utils/htmlDiff';
 import { useVersionsState } from '../composables/useVersionsState';
 import type { ArticleVersionDto, ArticleVersionComparisonDto, VersionType } from '@/types/api-client';
@@ -222,9 +222,7 @@ async function loadVersionDiff(): Promise<void> {
   diffHtml.value = null;
 
   try {
-    const response = await api.get<ArticleVersionComparisonDto>(
-      `/api/articles/${props.articleId}/versions/${props.versionId}/diff`
-    );
+    const response = await articlesClient.getVersionDiff(props.articleId, props.versionId);
 
     const beforeHtml = markdownToHtml(response.beforeContent || '');
     const afterHtml = markdownToHtml(response.afterContent || '');
@@ -341,10 +339,7 @@ async function acceptVersion(): Promise<void> {
       if (result) {
         isProcessing.value = true;
         try {
-          const response = await api.post<void, any>(
-            `/api/articles/${props.articleId}/versions/${version.value!.id}/accept`,
-            undefined as any
-          );
+          const response = await articlesClient.acceptAiVersion(props.articleId, version.value!.id!);
 
           if (response) {
             // Emit event so parent can handle the refresh
@@ -385,10 +380,7 @@ async function rejectVersion(): Promise<void> {
       if (result) {
         isProcessing.value = true;
         try {
-          await api.post<void, void>(
-            `/api/articles/${props.articleId}/versions/${version.value!.id}/reject`,
-            undefined as any
-          );
+          await articlesClient.rejectAiVersion(props.articleId, version.value!.id!);
 
           // Emit event so parent can handle the refresh
           emit('version-rejected', version.value!.id!);

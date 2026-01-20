@@ -1,6 +1,6 @@
 import { ref, nextTick, type Ref } from 'vue';
-import { apiClients } from '@/utils/apiClients';
-import type { ArticleDto, ArticleSummaryDto } from '@/types/api-client';
+import { articlesClient } from '@/utils/apiClients';
+import type { ArticleDto, ArticleSummaryDto, ArticleCreateRequest, ArticleUpdateMetadataRequest } from '@/types/api-client';
 
 export interface CreateModalState {
   visible: boolean;
@@ -99,11 +99,13 @@ export function useArticleModal(options: UseArticleModalOptions) {
 
     createModal.value.isSubmitting = true;
     try {
-      const response = await api.post<ArticleDto>('/api/articles', {
-        title: createModal.value.title,
-        articleTypeId: createModal.value.typeId,
-        parentArticleId: createModal.value.parentId
-      });
+      const request: ArticleCreateRequest = {
+        title: createModal.value.title!,
+        articleTypeId: createModal.value.typeId!,
+        parentArticleId: createModal.value.parentId || undefined
+      };
+      
+      const response = await articlesClient.create(request);
 
       closeCreateModal();
 
@@ -159,10 +161,12 @@ export function useArticleModal(options: UseArticleModalOptions) {
 
     editModal.value.isSubmitting = true;
     try {
-      await api.put(`/api/articles/${editModal.value.articleId}/metadata`, {
-        title: editModal.value.title,
-        articleTypeId: editModal.value.typeId
-      });
+      const request: ArticleUpdateMetadataRequest = {
+        title: editModal.value.title!,
+        articleTypeId: editModal.value.typeId!
+      };
+      
+      await articlesClient.updateMetadata(editModal.value.articleId, request);
 
       options.updateArticleInTree(editModal.value.articleId, {
         title: editModal.value.title,

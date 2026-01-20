@@ -49,7 +49,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import { api } from '@/utils/api';
+import { articlesClient } from '@/utils/apiClients';
 import { formatRelativeTime } from '@/utils/helpers';
 import { useVersionsState } from '../composables/useVersionsState';
 import type { ArticleVersionDto } from '@/types/api-client';
@@ -92,7 +92,7 @@ async function loadVersions(): Promise<void> {
   versionState.setError(null);
   
   try {
-    const versions = await api.get<ArticleVersionDto[]>(`/api/articles/${props.articleId}/versions`);
+    const versions = await articlesClient.getVersionHistory(props.articleId);
     versionState.setVersions(versions);
   } catch (err: any) {
     versionState.setError('Failed to load version history: ' + err.message);

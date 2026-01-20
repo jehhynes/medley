@@ -184,7 +184,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, nextTick, type Ref } from 'vue';
 import { Chart, registerables } from 'chart.js';
-import { api } from '@/utils/api';
+import { dashboardClient } from '@/utils/apiClients';
 import { getIconClass } from '@/utils/helpers';
 
 // Register Chart.js components
@@ -248,8 +248,7 @@ const loadMetrics = async (): Promise<void> => {
   loading.value = true;
   error.value = null;
   try {
-    const data = await api.get('/api/dashboard/metrics');
-    metrics.value = data as MetricData;
+    metrics.value = await dashboardClient.getMetrics();
   } catch (err: any) {
     error.value = 'Failed to load dashboard metrics: ' + err.message;
     console.error('Error loading metrics:', err);
