@@ -381,7 +381,7 @@
 <script setup lang="ts">
 
 import { ref, reactive, computed, provide, onMounted, onBeforeUnmount, nextTick, watch, type Ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { HubConnectionState } from '@microsoft/signalr';
 import { apiClients } from '@/utils/apiClients';
 import type { 
@@ -397,7 +397,6 @@ import {
   formatDate,
   showToast
 } from '@/utils/helpers';
-import { getUrlParam } from '@/utils/url';
 import type { ArticleHubConnection } from '../types/article-hub';
 
 // Composables
@@ -516,6 +515,7 @@ declare global {
 // ============================================================================
 
 const router = useRouter();
+const route = useRoute();
 const { leftSidebarVisible, rightSidebarVisible } = useSidebarState();
 
 // ============================================================================
@@ -1196,7 +1196,7 @@ onMounted(async () => {
   treeOps.sortArticlesRecursive(articles.list);
 
   // Select article from URL if present
-  const articleIdFromUrl = getUrlParam('id');
+  const articleIdFromUrl = route.query.id as string | undefined;
   if (articleIdFromUrl) {
     const article = articles.index.get(articleIdFromUrl);
     if (article) {
@@ -1229,5 +1229,21 @@ onMounted(async () => {
         .catch((err: any) => console.error('Error disconnecting from SignalR:', err));
     }
   });
+});
+
+// Watch for route changes (browser back/forward)
+watch(() => route.query.id, async (newId) => {
+  if (newId && typeof newId === 'string') {
+    const article = articles.index.get(newId);
+    if (article && article.id !== articles.selectedId) {
+      await selectArticle(article, true);
+    }
+  } else if (!newId && articles.selectedId) {
+    // Clear selection if no ID in URL
+    articles.selectedId = null;
+    articles.selected = null;
+    editor.title = '';
+    editor.content = '';
+  }
 });
 </script>
