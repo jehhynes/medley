@@ -380,7 +380,7 @@
 
 <script setup lang="ts">
 
-import { ref, reactive, computed, provide, onMounted, onBeforeUnmount, nextTick, type Ref } from 'vue';
+import { ref, reactive, computed, provide, onMounted, onBeforeUnmount, nextTick, watch, type Ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { HubConnectionState } from '@microsoft/signalr';
 import { apiClients } from '@/utils/apiClients';
@@ -443,6 +443,7 @@ interface ArticlesState {
   expandedIds: Set<string>;
   index: Map<string, ArticleDto>;
   parentPathCache: Map<string, ParentPathItem[]>;
+  typeIndexMap: Record<string, ArticleTypeDto>;
 }
 
 interface EditorState {
@@ -540,7 +541,8 @@ const articles = reactive<ArticlesState>({
   selectedId: null,
   expandedIds: new Set(),
   index: new Map(),
-  parentPathCache: new Map()
+  parentPathCache: new Map(),
+  typeIndexMap: {}
 });
 
 // View mode state
@@ -600,7 +602,12 @@ provide('dragState', dragState);
 // ============================================================================
 
 // Article types composable
-const { types: articleTypes, loadArticleTypes } = useArticleTypes();
+const { types: articleTypes, typeIndexMap, loadArticleTypes } = useArticleTypes();
+
+// Sync typeIndexMap with articles state
+watch(typeIndexMap, (newMap) => {
+  articles.typeIndexMap = newMap;
+}, { immediate: true });
 
 // My Work composable - call once at top level
 const { myWorkCount } = useMyWork(

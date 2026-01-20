@@ -67,7 +67,6 @@ public class ArticleChatApiController : ControllerBase
     /// </summary>
     [HttpGet("conversation/{conversationId?}")]
     [ProducesResponseType(typeof(ConversationDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<ConversationDto>> GetConversation(Guid articleId, Guid? conversationId = null)
     {
@@ -105,7 +104,7 @@ public class ArticleChatApiController : ControllerBase
             
             if (conversation == null)
             {
-                return NoContent(); // No active conversation is a valid state, not an error
+                return Ok(null); // No active conversation is a valid state, not an error
             }
         }
 

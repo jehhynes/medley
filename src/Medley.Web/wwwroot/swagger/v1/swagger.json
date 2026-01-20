@@ -46,9 +46,6 @@
               }
             }
           },
-          "204": {
-            "description": ""
-          },
           "404": {
             "description": "",
             "content": {
@@ -1416,9 +1413,6 @@
                 }
               }
             }
-          },
-          "204": {
-            "description": ""
           },
           "404": {
             "description": "",
