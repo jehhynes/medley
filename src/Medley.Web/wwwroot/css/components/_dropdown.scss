@@ -1,0 +1,24 @@
+/* Pure Vue Dropdown Styles */
+
+// Dropdown container for pure Vue dropdowns
+.dropdown-container {
+    position: relative;
+
+    .dropdown-menu {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        z-index: 1050;
+
+        // Dropdown positioning variants
+        &.dropdown-up {
+            top: auto;
+            bottom: 100%;
+        }
+
+        &.dropdown-left {
+            right: auto;
+            left: 0;
+        }
+    }
+}
