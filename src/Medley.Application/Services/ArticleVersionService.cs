@@ -459,6 +459,8 @@ public class ArticleVersionService : IArticleVersionService
     {
         try
         {
+            Article? article = null;
+
             _logger.LogInformation("Creating AI article version for article: {ArticleId}", articleId);
 
             // Get the most recent User version - AI versions always use the most recent User version as parent
@@ -467,9 +469,26 @@ public class ArticleVersionService : IArticleVersionService
                 .OrderByDescending(v => v.VersionNumber)
                 .FirstOrDefaultAsync(cancellationToken);
 
+            // If no User version exists, create one from the current article content
             if (mostRecentUserVersion == null)
             {
-                throw new InvalidOperationException("Cannot create AI version: no User version exists. Please create a User version first.");
+                _logger.LogInformation("No User version found for article {ArticleId}, creating base version", articleId);
+                
+                article = await _articleRepository.Query()
+                    .Where(a => a.Id == articleId)
+                    .Include(a => a.CreatedBy)
+                    .SingleOrDefaultAsync(cancellationToken);
+
+                if (article == null)
+                {
+                    throw new InvalidOperationException($"Article {articleId} not found");
+                }
+
+                // Create base version with current article content
+                mostRecentUserVersion = await CreateBaseVersionAsync(
+                    article,
+                    article.Content ?? string.Empty,
+                    cancellationToken);
             }
 
             // VersionNumber is scoped to the parent User version
@@ -492,7 +511,9 @@ public class ArticleVersionService : IArticleVersionService
             }
 
             // Load article for required navigation property
-            var article = await _articleRepository.GetByIdAsync(articleId);
+            if (article == null)
+                article = await _articleRepository.GetByIdAsync(articleId);
+
             if (article == null)
             {
                 throw new InvalidOperationException($"Article {articleId} not found");
