@@ -315,8 +315,9 @@ public class ArticleChatApiController : ControllerBase
         // Get all messages in the conversation to find both the tool call and its result
         var messages = await _chatService.GetConversationMessagesAsync(conversationId);
 
-        // First, find the tool call to get the tool name
+        // First, find the tool call to get the tool name and question/instructions
         string? toolName = null;
+        string? question = null;
         foreach (var msg in messages.Where(x => x.Role == ChatMessageRole.Assistant)) 
         {
             if (string.IsNullOrEmpty(msg.SerializedMessage)) continue;
@@ -329,6 +330,27 @@ public class ArticleChatApiController : ControllerBase
                 if (callContent.CallId == toolCallId)
                 {
                     toolName = callContent.Name;
+                    
+                    // Extract question/instructions from arguments dictionary
+                    if (callContent.Arguments != null && callContent.Arguments.Count > 0)
+                    {
+                        // Try to get "instructions" property first (used by ReviewArticleWithCursor)
+                        if (callContent.Arguments.TryGetValue("instructions", out var instructionsValue))
+                        {
+                            question = instructionsValue?.ToString();
+                        }
+                        // Fall back to "question" property if instructions not found
+                        else if (callContent.Arguments.TryGetValue("question", out var questionValue))
+                        {
+                            question = questionValue?.ToString();
+                        }
+                        // Fall back to "query" property for search tools
+                        else if (callContent.Arguments.TryGetValue("query", out var queryValue))
+                        {
+                            question = queryValue?.ToString();
+                        }
+                    }
+                    
                     break;
                 }
             }
@@ -364,14 +386,15 @@ public class ArticleChatApiController : ControllerBase
                         var resultData = JsonSerializer.Deserialize<JsonElement>(resultString);
                         
                         // Handle ReviewArticleWithCursorAsync tool format
-                        if (toolName == "ReviewArticleWithCursorAsync" && 
+                        if (toolName == "ReviewArticleWithCursor" && 
                             resultData.TryGetProperty("changesSummary", out var changesSummaryProperty))
                         {
                             return Ok(new ToolResultContentResponse
                             {
                                 ToolCallId = toolCallId,
                                 ToolName = toolName,
-                                Content = changesSummaryProperty.ToString()
+                                Content = changesSummaryProperty.ToString(),
+                                Question = question
                             });
                         }
                         
@@ -382,7 +405,8 @@ public class ArticleChatApiController : ControllerBase
                             {
                                 ToolCallId = toolCallId,
                                 ToolName = toolName,
-                                Content = responseProperty.ToString()
+                                Content = responseProperty.ToString(),
+                                Question = question
                             });
                         }
                         
@@ -391,7 +415,8 @@ public class ArticleChatApiController : ControllerBase
                         {
                             ToolCallId = toolCallId,
                             ToolName = toolName,
-                            Content = resultString
+                            Content = resultString,
+                            Question = question
                         });
                     }
                     catch (JsonException)
@@ -401,7 +426,8 @@ public class ArticleChatApiController : ControllerBase
                         {
                             ToolCallId = toolCallId,
                             ToolName = toolName,
-                            Content = resultString
+                            Content = resultString,
+                            Question = question
                         });
                     }
                 }

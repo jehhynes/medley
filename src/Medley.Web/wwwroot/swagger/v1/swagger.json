@@ -2513,6 +2513,10 @@
           },
           "content": {
             "type": "string"
+          },
+          "question": {
+            "type": "string",
+            "nullable": true
           }
         }
       },

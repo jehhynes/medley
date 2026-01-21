@@ -2160,6 +2160,7 @@ export interface ToolResultContentResponse {
     toolCallId?: string;
     toolName?: string;
     content?: string;
+    question?: string | null;
 }
 
 export interface SendMessageResponse {

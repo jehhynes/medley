@@ -6,19 +6,21 @@
           <div class="modal-content">
             <div class="modal-header">
               <div class="d-flex align-items-center">
-                <img :src="cursorIcon" 
+                <img v-if="toolName && toolName.toLowerCase().includes('cursor')"
+                     :src="cursorIcon" 
                      class="svg-icon me-2" 
                      style="width: 24px; height: 24px;"
                      alt="Cursor AI" />
+                <i v-else class="bi bi-gear me-2" style="font-size: 24px;"></i>
                 <h5 class="modal-title mb-0" id="cursorResponseModalLabel">
-                  Cursor Response
+                  {{ modalTitle }}
                 </h5>
               </div>
               <button type="button" class="btn-close" @click="close" aria-label="Close"></button>
             </div>
             <div class="modal-body">
               <div class="mb-3">
-                <strong class="text-muted">Instructions:</strong>
+                <strong class="text-muted">Prompt:</strong>
                 <div class="mt-1">{{ displayQuestion }}</div>
               </div>
               <hr />
@@ -51,7 +53,7 @@ declare const marked: {
 
 // Props
 interface Props {
-  toolDisplay?: string;
+  toolName?: string;
   articleId?: string;
   conversationId?: string;
   messageId?: string;
@@ -74,10 +76,15 @@ const emit = defineEmits<Emits>();
 const isLoading = ref<boolean>(false);
 const error = ref<string>('');
 const responseContent = ref<string>('');
+const question = ref<string>('');
 
 // Computed
 const displayQuestion = computed<string>(() => {
-  return props.toolDisplay || 'Question';
+  return question.value || 'Question';
+});
+
+const modalTitle = computed<string>(() => {
+  return props.toolName || 'Tool Response';
 });
 
 const renderedMarkdown = computed<string>(() => {
@@ -119,6 +126,7 @@ async function loadToolResult(): Promise<void> {
     );
     
     responseContent.value = result.content || 'No response available';
+    question.value = result.question || '';
   } catch (err) {
     console.error('Error loading tool result:', err);
     error.value = 'Error loading response';

@@ -89,7 +89,7 @@
   <!-- Cursor Response Modal -->
   <cursor-response-modal
     v-if="cursorModalVisible"
-    :tool-display="tool.display"
+    :tool-name="formatToolName(tool.name)"
     :article-id="articleId"
     :conversation-id="conversationId"
     :message-id="messageId"

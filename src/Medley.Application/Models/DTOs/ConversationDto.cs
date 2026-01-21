@@ -112,4 +112,5 @@ public record ToolResultContentResponse
     public required string ToolCallId { get; init; }
     public required string ToolName { get; init; }
     public required string Content { get; init; }
+    public string? Question { get; init; }
 }
