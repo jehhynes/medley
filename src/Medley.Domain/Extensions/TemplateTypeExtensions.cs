@@ -28,4 +28,14 @@ public static class TemplateTypeExtensions
         var attribute = field?.GetCustomAttribute<TemplateTypeMetadataAttribute>();
         return attribute?.Description ?? string.Empty;
     }
+
+    /// <summary>
+    /// Gets whether this template type is per-article-type
+    /// </summary>
+    public static bool GetIsPerArticleType(this TemplateType templateType)
+    {
+        var field = templateType.GetType().GetField(templateType.ToString());
+        var attribute = field?.GetCustomAttribute<TemplateTypeMetadataAttribute>();
+        return attribute?.IsPerArticleType ?? false;
+    }
 }

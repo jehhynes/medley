@@ -2007,11 +2007,13 @@ export class TemplatesApiClient {
         return Promise.resolve<TemplateListDto[]>(null as any);
     }
 
-    get(id: string): Promise<TemplateDto> {
-        let url_ = this.baseUrl + "/api/templates/{id}";
-        if (id === undefined || id === null)
-            throw new globalThis.Error("The parameter 'id' must be defined.");
-        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+    get(type: TemplateType, articleTypeId?: string | null | undefined): Promise<TemplateDto> {
+        let url_ = this.baseUrl + "/api/templates/{type}?";
+        if (type === undefined || type === null)
+            throw new globalThis.Error("The parameter 'type' must be defined.");
+        url_ = url_.replace("{type}", encodeURIComponent("" + type));
+        if (articleTypeId !== undefined && articleTypeId !== null)
+            url_ += "articleTypeId=" + encodeURIComponent("" + articleTypeId) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: RequestInit = {
@@ -2035,11 +2037,11 @@ export class TemplatesApiClient {
             result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as TemplateDto;
             return result200;
             });
-        } else if (status === 404) {
+        } else if (status === 400) {
             return response.text().then((_responseText) => {
-            let result404: any = null;
-            result404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
-            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+            let result400: any = null;
+            result400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
@@ -2049,11 +2051,13 @@ export class TemplatesApiClient {
         return Promise.resolve<TemplateDto>(null as any);
     }
 
-    update(id: string, request: UpdateTemplateRequest): Promise<TemplateDto> {
-        let url_ = this.baseUrl + "/api/templates/{id}";
-        if (id === undefined || id === null)
-            throw new globalThis.Error("The parameter 'id' must be defined.");
-        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+    createOrUpdate(type: TemplateType, request: CreateOrUpdateTemplateRequest, articleTypeId?: string | null | undefined): Promise<TemplateDto> {
+        let url_ = this.baseUrl + "/api/templates/{type}?";
+        if (type === undefined || type === null)
+            throw new globalThis.Error("The parameter 'type' must be defined.");
+        url_ = url_.replace("{type}", encodeURIComponent("" + type));
+        if (articleTypeId !== undefined && articleTypeId !== null)
+            url_ += "articleTypeId=" + encodeURIComponent("" + articleTypeId) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         const content_ = JSON.stringify(request);
@@ -2068,11 +2072,11 @@ export class TemplatesApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processUpdate(_response);
+            return this.processCreateOrUpdate(_response);
         });
     }
 
-    protected processUpdate(response: Response): Promise<TemplateDto> {
+    protected processCreateOrUpdate(response: Response): Promise<TemplateDto> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -2081,11 +2085,11 @@ export class TemplatesApiClient {
             result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as TemplateDto;
             return result200;
             });
-        } else if (status === 404) {
+        } else if (status === 400) {
             return response.text().then((_responseText) => {
-            let result404: any = null;
-            result404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
-            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+            let result400: any = null;
+            result400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
             });
         } else if (status === 500) {
             return response.text().then((_responseText) => {
@@ -2097,6 +2101,39 @@ export class TemplatesApiClient {
             });
         }
         return Promise.resolve<TemplateDto>(null as any);
+    }
+
+    getArticleTypes(): Promise<ArticleTypeDto[]> {
+        let url_ = this.baseUrl + "/api/templates/article-types";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processGetArticleTypes(_response);
+        });
+    }
+
+    protected processGetArticleTypes(response: Response): Promise<ArticleTypeDto[]> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ArticleTypeDto[];
+            return result200;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<ArticleTypeDto[]>(null as any);
     }
 }
 
@@ -2552,12 +2589,15 @@ export enum ScopeUpdateMode {
 }
 
 export interface TemplateListDto {
-    id?: string;
+    id?: string | null;
     name?: string;
     type?: TemplateType;
-    typeName?: string;
     description?: string | null;
-    createdAt?: Date;
+    isPerArticleType?: boolean;
+    articleTypeId?: string | null;
+    articleTypeName?: string | null;
+    exists?: boolean;
+    createdAt?: Date | null;
     lastModifiedAt?: Date | null;
 }
 
@@ -2568,21 +2608,26 @@ export enum TemplateType {
     ArticlePlanCreation = "ArticlePlanCreation",
     ArticleChat = "ArticleChat",
     ArticlePlanImplementation = "ArticlePlanImplementation",
+    ArticleTypePlanMode = "ArticleTypePlanMode",
+    ArticleTypeAgentMode = "ArticleTypeAgentMode",
 }
 
 export interface TemplateDto {
-    id?: string;
+    id?: string | null;
     name?: string;
     type?: TemplateType;
-    typeName?: string;
     description?: string | null;
+    isPerArticleType?: boolean;
+    articleTypeId?: string | null;
+    articleTypeName?: string | null;
     content?: string;
-    createdAt?: Date;
+    exists?: boolean;
+    createdAt?: Date | null;
     lastModifiedAt?: Date | null;
 }
 
-export interface UpdateTemplateRequest {
-    content?: string | null;
+export interface CreateOrUpdateTemplateRequest {
+    content?: string;
 }
 
 export class ApiException extends Error {

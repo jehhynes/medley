@@ -1,5 +1,6 @@
 import { ref, computed, nextTick, type Ref, type ComputedRef } from 'vue';
 import type { ArticleStatus } from '@/types/api-client';
+import { getIconClass } from '@/utils/helpers';
 
 export interface ArticleFilters {
   query: string;
@@ -121,19 +122,6 @@ export function useArticleFilter(options: UseArticleFilterOptions) {
     return labels[status] || 'Unknown';
   };
 
-  const getArticleTypeIconClass = (icon: string | null | undefined) => {
-    if (!icon) {
-      return 'bi bi-file-text';
-    }
-    if (icon.startsWith('bi-')) {
-      return `bi ${icon}`;
-    }
-    if (icon.startsWith('fa-')) {
-      return `fas ${icon}`;
-    }
-    return 'bi bi-file-text';
-  };
-
   return {
     filterModal,
     filters,
@@ -149,6 +137,6 @@ export function useArticleFilter(options: UseArticleFilterOptions) {
     isArticleTypeSelected,
     buildFilterQueryString,
     getStatusLabel,
-    getArticleTypeIconClass
+    getArticleTypeIconClass: getIconClass
   };
 }

@@ -41,6 +41,18 @@ public enum TemplateType
     /// Template for implementing article improvement plans
     /// </summary>
     [TemplateTypeMetadata("Article Plan Implementation", "Template for implementing article improvement plans with AI assistance")]
-    ArticlePlanImplementation = 6
+    ArticlePlanImplementation = 6,
+
+    /// <summary>
+    /// Template for article improvement plan generation specific to article types
+    /// </summary>
+    [TemplateTypeMetadata("Article Type (Plan Mode)", "Template for creating article improvement plans specific to article types", IsPerArticleType = true)]
+    ArticleTypePlanMode = 7,
+
+    /// <summary>
+    /// Template for article chat assistant specific to article types
+    /// </summary>
+    [TemplateTypeMetadata("Article Type (Agent Mode)", "Template for chat/agent mode specific to article types", IsPerArticleType = true)]
+    ArticleTypeAgentMode = 8
 }
 

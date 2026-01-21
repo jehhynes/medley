@@ -16,124 +16,308 @@ namespace Medley.Web.Controllers.Api;
 public class TemplatesApiController : ControllerBase
 {
     private readonly IRepository<Template> _templateRepository;
+    private readonly IRepository<ArticleType> _articleTypeRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<TemplatesApiController> _logger;
 
     public TemplatesApiController(
         IRepository<Template> templateRepository,
+        IRepository<ArticleType> articleTypeRepository,
         IUnitOfWork unitOfWork,
         ILogger<TemplatesApiController> logger)
     {
         _templateRepository = templateRepository;
+        _articleTypeRepository = articleTypeRepository;
         _unitOfWork = unitOfWork;
         _logger = logger;
     }
 
     /// <summary>
-    /// Get all templates
+    /// Get all possible templates (derived from TemplateType enum)
     /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(List<TemplateListDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<List<TemplateListDto>>> GetAll()
     {
-        var templates = await _templateRepository.Query()
-            .OrderBy(t => t.Type)
+        // Get all existing templates from database
+        var existingTemplates = await _templateRepository.Query()
+            .Include(t => t.ArticleType)
             .ToListAsync();
 
-        var templateDtos = templates.Select(t => new TemplateListDto
+        // Get all article types
+        var articleTypes = await _articleTypeRepository.Query()
+            .OrderBy(at => at.Name)
+            .ToListAsync();
+
+        var result = new List<TemplateListDto>();
+
+        // Iterate through all TemplateType enum values
+        foreach (TemplateType templateType in Enum.GetValues(typeof(TemplateType)))
         {
-            Id = t.Id,
-            Name = t.Type.GetName(),
-            Type = t.Type,
-            TypeName = t.Type.ToString(),
-            Description = t.Type.GetDescription(),
-            CreatedAt = t.CreatedAt,
-            LastModifiedAt = t.LastModifiedAt
-        }).ToList();
+            var isPerArticleType = templateType.GetIsPerArticleType();
 
-        return Ok(templateDtos);
-    }
+            if (isPerArticleType)
+            {
+                // Create one entry per article type
+                foreach (var articleType in articleTypes)
+                {
+                    var existingTemplate = existingTemplates.FirstOrDefault(t =>
+                        t.Type == templateType && t.ArticleTypeId == articleType.Id);
 
-    /// <summary>
-    /// Get a specific template by ID
-    /// </summary>
-    [HttpGet("{id}")]
-    [ProducesResponseType(typeof(TemplateDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<TemplateDto>> Get(Guid id)
-    {
-        var template = await _templateRepository.GetByIdAsync(id);
+                    result.Add(new TemplateListDto
+                    {
+                        Id = existingTemplate?.Id,
+                        Name = templateType.GetName(),
+                        Type = templateType,
+                        Description = templateType.GetDescription(),
+                        IsPerArticleType = true,
+                        ArticleTypeId = articleType.Id,
+                        ArticleTypeName = articleType.Name,
+                        Exists = existingTemplate != null,
+                        CreatedAt = existingTemplate?.CreatedAt,
+                        LastModifiedAt = existingTemplate?.LastModifiedAt
+                    });
+                }
+            }
+            else
+            {
+                // Create one entry for non-per-article-type templates
+                var existingTemplate = existingTemplates.FirstOrDefault(t =>
+                    t.Type == templateType && t.ArticleTypeId == null);
 
-        if (template == null)
-        {
-            return NotFound();
+                result.Add(new TemplateListDto
+                {
+                    Id = existingTemplate?.Id,
+                    Name = templateType.GetName(),
+                    Type = templateType,
+                    Description = templateType.GetDescription(),
+                    IsPerArticleType = false,
+                    ArticleTypeId = null,
+                    ArticleTypeName = null,
+                    Exists = existingTemplate != null,
+                    CreatedAt = existingTemplate?.CreatedAt,
+                    LastModifiedAt = existingTemplate?.LastModifiedAt
+                });
+            }
         }
 
-        return Ok(new TemplateDto
-        {
-            Id = template.Id,
-            Name = template.Type.GetName(),
-            Type = template.Type,
-            TypeName = template.Type.ToString(),
-            Description = template.Type.GetDescription(),
-            Content = template.Content,
-            CreatedAt = template.CreatedAt,
-            LastModifiedAt = template.LastModifiedAt
-        });
+        return Ok(result);
     }
 
     /// <summary>
-    /// Update a template's content
+    /// Get a specific template by type and optional article type
     /// </summary>
-    [HttpPut("{id}")]
+    [HttpGet("{type}")]
     [ProducesResponseType(typeof(TemplateDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<TemplateDto>> Update(Guid id, [FromBody] UpdateTemplateRequest request)
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<TemplateDto>> Get(TemplateType type, [FromQuery] Guid? articleTypeId = null)
     {
-        try
+        var isPerArticleType = type.GetIsPerArticleType();
+
+        // Validate that articleTypeId is provided for per-article-type templates
+        if (isPerArticleType && !articleTypeId.HasValue)
         {
-            var template = await _templateRepository.GetByIdAsync(id);
+            return BadRequest(new { message = "articleTypeId is required for per-article-type templates" });
+        }
 
-            if (template == null)
-            {
-                return NotFound();
-            }
+        // Validate that articleTypeId is NOT provided for non-per-article-type templates
+        if (!isPerArticleType && articleTypeId.HasValue)
+        {
+            return BadRequest(new { message = "articleTypeId should not be provided for this template type" });
+        }
 
-            if (request.Content != null)
-            {
-                template.Content = request.Content;
-            }
+        // Look up the template
+        var template = await _templateRepository.Query()
+            .Include(t => t.ArticleType)
+            .FirstOrDefaultAsync(t =>
+                t.Type == type &&
+                t.ArticleTypeId == articleTypeId);
 
-            template.LastModifiedAt = DateTimeOffset.UtcNow;
+        string? articleTypeName = null;
+        if (articleTypeId.HasValue)
+        {
+            var articleType = await _articleTypeRepository.GetByIdAsync(articleTypeId.Value);
+            articleTypeName = articleType?.Name;
+        }
 
-            
-            await _unitOfWork.SaveChangesAsync();
-
-            _logger.LogInformation("Updated template {TemplateId} ({TemplateName})", id, template.Type.GetName());
-
+        if (template != null)
+        {
+            // Template exists - return with content
             return Ok(new TemplateDto
             {
                 Id = template.Id,
-                Name = template.Type.GetName(),
-                Type = template.Type,
-                TypeName = template.Type.ToString(),
-                Description = template.Type.GetDescription(),
+                Name = type.GetName(),
+                Type = type,
+                Description = type.GetDescription(),
+                IsPerArticleType = isPerArticleType,
+                ArticleTypeId = articleTypeId,
+                ArticleTypeName = articleTypeName,
                 Content = template.Content,
+                Exists = true,
                 CreatedAt = template.CreatedAt,
                 LastModifiedAt = template.LastModifiedAt
             });
         }
+        else
+        {
+            // Template doesn't exist - return metadata with empty content
+            return Ok(new TemplateDto
+            {
+                Id = null,
+                Name = type.GetName(),
+                Type = type,
+                Description = type.GetDescription(),
+                IsPerArticleType = isPerArticleType,
+                ArticleTypeId = articleTypeId,
+                ArticleTypeName = articleTypeName,
+                Content = string.Empty,
+                Exists = false,
+                CreatedAt = null,
+                LastModifiedAt = null
+            });
+        }
+    }
+
+    /// <summary>
+    /// Create or update a template
+    /// </summary>
+    [HttpPut("{type}")]
+    [ProducesResponseType(typeof(TemplateDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<TemplateDto>> CreateOrUpdate(
+        TemplateType type,
+        [FromQuery] Guid? articleTypeId,
+        [FromBody] CreateOrUpdateTemplateRequest request)
+    {
+        try
+        {
+            var isPerArticleType = type.GetIsPerArticleType();
+
+            // Validate that articleTypeId is provided for per-article-type templates
+            if (isPerArticleType && !articleTypeId.HasValue)
+            {
+                return BadRequest(new { message = "articleTypeId is required for per-article-type templates" });
+            }
+
+            // Validate that articleTypeId is NOT provided for non-per-article-type templates
+            if (!isPerArticleType && articleTypeId.HasValue)
+            {
+                return BadRequest(new { message = "articleTypeId should not be provided for this template type" });
+            }
+
+            // Look up existing template
+            var template = await _templateRepository.Query()
+                .Include(t => t.ArticleType)
+                .FirstOrDefaultAsync(t =>
+                    t.Type == type &&
+                    t.ArticleTypeId == articleTypeId);
+
+            string? articleTypeName = null;
+            if (articleTypeId.HasValue)
+            {
+                var articleType = await _articleTypeRepository.GetByIdAsync(articleTypeId.Value);
+                if (articleType == null)
+                {
+                    return BadRequest(new { message = "Invalid articleTypeId" });
+                }
+                articleTypeName = articleType.Name;
+            }
+
+            if (template != null)
+            {
+                // Update existing template
+                template.Content = request.Content;
+                template.LastModifiedAt = DateTimeOffset.UtcNow;
+
+                await _unitOfWork.SaveChangesAsync();
+
+                _logger.LogInformation(
+                    "Updated template {TemplateType}" +
+                    (articleTypeId.HasValue ? " for article type {ArticleTypeId}" : ""),
+                    type, articleTypeId);
+
+                return Ok(new TemplateDto
+                {
+                    Id = template.Id,
+                    Name = type.GetName(),
+                    Type = type,
+                    Description = type.GetDescription(),
+                    IsPerArticleType = isPerArticleType,
+                    ArticleTypeId = articleTypeId,
+                    ArticleTypeName = articleTypeName,
+                    Content = template.Content,
+                    Exists = true,
+                    CreatedAt = template.CreatedAt,
+                    LastModifiedAt = template.LastModifiedAt
+                });
+            }
+            else
+            {
+                // Create new template
+                var newTemplate = new Template
+                {
+                    Type = type,
+                    Content = request.Content,
+                    ArticleTypeId = articleTypeId,
+                    CreatedAt = DateTimeOffset.UtcNow,
+                    LastModifiedAt = DateTimeOffset.UtcNow
+                };
+
+                await _templateRepository.AddAsync(newTemplate);
+                await _unitOfWork.SaveChangesAsync();
+
+                _logger.LogInformation(
+                    "Created template {TemplateType}" +
+                    (articleTypeId.HasValue ? " for article type {ArticleTypeId}" : ""),
+                    type, articleTypeId);
+
+                return Ok(new TemplateDto
+                {
+                    Id = newTemplate.Id,
+                    Name = type.GetName(),
+                    Type = type,
+                    Description = type.GetDescription(),
+                    IsPerArticleType = isPerArticleType,
+                    ArticleTypeId = articleTypeId,
+                    ArticleTypeName = articleTypeName,
+                    Content = newTemplate.Content,
+                    Exists = true,
+                    CreatedAt = newTemplate.CreatedAt,
+                    LastModifiedAt = newTemplate.LastModifiedAt
+                });
+            }
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to update template {TemplateId}", id);
-            return StatusCode(500, new { message = "Failed to update template" });
+            _logger.LogError(ex, "Failed to create or update template {TemplateType}", type);
+            return StatusCode(500, new { message = "Failed to create or update template" });
         }
+    }
+
+    /// <summary>
+    /// Get all article types
+    /// </summary>
+    [HttpGet("article-types")]
+    [ProducesResponseType(typeof(List<ArticleTypeDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<List<ArticleTypeDto>>> GetArticleTypes()
+    {
+        var articleTypes = await _articleTypeRepository.Query()
+            .OrderBy(at => at.Name)
+            .Select(at => new ArticleTypeDto
+            {
+                Id = at.Id,
+                Name = at.Name,
+                Icon = at.Icon
+            })
+            .ToListAsync();
+
+        return Ok(articleTypes);
     }
 }
 
-public class UpdateTemplateRequest
+public class CreateOrUpdateTemplateRequest
 {
-    public string? Content { get; set; }
+    public required string Content { get; set; }
 }
 

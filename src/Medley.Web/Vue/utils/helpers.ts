@@ -133,9 +133,9 @@ export const debounce = <T extends (...args: any[]) => any>(
   };
 };
 
-export const getIconClass = (icon: string | null | undefined): string => {
+export const getIconClass = (icon: string | null | undefined, fallback: string = 'bi-file-text'): string => {
   if (!icon) {
-    return 'bi bi-file-text';
+      icon = fallback;
   }
   if (icon.startsWith('bi-')) {
     return `bi ${icon}`;
@@ -143,7 +143,7 @@ export const getIconClass = (icon: string | null | undefined): string => {
   if (icon.startsWith('fa-')) {
     return `fas ${icon}`;
   }
-  return 'bi bi-file-text';
+  return icon;
 };
 
 const normalizeText = (str: string | null | undefined): string => {

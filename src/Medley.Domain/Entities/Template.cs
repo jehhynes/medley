@@ -19,6 +19,16 @@ public class Template : BusinessEntity
     public required string Content { get; set; }
 
     /// <summary>
+    /// Optional article type ID for per-article-type templates
+    /// </summary>
+    public Guid? ArticleTypeId { get; set; }
+
+    /// <summary>
+    /// Navigation property to the article type
+    /// </summary>
+    public ArticleType? ArticleType { get; set; }
+
+    /// <summary>
     /// Date when the template was last modified
     /// </summary>
     public DateTimeOffset? LastModifiedAt { get; set; }

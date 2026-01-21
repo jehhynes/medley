@@ -2230,7 +2230,7 @@
         }
       }
     },
-    "/api/templates/{id}": {
+    "/api/templates/{type}": {
       "get": {
         "tags": [
           "TemplatesApi"
@@ -2238,14 +2238,23 @@
         "operationId": "TemplatesApi_Get",
         "parameters": [
           {
-            "name": "id",
+            "name": "type",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "guid"
+              "$ref": "#/components/schemas/TemplateType"
             },
             "x-position": 1
+          },
+          {
+            "name": "articleTypeId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "guid",
+              "nullable": true
+            },
+            "x-position": 2
           }
         ],
         "responses": {
@@ -2259,7 +2268,7 @@
               }
             }
           },
-          "404": {
+          "400": {
             "description": "",
             "content": {
               "application/json": {
@@ -2275,17 +2284,26 @@
         "tags": [
           "TemplatesApi"
         ],
-        "operationId": "TemplatesApi_Update",
+        "operationId": "TemplatesApi_CreateOrUpdate",
         "parameters": [
           {
-            "name": "id",
+            "name": "type",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "guid"
+              "$ref": "#/components/schemas/TemplateType"
             },
             "x-position": 1
+          },
+          {
+            "name": "articleTypeId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "guid",
+              "nullable": true
+            },
+            "x-position": 2
           }
         ],
         "requestBody": {
@@ -2293,12 +2311,12 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdateTemplateRequest"
+                "$ref": "#/components/schemas/CreateOrUpdateTemplateRequest"
               }
             }
           },
           "required": true,
-          "x-position": 2
+          "x-position": 3
         },
         "responses": {
           "200": {
@@ -2311,7 +2329,7 @@
               }
             }
           },
-          "404": {
+          "400": {
             "description": "",
             "content": {
               "application/json": {
@@ -2323,6 +2341,29 @@
           },
           "500": {
             "description": ""
+          }
+        }
+      }
+    },
+    "/api/templates/article-types": {
+      "get": {
+        "tags": [
+          "TemplatesApi"
+        ],
+        "operationId": "TemplatesApi_GetArticleTypes",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ArticleTypeDto"
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -3761,7 +3802,8 @@
         "properties": {
           "id": {
             "type": "string",
-            "format": "guid"
+            "format": "guid",
+            "nullable": true
           },
           "name": {
             "type": "string"
@@ -3769,16 +3811,29 @@
           "type": {
             "$ref": "#/components/schemas/TemplateType"
           },
-          "typeName": {
-            "type": "string"
-          },
           "description": {
             "type": "string",
             "nullable": true
           },
+          "isPerArticleType": {
+            "type": "boolean"
+          },
+          "articleTypeId": {
+            "type": "string",
+            "format": "guid",
+            "nullable": true
+          },
+          "articleTypeName": {
+            "type": "string",
+            "nullable": true
+          },
+          "exists": {
+            "type": "boolean"
+          },
           "createdAt": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "nullable": true
           },
           "lastModifiedAt": {
             "type": "string",
@@ -3796,7 +3851,9 @@
           "ConfidenceScoring",
           "ArticlePlanCreation",
           "ArticleChat",
-          "ArticlePlanImplementation"
+          "ArticlePlanImplementation",
+          "ArticleTypePlanMode",
+          "ArticleTypeAgentMode"
         ],
         "enum": [
           "FragmentExtraction",
@@ -3804,7 +3861,9 @@
           "ConfidenceScoring",
           "ArticlePlanCreation",
           "ArticleChat",
-          "ArticlePlanImplementation"
+          "ArticlePlanImplementation",
+          "ArticleTypePlanMode",
+          "ArticleTypeAgentMode"
         ]
       },
       "TemplateDto": {
@@ -3813,7 +3872,8 @@
         "properties": {
           "id": {
             "type": "string",
-            "format": "guid"
+            "format": "guid",
+            "nullable": true
           },
           "name": {
             "type": "string"
@@ -3821,19 +3881,32 @@
           "type": {
             "$ref": "#/components/schemas/TemplateType"
           },
-          "typeName": {
-            "type": "string"
-          },
           "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "isPerArticleType": {
+            "type": "boolean"
+          },
+          "articleTypeId": {
+            "type": "string",
+            "format": "guid",
+            "nullable": true
+          },
+          "articleTypeName": {
             "type": "string",
             "nullable": true
           },
           "content": {
             "type": "string"
           },
+          "exists": {
+            "type": "boolean"
+          },
           "createdAt": {
             "type": "string",
-            "format": "date-time"
+            "format": "date-time",
+            "nullable": true
           },
           "lastModifiedAt": {
             "type": "string",
@@ -3842,13 +3915,12 @@
           }
         }
       },
-      "UpdateTemplateRequest": {
+      "CreateOrUpdateTemplateRequest": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
           "content": {
-            "type": "string",
-            "nullable": true
+            "type": "string"
           }
         }
       }

@@ -23,18 +23,53 @@
           {{ error }}
         </div>
         <ul v-else class="list-view" v-cloak>
-          <li v-for="template in templates" :key="template.id" class="list-item">
+          <!-- Non-per-article-type templates -->
+          <li v-for="template in nonPerArticleTypeTemplates" :key="`${template.type}`" class="list-item">
             <a href="#" 
                class="list-item-content"
-               :class="{ active: selectedTemplateId === template.id }"
+               :class="{ active: isTemplateSelected(template) }"
                @click.prevent="selectTemplate(template)">
               <i class="list-item-icon bi bi-file-earmark-code"></i>
               <div class="list-item-body">
-                <div class="list-item-title">{{ template.name }}</div>
-                <div class="list-item-subtitle">{{ template.description || template.typeName }}</div>
+                <div class="list-item-title">
+                  {{ template.name }}
+                  <span v-if="!template.exists" class="badge bg-secondary ms-2" style="font-size: 0.65rem;">Not customized</span>
+                </div>
+                <div class="list-item-subtitle">{{ template.description }}</div>
               </div>
             </a>
           </li>
+
+          <!-- Per-article-type templates (grouped) -->
+          <template v-for="group in perArticleTypeGroups" :key="group.templateType">
+            <li class="list-item list-item-group">
+              <a href="#" 
+                 class="list-item-content"
+                 @click.prevent="toggleGroup(group.templateType)">
+                <i class="list-item-icon bi" :class="group.expanded ? 'bi-chevron-down' : 'bi-chevron-right'"></i>
+                <div class="list-item-body">
+                  <div class="list-item-title">{{ group.name }}</div>
+                  <div class="list-item-subtitle">{{ group.description }}</div>
+                </div>
+              </a>
+            </li>
+            <template v-if="group.expanded">
+              <li v-for="template in group.templates" :key="`${template.type}-${template.articleTypeId}`" class="list-item list-item-child">
+                <a href="#" 
+                   class="list-item-content"
+                   :class="{ active: isTemplateSelected(template) }"
+                   @click.prevent="selectTemplate(template)">
+                  <i class="list-item-icon" :class="getIconClass(getArticleTypeIcon(template.articleTypeId))"></i>
+                  <div class="list-item-body">
+                    <div class="list-item-title">
+                      {{ template.articleTypeName }}
+                      <span v-if="!template.exists" class="badge bg-secondary ms-2" style="font-size: 0.65rem;">Not customized</span>
+                    </div>
+                  </div>
+                </a>
+              </li>
+            </template>
+          </template>
         </ul>
       </div>
     </div>
@@ -53,7 +88,7 @@
         <!-- Editor -->
         <tiptap-editor 
           v-model="editingContent"
-          :key="selectedTemplateId"
+          :key="`${selectedTemplate.type}-${selectedTemplate.articleTypeId || 'global'}`"
           :is-saving="isSaving"
           @save="saveTemplate"
           class="flex-grow-1"
@@ -69,19 +104,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { templatesClient } from '@/utils/apiClients';
 import { useSidebarState } from '@/composables/useSidebarState';
-import type { TemplateDto } from '@/types/api-client';
+import { useArticleTypes } from '@/features/articles/composables/useArticleTypes';
+import { getIconClass } from '@/utils/helpers';
+import type { TemplateListDto, TemplateDto, TemplateType } from '@/types/api-client';
 
 // Setup composables
 const { leftSidebarVisible } = useSidebarState();
 const router = useRouter();
+const { typeIconMap, loadArticleTypes } = useArticleTypes();
 
 // Reactive state
-const templates = ref<TemplateDto[]>([]);
-const selectedTemplateId = ref<string | null>(null);
+const templates = ref<TemplateListDto[]>([]);
 const selectedTemplate = ref<TemplateDto | null>(null);
 const loading = ref<boolean>(false);
 const error = ref<string | null>(null);
@@ -90,8 +127,46 @@ const isSaving = ref<boolean>(false);
 const lastSaved = ref<Date | null>(null);
 const userDisplayName = ref<string>(window.MedleyUser?.displayName || 'User');
 const userIsAuthenticated = ref<boolean>(window.MedleyUser?.isAuthenticated || false);
+const expandedGroups = ref<Set<number>>(new Set());
+
+// Computed properties
+const nonPerArticleTypeTemplates = computed(() => 
+  templates.value.filter(t => !t.isPerArticleType)
+);
+
+interface PerArticleTypeGroup {
+  templateType: number;
+  name: string;
+  description: string;
+  expanded: boolean;
+  templates: TemplateListDto[];
+}
+
+const perArticleTypeGroups = computed<PerArticleTypeGroup[]>(() => {
+  const perArticleTemplates = templates.value.filter(t => t.isPerArticleType);
+  const groupMap = new Map<number, PerArticleTypeGroup>();
+
+  for (const template of perArticleTemplates) {
+    if (!groupMap.has(template.type)) {
+      groupMap.set(template.type, {
+        templateType: template.type,
+        name: template.name,
+        description: template.description || '',
+        expanded: expandedGroups.value.has(template.type),
+        templates: []
+      });
+    }
+    groupMap.get(template.type)!.templates.push(template);
+  }
+
+  return Array.from(groupMap.values());
+});
 
 // Methods
+const getArticleTypeIcon = (articleTypeId: string | null | undefined): string => {
+  if (!articleTypeId) return 'bi-file-text';
+  return typeIconMap.value[articleTypeId] || 'bi-file-text';
+};
 const loadTemplates = async (): Promise<void> => {
   loading.value = true;
   error.value = null;
@@ -105,16 +180,42 @@ const loadTemplates = async (): Promise<void> => {
   }
 };
 
-const selectTemplate = async (template: TemplateDto): Promise<void> => {
+const toggleGroup = (templateType: number): void => {
+  if (expandedGroups.value.has(templateType)) {
+    expandedGroups.value.delete(templateType);
+  } else {
+    expandedGroups.value.add(templateType);
+  }
+};
+
+const isTemplateSelected = (template: TemplateListDto): boolean => {
+  if (!selectedTemplate.value) return false;
+  return selectedTemplate.value.type === template.type && 
+         selectedTemplate.value.articleTypeId === template.articleTypeId;
+};
+
+const selectTemplate = async (template: TemplateListDto): Promise<void> => {
   try {
-    const fullTemplate = await templatesClient.get(template.id!);
+    const fullTemplate = await templatesClient.get(
+      template.type as TemplateType,
+      template.articleTypeId || undefined
+    );
     
     selectedTemplate.value = fullTemplate;
-    selectedTemplateId.value = template.id!;
     editingContent.value = fullTemplate.content || '';
     lastSaved.value = fullTemplate.lastModifiedAt ? new Date(fullTemplate.lastModifiedAt) : null;
     
-    await router.push({ query: { id: template.id } });
+    // Update URL
+    const query: any = { type: template.type };
+    if (template.articleTypeId) {
+      query.articleTypeId = template.articleTypeId;
+    }
+    await router.push({ query });
+
+    // Expand the group if it's a per-article-type template
+    if (template.isPerArticleType) {
+      expandedGroups.value.add(template.type);
+    }
   } catch (err: any) {
     console.error('Error loading template:', err);
     error.value = 'Failed to load template: ' + err.message;
@@ -126,12 +227,24 @@ const saveTemplate = async (): Promise<void> => {
 
   isSaving.value = true;
   try {
-    const updated = await templatesClient.update(selectedTemplate.value.id!, {
-      content: editingContent.value
-    });
+    const updated = await templatesClient.createOrUpdate(
+      selectedTemplate.value.type,
+      { content: editingContent.value },
+      selectedTemplate.value.articleTypeId || undefined
+    );
 
     selectedTemplate.value = updated;
     lastSaved.value = new Date();
+
+    // Update the template in the list to mark it as existing
+    const templateInList = templates.value.find(t => 
+      t.type === updated.type && t.articleTypeId === updated.articleTypeId
+    );
+    if (templateInList) {
+      templateInList.exists = true;
+      templateInList.id = updated.id;
+      templateInList.lastModifiedAt = updated.lastModifiedAt;
+    }
   } catch (err: any) {
     console.error('Error saving template:', err);
     alert('Failed to save template: ' + err.message);
@@ -147,25 +260,42 @@ const formatTime = (date: Date | null): string => {
 
 // Lifecycle hooks
 onMounted(async () => {
+  await loadArticleTypes();
   await loadTemplates();
 
   const urlParams = new URLSearchParams(window.location.search);
-  const templateIdFromUrl = urlParams.get('id');
-  if (templateIdFromUrl) {
-    const template = templates.value.find(t => t.id === templateIdFromUrl);
+  const typeParam = urlParams.get('type');
+  const articleTypeIdParam = urlParams.get('articleTypeId');
+  
+  if (typeParam) {
+    const type = parseInt(typeParam);
+    const template = templates.value.find(t => 
+      t.type === type && 
+      (articleTypeIdParam ? t.articleTypeId === articleTypeIdParam : !t.articleTypeId)
+    );
     if (template) {
       await selectTemplate(template);
     }
   } else if (templates.value.length > 0) {
-    await selectTemplate(templates.value[0]);
+    // Select first non-per-article-type template by default
+    const firstTemplate = nonPerArticleTypeTemplates.value[0] || templates.value[0];
+    if (firstTemplate) {
+      await selectTemplate(firstTemplate);
+    }
   }
 
   window.addEventListener('popstate', async () => {
     const urlParams = new URLSearchParams(window.location.search);
-    const templateId = urlParams.get('id');
-    if (templateId && templateId !== selectedTemplateId.value) {
-      const template = templates.value.find(t => t.id === templateId);
-      if (template) {
+    const typeParam = urlParams.get('type');
+    const articleTypeIdParam = urlParams.get('articleTypeId');
+    
+    if (typeParam) {
+      const type = parseInt(typeParam);
+      const template = templates.value.find(t => 
+        t.type === type && 
+        (articleTypeIdParam ? t.articleTypeId === articleTypeIdParam : !t.articleTypeId)
+      );
+      if (template && !isTemplateSelected(template)) {
         await selectTemplate(template);
       }
     }
@@ -204,5 +334,17 @@ onMounted(async () => {
   font-size: 0.75rem;
   border-top: 1px solid var(--bs-border-color);
   background-color: var(--bs-body-bg);
+}
+
+.list-item-group .list-item-content {
+  font-weight: 500;
+}
+
+.list-item-child {
+  padding-left: 1rem;
+}
+
+.list-item-child .list-item-content {
+  padding-left: 0.5rem;
 }
 </style>

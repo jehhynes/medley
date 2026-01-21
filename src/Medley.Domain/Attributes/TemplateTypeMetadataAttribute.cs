@@ -8,10 +8,12 @@ public class TemplateTypeMetadataAttribute : Attribute
 {
     public string Name { get; }
     public string Description { get; }
+    public bool IsPerArticleType { get; set; }
 
     public TemplateTypeMetadataAttribute(string name, string description)
     {
         Name = name;
         Description = description;
+        IsPerArticleType = false;
     }
 }

@@ -9,9 +9,9 @@ namespace Medley.Application.Models.DTOs;
 public class TemplateListDto
 {
     /// <summary>
-    /// Unique identifier for the template
+    /// Unique identifier for the template (null if doesn't exist yet)
     /// </summary>
-    public required Guid Id { get; set; }
+    public Guid? Id { get; set; }
 
     /// <summary>
     /// Display name of the template
@@ -24,19 +24,34 @@ public class TemplateListDto
     public required TemplateType Type { get; set; }
 
     /// <summary>
-    /// Template type name as string
-    /// </summary>
-    public required string TypeName { get; set; }
-
-    /// <summary>
     /// Description of the template
     /// </summary>
     public string? Description { get; set; }
 
     /// <summary>
+    /// Whether this template type is per-article-type
+    /// </summary>
+    public required bool IsPerArticleType { get; set; }
+
+    /// <summary>
+    /// Article type ID (for per-article-type templates)
+    /// </summary>
+    public Guid? ArticleTypeId { get; set; }
+
+    /// <summary>
+    /// Article type name (for per-article-type templates)
+    /// </summary>
+    public string? ArticleTypeName { get; set; }
+
+    /// <summary>
+    /// Whether this template exists in the database
+    /// </summary>
+    public required bool Exists { get; set; }
+
+    /// <summary>
     /// When this template was created
     /// </summary>
-    public required DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset? CreatedAt { get; set; }
 
     /// <summary>
     /// When this template was last modified
@@ -50,9 +65,9 @@ public class TemplateListDto
 public class TemplateDto
 {
     /// <summary>
-    /// Unique identifier for the template
+    /// Unique identifier for the template (null if doesn't exist yet)
     /// </summary>
-    public required Guid Id { get; set; }
+    public Guid? Id { get; set; }
 
     /// <summary>
     /// Display name of the template
@@ -65,14 +80,24 @@ public class TemplateDto
     public required TemplateType Type { get; set; }
 
     /// <summary>
-    /// Template type name as string
-    /// </summary>
-    public required string TypeName { get; set; }
-
-    /// <summary>
     /// Description of the template
     /// </summary>
     public string? Description { get; set; }
+
+    /// <summary>
+    /// Whether this template type is per-article-type
+    /// </summary>
+    public required bool IsPerArticleType { get; set; }
+
+    /// <summary>
+    /// Article type ID (for per-article-type templates)
+    /// </summary>
+    public Guid? ArticleTypeId { get; set; }
+
+    /// <summary>
+    /// Article type name (for per-article-type templates)
+    /// </summary>
+    public string? ArticleTypeName { get; set; }
 
     /// <summary>
     /// Template content
@@ -80,9 +105,14 @@ public class TemplateDto
     public required string Content { get; set; }
 
     /// <summary>
+    /// Whether this template exists in the database
+    /// </summary>
+    public required bool Exists { get; set; }
+
+    /// <summary>
     /// When this template was created
     /// </summary>
-    public required DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset? CreatedAt { get; set; }
 
     /// <summary>
     /// When this template was last modified
