@@ -71,11 +71,11 @@ export interface ChatMessageStreamingPayload {
   articleId: string;
   role: string;
   text: string | null;
-  toolName: string | null;
-  toolCallId: string | null;
-  toolDisplay: string | null;
-  toolResultIds: string[] | null;
-  isError: boolean | null;
+  //toolName: string | null;
+  //toolCallId: string | null;
+  //toolDisplay: string | null;
+  //toolResultIds: string[] | null;
+  //isError: boolean | null;
   messageId: string | null;
   timestamp: string;
 }
@@ -86,6 +86,7 @@ export interface ChatToolInvokedPayload {
   toolName: string;
   toolCallId: string;
   toolDisplay: string | null;
+  messageId: string;
   timestamp: string;
 }
 
@@ -94,11 +95,12 @@ export interface ChatToolCompletedPayload {
   articleId: string;
   toolCallId: string;
   toolResultIds: string[] | null;
+  messageId: string;
   timestamp: string;
 }
 
 export interface ChatMessageCompletePayload {
-  id: string;
+  messageId: string;
   conversationId: string;
   articleId: string;
   role: string;
@@ -114,7 +116,7 @@ export interface ChatErrorPayload {
 }
 
 export interface ChatMessageReceivedPayload {
-  id: string;
+  messageId: string;
   conversationId: string;
   role: string;
   text: string;
