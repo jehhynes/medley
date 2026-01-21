@@ -139,6 +139,7 @@ public record ChatToolCompletedPayload
     public required Guid ArticleId { get; init; }
     public required string ToolCallId { get; init; }
     public Guid[]? ToolResultIds { get; init; }
+    public required bool IsError { get; init; }
     public required Guid MessageId { get; init; }
     public required DateTimeOffset Timestamp { get; init; }
 }

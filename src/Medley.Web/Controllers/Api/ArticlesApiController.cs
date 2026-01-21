@@ -708,7 +708,7 @@ public class ArticlesApiController : ControllerBase
         {
             Id = version.Id,
             ArticleId = id,
-            VersionNumber = int.TryParse(version.VersionNumber.Split('.')[0], out var vn) ? vn : 0,
+            VersionNumber = version.VersionNumber,
             CreatedBy = version.CreatedBy.HasValue ? new UserRef
             {
                 Id = version.CreatedBy.Value,
@@ -765,7 +765,7 @@ public class ArticlesApiController : ControllerBase
         {
             Id = version.Id,
             ArticleId = articleId,
-            VersionNumber = int.TryParse(version.VersionNumber.Split('.')[0], out var vn) ? vn : 0,
+            VersionNumber = version.VersionNumber,
             CreatedBy = version.CreatedBy.HasValue ? new UserRef
             {
                 Id = version.CreatedBy.Value,

@@ -2354,7 +2354,7 @@ export interface ArticleVersionDto {
     id?: string;
     articleId?: string;
     conversationId?: string | null;
-    versionNumber?: number;
+    versionNumber?: string;
     createdBy?: UserRef | null;
     createdAt?: Date;
     modifiedAt?: Date | null;

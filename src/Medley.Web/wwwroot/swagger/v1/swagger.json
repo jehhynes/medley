@@ -3055,8 +3055,7 @@
             "nullable": true
           },
           "versionNumber": {
-            "type": "integer",
-            "format": "int32"
+            "type": "string"
           },
           "createdBy": {
             "nullable": true,

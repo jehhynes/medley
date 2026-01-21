@@ -487,7 +487,7 @@ function onToolCompleted(data: ChatToolCompletedPayload) {
     return;
   }
 
-  console.log(`AI Agent completed tool with callId: ${data.toolCallId}`);
+  console.log(`AI Agent completed tool with callId: ${data.toolCallId}`, data.isError ? '(ERROR)' : '(SUCCESS)');
 
   const messageId = data.messageId;
 
@@ -497,6 +497,7 @@ function onToolCompleted(data: ChatToolCompletedPayload) {
     const toolCall = msg.toolCalls.find(t => t.callId === data.toolCallId);
     if (toolCall) {
       toolCall.completed = true;
+      toolCall.isError = data.isError;
       if (data.toolResultIds && data.toolResultIds.length > 0) {
         toolCall.result = {
           ids: data.toolResultIds
@@ -641,5 +642,10 @@ function adjustTextareaHeight(): void {
     textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
   }
 }
+
+// Expose methods for parent component
+defineExpose({
+  loadConversation
+});
 </script>
 

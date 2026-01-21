@@ -26,7 +26,7 @@ public class ArticleVersionDto
     /// <summary>
     /// Version number
     /// </summary>
-    public required int VersionNumber { get; set; }
+    public required string VersionNumber { get; set; }
 
     /// <summary>
     /// User who created this version

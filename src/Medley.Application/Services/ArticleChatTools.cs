@@ -603,24 +603,6 @@ public class ArticleChatTools
                 });
             }
 
-            if (string.IsNullOrWhiteSpace(request.ChangeMessage))
-            {
-                return JsonSerializer.Serialize(new
-                {
-                    success = false,
-                    error = "Change message cannot be empty"
-                });
-            }
-
-            if (request.ChangeMessage.Length > 200)
-            {
-                return JsonSerializer.Serialize(new
-                {
-                    success = false,
-                    error = "Change message cannot exceed 200 characters"
-                });
-            }
-
             // Create AI version using the service
             var versionDto = await _articleVersionService.CreateAiVersionAsync(
                 _articleId,

@@ -389,6 +389,11 @@
 
 import { ref, reactive, computed, provide, onMounted, onBeforeUnmount, nextTick, watch, type Ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+
+// Define props to handle attributes passed by router
+defineProps<{
+  id?: string;
+}>();
 import { HubConnectionState } from '@microsoft/signalr';
 import { apiClients } from '@/utils/apiClients';
 import type { 
@@ -1151,6 +1156,26 @@ const toggleViewMode = (): void => {
 // LIFECYCLE HOOKS
 // ============================================================================
 
+// Handle beforeunload event for unsaved changes
+const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+  if (hasUnsavedChanges.value) {
+    event.preventDefault();
+    event.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+    return event.returnValue;
+  }
+};
+
+// Register cleanup hook at top level (before any async operations)
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload);
+  
+  if (signalr.connection) {
+    signalr.connection.stop()
+      .then(() => console.log('Disconnected from ArticleHub'))
+      .catch((err: any) => console.error('Error disconnecting from SignalR:', err));
+  }
+});
+
 onMounted(async () => {
   // Restore saved view mode
   const savedViewMode = localStorage.getItem('articlesViewMode');
@@ -1208,26 +1233,8 @@ onMounted(async () => {
     }
   }
 
-  // Handle beforeunload event for unsaved changes
-  const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-    if (hasUnsavedChanges.value) {
-      event.preventDefault();
-      event.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
-      return event.returnValue;
-    }
-  };
+  // Register beforeunload event listener
   window.addEventListener('beforeunload', handleBeforeUnload);
-
-  // Store cleanup function
-  onBeforeUnmount(() => {
-    window.removeEventListener('beforeunload', handleBeforeUnload);
-    
-    if (signalr.connection) {
-      signalr.connection.stop()
-        .then(() => console.log('Disconnected from ArticleHub'))
-        .catch((err: any) => console.error('Error disconnecting from SignalR:', err));
-    }
-  });
 });
 
 // Watch for route changes (browser back/forward)

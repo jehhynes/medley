@@ -89,6 +89,7 @@ export interface ChatToolCompletedPayload {
   articleId: string;
   toolCallId: string;
   toolResultIds: string[] | null;
+  isError: boolean;
   messageId: string;
   timestamp: string;
 }

@@ -145,6 +145,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                                     ArticleId = conversation.ArticleId,
                                     ToolCallId = update.ToolCallId ?? string.Empty,
                                     ToolResultIds = update.ToolResultIds?.ToArray(),
+                                    IsError = update.IsError ?? false,
                                     MessageId = update.MessageId ?? Guid.Empty,
                                     Timestamp = update.Timestamp
                                 });
@@ -206,8 +207,9 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                 if (conversation.Mode == ConversationMode.Agent)
                 {
                     var aiVersion = await _versionRepository.Query()
-                        .Where(v => v.ArticleId == conversation.ArticleId 
-                            && v.ConversationId == conversation.Id 
+                        .Include(x => x.ParentVersion)
+                        .Where(v => v.ArticleId == conversation.ArticleId
+                            && v.ConversationId == conversation.Id
                             && v.VersionType == VersionType.AI)
                         .OrderByDescending(v => v.CreatedAt)
                         .FirstOrDefaultAsync(cancellationToken);
@@ -222,7 +224,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                             {
                                 ArticleId = conversation.ArticleId,
                                 VersionId = aiVersion.Id,
-                                VersionNumber = aiVersion.VersionNumber.ToString(),
+                                VersionNumber = $"{aiVersion.ParentVersion!.VersionNumber}.{aiVersion.VersionNumber}",
                                 VersionType = VersionType.AI,
                                 CreatedAt = aiVersion.CreatedAt
                             });
