@@ -144,7 +144,7 @@ public class FragmentConfidenceScoringJob : BaseHangfireJob<FragmentConfidenceSc
     private async Task<string?> BuildSystemPromptAsync(CancellationToken cancellationToken)
     {
         var scoringTemplate = await _templateRepository.Query()
-            .FirstOrDefaultAsync(t => t.Type == TemplateType.ConfidenceScoring, cancellationToken);
+            .FirstOrDefaultAsync(t => t.Type == PromptType.ConfidenceScoring, cancellationToken);
 
         if (scoringTemplate == null)
         {
@@ -153,7 +153,7 @@ public class FragmentConfidenceScoringJob : BaseHangfireJob<FragmentConfidenceSc
         }
 
         var orgContextTemplate = await _templateRepository.Query()
-            .FirstOrDefaultAsync(t => t.Type == TemplateType.OrganizationContext, cancellationToken);
+            .FirstOrDefaultAsync(t => t.Type == PromptType.OrganizationContext, cancellationToken);
 
         if (orgContextTemplate != null && !string.IsNullOrWhiteSpace(orgContextTemplate.Content))
         {

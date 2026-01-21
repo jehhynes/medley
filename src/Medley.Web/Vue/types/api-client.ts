@@ -50,7 +50,7 @@ export class AiPromptApiClient {
         return Promise.resolve<AiPromptListDto[]>(null as any);
     }
 
-    get(type: TemplateType, articleTypeId?: string | null | undefined): Promise<AiPromptDto> {
+    get(type: PromptType, articleTypeId?: string | null | undefined): Promise<AiPromptDto> {
         let url_ = this.baseUrl + "/api/prompts/{type}?";
         if (type === undefined || type === null)
             throw new globalThis.Error("The parameter 'type' must be defined.");
@@ -94,7 +94,7 @@ export class AiPromptApiClient {
         return Promise.resolve<AiPromptDto>(null as any);
     }
 
-    createOrUpdate(type: TemplateType, request: CreateOrUpdateAiPromptRequest, articleTypeId?: string | null | undefined): Promise<AiPromptDto> {
+    createOrUpdate(type: PromptType, request: CreateOrUpdateAiPromptRequest, articleTypeId?: string | null | undefined): Promise<AiPromptDto> {
         let url_ = this.baseUrl + "/api/prompts/{type}?";
         if (type === undefined || type === null)
             throw new globalThis.Error("The parameter 'type' must be defined.");
@@ -2140,7 +2140,7 @@ export class TagTypesApiClient {
 export interface AiPromptListDto {
     id?: string | null;
     name?: string;
-    type?: TemplateType;
+    type?: PromptType;
     description?: string | null;
     isPerArticleType?: boolean;
     articleTypeId?: string | null;
@@ -2150,12 +2150,12 @@ export interface AiPromptListDto {
     lastModifiedAt?: Date | null;
 }
 
-export enum TemplateType {
+export enum PromptType {
     FragmentExtraction = "FragmentExtraction",
     OrganizationContext = "OrganizationContext",
     ConfidenceScoring = "ConfidenceScoring",
     ArticlePlanCreation = "ArticlePlanCreation",
-    ArticleChat = "ArticleChat",
+    ArticleAgentMode = "ArticleAgentMode",
     ArticlePlanImplementation = "ArticlePlanImplementation",
     ArticleTypePlanMode = "ArticleTypePlanMode",
     ArticleTypeAgentMode = "ArticleTypeAgentMode",
@@ -2164,7 +2164,7 @@ export enum TemplateType {
 export interface AiPromptDto {
     id?: string | null;
     name?: string;
-    type?: TemplateType;
+    type?: PromptType;
     description?: string | null;
     isPerArticleType?: boolean;
     articleTypeId?: string | null;

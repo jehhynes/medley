@@ -9,9 +9,9 @@ public class AiPrompt : BusinessEntity
 {
     /// <summary>
     /// The type of template (determines which AI workflow uses it)
-    /// Name and description are defined on the TemplateType enum
+    /// Name and description are defined on the PromptType enum
     /// </summary>
-    public required TemplateType Type { get; set; }
+    public required PromptType Type { get; set; }
 
     /// <summary>
     /// The template content (markdown format)

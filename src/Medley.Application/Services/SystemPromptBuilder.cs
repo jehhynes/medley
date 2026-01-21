@@ -34,25 +34,25 @@ public class SystemPromptBuilder
     /// </summary>
     /// <param name="articleId">Required: The article being worked on</param>
     /// <param name="planId">Optional: Include plan-specific context if provided</param>
-    /// <param name="templateType">Optional: Include template content if provided</param>
+    /// <param name="promptType">Optional: Include template content if provided</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Complete system prompt string</returns>
     public async Task<string> BuildPromptAsync(
         Guid articleId,
         Guid? planId = null,
-        TemplateType? templateType = null,
+        PromptType? promptType = null,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Building system prompt for article {ArticleId}, plan {PlanId}, template {TemplateType}",
-            articleId, planId, templateType);
+        _logger.LogInformation("Building system prompt for article {ArticleId}, plan {PlanId}, template {PromptType}",
+            articleId, planId, promptType);
 
         var sb = new StringBuilder();
 
         // 1. Start with template (if provided)
-        if (templateType.HasValue)
+        if (promptType.HasValue)
         {
             var template = await _templateRepository.Query()
-                .FirstOrDefaultAsync(t => t.Type == templateType.Value, cancellationToken);
+                .FirstOrDefaultAsync(t => t.Type == promptType.Value, cancellationToken);
 
             if (template != null)
             {
@@ -61,7 +61,7 @@ public class SystemPromptBuilder
             }
             else
             {
-                _logger.LogWarning("Template type {TemplateType} not found", templateType);
+                _logger.LogWarning("Template type {PromptType} not found", promptType);
             }
         }
 

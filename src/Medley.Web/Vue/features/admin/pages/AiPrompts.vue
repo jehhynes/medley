@@ -41,11 +41,11 @@
           </li>
 
           <!-- Per-article-type templates (grouped) -->
-          <template v-for="group in perArticleTypeGroups" :key="group.templateType">
+          <template v-for="group in perArticleTypeGroups" :key="group.promptType">
             <li class="list-item list-item-group">
               <a href="#" 
                  class="list-item-content"
-                 @click.prevent="toggleGroup(group.templateType)">
+                 @click.prevent="toggleGroup(group.promptType)">
                 <i class="list-item-icon bi" :class="group.expanded ? 'bi-chevron-down' : 'bi-chevron-right'"></i>
                 <div class="list-item-body">
                   <div class="list-item-title">{{ group.name }}</div>
@@ -135,7 +135,7 @@ const nonPerArticleTypeTemplates = computed(() =>
 );
 
 interface PerArticleTypeGroup {
-  templateType: number;
+  promptType: number;
   name: string;
   description: string;
   expanded: boolean;
@@ -149,7 +149,7 @@ const perArticleTypeGroups = computed<PerArticleTypeGroup[]>(() => {
   for (const template of perArticleTemplates) {
     if (!groupMap.has(template.type)) {
       groupMap.set(template.type, {
-        templateType: template.type,
+        promptType: template.type,
         name: template.name,
         description: template.description || '',
         expanded: expandedGroups.value.has(template.type),
@@ -180,11 +180,11 @@ const loadTemplates = async (): Promise<void> => {
   }
 };
 
-const toggleGroup = (templateType: number): void => {
-  if (expandedGroups.value.has(templateType)) {
-    expandedGroups.value.delete(templateType);
+const toggleGroup = (promptType: number): void => {
+  if (expandedGroups.value.has(promptType)) {
+    expandedGroups.value.delete(promptType);
   } else {
-    expandedGroups.value.add(templateType);
+    expandedGroups.value.add(promptType);
   }
 };
 

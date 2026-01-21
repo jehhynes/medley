@@ -158,7 +158,7 @@ public class ArticleChatService : IArticleChatService
             {
                 // Load the ArticleImprovementPlan template
                 var template = await _templateRepository.Query()
-                    .FirstOrDefaultAsync(t => t.Type == TemplateType.ArticlePlanCreation, cancellationToken);
+                    .FirstOrDefaultAsync(t => t.Type == PromptType.ArticlePlanCreation, cancellationToken);
                 
                 if (template == null)
                 {
@@ -174,7 +174,7 @@ public class ArticleChatService : IArticleChatService
                 systemMessage = await _systemPromptBuilder.BuildPromptAsync(
                     conversation.ArticleId,
                     conversation.ImplementingPlanId,
-                    TemplateType.ArticlePlanImplementation,
+                    PromptType.ArticlePlanImplementation,
                     cancellationToken);
                 
                 aiFunctions = CreateFunctions(tools, conversation.Mode);
@@ -183,7 +183,7 @@ public class ArticleChatService : IArticleChatService
             {
                 // Regular agent chat - load ArticleChat template
                 var template = await _templateRepository.Query()
-                    .FirstOrDefaultAsync(t => t.Type == TemplateType.ArticleChat, cancellationToken);
+                    .FirstOrDefaultAsync(t => t.Type == PromptType.ArticleAgentMode, cancellationToken);
                 
                 if (template != null)
                 {

@@ -41,7 +41,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "$ref": "#/components/schemas/TemplateType"
+              "$ref": "#/components/schemas/PromptType"
             },
             "x-position": 1
           },
@@ -90,7 +90,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "$ref": "#/components/schemas/TemplateType"
+              "$ref": "#/components/schemas/PromptType"
             },
             "x-position": 1
           },
@@ -2384,7 +2384,7 @@
             "type": "string"
           },
           "type": {
-            "$ref": "#/components/schemas/TemplateType"
+            "$ref": "#/components/schemas/PromptType"
           },
           "description": {
             "type": "string",
@@ -2417,7 +2417,7 @@
           }
         }
       },
-      "TemplateType": {
+      "PromptType": {
         "type": "string",
         "description": "",
         "x-enumNames": [
@@ -2425,7 +2425,7 @@
           "OrganizationContext",
           "ConfidenceScoring",
           "ArticlePlanCreation",
-          "ArticleChat",
+          "ArticleAgentMode",
           "ArticlePlanImplementation",
           "ArticleTypePlanMode",
           "ArticleTypeAgentMode"
@@ -2435,7 +2435,7 @@
           "OrganizationContext",
           "ConfidenceScoring",
           "ArticlePlanCreation",
-          "ArticleChat",
+          "ArticleAgentMode",
           "ArticlePlanImplementation",
           "ArticleTypePlanMode",
           "ArticleTypeAgentMode"
@@ -2454,7 +2454,7 @@
             "type": "string"
           },
           "type": {
-            "$ref": "#/components/schemas/TemplateType"
+            "$ref": "#/components/schemas/PromptType"
           },
           "description": {
             "type": "string",

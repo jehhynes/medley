@@ -33,7 +33,7 @@ public class AiPromptApiController : ControllerBase
     }
 
     /// <summary>
-    /// Get all possible templates (derived from TemplateType enum)
+    /// Get all possible templates (derived from PromptType enum)
     /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(List<AiPromptListDto>), StatusCodes.Status200OK)]
@@ -51,10 +51,10 @@ public class AiPromptApiController : ControllerBase
 
         var result = new List<AiPromptListDto>();
 
-        // Iterate through all TemplateType enum values
-        foreach (TemplateType templateType in Enum.GetValues(typeof(TemplateType)))
+        // Iterate through all PromptType enum values
+        foreach (PromptType promptType in Enum.GetValues(typeof(PromptType)))
         {
-            var isPerArticleType = templateType.GetIsPerArticleType();
+            var isPerArticleType = promptType.GetIsPerArticleType();
 
             if (isPerArticleType)
             {
@@ -62,14 +62,14 @@ public class AiPromptApiController : ControllerBase
                 foreach (var articleType in articleTypes)
                 {
                     var existingTemplate = existingTemplates.FirstOrDefault(t =>
-                        t.Type == templateType && t.ArticleTypeId == articleType.Id);
+                        t.Type == promptType && t.ArticleTypeId == articleType.Id);
 
                     result.Add(new AiPromptListDto
                     {
                         Id = existingTemplate?.Id,
-                        Name = templateType.GetName(),
-                        Type = templateType,
-                        Description = templateType.GetDescription(),
+                        Name = promptType.GetName(),
+                        Type = promptType,
+                        Description = promptType.GetDescription(),
                         IsPerArticleType = true,
                         ArticleTypeId = articleType.Id,
                         ArticleTypeName = articleType.Name,
@@ -83,14 +83,14 @@ public class AiPromptApiController : ControllerBase
             {
                 // Create one entry for non-per-article-type templates
                 var existingTemplate = existingTemplates.FirstOrDefault(t =>
-                    t.Type == templateType && t.ArticleTypeId == null);
+                    t.Type == promptType && t.ArticleTypeId == null);
 
                 result.Add(new AiPromptListDto
                 {
                     Id = existingTemplate?.Id,
-                    Name = templateType.GetName(),
-                    Type = templateType,
-                    Description = templateType.GetDescription(),
+                    Name = promptType.GetName(),
+                    Type = promptType,
+                    Description = promptType.GetDescription(),
                     IsPerArticleType = false,
                     ArticleTypeId = null,
                     ArticleTypeName = null,
@@ -116,7 +116,7 @@ public class AiPromptApiController : ControllerBase
     [HttpGet("{type}")]
     [ProducesResponseType(typeof(AiPromptDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<AiPromptDto>> Get(TemplateType type, [FromQuery] Guid? articleTypeId = null)
+    public async Task<ActionResult<AiPromptDto>> Get(PromptType type, [FromQuery] Guid? articleTypeId = null)
     {
         var isPerArticleType = type.GetIsPerArticleType();
 
@@ -192,7 +192,7 @@ public class AiPromptApiController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<AiPromptDto>> CreateOrUpdate(
-        TemplateType type,
+        PromptType type,
         [FromQuery] Guid? articleTypeId,
         [FromBody] CreateOrUpdateAiPromptRequest request)
     {
@@ -239,7 +239,7 @@ public class AiPromptApiController : ControllerBase
                 await _unitOfWork.SaveChangesAsync();
 
                 _logger.LogInformation(
-                    "Updated template {TemplateType}" +
+                    "Updated template {PromptType}" +
                     (articleTypeId.HasValue ? " for article type {ArticleTypeId}" : ""),
                     type, articleTypeId);
 
@@ -274,7 +274,7 @@ public class AiPromptApiController : ControllerBase
                 await _unitOfWork.SaveChangesAsync();
 
                 _logger.LogInformation(
-                    "Created template {TemplateType}" +
+                    "Created template {PromptType}" +
                     (articleTypeId.HasValue ? " for article type {ArticleTypeId}" : ""),
                     type, articleTypeId);
 
@@ -296,7 +296,7 @@ public class AiPromptApiController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create or update template {TemplateType}", type);
+            _logger.LogError(ex, "Failed to create or update template {PromptType}", type);
             return StatusCode(500, new { message = "Failed to create or update template" });
         }
     }

@@ -5,54 +5,54 @@ namespace Medley.Domain.Enums;
 /// <summary>
 /// Types of AI prompt templates
 /// </summary>
-public enum TemplateType
+public enum PromptType
 {
     /// <summary>
     /// Template for extracting fragments from source content
     /// </summary>
-    [TemplateTypeMetadata("Fragment Extraction Prompt", "Instructions for extracting knowledge fragments from source content")]
+    [PromptTypeMetadata("Fragment Extraction", "Instructions for extracting knowledge fragments from sources")]
     FragmentExtraction = 1,
 
     /// <summary>
     /// Template for organization/tenant context used in prompts
     /// </summary>
-    [TemplateTypeMetadata("Organization Context", "Helpful information about your company or product")]
+    [PromptTypeMetadata("General Organization Context", "Helpful company or product information")]
     OrganizationContext = 2,
 
     /// <summary>
     /// Template for confidence scoring of extracted fragments
     /// </summary>
-    [TemplateTypeMetadata("Confidence Scoring Prompt", "Instructions for assigning a confidence score to extracted fragments")]
+    [PromptTypeMetadata("Confidence Scoring", "Instructions for assigning a confidence score to fragments")]
     ConfidenceScoring = 3,
 
     /// <summary>
     /// Template for article improvement plan generation
     /// </summary>
-    [TemplateTypeMetadata("Article Plan Creation", "Template for creating article improvement plans")]
+    [PromptTypeMetadata("Plan Creation", "Plan Mode for creating article improvement plans")]
     ArticlePlanCreation = 4,
 
     /// <summary>
     /// Template for article chat assistant
     /// </summary>
-    [TemplateTypeMetadata("Article Chat", "Template for general chat mode on an article")]
-    ArticleChat = 5,
+    [PromptTypeMetadata("Agent Mode", "General Agent Mode instructions for articles")]
+    ArticleAgentMode = 5,
 
     /// <summary>
     /// Template for implementing article improvement plans
     /// </summary>
-    [TemplateTypeMetadata("Article Plan Implementation", "Template for implementing article improvement plans with AI assistance")]
+    [PromptTypeMetadata("Plan Implementation", "Agent Mode when implementing article improvement plans")]
     ArticlePlanImplementation = 6,
 
     /// <summary>
     /// Template for article improvement plan generation specific to article types
     /// </summary>
-    [TemplateTypeMetadata("Article Type (Plan Mode)", "Template for creating article improvement plans specific to article types", IsPerArticleType = true)]
+    [PromptTypeMetadata("Article Types (Plan Mode)", "Plan mode instructions for specific article types", IsPerArticleType = true)]
     ArticleTypePlanMode = 7,
 
     /// <summary>
     /// Template for article chat assistant specific to article types
     /// </summary>
-    [TemplateTypeMetadata("Article Type (Agent Mode)", "Template for chat/agent mode specific to article types", IsPerArticleType = true)]
+    [PromptTypeMetadata("Article Types (Agent Mode)", "Agent mode instructions for specific article types", IsPerArticleType = true)]
     ArticleTypeAgentMode = 8
 }
 

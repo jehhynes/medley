@@ -104,7 +104,7 @@ public class FragmentExtractionService
 
         // Retrieve the fragment extraction prompt template
         var template = await _templateRepository.Query()
-            .FirstOrDefaultAsync(t => t.Type == TemplateType.FragmentExtraction, cancellationToken);
+            .FirstOrDefaultAsync(t => t.Type == PromptType.FragmentExtraction, cancellationToken);
 
         if (template == null)
         {
@@ -114,7 +114,7 @@ public class FragmentExtractionService
 
         // Load organization context template (if configured)
         var orgContextTemplate = await _templateRepository.Query()
-            .FirstOrDefaultAsync(t => t.Type == TemplateType.OrganizationContext, cancellationToken);
+            .FirstOrDefaultAsync(t => t.Type == PromptType.OrganizationContext, cancellationToken);
 
         // Build system prompt with organization context if available
         var systemPrompt = template.Content;

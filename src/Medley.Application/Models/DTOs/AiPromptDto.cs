@@ -21,7 +21,7 @@ public class AiPromptListDto
     /// <summary>
     /// Template type enum value
     /// </summary>
-    public required TemplateType Type { get; set; }
+    public required PromptType Type { get; set; }
 
     /// <summary>
     /// Description of the template
@@ -77,7 +77,7 @@ public class AiPromptDto
     /// <summary>
     /// Template type enum value
     /// </summary>
-    public required TemplateType Type { get; set; }
+    public required PromptType Type { get; set; }
 
     /// <summary>
     /// Description of the template
