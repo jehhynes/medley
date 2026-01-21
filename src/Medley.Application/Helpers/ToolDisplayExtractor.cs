@@ -43,6 +43,8 @@ public class ToolDisplayExtractor
                 "SearchFragments" when arguments.TryGetValue("query", out var query) => query?.ToString(),
                 "GetFragmentContent" when arguments.TryGetValue("fragmentId", out var fragmentIdObj) 
                     => await ExtractFragmentDisplayAsync(fragmentIdObj),
+                "AskQuestionWithCursor" when arguments.TryGetValue("question", out var question) =>
+                question?.ToString(),
                 _ => null
             };
         }
@@ -141,6 +143,13 @@ public class ToolDisplayExtractor
                 {
                     ids.Add(fragmentId);
                 }
+            }
+            else if (string.Equals(toolName, "AskQuestionWithCursor", StringComparison.OrdinalIgnoreCase))
+            {
+                // For Cursor questions, we don't extract IDs but we want to mark it as having a result
+                // Return an empty list to indicate the tool completed successfully
+                // The frontend will handle displaying the response differently
+                return new List<Guid>();
             }
 
             return ids.Count > 0 ? ids : null;

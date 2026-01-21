@@ -278,6 +278,77 @@
         }
       }
     },
+    "/api/articles/{articleId}/assistant/conversations/{conversationId}/messages/{messageId}/tool-result/{toolCallId}": {
+      "get": {
+        "tags": [
+          "ArticleChatApi"
+        ],
+        "operationId": "ArticleChatApi_GetToolResultContent",
+        "parameters": [
+          {
+            "name": "articleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "conversationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 2
+          },
+          {
+            "name": "messageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 3
+          },
+          {
+            "name": "toolCallId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-position": 4
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResultContentResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/articles/{articleId}/assistant/conversations/{conversationId}/complete": {
       "post": {
         "tags": [
@@ -2427,6 +2498,21 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "ToolResultContentResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "toolCallId": {
+            "type": "string"
+          },
+          "toolName": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
           }
         }
       },

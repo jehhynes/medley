@@ -240,7 +240,7 @@ public class ArticleChatApiController : ControllerBase
                     
                     // Extract result IDs using the shared helper with tool name
                     var resultIds = _toolDisplayExtractor.ExtractResultIds(toolName, resultContent);
-                    if (resultIds != null && resultIds.Count > 0)
+                    if (resultIds != null)
                     {
                         completedCallResults[resultContent.CallId] = resultIds;
                     }
@@ -292,6 +292,123 @@ public class ArticleChatApiController : ControllerBase
         }
 
         return Ok(results);
+    }
+
+    /// <summary>
+    /// Get tool result content for a specific tool call
+    /// </summary>
+    [HttpGet("conversations/{conversationId}/messages/{messageId}/tool-result/{toolCallId}")]
+    [ProducesResponseType(typeof(ToolResultContentResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<ToolResultContentResponse>> GetToolResultContent(
+        Guid articleId, 
+        Guid conversationId, 
+        Guid messageId, 
+        string toolCallId)
+    {
+        var conversation = await _chatService.GetConversationAsync(conversationId);
+        if (conversation == null || conversation.ArticleId != articleId)
+        {
+            return NotFound(new { message = "Conversation not found" });
+        }
+
+        // Get all messages in the conversation to find both the tool call and its result
+        var messages = await _chatService.GetConversationMessagesAsync(conversationId);
+
+        // First, find the tool call to get the tool name
+        string? toolName = null;
+        foreach (var msg in messages.Where(x => x.Role == ChatMessageRole.Assistant)) 
+        {
+            if (string.IsNullOrEmpty(msg.SerializedMessage)) continue;
+            
+            var aiMessage = TryDeserializeMessage(msg.SerializedMessage, msg.Id);
+            if (aiMessage?.Contents == null) continue;
+
+            foreach (var callContent in aiMessage.Contents.OfType<FunctionCallContent>())
+            {
+                if (callContent.CallId == toolCallId)
+                {
+                    toolName = callContent.Name;
+                    break;
+                }
+            }
+
+            if (toolName != null) break;
+        }
+
+        if (toolName == null)
+        {
+            return NotFound(new { message = "Could not find tool call" });
+        }
+
+        // Now search all messages for the result (it will be in a different message)
+        foreach (var msg in messages.Where(x => x.Role == ChatMessageRole.Tool)) 
+        {
+            if (string.IsNullOrEmpty(msg.SerializedMessage)) continue;
+            
+            var aiMessage = TryDeserializeMessage(msg.SerializedMessage, msg.Id);
+            if (aiMessage?.Contents == null) continue;
+
+            foreach (var resultContent in aiMessage.Contents.OfType<FunctionResultContent>())
+            {
+                if (resultContent.CallId == toolCallId)
+                {
+                    var resultString = resultContent.Result?.ToString();
+                    if (string.IsNullOrEmpty(resultString))
+                    {
+                        return NotFound(new { message = "Tool result is empty" });
+                    }
+
+                    try
+                    {
+                        var resultData = JsonSerializer.Deserialize<JsonElement>(resultString);
+                        
+                        // Handle ReviewArticleWithCursorAsync tool format
+                        if (toolName == "ReviewArticleWithCursorAsync" && 
+                            resultData.TryGetProperty("changesSummary", out var changesSummaryProperty))
+                        {
+                            return Ok(new ToolResultContentResponse
+                            {
+                                ToolCallId = toolCallId,
+                                ToolName = toolName,
+                                Content = changesSummaryProperty.ToString()
+                            });
+                        }
+                        
+                        // Handle default format with "response" property
+                        if (resultData.TryGetProperty("response", out var responseProperty))
+                        {
+                            return Ok(new ToolResultContentResponse
+                            {
+                                ToolCallId = toolCallId,
+                                ToolName = toolName,
+                                Content = responseProperty.ToString()
+                            });
+                        }
+                        
+                        // If no specific property found, return the whole result
+                        return Ok(new ToolResultContentResponse
+                        {
+                            ToolCallId = toolCallId,
+                            ToolName = toolName,
+                            Content = resultString
+                        });
+                    }
+                    catch (JsonException)
+                    {
+                        // If it's not JSON, return as plain text
+                        return Ok(new ToolResultContentResponse
+                        {
+                            ToolCallId = toolCallId,
+                            ToolName = toolName,
+                            Content = resultString
+                        });
+                    }
+                }
+            }
+        }
+
+        return NotFound(new { message = "Tool result not found" });
     }
 
     /// <summary>
@@ -544,4 +661,3 @@ public class ArticleChatApiController : ControllerBase
 }
 
 public record SendMessageRequest(string Message, ConversationMode? Mode = null);
-

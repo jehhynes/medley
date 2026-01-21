@@ -1,7 +1,15 @@
 <template>
   <div class="tool-call-item text-muted">
     <div class="d-flex align-items-center">
-      <i class="bi me-2" :class="getToolIcon(tool.name)" :title="formatToolName(tool.name)"></i>
+      <!-- Cursor tool with custom SVG icon -->
+      <template v-if="tool.name && tool.name.toLowerCase().includes('cursor')">
+        <img :src="cursorIcon" 
+             class="svg-icon me-1" 
+             style="width: 19px; height: 19px;"
+             :title="formatToolName(tool.name)" 
+             alt="Cursor AI" />
+      </template>
+      <i v-else class="bi me-2" :class="getToolIcon(tool.name)" :title="formatToolName(tool.name)"></i>
       
       <!-- CreatePlan tool with link -->
       <template v-if="tool.name && tool.name.toLowerCase().includes('createplan') && tool.completed && getIdFromResult(tool.result)">
@@ -25,6 +33,15 @@
       <template v-else-if="tool.name && tool.name.toLowerCase().includes('createarticleversion') && tool.completed && getIdFromResult(tool.result)">
         <a href="#" 
            @click.prevent="$emit('open-version', getIdFromResult(tool.result))"
+           class="tool-call-link">
+          {{ tool.display || formatToolName(tool.name) }}
+        </a>
+      </template>
+      
+      <!-- Cursor tool with clickable link when completed -->
+      <template v-else-if="tool.name && tool.name.toLowerCase().includes('cursor') && tool.completed">
+        <a href="#"
+           @click.prevent="showCursorResponse"
            class="tool-call-link">
           {{ tool.display || formatToolName(tool.name) }}
         </a>
@@ -68,12 +85,24 @@
       </div>
     </div>
   </div>
+  
+  <!-- Cursor Response Modal -->
+  <cursor-response-modal
+    v-if="cursorModalVisible"
+    :tool-display="tool.display"
+    :article-id="articleId"
+    :conversation-id="conversationId"
+    :message-id="messageId"
+    :tool-call-id="tool.callId"
+    @close="closeCursorModal" />
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue';
 import { apiClients } from '@/utils/apiClients';
 import type { FragmentTitleDto } from '@/types/api-client';
+import CursorResponseModal from './CursorResponseModal.vue';
+import cursorIcon from '@/../wwwroot/images/cursor-ai.svg?url';
 
 interface ToolResult {
   ids?: string[];
@@ -86,10 +115,14 @@ interface Tool {
   completed: boolean;
   isError?: boolean;
   result?: ToolResult;
+  callId?: string;
 }
 
 interface Props {
   tool: Tool;
+  articleId?: string;
+  conversationId?: string;
+  messageId?: string;
 }
 
 const props = defineProps<Props>();
@@ -104,6 +137,7 @@ const emit = defineEmits<Emits>();
 
 const isExpanded = ref<boolean>(false);
 const fragments = ref<FragmentTitleDto[] | null>(null);
+const cursorModalVisible = ref<boolean>(false);
 
 function formatToolName(toolName: string): string {
   if (!toolName) return '';
@@ -177,5 +211,13 @@ async function loadFragments(): Promise<void> {
     console.error('Error loading tool fragments:', err);
     fragments.value = [];
   }
+}
+
+async function showCursorResponse(): Promise<void> {
+  cursorModalVisible.value = true;
+}
+
+function closeCursorModal(): void {
+  cursorModalVisible.value = false;
 }
 </script>
