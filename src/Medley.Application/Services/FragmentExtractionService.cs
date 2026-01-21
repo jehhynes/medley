@@ -17,7 +17,7 @@ public class FragmentExtractionService
     private readonly IContentChunkingService _chunkingService;
     private readonly IRepository<Source> _sourceRepository;
     private readonly IRepository<Fragment> _fragmentRepository;
-    private readonly IRepository<AiPrompt> _templateRepository;
+    private readonly IRepository<AiPrompt> _promptRepository;
     private readonly ILogger<FragmentExtractionService> _logger;
     private readonly AiCallContext _aiCallContext;
 
@@ -29,7 +29,7 @@ public class FragmentExtractionService
         IContentChunkingService chunkingService,
         IRepository<Source> sourceRepository,
         IRepository<Fragment> fragmentRepository,
-        IRepository<AiPrompt> templateRepository,
+        IRepository<AiPrompt> promptRepository,
         ILogger<FragmentExtractionService> logger,
         AiCallContext aiCallContext)
     {
@@ -37,7 +37,7 @@ public class FragmentExtractionService
         _chunkingService = chunkingService;
         _sourceRepository = sourceRepository;
         _fragmentRepository = fragmentRepository;
-        _templateRepository = templateRepository;
+        _promptRepository = promptRepository;
         _logger = logger;
         _aiCallContext = aiCallContext;
     }
@@ -103,7 +103,7 @@ public class FragmentExtractionService
         }
 
         // Retrieve the fragment extraction prompt template
-        var template = await _templateRepository.Query()
+        var template = await _promptRepository.Query()
             .FirstOrDefaultAsync(t => t.Type == PromptType.FragmentExtraction, cancellationToken);
 
         if (template == null)
@@ -113,7 +113,7 @@ public class FragmentExtractionService
         }
 
         // Load organization context template (if configured)
-        var orgContextTemplate = await _templateRepository.Query()
+        var orgContextTemplate = await _promptRepository.Query()
             .FirstOrDefaultAsync(t => t.Type == PromptType.OrganizationContext, cancellationToken);
 
         // Build system prompt with organization context if available

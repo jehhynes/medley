@@ -25,14 +25,11 @@ public class ArticleChatService : IArticleChatService
     private readonly IRepository<ChatConversation> _conversationRepository;
     private readonly IRepository<DomainChatMessage> _chatMessageRepository;
     private readonly IRepository<Article> _articleRepository;
-    private readonly IRepository<AiPrompt> _templateRepository;
-    private readonly IRepository<Fragment> _fragmentRepository;
-    private readonly IRepository<Plan> _planRepository;
     private readonly IRepository<User> _userRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IChatClient _chatClient;
     private readonly ArticleChatToolsFactory _toolsFactory;
-    private readonly SystemPromptBuilder _systemPromptBuilder;
+    private readonly SystemContextManager _contextManager;
     private readonly ILogger<ArticleChatService> _logger;
     private readonly AiCallContext _aiCallContext;
     private readonly ToolDisplayExtractor _toolDisplayExtractor;
@@ -42,14 +39,11 @@ public class ArticleChatService : IArticleChatService
         IRepository<ChatConversation> conversationRepository,
         IRepository<DomainChatMessage> chatMessageRepository,
         IRepository<Article> articleRepository,
-        IRepository<AiPrompt> templateRepository,
-        IRepository<Fragment> fragmentRepository,
-        IRepository<Plan> planRepository,
         IRepository<User> userRepository,
         IUnitOfWork unitOfWork,
         IChatClient chatClient,
         ArticleChatToolsFactory pluginsFactory,
-        SystemPromptBuilder systemPromptBuilder,
+        SystemContextManager contextManager,
         ILogger<ArticleChatService> logger,
         AiCallContext aiCallContext,
         ToolDisplayExtractor toolDisplayExtractor,
@@ -58,13 +52,10 @@ public class ArticleChatService : IArticleChatService
         _conversationRepository = conversationRepository;
         _chatMessageRepository = chatMessageRepository;
         _articleRepository = articleRepository;
-        _templateRepository = templateRepository;
-        _fragmentRepository = fragmentRepository;
-        _planRepository = planRepository;
         _userRepository = userRepository;
         _unitOfWork = unitOfWork;
         _toolsFactory = pluginsFactory;
-        _systemPromptBuilder = systemPromptBuilder;
+        _contextManager = contextManager;
         _logger = logger;
         _aiCallContext = aiCallContext;
         _toolDisplayExtractor = toolDisplayExtractor;
@@ -150,53 +141,23 @@ public class ArticleChatService : IArticleChatService
             // Create article-scoped plugins instance
             var tools = _toolsFactory.Create(article.Id, latestUserMessage.User.Id, conversation.ImplementingPlan?.Id);
             
-            // Select system prompt and tools based on mode
-            string systemMessage;
-            AIFunction[] aiFunctions;
+            // Determine prompt type and plan ID based on conversation mode
+            var promptType = conversation.Mode == ConversationMode.Plan
+                ? PromptType.ArticlePlanCreation
+                : conversation.ImplementingPlanId.HasValue
+                    ? PromptType.ArticlePlanImplementation
+                    : PromptType.ArticleAgentMode;
             
-            if (conversation.Mode == ConversationMode.Plan)
-            {
-                // Load the ArticleImprovementPlan template
-                var template = await _templateRepository.Query()
-                    .FirstOrDefaultAsync(t => t.Type == PromptType.ArticlePlanCreation, cancellationToken);
-                
-                if (template == null)
-                {
-                    throw new InvalidOperationException("Article Improvement Plan template not found");
-                }
-                
-                systemMessage = template.Content.Replace("{article.Title}", article.Title);
-                aiFunctions = CreateFunctions(tools, conversation.Mode);
-            }
-            else if (conversation.Mode == ConversationMode.Agent && conversation.ImplementingPlanId.HasValue)
-            {
-                // Agent mode implementing a plan - use SystemPromptBuilder
-                systemMessage = await _systemPromptBuilder.BuildPromptAsync(
-                    conversation.ArticleId,
-                    conversation.ImplementingPlanId,
-                    PromptType.ArticlePlanImplementation,
-                    cancellationToken);
-                
-                aiFunctions = CreateFunctions(tools, conversation.Mode);
-            }
-            else
-            {
-                // Regular agent chat - load ArticleChat template
-                var template = await _templateRepository.Query()
-                    .FirstOrDefaultAsync(t => t.Type == PromptType.ArticleAgentMode, cancellationToken);
-                
-                if (template != null)
-                {
-                    systemMessage = template.Content.Replace("{article.Title}", article.Title)
-                                                  .Replace("{article.Content}", article.Content ?? string.Empty);
-                }
-                else
-                {
-                    throw new InvalidDataException("Article Chat template not found");
-                }
-                
-                aiFunctions = CreateFunctions(tools, conversation.Mode);
-            }
+            // Build system prompt using contextManager
+            var systemMessage = await _contextManager.BuildPromptAsync(
+                conversation.ArticleId,
+                promptType,
+                conversation.Mode,
+                latestUserMessage.User.FullName,
+                conversation.ImplementingPlanId,
+                cancellationToken);
+            
+            var aiFunctions = CreateFunctions(tools, conversation.Mode);
             
             // Create the message store for persistence
             var messageStore = CreateMessageStore(conversationId);

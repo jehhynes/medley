@@ -22,14 +22,14 @@ public class FragmentConfidenceScoringJob : BaseHangfireJob<FragmentConfidenceSc
     private readonly IAiProcessingService _aiProcessingService;
     private readonly IRepository<Fragment> _fragmentRepository;
     private readonly IRepository<Source> _sourceRepository;
-    private readonly IRepository<AiPrompt> _templateRepository;
+    private readonly IRepository<AiPrompt> _promptRepository;
     private readonly AiCallContext _aiCallContext;
 
     public FragmentConfidenceScoringJob(
         IAiProcessingService aiProcessingService,
         IRepository<Fragment> fragmentRepository,
         IRepository<Source> sourceRepository,
-        IRepository<AiPrompt> templateRepository,
+        IRepository<AiPrompt> promptRepository,
         IUnitOfWork unitOfWork,
         ILogger<FragmentConfidenceScoringJob> logger,
         AiCallContext aiCallContext) : base(unitOfWork, logger)
@@ -37,7 +37,7 @@ public class FragmentConfidenceScoringJob : BaseHangfireJob<FragmentConfidenceSc
         _aiProcessingService = aiProcessingService;
         _fragmentRepository = fragmentRepository;
         _sourceRepository = sourceRepository;
-        _templateRepository = templateRepository;
+        _promptRepository = promptRepository;
         _aiCallContext = aiCallContext;
     }
 
@@ -143,7 +143,7 @@ public class FragmentConfidenceScoringJob : BaseHangfireJob<FragmentConfidenceSc
 
     private async Task<string?> BuildSystemPromptAsync(CancellationToken cancellationToken)
     {
-        var scoringTemplate = await _templateRepository.Query()
+        var scoringTemplate = await _promptRepository.Query()
             .FirstOrDefaultAsync(t => t.Type == PromptType.ConfidenceScoring, cancellationToken);
 
         if (scoringTemplate == null)
@@ -152,7 +152,7 @@ public class FragmentConfidenceScoringJob : BaseHangfireJob<FragmentConfidenceSc
             return null;
         }
 
-        var orgContextTemplate = await _templateRepository.Query()
+        var orgContextTemplate = await _promptRepository.Query()
             .FirstOrDefaultAsync(t => t.Type == PromptType.OrganizationContext, cancellationToken);
 
         if (orgContextTemplate != null && !string.IsNullOrWhiteSpace(orgContextTemplate.Content))

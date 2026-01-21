@@ -25,7 +25,6 @@ public class PlanApiController : ControllerBase
     private readonly IRepository<ChatConversation> _conversationRepository;
     private readonly IRepository<Domain.Entities.ChatMessage> _messageRepository;
     private readonly IArticleChatService _articleChatService;
-    private readonly SystemPromptBuilder _systemPromptBuilder;
     private readonly IMedleyContext _medleyContext;
     private readonly IBackgroundJobClient _backgroundJobClient;
     private readonly ILogger<PlanApiController> _logger;
@@ -37,7 +36,6 @@ public class PlanApiController : ControllerBase
         IRepository<ChatConversation> conversationRepository,
         IRepository<Domain.Entities.ChatMessage> messageRepository,
         IArticleChatService articleChatService,
-        SystemPromptBuilder systemPromptBuilder,
         IMedleyContext medleyContext,
         IBackgroundJobClient backgroundJobClient,
         ILogger<PlanApiController> logger)
@@ -48,7 +46,6 @@ public class PlanApiController : ControllerBase
         _conversationRepository = conversationRepository;
         _messageRepository = messageRepository;
         _articleChatService = articleChatService;
-        _systemPromptBuilder = systemPromptBuilder;
         _medleyContext = medleyContext;
         _backgroundJobClient = backgroundJobClient;
         _logger = logger;

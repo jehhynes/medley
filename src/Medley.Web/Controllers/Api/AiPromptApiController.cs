@@ -15,18 +15,18 @@ namespace Medley.Web.Controllers.Api;
 [Authorize]
 public class AiPromptApiController : ControllerBase
 {
-    private readonly IRepository<AiPrompt> _templateRepository;
+    private readonly IRepository<AiPrompt> _promptRepository;
     private readonly IRepository<ArticleType> _articleTypeRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<AiPromptApiController> _logger;
 
     public AiPromptApiController(
-        IRepository<AiPrompt> templateRepository,
+        IRepository<AiPrompt> promptRepository,
         IRepository<ArticleType> articleTypeRepository,
         IUnitOfWork unitOfWork,
         ILogger<AiPromptApiController> logger)
     {
-        _templateRepository = templateRepository;
+        _promptRepository = promptRepository;
         _articleTypeRepository = articleTypeRepository;
         _unitOfWork = unitOfWork;
         _logger = logger;
@@ -40,7 +40,7 @@ public class AiPromptApiController : ControllerBase
     public async Task<ActionResult<List<AiPromptListDto>>> GetAll()
     {
         // Get all existing templates from database
-        var existingTemplates = await _templateRepository.Query()
+        var existingTemplates = await _promptRepository.Query()
             .Include(t => t.ArticleType)
             .ToListAsync();
 
@@ -133,7 +133,7 @@ public class AiPromptApiController : ControllerBase
         }
 
         // Look up the template
-        var template = await _templateRepository.Query()
+        var template = await _promptRepository.Query()
             .Include(t => t.ArticleType)
             .FirstOrDefaultAsync(t =>
                 t.Type == type &&
@@ -213,7 +213,7 @@ public class AiPromptApiController : ControllerBase
             }
 
             // Look up existing template
-            var template = await _templateRepository.Query()
+            var template = await _promptRepository.Query()
                 .Include(t => t.ArticleType)
                 .FirstOrDefaultAsync(t =>
                     t.Type == type &&
@@ -270,7 +270,7 @@ public class AiPromptApiController : ControllerBase
                     LastModifiedAt = DateTimeOffset.UtcNow
                 };
 
-                await _templateRepository.AddAsync(newTemplate);
+                await _promptRepository.AddAsync(newTemplate);
                 await _unitOfWork.SaveChangesAsync();
 
                 _logger.LogInformation(

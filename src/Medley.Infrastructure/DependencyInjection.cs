@@ -281,8 +281,8 @@ public static class DependencyInjection
         // Register ArticleAssistantPluginsFactory (for creating article-scoped plugin instances)
         services.AddScoped<ArticleChatToolsFactory>();
 
-        // Register SystemPromptBuilder (for composing system prompts from article, plan, and template context)
-        services.AddScoped<SystemPromptBuilder>();
+        // Register SystemContextManager (for composing system prompts from article, plan, and template context)
+        services.AddScoped<SystemContextManager>();
 
         // Register ToolDisplayExtractor (for extracting display-friendly tool text)
         services.AddScoped<ToolDisplayExtractor>();
