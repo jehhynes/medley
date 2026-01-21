@@ -6,7 +6,168 @@
     "version": "1.0.0"
   },
   "paths": {
-    "/api/articles/{articleId}/assistant/conversation": {
+    "/api/prompts": {
+      "get": {
+        "tags": [
+          "AiPromptApi"
+        ],
+        "operationId": "AiPromptApi_GetAll",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AiPromptListDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prompts/{type}": {
+      "get": {
+        "tags": [
+          "AiPromptApi"
+        ],
+        "operationId": "AiPromptApi_Get",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/TemplateType"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "articleTypeId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "guid",
+              "nullable": true
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiPromptDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "AiPromptApi"
+        ],
+        "operationId": "AiPromptApi_CreateOrUpdate",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/TemplateType"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "articleTypeId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "guid",
+              "nullable": true
+            },
+            "x-position": 2
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrUpdateAiPromptRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 3
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiPromptDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/prompts/article-types": {
+      "get": {
+        "tags": [
+          "AiPromptApi"
+        ],
+        "operationId": "AiPromptApi_GetArticleTypes",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ArticleTypeDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/articles/{articleId}/chat/conversation": {
       "get": {
         "tags": [
           "ArticleChatApi"
@@ -131,7 +292,7 @@
         }
       }
     },
-    "/api/articles/{articleId}/assistant/conversations/{conversationId}/messages": {
+    "/api/articles/{articleId}/chat/conversations/{conversationId}/messages": {
       "get": {
         "tags": [
           "ArticleChatApi"
@@ -278,7 +439,7 @@
         }
       }
     },
-    "/api/articles/{articleId}/assistant/conversations/{conversationId}/messages/{messageId}/tool-result/{toolCallId}": {
+    "/api/articles/{articleId}/chat/conversations/{conversationId}/messages/{messageId}/tool-result/{toolCallId}": {
       "get": {
         "tags": [
           "ArticleChatApi"
@@ -349,7 +510,7 @@
         }
       }
     },
-    "/api/articles/{articleId}/assistant/conversations/{conversationId}/complete": {
+    "/api/articles/{articleId}/chat/conversations/{conversationId}/complete": {
       "post": {
         "tags": [
           "ArticleChatApi"
@@ -401,7 +562,7 @@
         }
       }
     },
-    "/api/articles/{articleId}/assistant/conversations/{conversationId}/cancel": {
+    "/api/articles/{articleId}/chat/conversations/{conversationId}/cancel": {
       "post": {
         "tags": [
           "ArticleChatApi"
@@ -2206,171 +2367,184 @@
           }
         }
       }
-    },
-    "/api/templates": {
-      "get": {
-        "tags": [
-          "TemplatesApi"
-        ],
-        "operationId": "TemplatesApi_GetAll",
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TemplateListDto"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/templates/{type}": {
-      "get": {
-        "tags": [
-          "TemplatesApi"
-        ],
-        "operationId": "TemplatesApi_Get",
-        "parameters": [
-          {
-            "name": "type",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/TemplateType"
-            },
-            "x-position": 1
-          },
-          {
-            "name": "articleTypeId",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "guid",
-              "nullable": true
-            },
-            "x-position": 2
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TemplateDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "TemplatesApi"
-        ],
-        "operationId": "TemplatesApi_CreateOrUpdate",
-        "parameters": [
-          {
-            "name": "type",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/TemplateType"
-            },
-            "x-position": 1
-          },
-          {
-            "name": "articleTypeId",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "guid",
-              "nullable": true
-            },
-            "x-position": 2
-          }
-        ],
-        "requestBody": {
-          "x-name": "request",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateOrUpdateTemplateRequest"
-              }
-            }
-          },
-          "required": true,
-          "x-position": 3
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TemplateDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/api/templates/article-types": {
-      "get": {
-        "tags": [
-          "TemplatesApi"
-        ],
-        "operationId": "TemplatesApi_GetArticleTypes",
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ArticleTypeDto"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
     }
   },
   "components": {
     "schemas": {
+      "AiPromptListDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid",
+            "nullable": true
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/TemplateType"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "isPerArticleType": {
+            "type": "boolean"
+          },
+          "articleTypeId": {
+            "type": "string",
+            "format": "guid",
+            "nullable": true
+          },
+          "articleTypeName": {
+            "type": "string",
+            "nullable": true
+          },
+          "exists": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastModifiedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "TemplateType": {
+        "type": "string",
+        "description": "",
+        "x-enumNames": [
+          "FragmentExtraction",
+          "OrganizationContext",
+          "ConfidenceScoring",
+          "ArticlePlanCreation",
+          "ArticleChat",
+          "ArticlePlanImplementation",
+          "ArticleTypePlanMode",
+          "ArticleTypeAgentMode"
+        ],
+        "enum": [
+          "FragmentExtraction",
+          "OrganizationContext",
+          "ConfidenceScoring",
+          "ArticlePlanCreation",
+          "ArticleChat",
+          "ArticlePlanImplementation",
+          "ArticleTypePlanMode",
+          "ArticleTypeAgentMode"
+        ]
+      },
+      "AiPromptDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid",
+            "nullable": true
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/TemplateType"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "isPerArticleType": {
+            "type": "boolean"
+          },
+          "articleTypeId": {
+            "type": "string",
+            "format": "guid",
+            "nullable": true
+          },
+          "articleTypeName": {
+            "type": "string",
+            "nullable": true
+          },
+          "content": {
+            "type": "string"
+          },
+          "exists": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastModifiedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "additionalProperties": {
+          "nullable": true
+        },
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "instance": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "CreateOrUpdateAiPromptRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "content": {
+            "type": "string"
+          }
+        }
+      },
+      "ArticleTypeDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
       "ConversationDto": {
         "type": "object",
         "additionalProperties": false,
@@ -2404,35 +2578,6 @@
           "implementingPlanVersion": {
             "type": "integer",
             "format": "int32",
-            "nullable": true
-          }
-        }
-      },
-      "ProblemDetails": {
-        "type": "object",
-        "additionalProperties": {
-          "nullable": true
-        },
-        "properties": {
-          "type": {
-            "type": "string",
-            "nullable": true
-          },
-          "title": {
-            "type": "string",
-            "nullable": true
-          },
-          "status": {
-            "type": "integer",
-            "format": "int32",
-            "nullable": true
-          },
-          "detail": {
-            "type": "string",
-            "nullable": true
-          },
-          "instance": {
-            "type": "string",
             "nullable": true
           }
         }
@@ -2622,23 +2767,6 @@
           "Complete",
           "Archived"
         ]
-      },
-      "ArticleTypeDto": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "guid"
-          },
-          "name": {
-            "type": "string"
-          },
-          "icon": {
-            "type": "string",
-            "nullable": true
-          }
-        }
       },
       "ArticleSummaryDto": {
         "type": "object",
@@ -3795,134 +3923,6 @@
           "MarkInternalIfUnknown",
           "MarkExternalIfUnknown"
         ]
-      },
-      "TemplateListDto": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "guid",
-            "nullable": true
-          },
-          "name": {
-            "type": "string"
-          },
-          "type": {
-            "$ref": "#/components/schemas/TemplateType"
-          },
-          "description": {
-            "type": "string",
-            "nullable": true
-          },
-          "isPerArticleType": {
-            "type": "boolean"
-          },
-          "articleTypeId": {
-            "type": "string",
-            "format": "guid",
-            "nullable": true
-          },
-          "articleTypeName": {
-            "type": "string",
-            "nullable": true
-          },
-          "exists": {
-            "type": "boolean"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "lastModifiedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          }
-        }
-      },
-      "TemplateType": {
-        "type": "string",
-        "description": "",
-        "x-enumNames": [
-          "FragmentExtraction",
-          "OrganizationContext",
-          "ConfidenceScoring",
-          "ArticlePlanCreation",
-          "ArticleChat",
-          "ArticlePlanImplementation",
-          "ArticleTypePlanMode",
-          "ArticleTypeAgentMode"
-        ],
-        "enum": [
-          "FragmentExtraction",
-          "OrganizationContext",
-          "ConfidenceScoring",
-          "ArticlePlanCreation",
-          "ArticleChat",
-          "ArticlePlanImplementation",
-          "ArticleTypePlanMode",
-          "ArticleTypeAgentMode"
-        ]
-      },
-      "TemplateDto": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "guid",
-            "nullable": true
-          },
-          "name": {
-            "type": "string"
-          },
-          "type": {
-            "$ref": "#/components/schemas/TemplateType"
-          },
-          "description": {
-            "type": "string",
-            "nullable": true
-          },
-          "isPerArticleType": {
-            "type": "boolean"
-          },
-          "articleTypeId": {
-            "type": "string",
-            "format": "guid",
-            "nullable": true
-          },
-          "articleTypeName": {
-            "type": "string",
-            "nullable": true
-          },
-          "content": {
-            "type": "string"
-          },
-          "exists": {
-            "type": "boolean"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "lastModifiedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          }
-        }
-      },
-      "CreateOrUpdateTemplateRequest": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "content": {
-            "type": "string"
-          }
-        }
       }
     }
   }

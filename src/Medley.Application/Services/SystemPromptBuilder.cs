@@ -14,13 +14,13 @@ public class SystemPromptBuilder
 {
     private readonly IRepository<Article> _articleRepository;
     private readonly IRepository<Plan> _planRepository;
-    private readonly IRepository<Template> _templateRepository;
+    private readonly IRepository<AiPrompt> _templateRepository;
     private readonly ILogger<SystemPromptBuilder> _logger;
 
     public SystemPromptBuilder(
         IRepository<Article> articleRepository,
         IRepository<Plan> planRepository,
-        IRepository<Template> templateRepository,
+        IRepository<AiPrompt> templateRepository,
         ILogger<SystemPromptBuilder> logger)
     {
         _articleRepository = articleRepository;

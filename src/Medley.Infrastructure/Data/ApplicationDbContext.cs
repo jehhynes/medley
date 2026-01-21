@@ -30,7 +30,7 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     public DbSet<Observation> Observations { get; set; }
     public DbSet<Finding> Findings { get; set; }
     public DbSet<ObservationCluster> ObservationClusters { get; set; }
-    public DbSet<Template> Templates { get; set; }
+    public DbSet<AiPrompt> AiPrompts { get; set; }
     public DbSet<TagType> TagTypes { get; set; }
     public DbSet<TagOption> TagOptions { get; set; }
     public DbSet<Tag> Tags { get; set; }

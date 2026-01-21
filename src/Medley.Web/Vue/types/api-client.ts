@@ -7,6 +7,179 @@
 /* eslint-disable */
 // ReSharper disable InconsistentNaming
 
+export class AiPromptApiClient {
+    private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
+    private baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
+        this.http = http ? http : window as any;
+        this.baseUrl = baseUrl ?? "";
+    }
+
+    getAll(): Promise<AiPromptListDto[]> {
+        let url_ = this.baseUrl + "/api/prompts";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processGetAll(_response);
+        });
+    }
+
+    protected processGetAll(response: Response): Promise<AiPromptListDto[]> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as AiPromptListDto[];
+            return result200;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<AiPromptListDto[]>(null as any);
+    }
+
+    get(type: TemplateType, articleTypeId?: string | null | undefined): Promise<AiPromptDto> {
+        let url_ = this.baseUrl + "/api/prompts/{type}?";
+        if (type === undefined || type === null)
+            throw new globalThis.Error("The parameter 'type' must be defined.");
+        url_ = url_.replace("{type}", encodeURIComponent("" + type));
+        if (articleTypeId !== undefined && articleTypeId !== null)
+            url_ += "articleTypeId=" + encodeURIComponent("" + articleTypeId) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processGet(_response);
+        });
+    }
+
+    protected processGet(response: Response): Promise<AiPromptDto> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as AiPromptDto;
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            result400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<AiPromptDto>(null as any);
+    }
+
+    createOrUpdate(type: TemplateType, request: CreateOrUpdateAiPromptRequest, articleTypeId?: string | null | undefined): Promise<AiPromptDto> {
+        let url_ = this.baseUrl + "/api/prompts/{type}?";
+        if (type === undefined || type === null)
+            throw new globalThis.Error("The parameter 'type' must be defined.");
+        url_ = url_.replace("{type}", encodeURIComponent("" + type));
+        if (articleTypeId !== undefined && articleTypeId !== null)
+            url_ += "articleTypeId=" + encodeURIComponent("" + articleTypeId) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processCreateOrUpdate(_response);
+        });
+    }
+
+    protected processCreateOrUpdate(response: Response): Promise<AiPromptDto> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as AiPromptDto;
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            result400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+            });
+        } else if (status === 500) {
+            return response.text().then((_responseText) => {
+            return throwException("A server side error occurred.", status, _responseText, _headers);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<AiPromptDto>(null as any);
+    }
+
+    getArticleTypes(): Promise<ArticleTypeDto[]> {
+        let url_ = this.baseUrl + "/api/prompts/article-types";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processGetArticleTypes(_response);
+        });
+    }
+
+    protected processGetArticleTypes(response: Response): Promise<ArticleTypeDto[]> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ArticleTypeDto[];
+            return result200;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<ArticleTypeDto[]>(null as any);
+    }
+}
+
 export class ArticleChatApiClient {
     private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
     private baseUrl: string;
@@ -18,7 +191,7 @@ export class ArticleChatApiClient {
     }
 
     getConversation(articleId: string, conversationId?: string | null | undefined): Promise<ConversationDto> {
-        let url_ = this.baseUrl + "/api/articles/{articleId}/assistant/conversation?";
+        let url_ = this.baseUrl + "/api/articles/{articleId}/chat/conversation?";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
         url_ = url_.replace("{articleId}", encodeURIComponent("" + articleId));
@@ -62,7 +235,7 @@ export class ArticleChatApiClient {
     }
 
     createConversation(articleId: string, mode?: ConversationMode | undefined): Promise<ConversationDto> {
-        let url_ = this.baseUrl + "/api/articles/{articleId}/assistant/conversation?";
+        let url_ = this.baseUrl + "/api/articles/{articleId}/chat/conversation?";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
         url_ = url_.replace("{articleId}", encodeURIComponent("" + articleId));
@@ -120,7 +293,7 @@ export class ArticleChatApiClient {
     }
 
     getMessages(articleId: string, conversationId: string, limit?: number | null | undefined): Promise<ChatMessageDto[]> {
-        let url_ = this.baseUrl + "/api/articles/{articleId}/assistant/conversations/{conversationId}/messages?";
+        let url_ = this.baseUrl + "/api/articles/{articleId}/chat/conversations/{conversationId}/messages?";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
         url_ = url_.replace("{articleId}", encodeURIComponent("" + articleId));
@@ -167,7 +340,7 @@ export class ArticleChatApiClient {
     }
 
     sendMessage(articleId: string, conversationId: string, request: SendMessageRequest): Promise<SendMessageResponse> {
-        let url_ = this.baseUrl + "/api/articles/{articleId}/assistant/conversations/{conversationId}/messages";
+        let url_ = this.baseUrl + "/api/articles/{articleId}/chat/conversations/{conversationId}/messages";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
         url_ = url_.replace("{articleId}", encodeURIComponent("" + articleId));
@@ -228,7 +401,7 @@ export class ArticleChatApiClient {
     }
 
     getToolResultContent(articleId: string, conversationId: string, messageId: string, toolCallId: string): Promise<ToolResultContentResponse> {
-        let url_ = this.baseUrl + "/api/articles/{articleId}/assistant/conversations/{conversationId}/messages/{messageId}/tool-result/{toolCallId}";
+        let url_ = this.baseUrl + "/api/articles/{articleId}/chat/conversations/{conversationId}/messages/{messageId}/tool-result/{toolCallId}";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
         url_ = url_.replace("{articleId}", encodeURIComponent("" + articleId));
@@ -279,7 +452,7 @@ export class ArticleChatApiClient {
     }
 
     completeConversation(articleId: string, conversationId: string): Promise<ConversationStatusResponse> {
-        let url_ = this.baseUrl + "/api/articles/{articleId}/assistant/conversations/{conversationId}/complete";
+        let url_ = this.baseUrl + "/api/articles/{articleId}/chat/conversations/{conversationId}/complete";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
         url_ = url_.replace("{articleId}", encodeURIComponent("" + articleId));
@@ -324,7 +497,7 @@ export class ArticleChatApiClient {
     }
 
     cancelConversation(articleId: string, conversationId: string): Promise<ConversationStatusResponse> {
-        let url_ = this.baseUrl + "/api/articles/{articleId}/assistant/conversations/{conversationId}/cancel";
+        let url_ = this.baseUrl + "/api/articles/{articleId}/chat/conversations/{conversationId}/cancel";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
         url_ = url_.replace("{articleId}", encodeURIComponent("" + articleId));
@@ -1964,177 +2137,62 @@ export class TagTypesApiClient {
     }
 }
 
-export class TemplatesApiClient {
-    private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
-    private baseUrl: string;
-    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+export interface AiPromptListDto {
+    id?: string | null;
+    name?: string;
+    type?: TemplateType;
+    description?: string | null;
+    isPerArticleType?: boolean;
+    articleTypeId?: string | null;
+    articleTypeName?: string | null;
+    exists?: boolean;
+    createdAt?: Date | null;
+    lastModifiedAt?: Date | null;
+}
 
-    constructor(baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
-        this.http = http ? http : window as any;
-        this.baseUrl = baseUrl ?? "";
-    }
+export enum TemplateType {
+    FragmentExtraction = "FragmentExtraction",
+    OrganizationContext = "OrganizationContext",
+    ConfidenceScoring = "ConfidenceScoring",
+    ArticlePlanCreation = "ArticlePlanCreation",
+    ArticleChat = "ArticleChat",
+    ArticlePlanImplementation = "ArticlePlanImplementation",
+    ArticleTypePlanMode = "ArticleTypePlanMode",
+    ArticleTypeAgentMode = "ArticleTypeAgentMode",
+}
 
-    getAll(): Promise<TemplateListDto[]> {
-        let url_ = this.baseUrl + "/api/templates";
-        url_ = url_.replace(/[?&]$/, "");
+export interface AiPromptDto {
+    id?: string | null;
+    name?: string;
+    type?: TemplateType;
+    description?: string | null;
+    isPerArticleType?: boolean;
+    articleTypeId?: string | null;
+    articleTypeName?: string | null;
+    content?: string;
+    exists?: boolean;
+    createdAt?: Date | null;
+    lastModifiedAt?: Date | null;
+}
 
-        let options_: RequestInit = {
-            method: "GET",
-            headers: {
-                "Accept": "application/json"
-            }
-        };
+export interface ProblemDetails {
+    type?: string | null;
+    title?: string | null;
+    status?: number | null;
+    detail?: string | null;
+    instance?: string | null;
 
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetAll(_response);
-        });
-    }
+    [key: string]: any;
+}
 
-    protected processGetAll(response: Response): Promise<TemplateListDto[]> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as TemplateListDto[];
-            return result200;
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<TemplateListDto[]>(null as any);
-    }
+export interface CreateOrUpdateAiPromptRequest {
+    content?: string;
+}
 
-    get(type: TemplateType, articleTypeId?: string | null | undefined): Promise<TemplateDto> {
-        let url_ = this.baseUrl + "/api/templates/{type}?";
-        if (type === undefined || type === null)
-            throw new globalThis.Error("The parameter 'type' must be defined.");
-        url_ = url_.replace("{type}", encodeURIComponent("" + type));
-        if (articleTypeId !== undefined && articleTypeId !== null)
-            url_ += "articleTypeId=" + encodeURIComponent("" + articleTypeId) + "&";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: RequestInit = {
-            method: "GET",
-            headers: {
-                "Accept": "application/json"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGet(_response);
-        });
-    }
-
-    protected processGet(response: Response): Promise<TemplateDto> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as TemplateDto;
-            return result200;
-            });
-        } else if (status === 400) {
-            return response.text().then((_responseText) => {
-            let result400: any = null;
-            result400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
-            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<TemplateDto>(null as any);
-    }
-
-    createOrUpdate(type: TemplateType, request: CreateOrUpdateTemplateRequest, articleTypeId?: string | null | undefined): Promise<TemplateDto> {
-        let url_ = this.baseUrl + "/api/templates/{type}?";
-        if (type === undefined || type === null)
-            throw new globalThis.Error("The parameter 'type' must be defined.");
-        url_ = url_.replace("{type}", encodeURIComponent("" + type));
-        if (articleTypeId !== undefined && articleTypeId !== null)
-            url_ += "articleTypeId=" + encodeURIComponent("" + articleTypeId) + "&";
-        url_ = url_.replace(/[?&]$/, "");
-
-        const content_ = JSON.stringify(request);
-
-        let options_: RequestInit = {
-            body: content_,
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processCreateOrUpdate(_response);
-        });
-    }
-
-    protected processCreateOrUpdate(response: Response): Promise<TemplateDto> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as TemplateDto;
-            return result200;
-            });
-        } else if (status === 400) {
-            return response.text().then((_responseText) => {
-            let result400: any = null;
-            result400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
-            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
-            });
-        } else if (status === 500) {
-            return response.text().then((_responseText) => {
-            return throwException("A server side error occurred.", status, _responseText, _headers);
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<TemplateDto>(null as any);
-    }
-
-    getArticleTypes(): Promise<ArticleTypeDto[]> {
-        let url_ = this.baseUrl + "/api/templates/article-types";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_: RequestInit = {
-            method: "GET",
-            headers: {
-                "Accept": "application/json"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetArticleTypes(_response);
-        });
-    }
-
-    protected processGetArticleTypes(response: Response): Promise<ArticleTypeDto[]> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ArticleTypeDto[];
-            return result200;
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<ArticleTypeDto[]>(null as any);
-    }
+export interface ArticleTypeDto {
+    id?: string;
+    name?: string;
+    icon?: string | null;
 }
 
 export interface ConversationDto {
@@ -2146,16 +2204,6 @@ export interface ConversationDto {
     createdBy?: string;
     implementingPlanId?: string | null;
     implementingPlanVersion?: number | null;
-}
-
-export interface ProblemDetails {
-    type?: string | null;
-    title?: string | null;
-    status?: number | null;
-    detail?: string | null;
-    instance?: string | null;
-
-    [key: string]: any;
 }
 
 export enum ConversationMode {
@@ -2220,12 +2268,6 @@ export enum ConversationState {
     Active = "Active",
     Complete = "Complete",
     Archived = "Archived",
-}
-
-export interface ArticleTypeDto {
-    id?: string;
-    name?: string;
-    icon?: string | null;
 }
 
 export interface ArticleSummaryDto {
@@ -2586,48 +2628,6 @@ export enum ScopeUpdateMode {
     None = "None",
     MarkInternalIfUnknown = "MarkInternalIfUnknown",
     MarkExternalIfUnknown = "MarkExternalIfUnknown",
-}
-
-export interface TemplateListDto {
-    id?: string | null;
-    name?: string;
-    type?: TemplateType;
-    description?: string | null;
-    isPerArticleType?: boolean;
-    articleTypeId?: string | null;
-    articleTypeName?: string | null;
-    exists?: boolean;
-    createdAt?: Date | null;
-    lastModifiedAt?: Date | null;
-}
-
-export enum TemplateType {
-    FragmentExtraction = "FragmentExtraction",
-    OrganizationContext = "OrganizationContext",
-    ConfidenceScoring = "ConfidenceScoring",
-    ArticlePlanCreation = "ArticlePlanCreation",
-    ArticleChat = "ArticleChat",
-    ArticlePlanImplementation = "ArticlePlanImplementation",
-    ArticleTypePlanMode = "ArticleTypePlanMode",
-    ArticleTypeAgentMode = "ArticleTypeAgentMode",
-}
-
-export interface TemplateDto {
-    id?: string | null;
-    name?: string;
-    type?: TemplateType;
-    description?: string | null;
-    isPerArticleType?: boolean;
-    articleTypeId?: string | null;
-    articleTypeName?: string | null;
-    content?: string;
-    exists?: boolean;
-    createdAt?: Date | null;
-    lastModifiedAt?: Date | null;
-}
-
-export interface CreateOrUpdateTemplateRequest {
-    content?: string;
 }
 
 export class ApiException extends Error {

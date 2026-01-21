@@ -11,13 +11,13 @@ namespace Medley.Web.Areas.Admin.Controllers;
 [Authorize]
 public class SettingsController : Controller
 {
-    private readonly IRepository<Template> _templateRepository;
+    private readonly IRepository<AiPrompt> _templateRepository;
     private readonly IRepository<Organization> _organizationRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<SettingsController> _logger;
 
     public SettingsController(
-        IRepository<Template> templateRepository,
+        IRepository<AiPrompt> templateRepository,
         IRepository<Organization> organizationRepository,
         IUnitOfWork unitOfWork,
         ILogger<SettingsController> logger)

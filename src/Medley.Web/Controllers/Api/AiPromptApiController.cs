@@ -9,22 +9,22 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Medley.Web.Controllers.Api;
 
-[Route("api/templates")]
+[Route("api/prompts")]
 [ApiController]
 [ApiExplorerSettings(GroupName = "api")]
 [Authorize]
-public class TemplatesApiController : ControllerBase
+public class AiPromptApiController : ControllerBase
 {
-    private readonly IRepository<Template> _templateRepository;
+    private readonly IRepository<AiPrompt> _templateRepository;
     private readonly IRepository<ArticleType> _articleTypeRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<TemplatesApiController> _logger;
+    private readonly ILogger<AiPromptApiController> _logger;
 
-    public TemplatesApiController(
-        IRepository<Template> templateRepository,
+    public AiPromptApiController(
+        IRepository<AiPrompt> templateRepository,
         IRepository<ArticleType> articleTypeRepository,
         IUnitOfWork unitOfWork,
-        ILogger<TemplatesApiController> logger)
+        ILogger<AiPromptApiController> logger)
     {
         _templateRepository = templateRepository;
         _articleTypeRepository = articleTypeRepository;
@@ -36,8 +36,8 @@ public class TemplatesApiController : ControllerBase
     /// Get all possible templates (derived from TemplateType enum)
     /// </summary>
     [HttpGet]
-    [ProducesResponseType(typeof(List<TemplateListDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<TemplateListDto>>> GetAll()
+    [ProducesResponseType(typeof(List<AiPromptListDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<List<AiPromptListDto>>> GetAll()
     {
         // Get all existing templates from database
         var existingTemplates = await _templateRepository.Query()
@@ -49,7 +49,7 @@ public class TemplatesApiController : ControllerBase
             .OrderBy(at => at.Name)
             .ToListAsync();
 
-        var result = new List<TemplateListDto>();
+        var result = new List<AiPromptListDto>();
 
         // Iterate through all TemplateType enum values
         foreach (TemplateType templateType in Enum.GetValues(typeof(TemplateType)))
@@ -64,7 +64,7 @@ public class TemplatesApiController : ControllerBase
                     var existingTemplate = existingTemplates.FirstOrDefault(t =>
                         t.Type == templateType && t.ArticleTypeId == articleType.Id);
 
-                    result.Add(new TemplateListDto
+                    result.Add(new AiPromptListDto
                     {
                         Id = existingTemplate?.Id,
                         Name = templateType.GetName(),
@@ -85,7 +85,7 @@ public class TemplatesApiController : ControllerBase
                 var existingTemplate = existingTemplates.FirstOrDefault(t =>
                     t.Type == templateType && t.ArticleTypeId == null);
 
-                result.Add(new TemplateListDto
+                result.Add(new AiPromptListDto
                 {
                     Id = existingTemplate?.Id,
                     Name = templateType.GetName(),
@@ -101,6 +101,12 @@ public class TemplatesApiController : ControllerBase
             }
         }
 
+        // Sort: non-per-article-type first (alphabetically), then per-article-type (alphabetically)
+        result = result
+            .OrderBy(t => t.IsPerArticleType)
+            .ThenBy(t => t.Name)
+            .ToList();
+
         return Ok(result);
     }
 
@@ -108,9 +114,9 @@ public class TemplatesApiController : ControllerBase
     /// Get a specific template by type and optional article type
     /// </summary>
     [HttpGet("{type}")]
-    [ProducesResponseType(typeof(TemplateDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(AiPromptDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<TemplateDto>> Get(TemplateType type, [FromQuery] Guid? articleTypeId = null)
+    public async Task<ActionResult<AiPromptDto>> Get(TemplateType type, [FromQuery] Guid? articleTypeId = null)
     {
         var isPerArticleType = type.GetIsPerArticleType();
 
@@ -143,7 +149,7 @@ public class TemplatesApiController : ControllerBase
         if (template != null)
         {
             // Template exists - return with content
-            return Ok(new TemplateDto
+            return Ok(new AiPromptDto
             {
                 Id = template.Id,
                 Name = type.GetName(),
@@ -161,7 +167,7 @@ public class TemplatesApiController : ControllerBase
         else
         {
             // Template doesn't exist - return metadata with empty content
-            return Ok(new TemplateDto
+            return Ok(new AiPromptDto
             {
                 Id = null,
                 Name = type.GetName(),
@@ -182,13 +188,13 @@ public class TemplatesApiController : ControllerBase
     /// Create or update a template
     /// </summary>
     [HttpPut("{type}")]
-    [ProducesResponseType(typeof(TemplateDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(AiPromptDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<TemplateDto>> CreateOrUpdate(
+    public async Task<ActionResult<AiPromptDto>> CreateOrUpdate(
         TemplateType type,
         [FromQuery] Guid? articleTypeId,
-        [FromBody] CreateOrUpdateTemplateRequest request)
+        [FromBody] CreateOrUpdateAiPromptRequest request)
     {
         try
         {
@@ -237,7 +243,7 @@ public class TemplatesApiController : ControllerBase
                     (articleTypeId.HasValue ? " for article type {ArticleTypeId}" : ""),
                     type, articleTypeId);
 
-                return Ok(new TemplateDto
+                return Ok(new AiPromptDto
                 {
                     Id = template.Id,
                     Name = type.GetName(),
@@ -255,7 +261,7 @@ public class TemplatesApiController : ControllerBase
             else
             {
                 // Create new template
-                var newTemplate = new Template
+                var newTemplate = new AiPrompt
                 {
                     Type = type,
                     Content = request.Content,
@@ -272,7 +278,7 @@ public class TemplatesApiController : ControllerBase
                     (articleTypeId.HasValue ? " for article type {ArticleTypeId}" : ""),
                     type, articleTypeId);
 
-                return Ok(new TemplateDto
+                return Ok(new AiPromptDto
                 {
                     Id = newTemplate.Id,
                     Name = type.GetName(),
@@ -316,7 +322,7 @@ public class TemplatesApiController : ControllerBase
     }
 }
 
-public class CreateOrUpdateTemplateRequest
+public class CreateOrUpdateAiPromptRequest
 {
     public required string Content { get; set; }
 }

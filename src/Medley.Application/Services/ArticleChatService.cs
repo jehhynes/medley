@@ -25,7 +25,7 @@ public class ArticleChatService : IArticleChatService
     private readonly IRepository<ChatConversation> _conversationRepository;
     private readonly IRepository<DomainChatMessage> _chatMessageRepository;
     private readonly IRepository<Article> _articleRepository;
-    private readonly IRepository<Template> _templateRepository;
+    private readonly IRepository<AiPrompt> _templateRepository;
     private readonly IRepository<Fragment> _fragmentRepository;
     private readonly IRepository<Plan> _planRepository;
     private readonly IRepository<User> _userRepository;
@@ -42,7 +42,7 @@ public class ArticleChatService : IArticleChatService
         IRepository<ChatConversation> conversationRepository,
         IRepository<DomainChatMessage> chatMessageRepository,
         IRepository<Article> articleRepository,
-        IRepository<Template> templateRepository,
+        IRepository<AiPrompt> templateRepository,
         IRepository<Fragment> fragmentRepository,
         IRepository<Plan> planRepository,
         IRepository<User> userRepository,

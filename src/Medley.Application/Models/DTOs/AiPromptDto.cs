@@ -6,7 +6,7 @@ namespace Medley.Application.Models.DTOs;
 /// <summary>
 /// Summary information about a template (for list views)
 /// </summary>
-public class TemplateListDto
+public class AiPromptListDto
 {
     /// <summary>
     /// Unique identifier for the template (null if doesn't exist yet)
@@ -62,7 +62,7 @@ public class TemplateListDto
 /// <summary>
 /// Full template information including content
 /// </summary>
-public class TemplateDto
+public class AiPromptDto
 {
     /// <summary>
     /// Unique identifier for the template (null if doesn't exist yet)

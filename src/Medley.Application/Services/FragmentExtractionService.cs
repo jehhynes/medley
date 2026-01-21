@@ -17,7 +17,7 @@ public class FragmentExtractionService
     private readonly IContentChunkingService _chunkingService;
     private readonly IRepository<Source> _sourceRepository;
     private readonly IRepository<Fragment> _fragmentRepository;
-    private readonly IRepository<Template> _templateRepository;
+    private readonly IRepository<AiPrompt> _templateRepository;
     private readonly ILogger<FragmentExtractionService> _logger;
     private readonly AiCallContext _aiCallContext;
 
@@ -29,7 +29,7 @@ public class FragmentExtractionService
         IContentChunkingService chunkingService,
         IRepository<Source> sourceRepository,
         IRepository<Fragment> fragmentRepository,
-        IRepository<Template> templateRepository,
+        IRepository<AiPrompt> templateRepository,
         ILogger<FragmentExtractionService> logger,
         AiCallContext aiCallContext)
     {

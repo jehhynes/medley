@@ -22,14 +22,14 @@ public class FragmentConfidenceScoringJob : BaseHangfireJob<FragmentConfidenceSc
     private readonly IAiProcessingService _aiProcessingService;
     private readonly IRepository<Fragment> _fragmentRepository;
     private readonly IRepository<Source> _sourceRepository;
-    private readonly IRepository<Template> _templateRepository;
+    private readonly IRepository<AiPrompt> _templateRepository;
     private readonly AiCallContext _aiCallContext;
 
     public FragmentConfidenceScoringJob(
         IAiProcessingService aiProcessingService,
         IRepository<Fragment> fragmentRepository,
         IRepository<Source> sourceRepository,
-        IRepository<Template> templateRepository,
+        IRepository<AiPrompt> templateRepository,
         IUnitOfWork unitOfWork,
         ILogger<FragmentConfidenceScoringJob> logger,
         AiCallContext aiCallContext) : base(unitOfWork, logger)

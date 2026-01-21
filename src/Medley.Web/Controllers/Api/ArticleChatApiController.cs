@@ -19,7 +19,7 @@ using Microsoft.Extensions.AI;
 namespace Medley.Web.Controllers.Api;
 
 [Authorize]
-[Route("api/articles/{articleId}/assistant")]
+[Route("api/articles/{articleId}/chat")]
 [ApiController]
 [ApiExplorerSettings(GroupName = "api")]
 public class ArticleChatApiController : ControllerBase

@@ -5,7 +5,7 @@ namespace Medley.Domain.Entities;
 /// <summary>
 /// Template for AI prompts (fragment extraction, article generation, etc.)
 /// </summary>
-public class Template : BusinessEntity
+public class AiPrompt : BusinessEntity
 {
     /// <summary>
     /// The type of template (determines which AI workflow uses it)

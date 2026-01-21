@@ -106,11 +106,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { templatesClient } from '@/utils/apiClients';
+import { aiPromptsClient } from '@/utils/apiClients';
 import { useSidebarState } from '@/composables/useSidebarState';
 import { useArticleTypes } from '@/features/articles/composables/useArticleTypes';
 import { getIconClass } from '@/utils/helpers';
-import type { TemplateListDto, TemplateDto, TemplateType } from '@/types/api-client';
+import type { AiPromptListDto, AiPromptDto, AiPromptType } from '@/types/api-client';
 
 // Setup composables
 const { leftSidebarVisible } = useSidebarState();
@@ -118,8 +118,8 @@ const router = useRouter();
 const { typeIconMap, loadArticleTypes } = useArticleTypes();
 
 // Reactive state
-const templates = ref<TemplateListDto[]>([]);
-const selectedTemplate = ref<TemplateDto | null>(null);
+const templates = ref<AiPromptListDto[]>([]);
+const selectedTemplate = ref<AiPromptDto | null>(null);
 const loading = ref<boolean>(false);
 const error = ref<string | null>(null);
 const editingContent = ref<string>('');
@@ -139,7 +139,7 @@ interface PerArticleTypeGroup {
   name: string;
   description: string;
   expanded: boolean;
-  templates: TemplateListDto[];
+  templates: AiPromptListDto[];
 }
 
 const perArticleTypeGroups = computed<PerArticleTypeGroup[]>(() => {
@@ -171,7 +171,7 @@ const loadTemplates = async (): Promise<void> => {
   loading.value = true;
   error.value = null;
   try {
-    templates.value = await templatesClient.getAll();
+    templates.value = await aiPromptsClient.getAll();
   } catch (err: any) {
     error.value = 'Failed to load templates: ' + err.message;
     console.error('Error loading templates:', err);
@@ -188,16 +188,16 @@ const toggleGroup = (templateType: number): void => {
   }
 };
 
-const isTemplateSelected = (template: TemplateListDto): boolean => {
+const isTemplateSelected = (template: AiPromptListDto): boolean => {
   if (!selectedTemplate.value) return false;
   return selectedTemplate.value.type === template.type && 
          selectedTemplate.value.articleTypeId === template.articleTypeId;
 };
 
-const selectTemplate = async (template: TemplateListDto): Promise<void> => {
+const selectTemplate = async (template: AiPromptListDto): Promise<void> => {
   try {
-    const fullTemplate = await templatesClient.get(
-      template.type as TemplateType,
+    const fullTemplate = await aiPromptsClient.get(
+      template.type as AiPromptType,
       template.articleTypeId || undefined
     );
     
@@ -227,7 +227,7 @@ const saveTemplate = async (): Promise<void> => {
 
   isSaving.value = true;
   try {
-    const updated = await templatesClient.createOrUpdate(
+    const updated = await aiPromptsClient.createOrUpdate(
       selectedTemplate.value.type,
       { content: editingContent.value },
       selectedTemplate.value.articleTypeId || undefined
