@@ -31,6 +31,9 @@ $breakpoint-xl: 1200px;                  // Extra large devices and up
     --bg-hover: var(--bs-gray-200);
     --bg-vertical-menu: var(--bs-gray-100);
     --bs-body-color: var(--bs-gray-800);
+    
+    // Cursor icon filter for light mode (matches text-muted color)
+    --svg-icon-filter: brightness(0) saturate(100%) invert(42%) sepia(0%) saturate(0%) hue-rotate(180deg) brightness(95%) contrast(88%);
 }
 
 [data-bs-theme="dark"] {
@@ -40,7 +43,8 @@ $breakpoint-xl: 1200px;                  // Extra large devices and up
     --bg-vertical-menu: color-mix(in oklab, var(--bs-body-bg), black 30%);
     --bs-border-color: var(--bs-secondary-bg);
     --bs-body-color: var(--bs-gray-500);
-
     
+    // Cursor icon filter for dark mode (matches text-muted color)
+    --svg-icon-filter: brightness(0) saturate(100%) invert(75%) sepia(0%) saturate(0%) hue-rotate(180deg) brightness(95%) contrast(88%);
 }
 

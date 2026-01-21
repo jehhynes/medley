@@ -66,6 +66,9 @@
                           v-for="(tool, idx) in msg.toolCalls"
                           :key="idx"
                           :tool="tool"
+                          :article-id="articleId"
+                          :conversation-id="conversationId"
+                          :message-id="msg.id"
                           @open-plan="openPlan"
                           @open-fragment="$emit('open-fragment', $event)"
                           @open-version="$emit('open-version', $event)" />
@@ -94,6 +97,9 @@
                     v-for="(tool, idx) in msg.toolCalls"
                     :key="idx"
                     :tool="tool"
+                    :article-id="articleId"
+                    :conversation-id="conversationId"
+                    :message-id="msg.id"
                     @open-plan="openPlan"
                     @open-fragment="$emit('open-fragment', $event)"
                     @open-version="$emit('open-version', $event)" />

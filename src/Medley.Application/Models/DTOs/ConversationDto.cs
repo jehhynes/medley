@@ -105,3 +105,11 @@ public class ConversationStatusResponse
     /// </summary>
     public required DateTimeOffset Timestamp { get; set; }
 }
+
+
+public record ToolResultContentResponse
+{
+    public required string ToolCallId { get; init; }
+    public required string ToolName { get; init; }
+    public required string Content { get; init; }
+}
