@@ -66,6 +66,7 @@ public record VersionCreatedPayload
     public required Guid ArticleId { get; init; }
     public required Guid VersionId { get; init; }
     public required string VersionNumber { get; init; }
+    public required VersionType VersionType { get; init; }
     public required DateTimeOffset CreatedAt { get; init; }
 }
 
@@ -76,17 +77,6 @@ public record PlanGeneratedPayload
 {
     public required Guid ArticleId { get; init; }
     public required Guid PlanId { get; init; }
-    public required DateTimeOffset Timestamp { get; init; }
-}
-
-/// <summary>
-/// Payload for ArticleVersionCreated event
-/// </summary>
-public record ArticleVersionCreatedPayload
-{
-    public required Guid ArticleId { get; init; }
-    public required Guid VersionId { get; init; }
-    public required string VersionNumber { get; init; }
     public required DateTimeOffset Timestamp { get; init; }
 }
 

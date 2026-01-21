@@ -208,10 +208,34 @@ export function useArticleSignalR(options: UseArticleSignalROptions) {
     });
 
     // Version created event
-    connection.value.on('VersionCreated', (data) => {
+    connection.value.on('VersionCreated', async (data) => {
+      const selectedId = normalizeId(options.selectedArticleId.value);
+      const eventArticleId = normalizeId(data.articleId);
+
+      console.log('VersionCreated event received:', {
+        eventArticleId,
+        selectedId,
+        versionId: data.versionId,
+        versionNumber: data.versionNumber,
+        versionType: data.versionType,
+        matches: selectedId === eventArticleId
+      });
+
       // Refresh the versions panel if it's for the currently selected article
-      if (options.selectedArticleId.value === data.articleId && options.loadVersions) {
-        options.loadVersions();
+      if (selectedId === eventArticleId) {
+        if (options.loadVersions) {
+          await options.loadVersions();
+        }
+
+        // Auto-open AI versions
+        if (data.versionType === 'AI' && options.openVersionTab) {
+          console.log('Auto-opening AI version tab:', data.versionId);
+          options.openVersionTab({
+            id: data.versionId,
+            versionNumber: data.versionNumber,
+            createdAt: data.createdAt
+          });
+        }
       }
     });
 
@@ -233,41 +257,6 @@ export function useArticleSignalR(options: UseArticleSignalROptions) {
         options.openPlanTab(data.planId);
       } else {
         console.log('Plan generated for different article, not opening tab');
-      }
-    });
-
-    // Article version created event
-    connection.value.on('ArticleVersionCreated', async (data) => {
-      const selectedId = normalizeId(options.selectedArticleId.value);
-      const eventArticleId = normalizeId(data.articleId);
-
-      console.log('ArticleVersionCreated event received:', {
-        eventArticleId,
-        selectedId,
-        versionId: data.versionId,
-        versionNumber: data.versionNumber,
-        matches: selectedId === eventArticleId
-      });
-
-      // Open version tab when version is created for the currently selected article
-      if (selectedId === eventArticleId) {
-        console.log('Opening version tab automatically for version:', data.versionId);
-        
-        // Reload the versions list
-        if (options.loadVersions) {
-          await options.loadVersions();
-        }
-        
-        // Open and switch to the version tab
-        if (options.openVersionTab) {
-          options.openVersionTab({
-            id: data.versionId,
-            versionNumber: data.versionNumber,
-            createdAt: data.timestamp
-          });
-        }
-      } else {
-        console.log('Version created for different article, not opening tab');
       }
     });
 

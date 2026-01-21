@@ -202,7 +202,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                     }
                 }
 
-                // Get the created AI version and send ArticleVersionCreated event
+                // Get the created AI version and send VersionCreated event
                 if (conversation.Mode == ConversationMode.Agent)
                 {
                     var aiVersion = await _versionRepository.Query()
@@ -214,16 +214,17 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
 
                     if (aiVersion != null)
                     {
-                        _logger.LogInformation("Sending ArticleVersionCreated event for version {VersionId}, article {ArticleId}",
+                        _logger.LogInformation("Sending VersionCreated event for AI version {VersionId}, article {ArticleId}",
                             aiVersion.Id, conversation.ArticleId);
 
                         await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
-                            .ArticleVersionCreated(new ArticleVersionCreatedPayload
+                            .VersionCreated(new VersionCreatedPayload
                             {
                                 ArticleId = conversation.ArticleId,
                                 VersionId = aiVersion.Id,
                                 VersionNumber = aiVersion.VersionNumber.ToString(),
-                                Timestamp = DateTimeOffset.UtcNow
+                                VersionType = VersionType.AI,
+                                CreatedAt = aiVersion.CreatedAt
                             });
                     }
                 }

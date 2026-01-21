@@ -41,11 +41,6 @@ public interface IArticleClient
     Task PlanGenerated(PlanGeneratedPayload payload);
 
     /// <summary>
-    /// Notifies clients that a new article version was created
-    /// </summary>
-    Task ArticleVersionCreated(ArticleVersionCreatedPayload payload);
-
-    /// <summary>
     /// Notifies clients that a chat turn has started
     /// </summary>
     Task ChatTurnStarted(ChatTurnStartedPayload payload);

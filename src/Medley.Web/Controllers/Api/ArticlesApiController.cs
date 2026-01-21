@@ -7,6 +7,7 @@ using Medley.Application.Hubs.Clients;
 using Medley.Application.Interfaces;
 using Medley.Application.Models.DTOs;
 using Medley.Domain.Entities;
+using Medley.Domain.Enums;
 using Medley.Web.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -371,6 +372,7 @@ public class ArticlesApiController : ControllerBase
                     ArticleId = id,
                     VersionId = capturedVersion.Id,
                     VersionNumber = capturedVersion.VersionNumber,
+                    VersionType = VersionType.User,
                     CreatedAt = capturedVersion.CreatedAt
                 });
             });
@@ -857,6 +859,7 @@ public class ArticlesApiController : ControllerBase
                     ArticleId = articleId,
                     VersionId = newVersion.Id,
                     VersionNumber = newVersion.VersionNumber,
+                    VersionType = VersionType.User,
                     CreatedAt = newVersion.CreatedAt
                 });
             });

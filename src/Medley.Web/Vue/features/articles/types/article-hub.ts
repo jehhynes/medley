@@ -40,19 +40,13 @@ export interface VersionCreatedPayload {
   articleId: string;
   versionId: string;
   versionNumber: string;
+  versionType: 'User' | 'AI';
   createdAt: string;
 }
 
 export interface PlanGeneratedPayload {
   articleId: string;
   planId: string;
-  timestamp: string;
-}
-
-export interface ArticleVersionCreatedPayload {
-  articleId: string;
-  versionId: string;
-  versionNumber: string;
   timestamp: string;
 }
 
@@ -145,7 +139,6 @@ export interface ArticleHubServerMethods {
   ArticleAssignmentChanged: (payload: ArticleAssignmentChangedPayload) => void;
   VersionCreated: (payload: VersionCreatedPayload) => void;
   PlanGenerated: (payload: PlanGeneratedPayload) => void;
-  ArticleVersionCreated: (payload: ArticleVersionCreatedPayload) => void;
   ChatTurnStarted: (payload: ChatTurnStartedPayload) => void;
   ChatTurnComplete: (payload: ChatTurnCompletePayload) => void;
   ChatMessageStreaming: (payload: ChatMessageStreamingPayload) => void;
