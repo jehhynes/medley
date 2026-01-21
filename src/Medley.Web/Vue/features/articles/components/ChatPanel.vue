@@ -18,13 +18,25 @@
           <i class="bi bi-chat-dots empty-state-icon"></i>
           <p class="empty-state-text">Start a conversation with the AI assistant</p>
           <p class="empty-state-hint">Ask questions or request improvements to your article</p>
-          <button 
-            @click="createPlan"
-            :disabled="isAiTurn"
-            class="btn btn-primary mt-3">
-            <i class="far fa-magnifying-glass-play"></i>
-            Create a Plan
-          </button>
+          <div class="d-flex gap-2 mt-3">
+            <button 
+              @click="createPlan"
+              :disabled="isAiTurn"
+              class="btn btn-primary">
+              <i class="far fa-magnifying-glass-play"></i>
+              Create a Plan
+            </button>
+            <button 
+              @click="reviewWithCursor"
+              :disabled="isAiTurn"
+              class="btn btn-primary">
+              <img :src="cursorIcon" 
+                   class="svg-icon me-1" 
+                   style="width: 19px; height: 19px; vertical-align: text-top;"
+                   alt="Cursor AI" />
+              Review with Cursor
+            </button>
+          </div>
         </div>
 
         <template v-for="(msg, index) in messages" :key="msg.id">
@@ -173,6 +185,7 @@ import type {
   ChatMessageReceivedPayload,
   ChatErrorPayload
 } from '../types/article-hub';
+import cursorIcon from '@/../wwwroot/images/cursor-ai.svg?url';
 
 interface ChatMessage extends ChatMessageDto {
   isStreaming?: boolean;
@@ -603,6 +616,19 @@ async function createPlan(): Promise<void> {
 
   // Set the command message
   newMessage.value = 'Create a plan for improving this article';
+
+  // Send it using the standard chat flow
+  await sendMessage();
+}
+
+async function reviewWithCursor(): Promise<void> {
+  if (!props.articleId || isAiTurn.value) return;
+
+  // Switch to Agent mode
+  mode.value = ConversationMode.Agent;
+
+  // Set the command message
+  newMessage.value = 'Review this article with Cursor';
 
   // Send it using the standard chat flow
   await sendMessage();
