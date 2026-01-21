@@ -45,16 +45,6 @@ public interface IArticleChatService
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Get list of past conversations for an article
-    /// </summary>
-    /// <param name="articleId">The article ID</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>List of completed/cancelled conversations</returns>
-    Task<List<ChatConversation>> GetConversationHistoryAsync(
-        Guid articleId,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Mark a conversation as complete
     /// </summary>
     /// <param name="conversationId">The conversation ID</param>

@@ -116,11 +116,6 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                                     ArticleId = conversation.ArticleId,
                                     Role = ChatMessageRole.Assistant,
                                     Text = update.Text,
-                                    ToolName = null,
-                                    ToolCallId = null,
-                                    ToolDisplay = null,
-                                    ToolResultIds = null,
-                                    IsError = null,
                                     MessageId = update.MessageId,
                                     Timestamp = update.Timestamp
                                 });
@@ -136,6 +131,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                                     ToolName = update.ToolName ?? string.Empty,
                                     ToolCallId = update.ToolCallId ?? string.Empty,
                                     ToolDisplay = update.ToolDisplay,
+                                    MessageId = update.MessageId ?? Guid.Empty,
                                     Timestamp = update.Timestamp
                                 });
                             break;
@@ -149,6 +145,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                                     ArticleId = conversation.ArticleId,
                                     ToolCallId = update.ToolCallId ?? string.Empty,
                                     ToolResultIds = update.ToolResultIds?.ToArray(),
+                                    MessageId = update.MessageId ?? Guid.Empty,
                                     Timestamp = update.Timestamp
                                 });
                             break;
@@ -161,7 +158,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                             await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
                                 .ChatMessageComplete(new ChatMessageCompletePayload
                                 {
-                                    Id = update.MessageId ?? Guid.Empty,
+                                    MessageId = update.MessageId ?? Guid.Empty,
                                     ConversationId = conversation.Id,
                                     ArticleId = conversation.ArticleId,
                                     Role = ChatMessageRole.Assistant,

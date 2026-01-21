@@ -49,37 +49,6 @@ public class ConversationDto
 }
 
 /// <summary>
-/// Conversation history item (for GetHistory endpoint)
-/// </summary>
-public class ConversationHistoryItemDto
-{
-    /// <summary>
-    /// Unique identifier for the conversation
-    /// </summary>
-    public required Guid Id { get; set; }
-
-    /// <summary>
-    /// Current state of the conversation
-    /// </summary>
-    public required string State { get; set; }
-
-    /// <summary>
-    /// When this conversation was created
-    /// </summary>
-    public required DateTimeOffset CreatedAt { get; set; }
-
-    /// <summary>
-    /// Number of messages in the conversation
-    /// </summary>
-    public required int MessageCount { get; set; }
-
-    /// <summary>
-    /// When this conversation was completed (if applicable)
-    /// </summary>
-    public DateTimeOffset? CompletedAt { get; set; }
-}
-
-/// <summary>
 /// Summary information about a conversation (for nested references)
 /// </summary>
 public class ConversationSummaryDto

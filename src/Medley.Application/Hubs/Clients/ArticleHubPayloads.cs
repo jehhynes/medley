@@ -117,10 +117,10 @@ public record ChatMessageStreamingPayload
     public required Guid ArticleId { get; init; }
     public required ChatMessageRole Role { get; init; }
     public string? Text { get; init; }
-    public string? ToolName { get; init; }
-    public string? ToolCallId { get; init; }
-    public string? ToolDisplay { get; init; }
-    public Guid[]? ToolResultIds { get; init; }
+    //public string? ToolName { get; init; }
+    //public string? ToolCallId { get; init; }
+    //public string? ToolDisplay { get; init; }
+    //public Guid[]? ToolResultIds { get; init; }
     public bool? IsError { get; init; }
     public Guid? MessageId { get; init; }
     public required DateTimeOffset Timestamp { get; init; }
@@ -136,6 +136,7 @@ public record ChatToolInvokedPayload
     public required string ToolName { get; init; }
     public required string ToolCallId { get; init; }
     public string? ToolDisplay { get; init; }
+    public required Guid MessageId { get; init; }
     public required DateTimeOffset Timestamp { get; init; }
 }
 
@@ -148,6 +149,7 @@ public record ChatToolCompletedPayload
     public required Guid ArticleId { get; init; }
     public required string ToolCallId { get; init; }
     public Guid[]? ToolResultIds { get; init; }
+    public required Guid MessageId { get; init; }
     public required DateTimeOffset Timestamp { get; init; }
 }
 
@@ -156,7 +158,7 @@ public record ChatToolCompletedPayload
 /// </summary>
 public record ChatMessageCompletePayload
 {
-    public required Guid Id { get; init; }
+    public required Guid MessageId { get; init; }
     public required Guid ConversationId { get; init; }
     public required Guid ArticleId { get; init; }
     public required ChatMessageRole Role { get; init; }
@@ -180,7 +182,7 @@ public record ChatErrorPayload
 /// </summary>
 public record ChatMessageReceivedPayload
 {
-    public required Guid Id { get; init; }
+    public required Guid MessageId { get; init; }
     public required Guid ConversationId { get; init; }
     public required ChatMessageRole Role { get; init; }
     public required string Text { get; init; }

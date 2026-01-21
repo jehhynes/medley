@@ -278,51 +278,6 @@
         }
       }
     },
-    "/api/articles/{articleId}/assistant/history": {
-      "get": {
-        "tags": [
-          "ArticleChatApi"
-        ],
-        "operationId": "ArticleChatApi_GetHistory",
-        "parameters": [
-          {
-            "name": "articleId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "guid"
-            },
-            "x-position": 1
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ConversationHistoryItemDto"
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/articles/{articleId}/assistant/conversations/{conversationId}/complete": {
       "post": {
         "tags": [
@@ -2503,32 +2458,6 @@
                 "$ref": "#/components/schemas/ConversationMode"
               }
             ]
-          }
-        }
-      },
-      "ConversationHistoryItemDto": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "guid"
-          },
-          "state": {
-            "type": "string"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "messageCount": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "completedAt": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
           }
         }
       },

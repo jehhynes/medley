@@ -395,7 +395,7 @@ public class ArticleChatApiController : ControllerBase
             {
                 await _hubContext.Clients.Group($"Article_{articleId}").ChatMessageReceived(new ChatMessageReceivedPayload
                 {
-                    Id = userMessage.Id,
+                    MessageId = userMessage.Id,
                     ConversationId = conversationId,
                     Role = ChatMessageRole.User,
                     Text = request.Message,
@@ -437,32 +437,6 @@ public class ArticleChatApiController : ControllerBase
             MessageId = userMessage.Id,
             ConversationId = conversationId
         });
-    }
-
-    /// <summary>
-    /// Get conversation history for an article
-    /// </summary>
-    [HttpGet("history")]
-    [ProducesResponseType(typeof(List<ConversationHistoryItemDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<List<ConversationHistoryItemDto>>> GetHistory(Guid articleId)
-    {
-        var article = await _articleRepository.GetByIdAsync(articleId);
-        if (article == null)
-        {
-            return NotFound(new { message = "Article not found" });
-        }
-
-        var conversations = await _chatService.GetConversationHistoryAsync(articleId);
-
-        return Ok(conversations.Select(c => new ConversationHistoryItemDto
-        {
-            Id = c.Id,
-            State = c.State.ToString(),
-            CreatedAt = c.CreatedAt,
-            MessageCount = c.Messages.Count,
-            CompletedAt = c.CompletedAt
-        }).ToList());
     }
 
     /// <summary>

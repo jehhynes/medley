@@ -164,6 +164,7 @@ import type {
   ChatToolInvokedPayload,
   ChatToolCompletedPayload,
   ChatMessageCompletePayload,
+  ChatMessageReceivedPayload,
   ChatErrorPayload
 } from '../types/article-hub';
 
@@ -380,17 +381,17 @@ function onTurnStarted(data: ChatTurnStartedPayload) {
   nextTick(() => scrollToBottom());
 }
 
-function onMessageReceived(data: any) {
+function onMessageReceived(data: ChatMessageReceivedPayload) {
   if (data.conversationId !== conversationId.value) {
     return;
   }
   
   messages.value.push({
-    id: data.id,
-    role: data.role,
+    id: data.messageId,
+    role: data.role as ChatMessageRole,
     text: data.text,
     userName: data.userName,
-    createdAt: data.createdAt
+    createdAt: new Date(data.createdAt)
   });
 
   nextTick(() => scrollToBottom());
@@ -401,7 +402,11 @@ function onMessageStreaming(data: ChatMessageStreamingPayload) {
     return;
   }
 
-  const messageId = data.messageId || 'streaming-temp';
+  const messageId = data.messageId;
+  if (!messageId) {
+    console.warn('Received streaming update without messageId');
+    return;
+  }
 
   let streamingMsg = messages.value.find(m => m.id === messageId && m.isStreaming);
   if (!streamingMsg) {
@@ -428,7 +433,7 @@ function onToolInvoked(data: ChatToolInvokedPayload) {
 
   console.log(`AI Agent invoked tool: ${data.toolName}`);
 
-  const messageId = (data as any).messageId || 'streaming-temp';
+  const messageId = data.messageId;
 
   let streamingMsg = messages.value.find(m => m.id === messageId && m.isStreaming);
   if (!streamingMsg) {
@@ -465,18 +470,18 @@ function onToolCompleted(data: ChatToolCompletedPayload) {
 
   console.log(`AI Agent completed tool with callId: ${data.toolCallId}`);
 
-  for (let i = messages.value.length - 1; i >= 0; i--) {
-    const msg = messages.value[i];
-    if (msg && msg.toolCalls && msg.toolCalls.length > 0) {
-      const toolCall = msg.toolCalls.find(t => t.callId === data.toolCallId);
-      if (toolCall) {
-        toolCall.completed = true;
-        if (data.toolResultIds && data.toolResultIds.length > 0) {
-          toolCall.result = {
-            ids: data.toolResultIds
-          };
-        }
-        break;
+  const messageId = data.messageId;
+
+  // Find the message with this messageId first
+  const msg = messages.value.find(m => m.id === messageId);
+  if (msg && msg.toolCalls && msg.toolCalls.length > 0) {
+    const toolCall = msg.toolCalls.find(t => t.callId === data.toolCallId);
+    if (toolCall) {
+      toolCall.completed = true;
+      if (data.toolResultIds && data.toolResultIds.length > 0) {
+        toolCall.result = {
+          ids: data.toolResultIds
+        };
       }
     }
   }
@@ -490,14 +495,14 @@ function onMessageComplete(data: ChatMessageCompletePayload) {
   }
 
   const streamingIdx = messages.value.findIndex(m =>
-    m.isStreaming && (m.id === data.id || m.id === 'streaming-temp')
+    m.isStreaming && m.id === data.messageId
   );
 
   if (streamingIdx >= 0) {
     const streamingMsg = messages.value[streamingIdx];
     if (streamingMsg) {
       messages.value.splice(streamingIdx, 1, {
-        id: data.id,
+        id: data.messageId,
         role: data.role as ChatMessageRole,
         text: data.content,
         userName: (data as any).userName,
@@ -508,7 +513,7 @@ function onMessageComplete(data: ChatMessageCompletePayload) {
     }
   } else {
     messages.value.push({
-      id: data.id,
+      id: data.messageId,
       role: data.role as ChatMessageRole,
       text: data.content,
       userName: (data as any).userName,

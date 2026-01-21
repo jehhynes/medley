@@ -254,8 +254,8 @@ public class ArticleChatService : IArticleChatService
     {
         var accumulatedUpdates = new List<ChatResponseUpdate>();
 
-        // Track tool names by callId for results
-        var toolCallNames = new Dictionary<string, string>();
+        // Track tool call info by callId: (toolName, messageId)
+        var toolCallInfo = new Dictionary<string, (string toolName, Guid messageId)>();
 
         await foreach (var update in agentUpdates.WithCancellation(cancellationToken))
         {
@@ -288,10 +288,10 @@ public class ArticleChatService : IArticleChatService
                 // Extract function calls
                 foreach (var call in update.Contents.OfType<FunctionCallContent>())
                 {
-                    // Store the name for later result matching
-                    if (!string.IsNullOrEmpty(call.CallId) && !string.IsNullOrEmpty(call.Name))
+                    // Store the name and message ID for later result matching
+                    if (!string.IsNullOrEmpty(call.CallId) && !string.IsNullOrEmpty(call.Name) && messageId.HasValue)
                     {
-                        toolCallNames[call.CallId] = call.Name;
+                        toolCallInfo[call.CallId] = (call.Name, messageId.Value);
                     }
 
                     yield return new ChatStreamUpdate
@@ -311,10 +311,16 @@ public class ArticleChatService : IArticleChatService
                 {
                     isFunctionResult = true;
 
-                    // Get the name from the stored call
-                    var toolName = !string.IsNullOrEmpty(result.CallId) && toolCallNames.ContainsKey(result.CallId)
-                        ? toolCallNames[result.CallId]
-                        : null;
+                    // Get the name and message ID from the stored call info
+                    string? toolName = null;
+                    Guid? toolCallMessageId = messageId;
+                    
+                    if (!string.IsNullOrEmpty(result.CallId) && toolCallInfo.ContainsKey(result.CallId))
+                    {
+                        var info = toolCallInfo[result.CallId];
+                        toolName = info.toolName;
+                        toolCallMessageId = info.messageId;
+                    }
 
                     // Check if this is an error result
                     var isError = _toolDisplayExtractor.IsErrorResult(result);
@@ -331,7 +337,7 @@ public class ArticleChatService : IArticleChatService
                         IsError = isError,
                         ConversationId = conversationId,
                         ArticleId = articleId,
-                        MessageId = messageId
+                        MessageId = toolCallMessageId
                     };
                 }
             }
@@ -450,18 +456,6 @@ public class ArticleChatService : IArticleChatService
         }
 
         return await query.ToListAsync(cancellationToken);
-    }
-
-    public async Task<List<ChatConversation>> GetConversationHistoryAsync(
-        Guid articleId,
-        CancellationToken cancellationToken = default)
-    {
-        return await _conversationRepository.Query()
-            .Where(c => c.ArticleId == articleId &&
-                       (c.State == ConversationState.Complete || c.State == ConversationState.Archived))
-            .Include(c => c.Messages)
-            .OrderByDescending(c => c.CreatedAt)
-            .ToListAsync(cancellationToken);
     }
 
     public async Task CompleteConversationAsync(
