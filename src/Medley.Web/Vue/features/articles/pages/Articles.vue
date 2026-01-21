@@ -29,14 +29,21 @@
               {{ activeFilterCount }}
             </span>
           </button>
-          <div class="position-relative">
-            <button class="btn btn-sm btn-outline-secondary" @click.stop="toggleSidebarMenu" title="Actions">
+          <div class="dropdown-container position-relative">
+            <button 
+              class="btn btn-sm btn-outline-secondary" 
+              @click="toggleDropdown($event, 'header-actions')"
+              title="Actions">
               <i class="bi bi-three-dots"></i>
             </button>
-            <div v-if="ui.sidebarMenuOpen" v-cloak class="dropdown-menu show position-absolute" style="right: 0; top: 100%; margin-top: 0.25rem;" @click.stop>
-              <button v-if="viewMode === 'tree'" class="dropdown-item" @click="showCreateArticleModal(null)">New Article</button>
-              <span v-else class="dropdown-item-text text-muted fst-italic text-nowrap">No actions available</span>
-            </div>
+            <ul v-if="isDropdownOpen('header-actions')" class="dropdown-menu dropdown-menu-end show" :class="getPositionClasses()">
+              <li v-if="viewMode === 'tree'">
+                <button class="dropdown-item" @click="showCreateArticleModal(null); closeDropdown()">New Article</button>
+              </li>
+              <li v-else>
+                <span class="dropdown-item-text text-muted fst-italic">No actions available</span>
+              </li>
+            </ul>
           </div>
         </div>
       </div>
@@ -409,6 +416,7 @@ import { useVersionViewer } from '../composables/useVersionViewer';
 import { useArticleSignalR } from '../composables/useArticleSignalR';
 import { useArticleFilter } from '../composables/useArticleFilter';
 import { useArticleTypes } from '../composables/useArticleTypes';
+import { useDropDown } from '@/composables/useDropDown';
 
 // Components
 import FragmentModal from '../../sources/components/FragmentModal.vue';
@@ -459,7 +467,6 @@ interface ContentTabsState {
 interface UIState {
   loading: boolean;
   error: string | null;
-  sidebarMenuOpen: boolean;
   activeRightTab: 'assistant' | 'versions';
 }
 
@@ -565,7 +572,6 @@ const contentTabs = reactive<ContentTabsState>({
 const ui = reactive<UIState>({
   loading: false,
   error: null,
-  sidebarMenuOpen: false,
   activeRightTab: 'assistant'
 });
 
@@ -599,6 +605,9 @@ provide('dragState', dragState);
 // ============================================================================
 // COMPOSABLES
 // ============================================================================
+
+// Dropdown composable
+const { toggleDropdown, closeDropdown, isDropdownOpen, getPositionClasses } = useDropDown();
 
 // Article types composable
 const { types: articleTypes, typeIndexMap, loadArticleTypes } = useArticleTypes();
@@ -640,8 +649,7 @@ const {
   selectedArticleId: computed(() => articles.selectedId),
   titleInputRef: titleInput,
   editTitleInputRef: editTitleInput,
-  tiptapEditorRef: tiptapEditor,
-  closeSidebarMenu: () => { ui.sidebarMenuOpen = false; }
+  tiptapEditorRef: tiptapEditor
 });
 
 // Filter composable
@@ -1125,10 +1133,6 @@ const closeFragmentModal = (): void => {
 // METHODS - UI Utility
 // ============================================================================
 
-const toggleSidebarMenu = (): void => {
-  ui.sidebarMenuOpen = !ui.sidebarMenuOpen;
-};
-
 const setActiveRightTab = (tab: 'assistant' | 'versions'): void => {
   ui.activeRightTab = tab;
 };
@@ -1203,11 +1207,6 @@ onMounted(async () => {
       await selectArticle(article, true);
     }
   }
-
-  // Close sidebar menu when clicking outside
-  document.addEventListener('click', () => {
-    ui.sidebarMenuOpen = false;
-  });
 
   // Handle beforeunload event for unsaved changes
   const handleBeforeUnload = (event: BeforeUnloadEvent) => {

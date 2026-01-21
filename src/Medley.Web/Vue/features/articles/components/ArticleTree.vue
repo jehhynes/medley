@@ -35,20 +35,16 @@
             <i v-if="showProcessingSpinner(article)" class="fad fa-spinner-third fa-spin status-overlay-spinner text-info" title="AI Processing"></i>
             <span v-if="showUserTurnIndicator(article)" class="status-overlay-badge bg-success" title="Waiting for user"></span>
           </div>
-          <div class="dropdown actions-container">
+          <div class="dropdown-container actions-container">
             <button 
               class="actions-btn"
-              :id="'dropdown-' + article.id"
-              data-bs-toggle="dropdown"
-              data-bs-auto-close="true"
-              aria-expanded="false"
-              @click.stop="handleDropdownClick($event, article.id)"
+              @click.stop="toggleDropdown($event, article.id!)"
               title="Actions">
               <i class="bi bi-three-dots"></i>
             </button>
-            <ul class="dropdown-menu dropdown-menu-end" :aria-labelledby="'dropdown-' + article.id">
-              <li><button class="dropdown-item" @click.stop="editArticle(article)">Edit</button></li>
-              <li><button class="dropdown-item" @click.stop="createChild(article.id)">New Article</button></li>
+            <ul v-if="isDropdownOpen(article.id!)" class="dropdown-menu dropdown-menu-end show" :class="getPositionClasses()">
+              <li><button class="dropdown-item" @click.stop="editArticle(article); closeDropdown()">Edit</button></li>
+              <li><button class="dropdown-item" @click.stop="createChild(article.id); closeDropdown()">New Article</button></li>
             </ul>
           </div>
         </div>
@@ -110,7 +106,7 @@ const dragState = inject<DragState>('dragState', {
   dragOverId: null
 });
 
-const { handleDropdownClick } = useDropDown();
+const { toggleDropdown, closeDropdown, isDropdownOpen, getPositionClasses } = useDropDown();
 
 const {
   selectArticle,

@@ -16,6 +16,10 @@
     --sidebar-right-width-mobile-max: 35rem; // 320px - fixed maximum width for mobile overlay
 }
 
+.dropdown-menu {
+    --bs-dropdown-divider-bg: var(--bs-border-color);
+}
+
 // Responsive Breakpoints (Bootstrap 5 standard)
 $breakpoint-lg: 992px;                   // Large devices and up
 $breakpoint-xl: 1200px;                  // Extra large devices and up

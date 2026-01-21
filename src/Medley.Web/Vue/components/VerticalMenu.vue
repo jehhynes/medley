@@ -32,11 +32,11 @@
         <i class="bi bi-gear"></i>
         <span class="vertical-menu-item-label">Admin</span>
       </a>
-      <div class="dropdown">
-        <button class="vertical-menu-item" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="User">
+      <div class="dropdown-container">
+        <button class="vertical-menu-item" type="button" @click="toggleDropdown($event, 'user-menu')" title="User">
           <i class="bi bi-person-circle"></i>
         </button>
-        <ul class="dropdown-menu dropdown-menu-end">
+        <ul v-if="isDropdownOpen('user-menu')" class="dropdown-menu dropdown-menu-end show" :class="getPositionClasses()">
           <li><h6 class="dropdown-header">{{ displayName }}</h6></li>
           <li><hr class="dropdown-divider"></li>
           <li>
@@ -70,6 +70,7 @@
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { useSidebarState } from '@/composables/useSidebarState';
+import { useDropDown } from '@/composables/useDropDown';
 
 // Props
 interface Props {
@@ -85,6 +86,7 @@ const props = withDefaults(defineProps<Props>(), {
 // Composables
 const { leftSidebarVisible } = useSidebarState();
 const route = useRoute();
+const { toggleDropdown, isDropdownOpen, getPositionClasses } = useDropDown();
 
 // Computed
 const currentPage = computed<string | null>(() => {
