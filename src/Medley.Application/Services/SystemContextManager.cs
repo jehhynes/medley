@@ -75,6 +75,19 @@ public class SystemContextManager
             _logger.LogWarning("Prompt type {PromptType} not found", promptType);
         }
 
+        // 1a. Always append organization context
+        var organizationPrompt = await _promptRepository.Query()
+            .FirstOrDefaultAsync(t => t.Type == PromptType.OrganizationContext, cancellationToken);
+
+        if (organizationPrompt != null)
+        {
+            promptData.OrganizationContext = organizationPrompt.Content;
+        }
+        else
+        {
+            _logger.LogDebug("Organization context prompt not found");
+        }
+
         // 2. Always append article context (required)
         var article = await _articleRepository.Query()
             .Include(a => a.ArticleType)
@@ -144,11 +157,12 @@ public class SystemContextManager
                             Summary = pf.Fragment.Summary,
                             Content = pf.Fragment.Content,
                             Instructions = pf.Instructions,
+                            Confidence = pf.Fragment.Confidence?.ToString(),
                             Source = pf.Fragment.Source != null
                                 ? new SourceData
                                 {
                                     Date = pf.Fragment.Source.Date.Date,
-                                    IsInternal = pf.Fragment.Source.IsInternal,
+                                    Scope = pf.Fragment.Source.IsInternal == true ? "Internal" : pf.Fragment.Source.IsInternal == false ? "External" : null,
                                     Tags = pf.Fragment.Source.Tags.Select(t => new TagData
                                     {
                                         Type = t.TagType.Name,
@@ -177,51 +191,53 @@ public class SystemContextManager
     // Data models for JSON serialization
     private class SystemPromptData
     {
-        public string ConversationMode { get; set; } = null!;
-        public string UserName { get; set; } = null!;
+        public required string ConversationMode { get; set; }
+        public required string UserName { get; set; }
         public string? PrimaryGuidance { get; set; }
+        public string? OrganizationContext { get; set; }
         public string? ArticleTypeGuidance { get; set; }
-        public ArticleData? Article { get; set; } = null!;
+        public ArticleData? Article { get; set; }
         public PlanData? Plan { get; set; }
     }
 
     private class ArticleData
     {
         public required Guid Id { get; set; }
-        public required string Title { get; set; } = null!;
+        public required string Title { get; set; }
         public required string? Type { get; set; }
         public required string? Summary { get; set; }
-        public required string Status { get; set; } = null!;
-        public required string Content { get; set; } = null!;
+        public required string Status { get; set; }
+        public required string Content { get; set; }
     }
 
     private class PlanData
     {
         public Guid Id { get; set; }
-        public string Instructions { get; set; } = null!;
+        public required string Instructions { get; set; }
         public List<FragmentData> Fragments { get; set; } = new();
     }
 
     private class FragmentData
     {
-        public Guid Id { get; set; }
-        public string Title { get; set; } = null!;
+        public required Guid Id { get; set; }
+        public required string Title { get; set; }
         public string? Summary { get; set; }
-        public string Content { get; set; } = null!;
+        public required string Content { get; set; }
         public string? Instructions { get; set; }
+        public string? Confidence { get; set; }
         public SourceData? Source { get; set; }
     }
 
     private class SourceData
     {
-        public DateTimeOffset Date { get; set; }
-        public bool? IsInternal { get; set; }
+        public required DateTimeOffset Date { get; set; }
+        public string? Scope { get; set; }
         public List<TagData> Tags { get; set; } = new();
     }
 
     private class TagData
     {
-        public string Type { get; set; } = null!;
-        public string Value { get; set; } = null!;
+        public required string Type { get; set; }
+        public required string Value { get; set; }
     }
 }
