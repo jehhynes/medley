@@ -8,7 +8,18 @@
         <i class="list-item-icon bi" :class="getSourceIcon(source.type)"></i>
         <div class="list-item-body">
           <div class="list-item-title">{{ source.name || 'Untitled' }}</div>
-          <div class="list-item-subtitle">{{ formatDate(source.date) }} • {{ source.type }}</div>
+          <div class="list-item-subtitle">
+            <span>{{ formatDate(source.date) }} • {{ source.type }}</span>
+            <span v-if="source.primarySpeakerName">
+              •
+              {{ source.primarySpeakerName }}
+              <i 
+                v-if="source.primarySpeakerTrustLevel" 
+                class="bi bi-shield-check" 
+                :class="getTrustLevelClass(source.primarySpeakerTrustLevel)"
+              ></i>
+            </span>
+          </div>
         </div>
         <span class="list-item-status ms-auto">
           <span v-if="source.extractionStatus === 'InProgress'" 
@@ -57,6 +68,16 @@ function selectSource(source: SourceDto): void {
   emit('select', source);
   // Collapse left sidebar on mobile after selection
   (window as any).MedleySidebar?.collapseLeftSidebar();
+}
+
+function getTrustLevelClass(trustLevel: string | null | undefined): string {
+  if (!trustLevel) return '';
+  switch (trustLevel) {
+    case 'High': return 'text-success';
+    case 'Medium': return 'text-warning';
+    case 'Low': return 'text-danger';
+    default: return '';
+  }
 }
 
 // Expose utility functions to template

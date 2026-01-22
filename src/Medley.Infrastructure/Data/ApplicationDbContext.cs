@@ -40,6 +40,7 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     public DbSet<PlanFragment> PlanFragments { get; set; }
     public DbSet<AiTokenUsage> AiTokenUsages { get; set; }
     public DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
+    public DbSet<Speaker> Speakers { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -68,5 +69,18 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
             .WithMany(a => a.ChatConversations)
             .HasForeignKey(c => c.ArticleId)
             .OnDelete(DeleteBehavior.Cascade); // When article is deleted, delete all conversations
+
+        // Configure many-to-many relationship between Source and Speaker
+        builder.Entity<Source>()
+            .HasMany(s => s.Speakers)
+            .WithMany(sp => sp.Sources)
+            .UsingEntity(j => j.ToTable("source_speakers"));
+
+        // Configure one-to-many relationship for PrimarySpeaker
+        builder.Entity<Source>()
+            .HasOne(s => s.PrimarySpeaker)
+            .WithMany()
+            .HasForeignKey(s => s.PrimarySpeakerId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

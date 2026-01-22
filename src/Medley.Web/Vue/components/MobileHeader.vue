@@ -65,7 +65,8 @@ function formatRouteName(name: string | undefined): string {
     'articles': 'Articles',
     'sources': 'Sources',
     'fragments': 'Fragments',
-    'ai-prompts': 'AI Prompts'
+    'ai-prompts': 'AI Prompts',
+    'speakers': 'Speakers'
   };
   
   return titleMap[name] || name.charAt(0).toUpperCase() + name.slice(1);

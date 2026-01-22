@@ -84,6 +84,15 @@
                   <i class="bi bi-puzzle"></i>
                   {{ selectedSource.fragmentsCount }} fragments
                 </span>
+                <span class="ms-2" v-if="selectedSource.primarySpeakerName">
+                  <i class="bi bi-person"></i>
+                  {{ selectedSource.primarySpeakerName }}
+                  <i 
+                    v-if="selectedSource.primarySpeakerTrustLevel" 
+                    class="bi bi-shield-check ms-1" 
+                    :class="getTrustLevelClass(selectedSource.primarySpeakerTrustLevel)"
+                  ></i>
+                </span>
               </div>
               <div class="mt-2" v-if="sortedTags.length || selectedSource.isInternal">
                 <span
@@ -575,6 +584,16 @@ const selectFragment = (fragment: FragmentDto): void => {
 
 const closeFragmentModal = (): void => {
   selectedFragment.value = null;
+};
+
+const getTrustLevelClass = (trustLevel: string | null): string => {
+  if (!trustLevel) return '';
+  switch (trustLevel) {
+    case 'High': return 'text-success';
+    case 'Medium': return 'text-warning';
+    case 'Low': return 'text-danger';
+    default: return '';
+  }
 };
 
 // Lifecycle hooks

@@ -21,6 +21,11 @@ public class Organization : BaseEntity
     /// Indicates whether smart tagging (automatic IsInternal detection) is enabled
     /// </summary>
     public bool EnableSmartTagging { get; set; } = false;
+
+    /// <summary>
+    /// Indicates whether speaker extraction from meeting transcripts is enabled
+    /// </summary>
+    public bool EnableSpeakerExtraction { get; set; } = false;
 }
 
 

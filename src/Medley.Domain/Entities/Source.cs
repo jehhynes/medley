@@ -48,6 +48,17 @@ public class Source : BusinessEntity
     public DateTimeOffset? TagsGenerated { get; set; }
 
     /// <summary>
+    /// Timestamp when speakers were extracted from this source.
+    /// </summary>
+    public DateTimeOffset? SpeakersExtracted { get; set; }
+
+    /// <summary>
+    /// The primary speaker for this source (determined by total transcript length)
+    /// </summary>
+    public Guid? PrimarySpeakerId { get; set; }
+    public virtual Speaker? PrimarySpeaker { get; set; }
+
+    /// <summary>
     /// Status of fragment extraction for this source
     /// </summary>
     public ExtractionStatus ExtractionStatus { get; set; } = ExtractionStatus.NotStarted;
@@ -65,6 +76,7 @@ public class Source : BusinessEntity
     public virtual ICollection<Fragment> Fragments { get; set; } = new List<Fragment>();
     public virtual ICollection<Observation> Observations { get; set; } = new List<Observation>();
     public virtual ICollection<Tag> Tags { get; set; } = new List<Tag>();
+    public virtual ICollection<Speaker> Speakers { get; set; } = new List<Speaker>();
 }
 
 

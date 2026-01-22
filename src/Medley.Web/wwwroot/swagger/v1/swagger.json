@@ -2345,6 +2345,146 @@
         }
       }
     },
+    "/api/speakers": {
+      "get": {
+        "tags": [
+          "SpeakersApi"
+        ],
+        "operationId": "SpeakersApi_GetAll",
+        "parameters": [
+          {
+            "name": "isInternal",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "nullable": true
+            },
+            "x-position": 1
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SpeakerListDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/speakers/{id}": {
+      "get": {
+        "tags": [
+          "SpeakersApi"
+        ],
+        "operationId": "SpeakersApi_GetById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpeakerDetailDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "SpeakersApi"
+        ],
+        "operationId": "SpeakersApi_Update",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSpeakerRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpeakerDetailDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
     "/api/tagtypes": {
       "get": {
         "tags": [
@@ -3722,6 +3862,18 @@
           },
           "extractionStatus": {
             "$ref": "#/components/schemas/ExtractionStatus"
+          },
+          "primarySpeakerName": {
+            "type": "string",
+            "nullable": true
+          },
+          "primarySpeakerTrustLevel": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/TrustLevel"
+              }
+            ]
           }
         }
       },
@@ -3739,6 +3891,20 @@
           "InProgress",
           "Completed",
           "Failed"
+        ]
+      },
+      "TrustLevel": {
+        "type": "string",
+        "description": "",
+        "x-enumNames": [
+          "High",
+          "Medium",
+          "Low"
+        ],
+        "enum": [
+          "High",
+          "Medium",
+          "Low"
         ]
       },
       "SourceDto": {
@@ -3780,6 +3946,18 @@
             "type": "string",
             "format": "date-time",
             "nullable": true
+          },
+          "primarySpeakerName": {
+            "type": "string",
+            "nullable": true
+          },
+          "primarySpeakerTrustLevel": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/TrustLevel"
+              }
+            ]
           },
           "extractionStatus": {
             "$ref": "#/components/schemas/ExtractionStatus"
@@ -3877,6 +4055,98 @@
           "tagCount": {
             "type": "integer",
             "format": "int32"
+          }
+        }
+      },
+      "SpeakerListDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "isInternal": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "trustLevel": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/TrustLevel"
+              }
+            ]
+          },
+          "sourceCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SpeakerDetailDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "isInternal": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "trustLevel": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/TrustLevel"
+              }
+            ]
+          },
+          "sourceCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "UpdateSpeakerRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "isInternal": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "trustLevel": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/TrustLevel"
+              }
+            ]
           }
         }
       },

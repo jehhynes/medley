@@ -2093,6 +2093,146 @@ export class SourcesApiClient {
     }
 }
 
+export class SpeakersApiClient {
+    private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
+    private baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(baseUrl?: string, http?: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> }) {
+        this.http = http ? http : window as any;
+        this.baseUrl = baseUrl ?? "";
+    }
+
+    getAll(isInternal?: boolean | null | undefined, search?: string | null | undefined): Promise<SpeakerListDto[]> {
+        let url_ = this.baseUrl + "/api/speakers?";
+        if (isInternal !== undefined && isInternal !== null)
+            url_ += "isInternal=" + encodeURIComponent("" + isInternal) + "&";
+        if (search !== undefined && search !== null)
+            url_ += "search=" + encodeURIComponent("" + search) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processGetAll(_response);
+        });
+    }
+
+    protected processGetAll(response: Response): Promise<SpeakerListDto[]> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as SpeakerListDto[];
+            return result200;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<SpeakerListDto[]>(null as any);
+    }
+
+    getById(id: string): Promise<SpeakerDetailDto> {
+        let url_ = this.baseUrl + "/api/speakers/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processGetById(_response);
+        });
+    }
+
+    protected processGetById(response: Response): Promise<SpeakerDetailDto> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as SpeakerDetailDto;
+            return result200;
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            result404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<SpeakerDetailDto>(null as any);
+    }
+
+    update(id: string, request: UpdateSpeakerRequest): Promise<SpeakerDetailDto> {
+        let url_ = this.baseUrl + "/api/speakers/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processUpdate(_response);
+        });
+    }
+
+    protected processUpdate(response: Response): Promise<SpeakerDetailDto> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as SpeakerDetailDto;
+            return result200;
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            result404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+            });
+        } else if (status === 500) {
+            return response.text().then((_responseText) => {
+            return throwException("A server side error occurred.", status, _responseText, _headers);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<SpeakerDetailDto>(null as any);
+    }
+}
+
 export class TagTypesApiClient {
     private http: { fetch(url: RequestInfo, init?: RequestInit): Promise<Response> };
     private baseUrl: string;
@@ -2560,6 +2700,8 @@ export interface SourceSummaryDto {
     integrationName?: string;
     fragmentsCount?: number;
     extractionStatus?: ExtractionStatus;
+    primarySpeakerName?: string | null;
+    primarySpeakerTrustLevel?: TrustLevel | null;
 }
 
 export enum ExtractionStatus {
@@ -2567,6 +2709,12 @@ export enum ExtractionStatus {
     InProgress = "InProgress",
     Completed = "Completed",
     Failed = "Failed",
+}
+
+export enum TrustLevel {
+    High = "High",
+    Medium = "Medium",
+    Low = "Low",
 }
 
 export interface SourceDto {
@@ -2580,6 +2728,8 @@ export interface SourceDto {
     date?: Date;
     isInternal?: boolean | null;
     tagsGenerated?: Date | null;
+    primarySpeakerName?: string | null;
+    primarySpeakerTrustLevel?: TrustLevel | null;
     extractionStatus?: ExtractionStatus;
     extractionMessage?: string | null;
     integrationName?: string;
@@ -2613,6 +2763,31 @@ export interface TaggingResponse {
     message?: string;
     isInternal?: boolean | null;
     tagCount?: number;
+}
+
+export interface SpeakerListDto {
+    id?: string;
+    name?: string;
+    email?: string | null;
+    isInternal?: boolean | null;
+    trustLevel?: TrustLevel | null;
+    sourceCount?: number;
+    createdAt?: Date;
+}
+
+export interface SpeakerDetailDto {
+    id?: string;
+    name?: string;
+    email?: string | null;
+    isInternal?: boolean | null;
+    trustLevel?: TrustLevel | null;
+    sourceCount?: number;
+    createdAt?: Date;
+}
+
+export interface UpdateSpeakerRequest {
+    isInternal?: boolean | null;
+    trustLevel?: TrustLevel | null;
 }
 
 export interface TagTypeDto {

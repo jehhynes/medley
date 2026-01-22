@@ -178,6 +178,11 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
                     currentJobId,
                     j => j.ExecuteAsync(default!, default, sourceId));
                 _logger.LogDebug("Enqueued smart tag processing job for source {SourceId}", sourceId);
+
+                _backgroundJobClient.ContinueJobWith<SpeakerExtractionJob>(
+                    currentJobId,
+                    j => j.ExecuteAsync(default!, default, sourceId));
+                _logger.LogDebug("Enqueued speaker extraction job for source {SourceId}", sourceId);
             }
 
             _logger.LogInformation(

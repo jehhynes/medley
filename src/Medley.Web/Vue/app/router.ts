@@ -13,6 +13,7 @@ const Sources = () => import('../features/sources/pages/Sources.vue');
 const Fragments = () => import('../features/sources/pages/Fragments.vue');
 const Articles = () => import('../features/articles/pages/Articles.vue');
 const AiPrompts = () => import('../features/admin/pages/AiPrompts.vue');
+const Speakers = () => import('../features/admin/pages/Speakers.vue');
 
 const routes: RouteRecordRaw[] = [
   {
@@ -59,6 +60,15 @@ const routes: RouteRecordRaw[] = [
     meta: { 
         title: 'AI Prompts'
     } as RouteMeta
+  },
+  {
+    path: '/Admin/Speakers',
+    name: 'speakers',
+    component: Speakers,
+    meta: { 
+        title: 'Speakers'
+    } as RouteMeta,
+    props: route => ({ id: route.query.id })
   }
 ];
 

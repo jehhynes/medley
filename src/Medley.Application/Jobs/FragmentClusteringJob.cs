@@ -35,7 +35,6 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
         _aiCallContext = aiCallContext;
     }
 
-    [DisableMultipleQueuedItemsFilter]
     [Mission]
     public async Task ExecuteAsync(PerformContext context, CancellationToken cancellationToken)
     {

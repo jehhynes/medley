@@ -41,7 +41,6 @@ public class FragmentExtractionJob : BaseHangfireJob<FragmentExtractionJob>
     /// Executes fragment extraction for a specific source
     /// </summary>
     /// <param name="sourceId">The source ID to extract fragments from</param>
-    [DisableMultipleQueuedItemsFilter]
     [Mission]
     public async Task ExecuteAsync(Guid sourceId, PerformContext context, CancellationToken cancellationToken)
     {

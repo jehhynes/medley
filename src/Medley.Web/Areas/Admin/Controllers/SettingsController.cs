@@ -41,7 +41,8 @@ public class SettingsController : Controller
             {
                 Name = "Default Organization",
                 EmailDomain = null,
-                EnableSmartTagging = false
+                EnableSmartTagging = false,
+                EnableSpeakerExtraction = false
             };
             await _organizationRepository.AddAsync(organization);
             await _unitOfWork.SaveChangesAsync();
@@ -51,13 +52,14 @@ public class SettingsController : Controller
         ViewBag.OrganizationId = organization.Id;
         ViewBag.EmailDomain = organization.EmailDomain ?? "";
         ViewBag.EnableSmartTagging = organization.EnableSmartTagging;
+        ViewBag.EnableSpeakerExtraction = organization.EnableSpeakerExtraction;
 
         return View();
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> SaveOrganizationSettings(Guid organizationId, string? emailDomain, bool enableSmartTagging)
+    public async Task<IActionResult> SaveOrganizationSettings(Guid organizationId, string? emailDomain, bool enableSmartTagging, bool enableSpeakerExtraction)
     {
         try
         {
@@ -75,7 +77,7 @@ public class SettingsController : Controller
 
             organization.EmailDomain = normalizedDomain;
             organization.EnableSmartTagging = enableSmartTagging;
-            
+            organization.EnableSpeakerExtraction = enableSpeakerExtraction;
             
             await _unitOfWork.SaveChangesAsync();
 

@@ -3,6 +3,7 @@
     var currentArea = ViewContext.RouteData.Values["area"]?.ToString();
     var isSettings = currentArea == "Admin" && currentController == "Settings";
     var isAiPrompts = currentArea == "Admin" && currentController == "AiPrompts";
+    var isSpeakers = currentArea == "Admin" && currentController == "Speakers";
     var isIntegrations = currentArea == "Integrations";
     var isUsers = currentArea == "Admin" && currentController == "Users";
     var isKnowledgeBuilderImport = currentArea == "Admin" && currentController == "KnowledgeBuilderImport";
@@ -45,6 +46,14 @@
                 <i class="list-item-icon bi bi-file-text"></i>
                 <div class="list-item-body">
                     <div class="list-item-title">Article Types</div>
+                </div>
+            </a>
+        </li>
+        <li class="list-item">
+            <a asp-area="Admin" asp-controller="Speakers" asp-action="Index" class="list-item-content @(isSpeakers ? "active" : "")">
+                <i class="list-item-icon bi bi-person"></i>
+                <div class="list-item-body">
+                    <div class="list-item-title">Speakers</div>
                 </div>
             </a>
         </li>

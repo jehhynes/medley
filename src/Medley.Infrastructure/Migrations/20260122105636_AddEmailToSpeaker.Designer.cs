@@ -3,6 +3,7 @@ using System;
 using Medley.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -12,9 +13,11 @@ using Pgvector;
 namespace Medley.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260122105636_AddEmailToSpeaker")]
+    partial class AddEmailToSpeaker
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -995,10 +998,6 @@ namespace Medley.Infrastructure.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("name");
 
-                    b.Property<Guid?>("PrimarySpeakerId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("primary_speaker_id");
-
                     b.Property<DateTimeOffset?>("SpeakersExtracted")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("speakers_extracted");
@@ -1016,9 +1015,6 @@ namespace Medley.Infrastructure.Migrations
 
                     b.HasIndex("IntegrationId")
                         .HasDatabaseName("ix_sources_integration_id");
-
-                    b.HasIndex("PrimarySpeakerId")
-                        .HasDatabaseName("ix_sources_primary_speaker_id");
 
                     b.ToTable("sources", (string)null);
                 });
@@ -1826,15 +1822,7 @@ namespace Medley.Infrastructure.Migrations
                         .IsRequired()
                         .HasConstraintName("fk_sources_integrations_integration_id");
 
-                    b.HasOne("Medley.Domain.Entities.Speaker", "PrimarySpeaker")
-                        .WithMany()
-                        .HasForeignKey("PrimarySpeakerId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_sources_speakers_primary_speaker_id");
-
                     b.Navigation("Integration");
-
-                    b.Navigation("PrimarySpeaker");
                 });
 
             modelBuilder.Entity("Medley.Domain.Entities.Tag", b =>

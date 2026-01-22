@@ -6,7 +6,8 @@ import {
   PlanApiClient,
   SourcesApiClient,
   TagTypesApiClient,
-  AiPromptApiClient
+  AiPromptApiClient,
+  SpeakersApiClient
 } from '@/types/api-client';
 
 export const apiClients = {
@@ -17,7 +18,8 @@ export const apiClients = {
   plans: new PlanApiClient(),
   sources: new SourcesApiClient(),
   tagTypes: new TagTypesApiClient(),
-  aiPrompts: new AiPromptApiClient()
+  aiPrompts: new AiPromptApiClient(),
+  speakers: new SpeakersApiClient()
 } as const;
 
 export const {
@@ -28,5 +30,6 @@ export const {
   plans: plansClient,
   sources: sourcesClient,
   tagTypes: tagTypesClient,
-  aiPrompts: aiPromptsClient
+  aiPrompts: aiPromptsClient,
+  speakers: speakersClient
 } = apiClients;

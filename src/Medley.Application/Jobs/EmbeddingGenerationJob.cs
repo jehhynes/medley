@@ -53,7 +53,6 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
     /// </summary>
     /// <param name="sourceId">Optional source ID to filter fragments by specific source</param>
     /// <param name="fragmentId">Optional fragment ID to process a specific fragment</param>
-    [DisableMultipleQueuedItemsFilter]
     [Mission]
     public async Task GenerateFragmentEmbeddings(PerformContext context, CancellationToken cancellationToken, Guid? sourceId = null, Guid? fragmentId = null)
     {

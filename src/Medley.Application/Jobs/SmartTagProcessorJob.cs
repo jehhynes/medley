@@ -41,7 +41,6 @@ public class SmartTagProcessorJob : BaseHangfireJob<SmartTagProcessorJob>
     /// Processes up to 100 sources and reschedules itself if more remain.
     /// </summary>
     /// <param name="sourceId">Optional source ID to process a specific source only</param>
-    [DisableMultipleQueuedItemsFilter]
     [Mission]
     public async Task ExecuteAsync(PerformContext context, CancellationToken cancellationToken, Guid? sourceId = null)
     {

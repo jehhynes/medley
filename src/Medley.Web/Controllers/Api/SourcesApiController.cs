@@ -59,6 +59,7 @@ public class SourcesApiController : ControllerBase
         IQueryable<Source> queryable = _sourceRepository.Query()
             .Include(s => s.Integration)
             .Include(s => s.Fragments)
+            .Include(s => s.PrimarySpeaker)
             .Include(s => s.Tags)
                 .ThenInclude(t => t.TagType);
 
@@ -87,7 +88,9 @@ public class SourcesApiController : ControllerBase
                 Date = s.Date,
                 IntegrationName = s.Integration.Name,
                 FragmentsCount = s.Fragments.Count,
-                ExtractionStatus = s.ExtractionStatus
+                ExtractionStatus = s.ExtractionStatus,
+                PrimarySpeakerName = s.PrimarySpeaker != null ? s.PrimarySpeaker.Name : null,
+                PrimarySpeakerTrustLevel = s.PrimarySpeaker != null ? s.PrimarySpeaker.TrustLevel : null
             })
             .ToListAsync();
 
@@ -111,6 +114,7 @@ public class SourcesApiController : ControllerBase
                 .ThenInclude(t => t.TagType)
             .Include(s => s.Tags)
                 .ThenInclude(t => t.TagOption)
+            .Include(s => s.PrimarySpeaker)
             .FirstOrDefaultAsync(s => s.Id == id);
 
         if (source == null)
@@ -135,6 +139,8 @@ public class SourcesApiController : ControllerBase
             ExtractionMessage = source.ExtractionMessage,
             CreatedAt = source.CreatedAt,
             TagsGenerated = source.TagsGenerated,
+            PrimarySpeakerName = source.PrimarySpeaker?.Name,
+            PrimarySpeakerTrustLevel = source.PrimarySpeaker?.TrustLevel,
             Tags = source.Tags.Select(t => new SourceTagDto
             {
                 TagTypeId = t.TagTypeId,

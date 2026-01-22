@@ -58,6 +58,16 @@ public class SourceDto
     public DateTimeOffset? TagsGenerated { get; set; }
 
     /// <summary>
+    /// Primary speaker name for this source
+    /// </summary>
+    public string? PrimarySpeakerName { get; set; }
+
+    /// <summary>
+    /// Primary speaker trust level
+    /// </summary>
+    public TrustLevel? PrimarySpeakerTrustLevel { get; set; }
+
+    /// <summary>
     /// Status of fragment extraction for this source
     /// </summary>
     public required ExtractionStatus ExtractionStatus { get; set; }
@@ -127,6 +137,16 @@ public class SourceSummaryDto
     /// Extraction status
     /// </summary>
     public required ExtractionStatus ExtractionStatus { get; set; }
+
+    /// <summary>
+    /// Primary speaker name for this source
+    /// </summary>
+    public string? PrimarySpeakerName { get; set; }
+
+    /// <summary>
+    /// Primary speaker trust level
+    /// </summary>
+    public TrustLevel? PrimarySpeakerTrustLevel { get; set; }
 }
 
 /// <summary>
