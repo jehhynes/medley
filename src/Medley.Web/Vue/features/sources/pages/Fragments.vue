@@ -170,21 +170,18 @@ const showConfidenceComment = ref<boolean>(false);
 const userDisplayName = ref<string>(window.MedleyUser?.displayName || 'User');
 const userIsAuthenticated = ref<boolean>(window.MedleyUser?.isAuthenticated || false);
 
-const pagination = ref<PaginationState>({
-  page: 0,
-  pageSize: 50,
-  hasMore: true,
-  loadingMore: false
-});
-
 let searchDebounced: (() => void) | null = null;
 
 // Use infinite scroll composable
 const {
+  pagination,
   setupInfiniteScroll,
   resetPagination,
   updateHasMore
-} = useInfiniteScroll(pagination, loadMoreItems);
+} = useInfiniteScroll({
+  loadMoreItems,
+  pageSize: 50
+});
 
 // Computed properties
 const renderedMarkdown = computed(() => {

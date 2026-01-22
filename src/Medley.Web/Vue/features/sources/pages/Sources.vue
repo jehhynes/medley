@@ -291,19 +291,16 @@ const activeTagFilter = ref<TagFilter | null>(null);
 const userDisplayName = ref<string>(window.MedleyUser?.displayName || 'User');
 const userIsAuthenticated = ref<boolean>(window.MedleyUser?.isAuthenticated || false);
 
-const pagination = ref<PaginationState>({
-  page: 0,
-  pageSize: 50,
-  hasMore: true,
-  loadingMore: false
-});
-
 // Use infinite scroll composable
 const {
+  pagination,
   setupInfiniteScroll,
   resetPagination,
   updateHasMore
-} = useInfiniteScroll(pagination, loadMoreItems);
+} = useInfiniteScroll({
+  loadMoreItems,
+  pageSize: 50
+});
 
 // Computed properties
 const parsedMetadata = computed(() => {
