@@ -86,9 +86,11 @@ public class SpeakerExtractionJob : BaseHangfireJob<SpeakerExtractionJob>
                 return;
             }
 
-            // Get the batch of sources to process
+            // Get the batch of sources to process (both Fellow and Google Drive)
             var query = _sourceRepository.Query()
-                .Where(s => s.SpeakersExtracted == null && s.MetadataType == SourceMetadataType.Collector_Fellow);
+                .Where(s => s.SpeakersExtracted == null && 
+                       (s.MetadataType == SourceMetadataType.Collector_Fellow || 
+                        s.MetadataType == SourceMetadataType.Collector_GoogleDrive));
 
             // Filter by source if specified
             if (sourceId.HasValue)
@@ -97,6 +99,7 @@ public class SpeakerExtractionJob : BaseHangfireJob<SpeakerExtractionJob>
             }
 
             var sourceIds = await query
+                .OrderByDescending(s => s.Date)
                 .Select(s => s.Id)
                 .Take(BatchSize)
                 .ToListAsync(cancellationToken);
@@ -188,7 +191,7 @@ public class SpeakerExtractionJob : BaseHangfireJob<SpeakerExtractionJob>
     }
 
     /// <summary>
-    /// Extracts speakers from a single source
+    /// Extracts speakers from a single source based on its metadata type
     /// </summary>
     /// <returns>Number of speakers extracted</returns>
     private async Task<int> ExtractSpeakersFromSourceAsync(Guid sourceId, CancellationToken cancellationToken)
@@ -205,115 +208,292 @@ public class SpeakerExtractionJob : BaseHangfireJob<SpeakerExtractionJob>
 
         // Get organization for email domain matching
         var organization = await _organizationRepository.Query().FirstOrDefaultAsync(cancellationToken);
-        var organizationEmailDomain = organization?.EmailDomain?.ToLowerInvariant();
 
         try
         {
-            // Deserialize metadata
-            FellowRecordingImportModel? recording;
-            try
+            // Route to appropriate handler based on metadata type
+            return source.MetadataType switch
             {
-                recording = JsonSerializer.Deserialize<FellowRecordingImportModel>(source.MetadataJson);
-            }
-            catch (JsonException ex)
-            {
-                _logger.LogWarning(ex, "Failed to deserialize metadata for source {SourceId}. Marking as processed.", sourceId);
-                source.SpeakersExtracted = DateTimeOffset.UtcNow;
-                return 0;
-            }
-
-            if (recording?.Transcript?.SpeechSegments == null || recording.Transcript.SpeechSegments.Count == 0)
-            {
-                _logger.LogDebug("No speech segments found for source {SourceId}", sourceId);
-                source.SpeakersExtracted = DateTimeOffset.UtcNow;
-                return 0;
-            }
-
-            // Extract unique speaker names
-            var speakers = recording.Transcript.SpeechSegments
-                .Where(s => !string.IsNullOrWhiteSpace(s.Speaker))
-                .Select(s => new { Speaker = RemoveSpeakerSuffixes(s.Speaker!), TextLength = s.Text?.Length ?? 0 })
-                .Where(s => !IsPhoneNumber(s.Speaker))
-                .GroupBy(x => x.Speaker)
-                .Select(g => new { Speaker = g.Key, TotalLength = g.Sum(x => x.TextLength) })
-                .ToList();
-
-            if (speakers.Count == 0)
-            {
-                _logger.LogDebug("No valid speakers found for source {SourceId}", sourceId);
-                source.SpeakersExtracted = DateTimeOffset.UtcNow;
-                return 0;
-            }
-
-            var speakerNames = speakers.Select(x => x.Speaker).ToList();
-
-            _logger.LogDebug("Found {Count} unique speakers for source {SourceId}: {Speakers}",
-                speakerNames.Count, sourceId, string.Join(", ", speakerNames));
-
-            // Get attendee emails for IsInternal matching
-            var attendeeEmails = recording.Note?.EventAttendees?
-                .Where(a => !string.IsNullOrWhiteSpace(a.Email))
-                .Select(a => a.Email!.ToLowerInvariant())
-                .ToList() ?? new List<string>();
-
-            // Find or create speakers
-            var existingSpeakers = await _speakerRepository.Query()
-                .Where(sp => speakerNames.Contains(sp.Name))
-                .ToListAsync(cancellationToken);
-
-            var existingSpeakerNames = existingSpeakers.Select(sp => sp.Name).ToHashSet();
-            var newSpeakerNames = speakerNames.Where(name => !existingSpeakerNames.Contains(name)).ToList();
-
-            // Create new speakers
-            foreach (var speakerName in newSpeakerNames)
-            {
-                var (isInternal, email) = DetermineIsInternalAndEmail(speakerName, attendeeEmails, organizationEmailDomain);
-                
-                var speaker = new Speaker
-                {
-                    Name = speakerName,
-                    Email = email,
-                    IsInternal = isInternal,
-                    TrustLevel = null
-                };
-                await _speakerRepository.AddAsync(speaker);
-                existingSpeakers.Add(speaker);
-                
-                _logger.LogDebug("Created new speaker: {SpeakerName} with IsInternal={IsInternal}, Email={Email}",
-                    speakerName, isInternal?.ToString() ?? "null", email ?? "null");
-            }
-
-            // Associate speakers with source
-            source.Speakers.Clear();
-            foreach (var speaker in existingSpeakers)
-            {
-                source.Speakers.Add(speaker);
-            }
-
-
-            if (source.PrimarySpeakerId == null)
-            {
-                // Determine primary speaker by total transcript length (only internal speakers)
-                var speakerLengths = speakers.ToDictionary(x => x.Speaker, x => x.TotalLength);
-
-                source.PrimarySpeakerId = existingSpeakers
-                    .OrderByDescending(x => x.IsInternal == true)
-                    .ThenByDescending(x => speakerLengths.ContainsKey(x.Name) ? speakerLengths[x.Name] : 0)
-                    .FirstOrDefault()?.Id;
-            }
-
-            source.SpeakersExtracted = DateTimeOffset.UtcNow;
-
-            _logger.LogInformation("Extracted {Count} speakers for source {SourceId} ({SourceName})",
-                existingSpeakers.Count, sourceId, source.Name);
-
-            return existingSpeakers.Count;
+                SourceMetadataType.Collector_Fellow => await ExtractSpeakersFromFellowSourceAsync(source, organization, cancellationToken),
+                SourceMetadataType.Collector_GoogleDrive => await ExtractSpeakersFromGoogleDriveSourceAsync(source, organization, cancellationToken),
+                _ => await HandleUnsupportedMetadataTypeAsync(source, cancellationToken)
+            };
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error extracting speakers from source {SourceId}", sourceId);
             throw;
         }
+    }
+
+    /// <summary>
+    /// Extracts speakers from a Fellow.ai recording source
+    /// </summary>
+    private async Task<int> ExtractSpeakersFromFellowSourceAsync(Source source, Organization? organization, CancellationToken cancellationToken)
+    {
+        // Deserialize metadata
+        FellowRecordingImportModel? recording;
+        try
+        {
+            recording = JsonSerializer.Deserialize<FellowRecordingImportModel>(source.MetadataJson);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogWarning(ex, "Failed to deserialize Fellow metadata for source {SourceId}. Marking as processed.", source.Id);
+            source.SpeakersExtracted = DateTimeOffset.UtcNow;
+            return 0;
+        }
+
+        if (recording?.Transcript?.SpeechSegments == null || recording.Transcript.SpeechSegments.Count == 0)
+        {
+            _logger.LogDebug("No speech segments found for Fellow source {SourceId}", source.Id);
+            source.SpeakersExtracted = DateTimeOffset.UtcNow;
+            return 0;
+        }
+
+        // Extract unique speaker names with text lengths
+        var speakerData = recording.Transcript.SpeechSegments
+            .Where(s => !string.IsNullOrWhiteSpace(s.Speaker))
+            .Select(s => new { Speaker = RemoveSpeakerSuffixes(s.Speaker!), TextLength = s.Text?.Length ?? 0 })
+            .Where(s => !IsPhoneNumber(s.Speaker))
+            .GroupBy(x => x.Speaker)
+            .Select(g => new { Speaker = g.Key, TotalLength = g.Sum(x => x.TextLength) })
+            .ToList();
+
+        if (speakerData.Count == 0)
+        {
+            _logger.LogDebug("No valid speakers found for Fellow source {SourceId}", source.Id);
+            source.SpeakersExtracted = DateTimeOffset.UtcNow;
+            return 0;
+        }
+
+        var speakerNames = speakerData.Select(x => x.Speaker).ToList();
+
+        _logger.LogDebug("Found {Count} unique speakers for Fellow source {SourceId}: {Speakers}",
+            speakerNames.Count, source.Id, string.Join(", ", speakerNames));
+
+        // Get attendee emails for IsInternal matching
+        var attendeeEmails = recording.Note?.EventAttendees?
+            .Where(a => !string.IsNullOrWhiteSpace(a.Email))
+            .Select(a => a.Email!.ToLowerInvariant())
+            .ToList() ?? new List<string>();
+
+        // Create speaker info list
+        var speakerInfoList = speakerNames.Select(name => new SpeakerInfo
+        {
+            Name = name,
+            Email = null,
+            IsInternal = null
+        }).ToList();
+
+        // Determine IsInternal and Email for each speaker
+        var organizationEmailDomain = organization?.EmailDomain?.ToLowerInvariant();
+        foreach (var speakerInfo in speakerInfoList)
+        {
+            var (isInternal, email) = DetermineIsInternalAndEmail(speakerInfo.Name, attendeeEmails, organizationEmailDomain);
+            speakerInfo.IsInternal = isInternal;
+            speakerInfo.Email = email;
+        }
+
+        // Find or create speakers
+        var speakers = await FindOrCreateSpeakersAsync(speakerInfoList, cancellationToken);
+
+        // Determine primary speaker by total transcript length (prefer internal speakers)
+        var speakerLengths = speakerData.ToDictionary(x => x.Speaker, x => x.TotalLength);
+        var primarySpeaker = speakers
+            .OrderByDescending(x => x.IsInternal == true)
+            .ThenByDescending(x => speakerLengths.ContainsKey(x.Name) ? speakerLengths[x.Name] : 0)
+            .FirstOrDefault();
+
+        // Associate speakers with source
+        await AssociateSpeakersWithSourceAsync(source, speakers, primarySpeaker?.Id, cancellationToken);
+
+        source.SpeakersExtracted = DateTimeOffset.UtcNow;
+
+        _logger.LogInformation("Extracted {Count} speakers for Fellow source {SourceId} ({SourceName})",
+            speakers.Count, source.Id, source.Name);
+
+        return speakers.Count;
+    }
+
+    /// <summary>
+    /// Extracts speakers from a Google Drive video source
+    /// </summary>
+    private async Task<int> ExtractSpeakersFromGoogleDriveSourceAsync(Source source, Organization? organization, CancellationToken cancellationToken)
+    {
+        // Deserialize metadata
+        GoogleDriveVideoImportModel? video;
+        try
+        {
+            video = JsonSerializer.Deserialize<GoogleDriveVideoImportModel>(source.MetadataJson);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogWarning(ex, "Failed to deserialize Google Drive metadata for source {SourceId}. Marking as processed.", source.Id);
+            source.SpeakersExtracted = DateTimeOffset.UtcNow;
+            return 0;
+        }
+
+        if (video == null)
+        {
+            _logger.LogDebug("No video metadata found for Google Drive source {SourceId}", source.Id);
+            source.SpeakersExtracted = DateTimeOffset.UtcNow;
+            return 0;
+        }
+
+        // Google Drive videos have a single speaker - the last modifying user
+        if (string.IsNullOrWhiteSpace(video.LastModifyingUserDisplayName))
+        {
+            _logger.LogDebug("No LastModifyingUserDisplayName found for Google Drive source {SourceId}", source.Id);
+            source.SpeakersExtracted = DateTimeOffset.UtcNow;
+            return 0;
+        }
+
+        var speakerName = video.LastModifyingUserDisplayName.Trim();
+        var speakerEmail = string.IsNullOrWhiteSpace(video.LastModifyingUserEmail) 
+            ? null 
+            : video.LastModifyingUserEmail.ToLowerInvariant();
+
+        Speaker? existingSpeaker = null;
+
+        // If email is missing, try to infer it from existing speakers
+        if (string.IsNullOrWhiteSpace(speakerEmail) && !string.IsNullOrWhiteSpace(organization?.EmailDomain))
+        {
+            var inferredEmail = $"{speakerName.ToLowerInvariant()}@{organization.EmailDomain.ToLowerInvariant()}";
+            
+            // Check if a speaker with this inferred email exists
+            existingSpeaker = await _speakerRepository.Query()
+                .FirstOrDefaultAsync(s => s.Email == inferredEmail, cancellationToken);
+            
+            if (existingSpeaker != null)
+            {
+                speakerEmail = inferredEmail;
+                _logger.LogDebug("Inferred email {Email} for Google Drive source {SourceId} from existing speaker {SpeakerId}",
+                    speakerEmail, source.Id, existingSpeaker.Id);
+            }
+        }
+
+        _logger.LogDebug("Found speaker for Google Drive source {SourceId}: {Speaker} ({Email})",
+            source.Id, speakerName, speakerEmail ?? "no email");
+
+        List<Speaker> speakers;
+
+        // If we found an existing speaker through inference, use it directly
+        if (existingSpeaker != null)
+        {
+            speakers = new List<Speaker> { existingSpeaker };
+        }
+        else
+        {
+            // All Google Drive speakers are marked as internal
+            var isInternal = true;
+
+            // Create speaker info
+            var speakerInfoList = new List<SpeakerInfo>
+            {
+                new SpeakerInfo
+                {
+                    Name = speakerName,
+                    Email = speakerEmail,
+                    IsInternal = isInternal
+                }
+            };
+
+            // Find or create speaker
+            speakers = await FindOrCreateSpeakersAsync(speakerInfoList, cancellationToken);
+        }
+
+        // For Google Drive, the single speaker is always the primary speaker
+        var primarySpeaker = speakers.FirstOrDefault();
+
+        // Associate speaker with source
+        await AssociateSpeakersWithSourceAsync(source, speakers, primarySpeaker?.Id, cancellationToken);
+
+        source.SpeakersExtracted = DateTimeOffset.UtcNow;
+
+        _logger.LogInformation("Extracted {Count} speaker(s) for Google Drive source {SourceId} ({SourceName})",
+            speakers.Count, source.Id, source.Name);
+
+        return speakers.Count;
+    }
+
+    /// <summary>
+    /// Handles sources with unsupported metadata types
+    /// </summary>
+    private async Task<int> HandleUnsupportedMetadataTypeAsync(Source source, CancellationToken cancellationToken)
+    {
+        _logger.LogWarning("Unsupported metadata type {MetadataType} for source {SourceId}. Marking as processed.",
+            source.MetadataType, source.Id);
+        source.SpeakersExtracted = DateTimeOffset.UtcNow;
+        return 0;
+    }
+
+    /// <summary>
+    /// Finds existing speakers or creates new ones based on the provided speaker information
+    /// </summary>
+    private async Task<List<Speaker>> FindOrCreateSpeakersAsync(List<SpeakerInfo> speakerInfoList, CancellationToken cancellationToken)
+    {
+        var speakerNames = speakerInfoList.Select(s => s.Name).ToList();
+
+        // Find existing speakers
+        var existingSpeakers = await _speakerRepository.Query()
+            .Where(sp => speakerNames.Contains(sp.Name))
+            .ToListAsync(cancellationToken);
+
+        var existingSpeakerNames = existingSpeakers.Select(sp => sp.Name).ToHashSet();
+        var newSpeakerInfos = speakerInfoList.Where(info => !existingSpeakerNames.Contains(info.Name)).ToList();
+
+        // Create new speakers
+        foreach (var speakerInfo in newSpeakerInfos)
+        {
+            var speaker = new Speaker
+            {
+                Name = speakerInfo.Name,
+                Email = speakerInfo.Email,
+                IsInternal = speakerInfo.IsInternal,
+                TrustLevel = null
+            };
+            await _speakerRepository.AddAsync(speaker);
+            existingSpeakers.Add(speaker);
+
+            _logger.LogDebug("Created new speaker: {SpeakerName} with IsInternal={IsInternal}, Email={Email}",
+                speakerInfo.Name, speakerInfo.IsInternal?.ToString() ?? "null", speakerInfo.Email ?? "null");
+        }
+
+        return existingSpeakers;
+    }
+
+    /// <summary>
+    /// Associates speakers with a source and sets the primary speaker
+    /// </summary>
+    private async Task AssociateSpeakersWithSourceAsync(Source source, List<Speaker> speakers, Guid? primarySpeakerId, CancellationToken cancellationToken)
+    {
+        // Clear existing associations
+        source.Speakers.Clear();
+
+        // Add new associations
+        foreach (var speaker in speakers)
+        {
+            source.Speakers.Add(speaker);
+        }
+
+        // Set primary speaker if not already set
+        if (source.PrimarySpeakerId == null && primarySpeakerId.HasValue)
+        {
+            source.PrimarySpeakerId = primarySpeakerId;
+        }
+
+        await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Helper class to hold speaker information during processing
+    /// </summary>
+    private class SpeakerInfo
+    {
+        public required string Name { get; set; }
+        public string? Email { get; set; }
+        public bool? IsInternal { get; set; }
     }
 
     /// <summary>
