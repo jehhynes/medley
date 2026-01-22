@@ -1,4 +1,4 @@
-namespace Medley.Application.Models.DTOs;
+namespace Medley.Application.Models.DTOs.Llm;
 
 /// <summary>
 /// Fragment data for tool responses
@@ -43,6 +43,7 @@ public class PlanFragmentData
 public class SourceData
 {
     public required DateTimeOffset Date { get; set; }
+    public required string SourceType { get; set; }
     public string? Scope { get; set; }
     public string? PrimarySpeaker { get; set; }
     public string? TrustLevel { get; set; }

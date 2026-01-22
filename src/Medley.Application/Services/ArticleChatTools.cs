@@ -2,8 +2,12 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Medley.Application.Configuration;
 using Medley.Application.Interfaces;
+using Medley.Application.Models.DTOs;
+using Medley.Application.Models.DTOs.Llm;
+using Medley.Application.Models.DTOs.Llm.Tools;
 using Medley.Application.Services;
 using Medley.Domain.Entities;
 using Medley.Domain.Enums;
@@ -36,6 +40,13 @@ public class ArticleChatTools
     private readonly Guid _currentUserId;
     private readonly ICursorService? _cursorService;
     private readonly IOptions<CursorSettings>? _cursorSettings;
+    
+    private static readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = true
+    };
 
     public ArticleChatTools(
         Guid articleId,
@@ -94,12 +105,12 @@ public class ArticleChatTools
 
             if (string.IsNullOrWhiteSpace(query))
             {
-                return JsonSerializer.Serialize(new
+                var errorResponse = new SearchFragmentsResponse
                 {
-                    success = false,
-                    error = "Query cannot be empty",
-                    fragments = Array.Empty<object>()
-                });
+                    Success = false,
+                    Error = "Query cannot be empty",
+                };
+                return JsonSerializer.Serialize(errorResponse, _jsonOptions);
             }
 
             // Generate embedding for the query
@@ -120,12 +131,12 @@ public class ArticleChatTools
             if (embedding == null)
             {
                 _logger.LogWarning("Failed to generate embedding for query: {Query}", query);
-                return JsonSerializer.Serialize(new
+                var errorResponse = new SearchFragmentsResponse
                 {
-                    success = false,
-                    error = "Failed to generate embedding for query",
-                    fragments = Array.Empty<object>()
-                });
+                    Success = false,
+                    Error = "Failed to generate embedding for query",
+                };
+                return JsonSerializer.Serialize(errorResponse, _jsonOptions);
             }
 
             // Search for similar fragments
@@ -135,70 +146,79 @@ public class ArticleChatTools
                 minSimilarity,
                 cancellationToken);
 
-            var fragments = new List<object>();
+            var fragments = new List<ToolFragmentSearchResult>();
             foreach (var result in results)
             {
                 var fragment = result.RelatedEntity;
                 
                 // Load source information if available
-                string? sourceName = null;
-                string? sourceType = null;
-                DateTimeOffset? sourceDate = null;
+                SourceData? sourceData = null;
 
                 if (fragment.SourceId.HasValue)
                 {
                     var source = await _fragmentRepository.Query()
                         .Where(f => f.Id == fragment.Id)
-                        .Select(f => new { f.Source!.Name, f.Source.Type, f.Source.Date })
+                        .Select(f => new 
+                        { 
+                            f.Source!.Type,
+                            f.Source.Date,
+                            f.Source.IsInternal,
+                            PrimarySpeakerName = f.Source.PrimarySpeaker != null ? f.Source.PrimarySpeaker.Name : null,
+                            TrustLevel = f.Source.PrimarySpeaker != null ? f.Source.PrimarySpeaker.TrustLevel : null,
+                            Tags = f.Source.Tags.Select(t => new { t.TagType.Name, t.Value }).ToList()
+                        })
                         .FirstOrDefaultAsync(cancellationToken);
                     
                     if (source != null)
                     {
-                        sourceName = source.Name;
-                        sourceType = source.Type.ToString();
-                        sourceDate = source.Date;
+                        sourceData = new SourceData
+                        {
+                            Date = source.Date.Date,
+                            SourceType = source.Type.ToString(),
+                            Scope = source.IsInternal == true ? "Internal" : source.IsInternal == false ? "External" : null,
+                            PrimarySpeaker = source.PrimarySpeakerName,
+                            TrustLevel = source.TrustLevel?.ToString(),
+                            Tags = source.Tags.Select(t => new TagData
+                            {
+                                Type = t.Name,
+                                Value = t.Value
+                            }).ToList()
+                        };
                     }
                 }
 
-                fragments.Add(new
+                fragments.Add(new ToolFragmentSearchResult
                 {
-                    id = fragment.Id,
-                    title = fragment.Title,
-                    summary = fragment.Summary,
-                    category = fragment.Category,
-                    content = fragment.Content,
-                    similarityScore = Math.Round(1.0 - (result.Distance / 2.0), 3), // Convert distance to similarity (0-1 scale)
-                    distance = Math.Round(result.Distance, 3),
-                    source = new
-                    {
-                        name = sourceName,
-                        type = sourceType,
-                        date = sourceDate
-                    }
+                    Id = fragment.Id,
+                    Title = fragment.Title,
+                    Summary = fragment.Summary,
+                    Category = fragment.Category,
+                    SimilarityScore = result.Similarity,
+                    Confidence = fragment.Confidence?.ToString(),
+                    ConfidenceComment = fragment.ConfidenceComment,
+                    Source = sourceData
                 });
             }
 
-            var response = new
+            var response = new SearchFragmentsResponse
             {
-                success = true,
-                query = query,
-                resultsCount = fragments.Count,
-                fragments = fragments
+                Success = true,
+                Fragments = fragments
             };
 
             _logger.LogInformation("Found {Count} fragments for query: {Query}", fragments.Count, query);
 
-            return JsonSerializer.Serialize(response, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(response, _jsonOptions);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error searching fragments with query: {Query}", query);
-            return JsonSerializer.Serialize(new
+            var errorResponse = new SearchFragmentsResponse
             {
-                success = false,
-                error = $"Error searching fragments: {ex.Message}",
-                fragments = Array.Empty<object>()
-            });
+                Success = false,
+                Error = $"Error searching fragments: {ex.Message}",
+            };
+            return JsonSerializer.Serialize(errorResponse, _jsonOptions);
         }
     }
 
@@ -225,12 +245,12 @@ public class ArticleChatTools
             if (article == null)
             {
                 _logger.LogWarning("Article not found: {ArticleId}", _articleId);
-                return JsonSerializer.Serialize(new
+                var errorResponse = new FindSimilarFragmentsResponse
                 {
-                    success = false,
-                    error = "Article not found",
-                    fragments = Array.Empty<object>()
-                });
+                    Success = false,
+                    Error = "Article not found",
+                };
+                return JsonSerializer.Serialize(errorResponse, _jsonOptions);
             }
 
             // Build text for embedding from article content
@@ -239,14 +259,12 @@ public class ArticleChatTools
             if (string.IsNullOrWhiteSpace(textForEmbedding))
             {
                 _logger.LogWarning("Article has no content to search with: {ArticleId}", _articleId);
-                return JsonSerializer.Serialize(new
+                var errorResponse = new FindSimilarFragmentsResponse
                 {
-                    success = false,
-                    error = "Article has no content to search with",
-                    articleId = _articleId,
-                    articleTitle = article.Title,
-                    fragments = Array.Empty<object>()
-                });
+                    Success = false,
+                    Error = "Article has no content to search with"
+                };
+                return JsonSerializer.Serialize(errorResponse, _jsonOptions);
             }
 
             // Generate embedding for the article content
@@ -267,12 +285,12 @@ public class ArticleChatTools
             if (embedding == null)
             {
                 _logger.LogWarning("Failed to generate embedding for article: {ArticleId}", _articleId);
-                return JsonSerializer.Serialize(new
+                var errorResponse = new FindSimilarFragmentsResponse
                 {
-                    success = false,
-                    error = "Failed to generate embedding for article content",
-                    fragments = Array.Empty<object>()
-                });
+                    Success = false,
+                    Error = "Failed to generate embedding for article content",
+                };
+                return JsonSerializer.Serialize(errorResponse, _jsonOptions);
             }
 
             // Search for similar fragments
@@ -282,71 +300,79 @@ public class ArticleChatTools
                 minSimilarity,
                 cancellationToken);
 
-            var fragments = new List<object>();
+            var fragments = new List<ToolFragmentSearchResult>();
             foreach (var result in results)
             {
                 var fragment = result.RelatedEntity;
                 
                 // Load source information if available
-                string? sourceName = null;
-                string? sourceType = null;
-                DateTimeOffset? sourceDate = null;
+                SourceData? sourceData = null;
 
                 if (fragment.SourceId.HasValue)
                 {
                     var source = await _fragmentRepository.Query()
                         .Where(f => f.Id == fragment.Id)
-                        .Select(f => new { f.Source!.Name, f.Source.Type, f.Source.Date })
+                        .Select(f => new 
+                        { 
+                            f.Source!.Type,
+                            f.Source.Date,
+                            f.Source.IsInternal,
+                            PrimarySpeakerName = f.Source.PrimarySpeaker != null ? f.Source.PrimarySpeaker.Name : null,
+                            TrustLevel = f.Source.PrimarySpeaker != null ? f.Source.PrimarySpeaker.TrustLevel : null,
+                            Tags = f.Source.Tags.Select(t => new { t.TagType.Name, t.Value }).ToList()
+                        })
                         .FirstOrDefaultAsync(cancellationToken);
                     
                     if (source != null)
                     {
-                        sourceName = source.Name;
-                        sourceType = source.Type.ToString();
-                        sourceDate = source.Date;
+                        sourceData = new SourceData
+                        {
+                            Date = source.Date.Date,
+                            SourceType = source.Type.ToString(),
+                            Scope = source.IsInternal == true ? "Internal" : source.IsInternal == false ? "External" : null,
+                            PrimarySpeaker = source.PrimarySpeakerName,
+                            TrustLevel = source.TrustLevel?.ToString(),
+                            Tags = source.Tags.Select(t => new TagData
+                            {
+                                Type = t.Name,
+                                Value = t.Value
+                            }).ToList()
+                        };
                     }
                 }
 
-                fragments.Add(new
+                fragments.Add(new ToolFragmentSearchResult
                 {
-                    id = fragment.Id,
-                    title = fragment.Title,
-                    summary = fragment.Summary,
-                    category = fragment.Category,
-                    content = fragment.Content,
-                    similarityScore = Math.Round(1.0 - (result.Distance / 2.0), 3), // Convert distance to similarity (0-1 scale)
-                    distance = Math.Round(result.Distance, 3),
-                    source = new
-                    {
-                        name = sourceName,
-                        type = sourceType,
-                        date = sourceDate
-                    }
+                    Id = fragment.Id,
+                    Title = fragment.Title,
+                    Summary = fragment.Summary,
+                    Category = fragment.Category,
+                    SimilarityScore = result.Similarity,
+                    Confidence = fragment.Confidence?.ToString(),
+                    ConfidenceComment = fragment.ConfidenceComment,
+                    Source = sourceData
                 });
             }
 
-            var response = new
+            var response = new FindSimilarFragmentsResponse
             {
-                success = true,
-                articleId = _articleId,
-                articleTitle = article.Title,
-                resultsCount = fragments.Count,
-                fragments = fragments
+                Success = true,
+                Fragments = fragments
             };
 
             _logger.LogInformation("Found {Count} similar fragments for article: {ArticleId}", fragments.Count, _articleId);
 
-            return JsonSerializer.Serialize(response, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(response, _jsonOptions);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error finding similar fragments for article: {ArticleId}", _articleId);
-            return JsonSerializer.Serialize(new
+            var errorResponse = new FindSimilarFragmentsResponse
             {
-                success = false,
-                error = $"Error finding similar fragments: {ex.Message}",
-                fragments = Array.Empty<object>()
-            });
+                Success = false,
+                Error = $"Error finding similar fragments: {ex.Message}",
+            };
+            return JsonSerializer.Serialize(errorResponse, _jsonOptions);
         }
     }
 
@@ -396,49 +422,67 @@ public class ArticleChatTools
 
             var fragment = await _fragmentRepository.Query()
                 .Include(f => f.Source)
+                    .ThenInclude(s => s!.Tags)
+                        .ThenInclude(t => t.TagType)
+                .Include(f => f.Source)
+                    .ThenInclude(s => s!.PrimarySpeaker)
                 .FirstOrDefaultAsync(f => f.Id == fragmentId, cancellationToken);
 
             if (fragment == null)
             {
-                return JsonSerializer.Serialize(new
+                var errorResponse = new GetFragmentResponse
                 {
-                    success = false,
-                    error = "Fragment not found"
-                });
+                    Success = false,
+                    Error = "Fragment not found"
+                };
+                return JsonSerializer.Serialize(errorResponse, _jsonOptions);
             }
 
-            var response = new
+            SourceData? sourceData = null;
+            if (fragment.Source != null)
             {
-                success = true,
-                fragment = new
+                sourceData = new SourceData
                 {
-                    id = fragment.Id,
-                    title = fragment.Title,
-                    summary = fragment.Summary,
-                    category = fragment.Category,
-                    content = fragment.Content,
-                    confidence = fragment.Confidence?.ToString(),
-                    confidenceComment = fragment.ConfidenceComment,
-                    source = fragment.Source != null ? new
+                    Date = fragment.Source.Date.Date,
+                    SourceType = fragment.Source.Type.ToString(),
+                    Scope = fragment.Source.IsInternal == true ? "Internal" : fragment.Source.IsInternal == false ? "External" : null,
+                    PrimarySpeaker = fragment.Source.PrimarySpeaker?.Name,
+                    TrustLevel = fragment.Source.PrimarySpeaker?.TrustLevel?.ToString(),
+                    Tags = fragment.Source.Tags.Select(t => new TagData
                     {
-                        id = fragment.Source.Id,
-                        name = fragment.Source.Name,
-                        type = fragment.Source.Type.ToString(),
-                        date = fragment.Source.Date
-                    } : null
+                        Type = t.TagType.Name,
+                        Value = t.Value
+                    }).ToList()
+                };
+            }
+
+            var response = new GetFragmentResponse
+            {
+                Success = true,
+                Fragment = new FragmentWithContentData
+                {
+                    Id = fragment.Id,
+                    Title = fragment.Title,
+                    Summary = fragment.Summary,
+                    Category = fragment.Category,
+                    Content = fragment.Content,
+                    Confidence = fragment.Confidence?.ToString(),
+                    ConfidenceComment = fragment.ConfidenceComment,
+                    Source = sourceData
                 }
             };
 
-            return JsonSerializer.Serialize(response, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(response, _jsonOptions);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting fragment content: {FragmentId}", fragmentId);
-            return JsonSerializer.Serialize(new
+            var errorResponse = new GetFragmentResponse
             {
-                success = false,
-                error = $"Error getting fragment: {ex.Message}"
-            });
+                Success = false,
+                Error = $"Error getting fragment: {ex.Message}"
+            };
+            return JsonSerializer.Serialize(errorResponse, _jsonOptions);
         }
     }
 
@@ -458,20 +502,22 @@ public class ArticleChatTools
             // Validate request
             if (string.IsNullOrWhiteSpace(request.Instructions))
             {
-                return JsonSerializer.Serialize(new
+                var errorResponse = new CreatePlanResponse
                 {
-                    success = false,
-                    error = "Instructions cannot be empty"
-                });
+                    Success = false,
+                    Error = "Instructions cannot be empty"
+                };
+                return JsonSerializer.Serialize(errorResponse, _jsonOptions);
             }
 
             if (request.Recommendations == null || request.Recommendations.Length == 0)
             {
-                return JsonSerializer.Serialize(new
+                var errorResponse = new CreatePlanResponse
                 {
-                    success = false,
-                    error = "At least one fragment recommendation is required"
-                });
+                    Success = false,
+                    Error = "At least one fragment recommendation is required"
+                };
+                return JsonSerializer.Serialize(errorResponse, _jsonOptions);
             }
 
             // Get existing draft plan (if any) to determine version and parent
@@ -562,21 +608,23 @@ public class ArticleChatTools
 
             _logger.LogInformation("Created plan {PlanId} for article {ArticleId}", plan.Id, _articleId);
 
-            return JsonSerializer.Serialize(new
+            var response = new CreatePlanResponse
             {
-                success = true,
-                planId = plan.Id,
-                message = $"Created plan with {request.Recommendations.Length} fragment recommendations"
-            });
+                Success = true,
+                PlanId = plan.Id,
+                Message = $"Created plan with {request.Recommendations.Length} fragment recommendations"
+            };
+            return JsonSerializer.Serialize(response, _jsonOptions);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating plan for article: {ArticleId}", _articleId);
-            return JsonSerializer.Serialize(new
+            var errorResponse = new CreatePlanResponse
             {
-                success = false,
-                error = $"Error creating plan: {ex.Message}"
-            });
+                Success = false,
+                Error = $"Error creating plan: {ex.Message}"
+            };
+            return JsonSerializer.Serialize(errorResponse, _jsonOptions);
         }
     }
 
@@ -596,11 +644,12 @@ public class ArticleChatTools
             // Validate request
             if (string.IsNullOrWhiteSpace(request.Content))
             {
-                return JsonSerializer.Serialize(new
+                var errorResponse = new CreateArticleVersionResponse
                 {
-                    success = false,
-                    error = "Content cannot be empty"
-                });
+                    Success = false,
+                    Error = "Content cannot be empty"
+                };
+                return JsonSerializer.Serialize(errorResponse, _jsonOptions);
             }
 
             // Create AI version using the service
@@ -626,31 +675,34 @@ public class ArticleChatTools
             
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            return JsonSerializer.Serialize(new
+            var response = new CreateArticleVersionResponse
             {
-                success = true,
-                versionId = versionDto.Id,
-                versionNumber = versionDto.VersionNumber,
-                message = $"Created AI version {versionDto.VersionNumber} of the article"
-            });
+                Success = true,
+                VersionId = versionDto.Id,
+                VersionNumber = versionDto.VersionNumber,
+                Message = $"Created AI version {versionDto.VersionNumber} of the article"
+            };
+            return JsonSerializer.Serialize(response, _jsonOptions);
         }
         catch (InvalidOperationException ex)
         {
             _logger.LogWarning(ex, "Invalid operation creating article version for article: {ArticleId}", _articleId);
-            return JsonSerializer.Serialize(new
+            var errorResponse = new CreateArticleVersionResponse
             {
-                success = false,
-                error = ex.Message
-            });
+                Success = false,
+                Error = ex.Message
+            };
+            return JsonSerializer.Serialize(errorResponse, _jsonOptions);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating article version for article: {ArticleId}", _articleId);
-            return JsonSerializer.Serialize(new
+            var errorResponse = new CreateArticleVersionResponse
             {
-                success = false,
-                error = $"Error creating article version: {ex.Message}"
-            });
+                Success = false,
+                Error = $"Error creating article version: {ex.Message}"
+            };
+            return JsonSerializer.Serialize(errorResponse, _jsonOptions);
         }
     }
 
@@ -669,20 +721,22 @@ public class ArticleChatTools
             // Check if Cursor is enabled
             if (_cursorSettings?.Value?.Enabled != true)
             {
-                return JsonSerializer.Serialize(new
+                var errorResponse = new ReviewArticleWithCursorResponse
                 {
-                    success = false,
-                    error = "Cursor integration is not enabled"
-                });
+                    Success = false,
+                    Error = "Cursor integration is not enabled"
+                };
+                return JsonSerializer.Serialize(errorResponse, _jsonOptions);
             }
 
             if (_cursorService == null)
             {
-                return JsonSerializer.Serialize(new
+                var errorResponse = new ReviewArticleWithCursorResponse
                 {
-                    success = false,
-                    error = "Cursor service is not available"
-                });
+                    Success = false,
+                    Error = "Cursor service is not available"
+                };
+                return JsonSerializer.Serialize(errorResponse, _jsonOptions);
             }
 
             // Load article
@@ -693,11 +747,12 @@ public class ArticleChatTools
             if (article == null)
             {
                 _logger.LogWarning("Article not found: {ArticleId}", _articleId);
-                return JsonSerializer.Serialize(new
+                var errorResponse = new ReviewArticleWithCursorResponse
                 {
-                    success = false,
-                    error = "Article not found"
-                });
+                    Success = false,
+                    Error = "Article not found"
+                };
+                return JsonSerializer.Serialize(errorResponse, _jsonOptions);
             }
 
             // Call CursorService to review the article
@@ -709,11 +764,12 @@ public class ArticleChatTools
             if (!result.Success)
             {
                 _logger.LogError("Cursor review failed: {Error}", result.Error);
-                return JsonSerializer.Serialize(new
+                var errorResponse = new ReviewArticleWithCursorResponse
                 {
-                    success = false,
-                    error = result.Error
-                });
+                    Success = false,
+                    Error = result.Error
+                };
+                return JsonSerializer.Serialize(errorResponse, _jsonOptions);
             }
 
             // Create new article version with improved content
@@ -733,24 +789,26 @@ public class ArticleChatTools
             _logger.LogInformation("Created version {VersionNumber} for article {ArticleId} with Cursor improvements", 
                 versionDto.VersionNumber, _articleId);
 
-            return JsonSerializer.Serialize(new
+            var response = new ReviewArticleWithCursorResponse
             {
-                success = true,
-                versionId = versionDto.Id,
-                versionNumber = versionDto.VersionNumber,
-                improvedContent = result.ImprovedContent,
-                changesSummary = result.ChangesSummary,
-                message = $"Created version {versionDto.VersionNumber} with Cursor improvements"
-            }, new JsonSerializerOptions { WriteIndented = true });
+                Success = true,
+                VersionId = versionDto.Id,
+                VersionNumber = versionDto.VersionNumber,
+                ImprovedContent = result.ImprovedContent,
+                ChangesSummary = result.ChangesSummary,
+                Message = $"Created version {versionDto.VersionNumber} with Cursor improvements"
+            };
+            return JsonSerializer.Serialize(response, _jsonOptions);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during Cursor review for article: {ArticleId}", _articleId);
-            return JsonSerializer.Serialize(new
+            var errorResponse = new ReviewArticleWithCursorResponse
             {
-                success = false,
-                error = $"Error during Cursor review: {ex.Message}"
-            });
+                Success = false,
+                Error = $"Error during Cursor review: {ex.Message}"
+            };
+            return JsonSerializer.Serialize(errorResponse, _jsonOptions);
         }
     }
 
@@ -769,29 +827,32 @@ public class ArticleChatTools
             // Check if Cursor is enabled
             if (_cursorSettings?.Value?.Enabled != true)
             {
-                return JsonSerializer.Serialize(new
+                var errorResponse = new AskQuestionWithCursorResponse
                 {
-                    success = false,
-                    error = "Cursor integration is not enabled"
-                });
+                    Success = false,
+                    Error = "Cursor integration is not enabled"
+                };
+                return JsonSerializer.Serialize(errorResponse, _jsonOptions);
             }
 
             if (_cursorService == null)
             {
-                return JsonSerializer.Serialize(new
+                var errorResponse = new AskQuestionWithCursorResponse
                 {
-                    success = false,
-                    error = "Cursor service is not available"
-                });
+                    Success = false,
+                    Error = "Cursor service is not available"
+                };
+                return JsonSerializer.Serialize(errorResponse, _jsonOptions);
             }
 
             if (string.IsNullOrWhiteSpace(question))
             {
-                return JsonSerializer.Serialize(new
+                var errorResponse = new AskQuestionWithCursorResponse
                 {
-                    success = false,
-                    error = "Question cannot be empty"
-                });
+                    Success = false,
+                    Error = "Question cannot be empty"
+                };
+                return JsonSerializer.Serialize(errorResponse, _jsonOptions);
             }
 
             // Call CursorService to ask the question
@@ -800,101 +861,32 @@ public class ArticleChatTools
             if (!result.Success)
             {
                 _logger.LogError("Cursor question failed: {Error}", result.Error);
-                return JsonSerializer.Serialize(new
+                var errorResponse = new AskQuestionWithCursorResponse
                 {
-                    success = false,
-                    error = result.Error
-                });
+                    Success = false,
+                    Error = result.Error
+                };
+                return JsonSerializer.Serialize(errorResponse, _jsonOptions);
             }
 
             _logger.LogInformation("Cursor question completed successfully for article {ArticleId}", _articleId);
 
-            return JsonSerializer.Serialize(new
+            var response = new AskQuestionWithCursorResponse
             {
-                success = true,
-                response = result.Response,
-                question = question
-            }, new JsonSerializerOptions { WriteIndented = true });
+                Success = true,
+                Response = result.Response
+            };
+            return JsonSerializer.Serialize(response, _jsonOptions);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during Cursor question for article: {ArticleId}", _articleId);
-            return JsonSerializer.Serialize(new
+            var errorResponse = new AskQuestionWithCursorResponse
             {
-                success = false,
-                error = $"Error asking Cursor question: {ex.Message}"
-            });
+                Success = false,
+                Error = $"Error asking Cursor question: {ex.Message}"
+            };
+            return JsonSerializer.Serialize(errorResponse, _jsonOptions);
         }
     }
-}
-
-/// <summary>
-/// Request for creating an article improvement plan
-/// </summary>
-public class CreatePlanRequest
-{
-    /// <summary>
-    /// Overall instructions for how to improve the article using the recommended fragments
-    /// </summary>
-    [Description("Overall instructions for how to improve the article using the recommended fragments")]
-    [Required]
-    public required string Instructions { get; set; }
-
-    /// <summary>
-    /// Array of fragment recommendations
-    /// </summary>
-    [Description("Array of fragment recommendations")]
-    [Required]
-    [MinLength(1)]
-    public required PlanFragmentRecommendation[] Recommendations { get; set; }
-
-    /// <summary>
-    /// Optional summary of changes if this is a modification of an existing plan
-    /// </summary>
-    [Description("Optional summary of changes if this is a modification of an existing plan")]
-    [MaxLength(500)]
-    public string? ChangesSummary { get; set; }
-}
-
-/// <summary>
-/// Represents a fragment recommendation for a plan
-/// </summary>
-public class PlanFragmentRecommendation
-{
-    [Description("The unique identifier of the fragment being recommended")]
-    public Guid FragmentId { get; set; }
-    
-    [Description("The similarity score between the fragment and the article (0.0 to 1.0)")]
-    public double SimilarityScore { get; set; }
-    
-    [Description("Whether to include this fragment in the article improvement (true) or exclude it (false)")]
-    public bool Include { get; set; }
-
-    [Required]
-    [Description("Explanation of why this fragment should not be included in the article. Omit if Include=true")]
-    [MaxLength(200)]
-    public required string Reasoning { get; set; }
-
-    [Required]
-    [Description("Optional instructions on how to incorporate this fragment into the article")]
-    [MaxLength(200)]
-    public required string Instructions { get; set; }
-}
-
-public class CreateArticleVersionRequest
-{
-    /// <summary>
-    /// The complete improved article content
-    /// </summary>
-    [Description("The complete improved article content")]
-    [Required]
-    public required string Content { get; set; }
-
-    /// <summary>
-    /// Description of changes made in this version
-    /// </summary>
-    [Description("Description of changes made in this version")]
-    [Required]
-    [MaxLength(200)]
-    public required string ChangeMessage { get; set; }
 }

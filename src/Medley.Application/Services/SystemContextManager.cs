@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Medley.Application.Interfaces;
-using Medley.Application.Models.DTOs;
+using Medley.Application.Models.DTOs.Llm;
 using Medley.Domain.Entities;
 using Medley.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -17,6 +17,7 @@ public class SystemContextManager
     private readonly IRepository<Article> _articleRepository;
     private readonly IRepository<Plan> _planRepository;
     private readonly IRepository<AiPrompt> _promptRepository;
+    private readonly IRepository<ArticleVersion> _versionRepository;
     private readonly ILogger<SystemContextManager> _logger;
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -28,11 +29,13 @@ public class SystemContextManager
         IRepository<Article> articleRepository,
         IRepository<Plan> planRepository,
         IRepository<AiPrompt> promptRepository,
+        IRepository<ArticleVersion> versionRepository,
         ILogger<SystemContextManager> logger)
     {
         _articleRepository = articleRepository;
         _planRepository = planRepository;
         _promptRepository = promptRepository;
+        _versionRepository = versionRepository;
         _logger = logger;
     }
 
@@ -109,6 +112,31 @@ public class SystemContextManager
             Content = article.Content ?? "(No content yet)"
         };
 
+        // 2b. Include latest AI draft version if it exists
+        var latestAiDraft = await _versionRepository.Query()
+            .Include(v => v.ParentVersion)
+            .Where(v => v.ArticleId == articleId && v.VersionType == VersionType.AI)
+            .OrderByDescending(v => v.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (latestAiDraft != null && latestAiDraft.ReviewAction == ReviewAction.None) //Only include if it's a Pending AI draft 
+        {
+            var versionNumber = latestAiDraft.ParentVersion != null
+                ? $"{latestAiDraft.ParentVersion.VersionNumber}.{latestAiDraft.VersionNumber}"
+                : latestAiDraft.VersionNumber.ToString();
+
+            promptData.Article.LatestAiDraft = new AiDraftData
+            {
+                VersionNumber = versionNumber,
+                Content = latestAiDraft.ContentSnapshot,
+                ChangeMessage = latestAiDraft.ChangeMessage,
+                CreatedAt = latestAiDraft.CreatedAt,
+            };
+
+            _logger.LogDebug("Included latest AI draft version {VersionNumber} for article {ArticleId}",
+                versionNumber, articleId);
+        }
+
         // 2a. Add article type guidance (if article has a type)
         if (article.ArticleType != null)
         {
@@ -168,6 +196,7 @@ public class SystemContextManager
                                 ? new SourceData
                                 {
                                     Date = pf.Fragment.Source.Date.Date,
+                                    SourceType = pf.Fragment.Source.Type.ToString(),
                                     Scope = pf.Fragment.Source.IsInternal == true ? "Internal" : pf.Fragment.Source.IsInternal == false ? "External" : null,
                                     PrimarySpeaker = pf.Fragment.Source.PrimarySpeaker?.Name,
                                     TrustLevel = pf.Fragment.Source.PrimarySpeaker?.TrustLevel?.ToString(),
@@ -216,6 +245,15 @@ public class SystemContextManager
         public required string? Summary { get; set; }
         public required string Status { get; set; }
         public required string Content { get; set; }
+        public AiDraftData? LatestAiDraft { get; set; }
+    }
+
+    private class AiDraftData
+    {
+        public required string VersionNumber { get; set; }
+        public required string Content { get; set; }
+        public string? ChangeMessage { get; set; }
+        public DateTimeOffset CreatedAt { get; set; }
     }
 
     private class PlanData
