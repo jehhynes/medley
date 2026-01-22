@@ -147,7 +147,10 @@ public class ArticleChatService : IArticleChatService
                 : conversation.ImplementingPlanId.HasValue
                     ? PromptType.ArticlePlanImplementation
                     : PromptType.ArticleAgentMode;
-            
+
+            // Create the message store for persistence
+            var messageStore = CreateMessageStore(conversationId);
+
             // Build system prompt using contextManager
             var systemMessage = await _contextManager.BuildPromptAsync(
                 conversation.ArticleId,
@@ -155,13 +158,11 @@ public class ArticleChatService : IArticleChatService
                 conversation.Mode,
                 latestUserMessage.User.FullName,
                 conversation.ImplementingPlanId,
+                messageStore,
                 cancellationToken);
             
             var aiFunctions = CreateFunctions(tools, conversation.Mode);
-            
-            // Create the message store for persistence
-            var messageStore = CreateMessageStore(conversationId);
-            
+
             // Create the agent with appropriate system message and tools
             var agent = CreateChatAgent(systemMessage, aiFunctions);
 
