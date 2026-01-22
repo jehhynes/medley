@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Medley.Application.Interfaces;
+using Medley.Application.Models.DTOs;
 using Medley.Domain.Entities;
 using Medley.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -138,6 +139,10 @@ public class SystemContextManager
                         .ThenInclude(f => f.Source)
                             .ThenInclude(s => s!.Tags)
                                 .ThenInclude(t => t.TagType)
+                .Include(p => p.PlanFragments.Where(pf => pf.Include))
+                    .ThenInclude(pf => pf.Fragment)
+                        .ThenInclude(f => f.Source)
+                            .ThenInclude(s => s!.PrimarySpeaker)
                 .FirstOrDefaultAsync(p => p.Id == planId.Value, cancellationToken);
 
             if (plan != null)
@@ -150,11 +155,12 @@ public class SystemContextManager
                     Instructions = plan.Instructions,
                     Fragments = includedFragments
                         .OrderByDescending(x => x.SimilarityScore)
-                        .Select(pf => new FragmentData
+                        .Select(pf => new PlanFragmentData
                         {
                             Id = pf.Fragment.Id,
                             Title = pf.Fragment.Title,
                             Summary = pf.Fragment.Summary,
+                            Category = pf.Fragment.Category,
                             Content = pf.Fragment.Content,
                             Instructions = pf.Instructions,
                             Confidence = pf.Fragment.Confidence?.ToString(),
@@ -163,6 +169,8 @@ public class SystemContextManager
                                 {
                                     Date = pf.Fragment.Source.Date.Date,
                                     Scope = pf.Fragment.Source.IsInternal == true ? "Internal" : pf.Fragment.Source.IsInternal == false ? "External" : null,
+                                    PrimarySpeaker = pf.Fragment.Source.PrimarySpeaker?.Name,
+                                    TrustLevel = pf.Fragment.Source.PrimarySpeaker?.TrustLevel?.ToString(),
                                     Tags = pf.Fragment.Source.Tags.Select(t => new TagData
                                     {
                                         Type = t.TagType.Name,
@@ -214,30 +222,6 @@ public class SystemContextManager
     {
         public Guid Id { get; set; }
         public required string Instructions { get; set; }
-        public List<FragmentData> Fragments { get; set; } = new();
-    }
-
-    private class FragmentData
-    {
-        public required Guid Id { get; set; }
-        public required string Title { get; set; }
-        public string? Summary { get; set; }
-        public required string Content { get; set; }
-        public string? Instructions { get; set; }
-        public string? Confidence { get; set; }
-        public SourceData? Source { get; set; }
-    }
-
-    private class SourceData
-    {
-        public required DateTimeOffset Date { get; set; }
-        public string? Scope { get; set; }
-        public List<TagData> Tags { get; set; } = new();
-    }
-
-    private class TagData
-    {
-        public required string Type { get; set; }
-        public required string Value { get; set; }
+        public List<PlanFragmentData> Fragments { get; set; } = new();
     }
 }
