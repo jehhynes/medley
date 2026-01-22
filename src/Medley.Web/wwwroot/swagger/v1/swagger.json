@@ -3929,7 +3929,22 @@
             "nullable": true
           },
           "content": {
-            "type": "string"
+            "type": "string",
+            "nullable": true
+          },
+          "speechSegments": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "$ref": "#/components/schemas/SpeechSegmentDto"
+            }
+          },
+          "speakers": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "$ref": "#/components/schemas/SpeakerDto"
+            }
           },
           "metadataJson": {
             "type": "string"
@@ -3998,6 +4013,47 @@
           "Collector_GoogleDrive",
           "Collector_Fellow"
         ]
+      },
+      "SpeechSegmentDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "speakerId": {
+            "type": "string",
+            "format": "guid"
+          },
+          "speakerName": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "SpeakerDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "isInternal": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "trustLevel": {
+            "type": "string",
+            "nullable": true
+          }
+        }
       },
       "SourceTagDto": {
         "type": "object",

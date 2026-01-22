@@ -153,7 +153,31 @@
 
         <div class="tab-content">
           <div class="tab-pane show active" id="content-pane" role="tabpanel" aria-labelledby="content-tab">
-            <div v-if="selectedSource.content">
+            <!-- Fellow sources with speech segments -->
+            <div v-if="selectedSource.speechSegments && selectedSource.speechSegments.length > 0">
+              <div 
+                v-for="(segment, index) in selectedSource.speechSegments" 
+                :key="index"
+                class="speech-segment">
+                <span 
+                  class="badge me-1"
+                  :class="getSpeakerInfo(segment.speakerId)?.isInternal ? 'bg-primary' : 'bg-primary-subtle text-primary-emphasis'">
+                  <span v-if="getSpeakerInfo(segment.speakerId)?.isInternal">
+                    <i 
+                      class="bi me-1" 
+                      :class="getSpeakerInfo(segment.speakerId)?.trustLevel ? 'bi-shield-check ' + getTrustLevelClass(getSpeakerInfo(segment.speakerId)?.trustLevel) : 'bi-shield'"
+                    ></i>
+                  </span>
+                  <span v-else>
+                    <i class="bi bi-globe me-1"></i>
+                  </span>
+                  {{ segment.speakerName }}
+                </span>
+                {{ segment.text }}
+              </div>
+            </div>
+            <!-- Other sources with plain content -->
+            <div v-else-if="selectedSource.content">
               <div class="content-preview">
                 {{ selectedSource.content }}
               </div>
@@ -596,6 +620,11 @@ const getTrustLevelClass = (trustLevel: string | null): string => {
   }
 };
 
+const getSpeakerInfo = (speakerId: string) => {
+  if (!selectedSource.value?.speakers) return null;
+  return selectedSource.value.speakers.find(s => s.id === speakerId);
+};
+
 // Lifecycle hooks
 onMounted(async () => {
   markdownRenderer.value = initializeMarkdownRenderer();
@@ -745,5 +774,10 @@ json-viewer {
 /* Tag filtering styles */
 .badge[style*="cursor: pointer"]:hover {
   text-decoration: underline;
+}
+
+/* Speech segment styles - minimalistic */
+.speech-segment {
+  margin-bottom: .5rem;
 }
 </style>

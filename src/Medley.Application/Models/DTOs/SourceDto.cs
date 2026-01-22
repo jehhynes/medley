@@ -35,7 +35,17 @@ public class SourceDto
     /// <summary>
     /// Text content of the source (e.g., transcript data)
     /// </summary>
-    public required string Content { get; set; }
+    public string? Content { get; set; }
+
+    /// <summary>
+    /// Speech segments for Fellow sources (replaces Content when available)
+    /// </summary>
+    public List<SpeechSegmentDto>? SpeechSegments { get; set; }
+
+    /// <summary>
+    /// Speakers in this source
+    /// </summary>
+    public List<SpeakerDto>? Speakers { get; set; }
 
     /// <summary>
     /// JSON metadata from the external source
@@ -225,4 +235,56 @@ public class TaggingResponse
     /// Number of tags generated
     /// </summary>
     public required int TagCount { get; set; }
+}
+
+/// <summary>
+/// Speech segment from a Fellow source
+/// </summary>
+public class SpeechSegmentDto
+{
+    /// <summary>
+    /// Speaker ID
+    /// </summary>
+    public required Guid SpeakerId { get; set; }
+
+    /// <summary>
+    /// Speaker name
+    /// </summary>
+    public required string SpeakerName { get; set; }
+
+    /// <summary>
+    /// Merged text content from adjacent segments by the same speaker
+    /// </summary>
+    public required string Text { get; set; }
+}
+
+/// <summary>
+/// Speaker information
+/// </summary>
+public class SpeakerDto
+{
+    /// <summary>
+    /// Speaker ID
+    /// </summary>
+    public required Guid Id { get; set; }
+
+    /// <summary>
+    /// Speaker name
+    /// </summary>
+    public required string Name { get; set; }
+
+    /// <summary>
+    /// Speaker email
+    /// </summary>
+    public string? Email { get; set; }
+
+    /// <summary>
+    /// Whether the speaker is internal
+    /// </summary>
+    public bool? IsInternal { get; set; }
+
+    /// <summary>
+    /// Trust level
+    /// </summary>
+    public string? TrustLevel { get; set; }
 }

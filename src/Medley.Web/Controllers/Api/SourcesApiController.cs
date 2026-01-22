@@ -1,11 +1,15 @@
 using Hangfire;
+using Medley.Application.Integrations.Models.Collector;
 using Medley.Application.Interfaces;
 using Medley.Application.Jobs;
 using Medley.Application.Models.DTOs;
 using Medley.Domain.Entities;
+using Medley.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace Medley.Web.Controllers.Api;
 
@@ -17,6 +21,7 @@ public class SourcesApiController : ControllerBase
 {
     private readonly IRepository<Source> _sourceRepository;
     private readonly IRepository<TagType> _tagTypeRepository;
+    private readonly IRepository<Speaker> _speakerRepository;
     private readonly ITaggingService _taggingService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IBackgroundJobClient _backgroundJobClient;
@@ -25,6 +30,7 @@ public class SourcesApiController : ControllerBase
     public SourcesApiController(
         IRepository<Source> sourceRepository,
         IRepository<TagType> tagTypeRepository,
+        IRepository<Speaker> speakerRepository,
         ITaggingService taggingService,
         IUnitOfWork unitOfWork,
         IBackgroundJobClient backgroundJobClient,
@@ -32,6 +38,7 @@ public class SourcesApiController : ControllerBase
     {
         _sourceRepository = sourceRepository;
         _tagTypeRepository = tagTypeRepository;
+        _speakerRepository = speakerRepository;
         _taggingService = taggingService;
         _unitOfWork = unitOfWork;
         _backgroundJobClient = backgroundJobClient;
@@ -115,6 +122,7 @@ public class SourcesApiController : ControllerBase
             .Include(s => s.Tags)
                 .ThenInclude(t => t.TagOption)
             .Include(s => s.PrimarySpeaker)
+            .Include(s => s.Speakers)
             .FirstOrDefaultAsync(s => s.Id == id);
 
         if (source == null)
@@ -122,14 +130,13 @@ public class SourcesApiController : ControllerBase
             return NotFound();
         }
 
-        return Ok(new SourceDto
+        var dto = new SourceDto
         {
             Id = source.Id,
             Name = source.Name,
             Type = source.Type,
             MetadataType = source.MetadataType,
             Date = source.Date,
-            Content = source.Content,
             MetadataJson = source.MetadataJson,
             ExternalId = source.ExternalId,
             IntegrationName = source.Integration.Name,
@@ -148,7 +155,22 @@ public class SourcesApiController : ControllerBase
                 Value = t.Value,
                 AllowedValue = t.TagOption?.Value
             }).ToList()
-        });
+        };
+
+        // For Fellow sources, parse speech segments
+        if (source.MetadataType == SourceMetadataType.Collector_Fellow)
+        {
+            var (speechSegments, speakers) = ParseFellowSpeechSegments(source);
+            dto.SpeechSegments = speechSegments;
+            dto.Speakers = speakers;
+        }
+        else
+        {
+            // For other sources (like Google Drive), use the Content field
+            dto.Content = source.Content;
+        }
+
+        return Ok(dto);
     }
 
     /// <summary>
@@ -225,6 +247,136 @@ public class SourcesApiController : ControllerBase
             IsInternal = result.IsInternal,
             TagCount = result.TagCount
         });
+    }
+
+    /// <summary>
+    /// Parses Fellow metadata to extract speech segments and speakers
+    /// </summary>
+    private (List<SpeechSegmentDto>? speechSegments, List<SpeakerDto>? speakers) ParseFellowSpeechSegments(Source source)
+    {
+        try
+        {
+            var recording = JsonSerializer.Deserialize<FellowRecordingImportModel>(source.MetadataJson);
+            
+            if (recording?.Transcript?.SpeechSegments == null || recording.Transcript.SpeechSegments.Count == 0)
+            {
+                return (null, null);
+            }
+
+            // Get speaker entities for this source
+            var speakerLookup = source.Speakers.ToDictionary(s => s.Name, s => s);
+
+            var speechSegments = new List<SpeechSegmentDto>();
+            var speakers = new List<SpeakerDto>();
+            var seenSpeakers = new HashSet<Guid>();
+
+            SpeechSegmentDto? currentSegment = null;
+
+            foreach (var segment in recording.Transcript.SpeechSegments)
+            {
+                if (string.IsNullOrWhiteSpace(segment.Speaker) || string.IsNullOrWhiteSpace(segment.Text))
+                {
+                    continue;
+                }
+
+                var cleanedSpeakerName = RemoveSpeakerSuffixes(segment.Speaker);
+
+                // Find the speaker entity
+                if (!speakerLookup.TryGetValue(cleanedSpeakerName, out var speaker))
+                {
+                    // Speaker not found, skip this segment
+                    continue;
+                }
+
+                // Add speaker to the list if not already added
+                if (!seenSpeakers.Contains(speaker.Id))
+                {
+                    speakers.Add(new SpeakerDto
+                    {
+                        Id = speaker.Id,
+                        Name = speaker.Name,
+                        Email = speaker.Email,
+                        IsInternal = speaker.IsInternal,
+                        TrustLevel = speaker.TrustLevel?.ToString()
+                    });
+                    seenSpeakers.Add(speaker.Id);
+                }
+
+                // Merge adjacent segments by the same speaker
+                if (currentSegment != null && currentSegment.SpeakerId == speaker.Id)
+                {
+                    currentSegment.Text += " " + segment.Text.Trim();
+                }
+                else
+                {
+                    // Start a new segment
+                    if (currentSegment != null)
+                    {
+                        speechSegments.Add(currentSegment);
+                    }
+
+                    currentSegment = new SpeechSegmentDto
+                    {
+                        SpeakerId = speaker.Id,
+                        SpeakerName = speaker.Name,
+                        Text = segment.Text.Trim()
+                    };
+                }
+            }
+
+            // Add the last segment
+            if (currentSegment != null)
+            {
+                speechSegments.Add(currentSegment);
+            }
+
+            return speechSegments.Count > 0 ? (speechSegments, speakers) : (null, null);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to parse Fellow speech segments for source {SourceId}", source.Id);
+            return (null, null);
+        }
+    }
+
+    /// <summary>
+    /// Removes common suffixes from speaker names like (1), (2), - A, - B, (A), (B)
+    /// </summary>
+    private static string RemoveSpeakerSuffixes(string speakerName)
+    {
+        speakerName = speakerName.Trim();
+        
+        bool changed;
+        do
+        {
+            changed = false;
+            var original = speakerName;
+            
+            // Remove suffixes like (1), (2), (3), etc.
+            speakerName = Regex.Replace(speakerName, @"\s*\(\d+\)$", "").Trim();
+            if (speakerName != original)
+            {
+                changed = true;
+                continue;
+            }
+            
+            // Remove suffixes like (A), (B), (C), etc.
+            speakerName = Regex.Replace(speakerName, @"\s*\([A-Z]\)$", "").Trim();
+            if (speakerName != original)
+            {
+                changed = true;
+                continue;
+            }
+            
+            // Remove suffixes like - A, - B, - C, etc.
+            speakerName = Regex.Replace(speakerName, @"\s*-\s*[A-Z]$", "").Trim();
+            if (speakerName != original)
+            {
+                changed = true;
+            }
+        } while (changed);
+        
+        return speakerName;
     }
 }
 

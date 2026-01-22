@@ -2723,7 +2723,9 @@ export interface SourceDto {
     metadataType?: SourceMetadataType;
     name?: string;
     externalId?: string | null;
-    content?: string;
+    content?: string | null;
+    speechSegments?: SpeechSegmentDto[] | null;
+    speakers?: SpeakerDto[] | null;
     metadataJson?: string;
     date?: Date;
     isInternal?: boolean | null;
@@ -2742,6 +2744,20 @@ export enum SourceMetadataType {
     Unknown = "Unknown",
     Collector_GoogleDrive = "Collector_GoogleDrive",
     Collector_Fellow = "Collector_Fellow",
+}
+
+export interface SpeechSegmentDto {
+    speakerId?: string;
+    speakerName?: string;
+    text?: string;
+}
+
+export interface SpeakerDto {
+    id?: string;
+    name?: string;
+    email?: string | null;
+    isInternal?: boolean | null;
+    trustLevel?: string | null;
 }
 
 export interface SourceTagDto {
