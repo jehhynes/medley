@@ -11,15 +11,18 @@ namespace Medley.Web.Areas.Admin.Controllers;
 public class ArticleTypesController : Controller
 {
     private readonly IRepository<ArticleType> _articleTypeRepository;
+    private readonly IRepository<Article> _articleRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<ArticleTypesController> _logger;
 
     public ArticleTypesController(
         IRepository<ArticleType> articleTypeRepository,
+        IRepository<Article> articleRepository,
         IUnitOfWork unitOfWork,
         ILogger<ArticleTypesController> logger)
     {
         _articleTypeRepository = articleTypeRepository;
+        _articleRepository = articleRepository;
         _unitOfWork = unitOfWork;
         _logger = logger;
     }
@@ -47,11 +50,19 @@ public class ArticleTypesController : Controller
             return View(model);
         }
 
-        await _articleTypeRepository.AddAsync(model);
-        await _unitOfWork.SaveChangesAsync();
-        
-        TempData["SuccessMessage"] = "Article type created";
-        return RedirectToAction(nameof(Index));
+        try
+        {
+            await _articleTypeRepository.AddAsync(model);
+            await _unitOfWork.SaveChangesAsync();
+            
+            TempData["SuccessMessage"] = "Article type created";
+            return RedirectToAction(nameof(Index));
+        }
+        catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("ix_article_types_name") == true)
+        {
+            ModelState.AddModelError(nameof(model.Name), "An article type with this name already exists.");
+            return View(model);
+        }
     }
 
     public async Task<IActionResult> Edit(Guid id)
@@ -85,11 +96,18 @@ public class ArticleTypesController : Controller
         existing.Name = model.Name;
         existing.Icon = model.Icon;
 
-        
-        await _unitOfWork.SaveChangesAsync();
+        try
+        {
+            await _unitOfWork.SaveChangesAsync();
 
-        TempData["SuccessMessage"] = "Article type updated";
-        return RedirectToAction(nameof(Index));
+            TempData["SuccessMessage"] = "Article type updated";
+            return RedirectToAction(nameof(Index));
+        }
+        catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("ix_article_types_name") == true)
+        {
+            ModelState.AddModelError(nameof(model.Name), "An article type with this name already exists.");
+            return View(model);
+        }
     }
 
     [HttpPost]
@@ -100,6 +118,16 @@ public class ArticleTypesController : Controller
         if (articleType == null)
         {
             return NotFound();
+        }
+
+        // Check if any articles use this type
+        var articleCount = await _articleRepository.Query()
+            .CountAsync(a => a.ArticleTypeId == id);
+
+        if (articleCount > 0)
+        {
+            TempData["ErrorMessage"] = $"Cannot delete this article type because {articleCount} article(s) are using it. Please reassign those articles first.";
+            return RedirectToAction(nameof(Index));
         }
 
         await _articleTypeRepository.DeleteAsync(articleType);

@@ -220,7 +220,7 @@
                     >
                       <td class="align-middle" style="width: 50px;">
                         <i 
-                          :class="getIconClass(getFragmentCategoryIcon(fragment.category))" 
+                          :class="getIconClass(fragment.categoryIcon, 'bi-puzzle')" 
                           :title="fragment.category || ''"
                           style="font-size: 1.25rem;"
                         ></i>
@@ -270,7 +270,6 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { sourcesClient, fragmentsClient } from '@/utils/apiClients';
 import { 
-  getFragmentCategoryIcon, 
   getIconClass, 
   getSourceTypeIcon, 
   getConfidenceIcon, 

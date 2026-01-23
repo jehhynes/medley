@@ -80,7 +80,7 @@ public class BedrockAiServiceTests
             .ReturnsAsync(mockResponse);
 
         // Act
-        var result = await service.ProcessPromptAsync(userPrompt, systemPrompt, null, temperature);
+        var result = await service.ProcessPromptAsync(userPrompt, systemPrompt, temperature);
 
         // Assert
         Assert.Equal(expectedResponse, result);

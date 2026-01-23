@@ -120,6 +120,11 @@ public class FragmentInPlanDto
     public required string Category { get; set; }
 
     /// <summary>
+    /// Icon for the fragment category
+    /// </summary>
+    public string? CategoryIcon { get; set; }
+
+    /// <summary>
     /// Fragment content
     /// </summary>
     public required string Content { get; set; }

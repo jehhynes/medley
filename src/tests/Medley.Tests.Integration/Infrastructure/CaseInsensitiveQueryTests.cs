@@ -13,11 +13,28 @@ namespace Medley.Tests.Integration.Infrastructure;
 public class CaseInsensitiveQueryTests : DatabaseTestBase
 {
     private readonly ITestOutputHelper _output;
+    protected FragmentCategory _defaultCategory = null!;
 
     public CaseInsensitiveQueryTests(DatabaseFixture fixture, ITestOutputHelper output) 
         : base(fixture)
     {
         _output = output;
+    }
+
+    public override async Task InitializeAsync()
+    {
+        await base.InitializeAsync();
+
+        // Create default fragment category for tests
+        _defaultCategory = new FragmentCategory
+        {
+            Id = Guid.NewGuid(),
+            Name = "Test Category",
+            Icon = "bi-test",
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        await _dbContext.Set<FragmentCategory>().AddAsync(_defaultCategory);
+        await _dbContext.SaveChangesAsync();
     }
 
     /// <summary>
@@ -178,7 +195,7 @@ public class CaseInsensitiveQueryTests : DatabaseTestBase
         {
             Title = "Special Characters Test",
             Summary = "Fragment with special characters",
-            Category = "Test",
+            FragmentCategory = _defaultCategory,
             Content = "This contains % and _ special characters",
             Source = await _dbContext.Sources.FirstAsync()
         };
@@ -187,7 +204,7 @@ public class CaseInsensitiveQueryTests : DatabaseTestBase
         {
             Title = "No Special Characters",
             Summary = "Regular fragment",
-            Category = "Test",
+            FragmentCategory = _defaultCategory,
             Content = "This fragment has no special characters",
             Source = await _dbContext.Sources.FirstAsync()
         };
@@ -321,14 +338,14 @@ public class CaseInsensitiveQueryTests : DatabaseTestBase
         // Create test fragments with various case combinations
         var testFragments = new[]
         {
-            new Fragment { Title = "Test Fragment 1", Summary = "Summary", Category = "Test", Content = "This is a test fragment", Source = source },
-            new Fragment { Title = "Test Fragment 2", Summary = "Summary", Category = "Test", Content = "TEST content with uppercase", Source = source },
-            new Fragment { Title = "Test Fragment 3", Summary = "Summary", Category = "Test", Content = "Mixed Test Case Content", Source = source },
-            new Fragment { Title = "Test Fragment 4", Summary = "Summary", Category = "Test", Content = "Another fragment for testing", Source = source },
-            new Fragment { Title = "Test Fragment 5", Summary = "Summary", Category = "Test", Content = "Ends with test", Source = source },
-            new Fragment { Title = "Test Fragment 6", Summary = "Summary", Category = "Test", Content = "Test starts this fragment", Source = source },
-            new Fragment { Title = "Test Fragment 7", Summary = "Summary", Category = "Test", Content = "No matching content here", Source = source },
-            new Fragment { Title = "Test Fragment 8", Summary = "Summary", Category = "Test", Content = "Special % and _ characters", Source = source }
+            new Fragment { Title = "Test Fragment 1", Summary = "Summary", FragmentCategory = _defaultCategory, Content = "This is a test fragment", Source = source },
+            new Fragment { Title = "Test Fragment 2", Summary = "Summary", FragmentCategory = _defaultCategory, Content = "TEST content with uppercase", Source = source },
+            new Fragment { Title = "Test Fragment 3", Summary = "Summary", FragmentCategory = _defaultCategory, Content = "Mixed Test Case Content", Source = source },
+            new Fragment { Title = "Test Fragment 4", Summary = "Summary", FragmentCategory = _defaultCategory, Content = "Another fragment for testing", Source = source },
+            new Fragment { Title = "Test Fragment 5", Summary = "Summary", FragmentCategory = _defaultCategory, Content = "Ends with test", Source = source },
+            new Fragment { Title = "Test Fragment 6", Summary = "Summary", FragmentCategory = _defaultCategory, Content = "Test starts this fragment", Source = source },
+            new Fragment { Title = "Test Fragment 7", Summary = "Summary", FragmentCategory = _defaultCategory, Content = "No matching content here", Source = source },
+            new Fragment { Title = "Test Fragment 8", Summary = "Summary", FragmentCategory = _defaultCategory, Content = "Special % and _ characters", Source = source }
         };
 
         _dbContext.Fragments.AddRange(testFragments);

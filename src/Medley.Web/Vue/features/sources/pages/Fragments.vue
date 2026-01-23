@@ -70,7 +70,7 @@
             <h1 class="main-content-title">{{ selectedFragment.title || 'Untitled Fragment' }}</h1>
             <div class="text-muted">
               <span class="badge bg-secondary" v-if="selectedFragment.category">
-                <i :class="getIconClass(getFragmentCategoryIcon(selectedFragment.category))" class="me-1"></i>{{ selectedFragment.category }}
+                <i :class="getIconClass(selectedFragment.categoryIcon, 'bi-puzzle')" class="me-1"></i>{{ selectedFragment.category }}
               </span>
               <span 
                 v-if="selectedFragment.confidence !== null && selectedFragment.confidence !== undefined && selectedFragment.confidenceComment" 
@@ -129,7 +129,6 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { fragmentsClient } from '@/utils/apiClients';
 import { 
-  getFragmentCategoryIcon, 
   getIconClass, 
   getConfidenceIcon, 
   getConfidenceColor, 

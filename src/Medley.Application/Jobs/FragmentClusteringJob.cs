@@ -17,12 +17,14 @@ namespace Medley.Application.Jobs;
 public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
 {
     private readonly IFragmentRepository _fragmentRepository;
+    private readonly IRepository<FragmentCategory> _fragmentCategoryRepository;
     private readonly IAiProcessingService _aiProcessingService;
     private readonly IBackgroundJobClient _backgroundJobClient;
     private readonly AiCallContext _aiCallContext;
 
     public FragmentClusteringJob(
         IFragmentRepository fragmentRepository,
+        IRepository<FragmentCategory> fragmentCategoryRepository,
         IAiProcessingService aiProcessingService,
         IBackgroundJobClient backgroundJobClient,
         IUnitOfWork unitOfWork,
@@ -30,6 +32,7 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
         AiCallContext aiCallContext) : base(unitOfWork, logger)
     {
         _fragmentRepository = fragmentRepository;
+        _fragmentCategoryRepository = fragmentCategoryRepository;
         _aiProcessingService = aiProcessingService;
         _backgroundJobClient = backgroundJobClient;
         _aiCallContext = aiCallContext;
@@ -100,13 +103,17 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
                     return true;
                 }
 
+                var fragmentCategory = await _fragmentCategoryRepository.Query().Where(x => x.Name == clusterResponse.Category).FirstOrDefaultAsync()
+                    ?? await _fragmentCategoryRepository.Query().Where(x => x.Name == "How-To").FirstOrDefaultAsync()
+                    ?? throw new InvalidDataException("Could not find fragment category");
+
                 // 6) Create new Fragment (Cluster)
                 var cluster = new Fragment
                 {
                     Id = Guid.NewGuid(),
                     Title = clusterResponse.Title.Trim().Substring(0, Math.Min(200, clusterResponse.Title.Trim().Length)),
                     Summary = clusterResponse.Summary.Trim().Substring(0, Math.Min(500, clusterResponse.Summary.Trim().Length)),
-                    Category = clusterResponse.Category.Trim().Substring(0, Math.Min(100, clusterResponse.Category.Trim().Length)),
+                    FragmentCategory = fragmentCategory,
                     Content = clusterResponse.Content.Trim().Substring(0, Math.Min(10000, clusterResponse.Content.Trim().Length)),
                     IsCluster = true,
                     ClusteringProcessed = DateTimeOffset.UtcNow,
@@ -154,7 +161,7 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
             {
                 f.Title,
                 f.Summary,
-                f.Category,
+                Category = f.FragmentCategory.Name,
                 f.Content,
                 Date = f.Source?.Date
             }));

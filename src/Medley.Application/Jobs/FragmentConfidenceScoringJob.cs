@@ -183,7 +183,7 @@ public class FragmentConfidenceScoringJob : BaseHangfireJob<FragmentConfidenceSc
         {
             sb.AppendLine($"## Fragment {index}");
             sb.AppendLine($"- **ID**: {index}");
-            sb.AppendLine($"- **Category**: {fragment.Category}");
+            sb.AppendLine($"- **Category**: {fragment.FragmentCategory.Name}");
             sb.AppendLine("- **Content**:");
             sb.AppendLine();
             sb.AppendLine(fragment.Content);

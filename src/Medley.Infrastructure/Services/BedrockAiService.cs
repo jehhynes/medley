@@ -33,13 +33,12 @@ public class BedrockAiService : IAiProcessingService
     public async Task<string> ProcessPromptAsync(
         string userPrompt, 
         string? systemPrompt = null, 
-        string? assistantPrompt = null,
         double? temperature = null,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            var messages = BuildMessages(userPrompt, systemPrompt, assistantPrompt);
+            var messages = BuildMessages(userPrompt, systemPrompt);
             var options = BuildChatOptions(temperature);
 
             var response = await _chatClient.GetResponseAsync(messages, options, cancellationToken);
@@ -56,13 +55,12 @@ public class BedrockAiService : IAiProcessingService
     public async Task<T> ProcessStructuredPromptAsync<T>(
         string userPrompt, 
         string? systemPrompt = null, 
-        string? assistantPrompt = null,
         double? temperature = null,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            var messages = BuildMessages(userPrompt, systemPrompt, assistantPrompt);
+            var messages = BuildMessages(userPrompt, systemPrompt);
             var options = BuildChatOptions(temperature, ChatResponseFormat.Json);
             
             var response = await _chatClient.GetResponseAsync<T>(messages, options);
@@ -97,7 +95,7 @@ public class BedrockAiService : IAiProcessingService
     /// <summary>
     /// Builds a list of chat messages from the provided prompts
     /// </summary>
-    private List<ChatMessage> BuildMessages(string userPrompt, string? systemPrompt, string? assistantPrompt)
+    private List<ChatMessage> BuildMessages(string userPrompt, string? systemPrompt)
     {
         var messages = new List<ChatMessage>();
         
@@ -109,12 +107,6 @@ public class BedrockAiService : IAiProcessingService
         
         // Add user message
         messages.Add(new ChatMessage(ChatRole.User, userPrompt));
-        
-        // Add assistant prefill if provided
-        if (!string.IsNullOrWhiteSpace(assistantPrompt))
-        {
-            messages.Add(new ChatMessage(ChatRole.Assistant, assistantPrompt));
-        }
         
         return messages;
     }

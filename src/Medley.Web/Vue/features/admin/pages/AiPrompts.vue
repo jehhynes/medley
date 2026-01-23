@@ -70,6 +70,37 @@
               </li>
             </template>
           </template>
+
+          <!-- Per-fragment-category templates (grouped) -->
+          <template v-for="group in perFragmentCategoryGroups" :key="group.promptType">
+            <li class="list-item list-item-group">
+              <a href="#" 
+                 class="list-item-content"
+                 @click.prevent="toggleGroup(group.promptType)">
+                <i class="list-item-icon bi" :class="group.expanded ? 'bi-chevron-down' : 'bi-chevron-right'"></i>
+                <div class="list-item-body">
+                  <div class="list-item-title">{{ group.name }}</div>
+                  <div class="list-item-subtitle">{{ group.description }}</div>
+                </div>
+              </a>
+            </li>
+            <template v-if="group.expanded">
+              <li v-for="template in group.templates" :key="`${template.type}-${template.fragmentCategoryId}`" class="list-item list-item-child">
+                <a href="#" 
+                   class="list-item-content"
+                   :class="{ active: isTemplateSelected(template) }"
+                   @click.prevent="selectTemplate(template)">
+                  <i class="list-item-icon" :class="getIconClass(getFragmentCategoryIcon(template.fragmentCategoryId))"></i>
+                  <div class="list-item-body">
+                    <div class="list-item-title">
+                      {{ template.fragmentCategoryName }}
+                      <span v-if="!template.exists" class="badge bg-secondary ms-2" style="font-size: 0.65rem;">Not customized</span>
+                    </div>
+                  </div>
+                </a>
+              </li>
+            </template>
+          </template>
         </ul>
       </div>
     </div>
@@ -109,6 +140,7 @@ import { useRouter } from 'vue-router';
 import { aiPromptsClient } from '@/utils/apiClients';
 import { useSidebarState } from '@/composables/useSidebarState';
 import { useArticleTypes } from '@/features/articles/composables/useArticleTypes';
+import { useFragmentCategories } from '@/features/admin/composables/useFragmentCategories';
 import { getIconClass } from '@/utils/helpers';
 import type { AiPromptListDto, AiPromptDto, AiPromptType } from '@/types/api-client';
 
@@ -116,6 +148,7 @@ import type { AiPromptListDto, AiPromptDto, AiPromptType } from '@/types/api-cli
 const { leftSidebarVisible } = useSidebarState();
 const router = useRouter();
 const { typeIconMap, loadArticleTypes } = useArticleTypes();
+const { categoryIconMap, loadFragmentCategories } = useFragmentCategories();
 
 // Reactive state
 const templates = ref<AiPromptListDto[]>([]);
@@ -131,7 +164,7 @@ const expandedGroups = ref<Set<number>>(new Set());
 
 // Computed properties
 const nonPerArticleTypeTemplates = computed(() => 
-  templates.value.filter(t => !t.isPerArticleType)
+  templates.value.filter(t => !t.isPerArticleType && !t.isPerFragmentCategory)
 );
 
 interface PerArticleTypeGroup {
@@ -162,10 +195,43 @@ const perArticleTypeGroups = computed<PerArticleTypeGroup[]>(() => {
   return Array.from(groupMap.values());
 });
 
+interface PerFragmentCategoryGroup {
+  promptType: number;
+  name: string;
+  description: string;
+  expanded: boolean;
+  templates: AiPromptListDto[];
+}
+
+const perFragmentCategoryGroups = computed<PerFragmentCategoryGroup[]>(() => {
+  const perFragmentTemplates = templates.value.filter(t => t.isPerFragmentCategory);
+  const groupMap = new Map<number, PerFragmentCategoryGroup>();
+
+  for (const template of perFragmentTemplates) {
+    if (!groupMap.has(template.type)) {
+      groupMap.set(template.type, {
+        promptType: template.type,
+        name: template.name,
+        description: template.description || '',
+        expanded: expandedGroups.value.has(template.type),
+        templates: []
+      });
+    }
+    groupMap.get(template.type)!.templates.push(template);
+  }
+
+  return Array.from(groupMap.values());
+});
+
 // Methods
 const getArticleTypeIcon = (articleTypeId: string | null | undefined): string => {
   if (!articleTypeId) return 'bi-file-text';
   return typeIconMap.value[articleTypeId] || 'bi-file-text';
+};
+
+const getFragmentCategoryIcon = (fragmentCategoryId: string | null | undefined): string => {
+  if (!fragmentCategoryId) return 'bi-puzzle';
+  return categoryIconMap.value[fragmentCategoryId] || 'bi-puzzle';
 };
 const loadTemplates = async (): Promise<void> => {
   loading.value = true;
@@ -191,14 +257,16 @@ const toggleGroup = (promptType: number): void => {
 const isTemplateSelected = (template: AiPromptListDto): boolean => {
   if (!selectedTemplate.value) return false;
   return selectedTemplate.value.type === template.type && 
-         selectedTemplate.value.articleTypeId === template.articleTypeId;
+         selectedTemplate.value.articleTypeId === template.articleTypeId &&
+         selectedTemplate.value.fragmentCategoryId === template.fragmentCategoryId;
 };
 
 const selectTemplate = async (template: AiPromptListDto): Promise<void> => {
   try {
     const fullTemplate = await aiPromptsClient.get(
       template.type as AiPromptType,
-      template.articleTypeId || undefined
+      template.articleTypeId || undefined,
+      template.fragmentCategoryId || undefined
     );
     
     selectedTemplate.value = fullTemplate;
@@ -210,10 +278,13 @@ const selectTemplate = async (template: AiPromptListDto): Promise<void> => {
     if (template.articleTypeId) {
       query.articleTypeId = template.articleTypeId;
     }
+    if (template.fragmentCategoryId) {
+      query.fragmentCategoryId = template.fragmentCategoryId;
+    }
     await router.push({ query });
 
-    // Expand the group if it's a per-article-type template
-    if (template.isPerArticleType) {
+    // Expand the group if it's a per-article-type or per-fragment-category template
+    if (template.isPerArticleType || template.isPerFragmentCategory) {
       expandedGroups.value.add(template.type);
     }
   } catch (err: any) {
@@ -230,7 +301,8 @@ const saveTemplate = async (): Promise<void> => {
     const updated = await aiPromptsClient.createOrUpdate(
       selectedTemplate.value.type,
       { content: editingContent.value },
-      selectedTemplate.value.articleTypeId || undefined
+      selectedTemplate.value.articleTypeId || undefined,
+      selectedTemplate.value.fragmentCategoryId || undefined
     );
 
     selectedTemplate.value = updated;
@@ -238,7 +310,9 @@ const saveTemplate = async (): Promise<void> => {
 
     // Update the template in the list to mark it as existing
     const templateInList = templates.value.find(t => 
-      t.type === updated.type && t.articleTypeId === updated.articleTypeId
+      t.type === updated.type && 
+      t.articleTypeId === updated.articleTypeId &&
+      t.fragmentCategoryId === updated.fragmentCategoryId
     );
     if (templateInList) {
       templateInList.exists = true;
@@ -261,17 +335,20 @@ const formatTime = (date: Date | null): string => {
 // Lifecycle hooks
 onMounted(async () => {
   await loadArticleTypes();
+  await loadFragmentCategories();
   await loadTemplates();
 
   const urlParams = new URLSearchParams(window.location.search);
   const typeParam = urlParams.get('type');
   const articleTypeIdParam = urlParams.get('articleTypeId');
+  const fragmentCategoryIdParam = urlParams.get('fragmentCategoryId');
   
   if (typeParam) {
     const type = parseInt(typeParam);
     const template = templates.value.find(t => 
       t.type === type && 
-      (articleTypeIdParam ? t.articleTypeId === articleTypeIdParam : !t.articleTypeId)
+      (articleTypeIdParam ? t.articleTypeId === articleTypeIdParam : !t.articleTypeId) &&
+      (fragmentCategoryIdParam ? t.fragmentCategoryId === fragmentCategoryIdParam : !t.fragmentCategoryId)
     );
     if (template) {
       await selectTemplate(template);
@@ -288,12 +365,14 @@ onMounted(async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const typeParam = urlParams.get('type');
     const articleTypeIdParam = urlParams.get('articleTypeId');
+    const fragmentCategoryIdParam = urlParams.get('fragmentCategoryId');
     
     if (typeParam) {
       const type = parseInt(typeParam);
       const template = templates.value.find(t => 
         t.type === type && 
-        (articleTypeIdParam ? t.articleTypeId === articleTypeIdParam : !t.articleTypeId)
+        (articleTypeIdParam ? t.articleTypeId === articleTypeIdParam : !t.articleTypeId) &&
+        (fragmentCategoryIdParam ? t.fragmentCategoryId === fragmentCategoryIdParam : !t.fragmentCategoryId)
       );
       if (template && !isTemplateSelected(template)) {
         await selectTemplate(template);

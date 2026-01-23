@@ -191,6 +191,27 @@ public class ArticleTypeDto
 }
 
 /// <summary>
+/// Fragment category information
+/// </summary>
+public class FragmentCategoryDto
+{
+    /// <summary>
+    /// Unique identifier for the fragment category
+    /// </summary>
+    public required Guid Id { get; set; }
+
+    /// <summary>
+    /// Fragment category name
+    /// </summary>
+    public required string Name { get; set; }
+
+    /// <summary>
+    /// Icon for the fragment category
+    /// </summary>
+    public string? Icon { get; set; }
+}
+
+/// <summary>
 /// Response after moving an article
 /// </summary>
 public class ArticleMoveResponse

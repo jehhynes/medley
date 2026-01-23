@@ -3,6 +3,7 @@ using System;
 using Medley.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -12,9 +13,11 @@ using Pgvector;
 namespace Medley.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260123135922_AddFragmentCategory")]
+    partial class AddFragmentCategory
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -301,10 +304,6 @@ namespace Medley.Infrastructure.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_article_types");
-
-                    b.HasIndex("Name")
-                        .IsUnique()
-                        .HasDatabaseName("ix_article_types_name");
 
                     b.ToTable("article_types", (string)null);
                 });
@@ -646,13 +645,9 @@ namespace Medley.Infrastructure.Migrations
                         .HasColumnName("name");
 
                     b.HasKey("Id")
-                        .HasName("pk_fragment_categories");
+                        .HasName("pk_fragment_category");
 
-                    b.HasIndex("Name")
-                        .IsUnique()
-                        .HasDatabaseName("ix_fragment_categories_name");
-
-                    b.ToTable("fragment_categories", (string)null);
+                    b.ToTable("fragment_category", (string)null);
                 });
 
             modelBuilder.Entity("Medley.Domain.Entities.Insight", b =>
@@ -1624,7 +1619,7 @@ namespace Medley.Infrastructure.Migrations
                     b.HasOne("Medley.Domain.Entities.FragmentCategory", "FragmentCategory")
                         .WithMany()
                         .HasForeignKey("FragmentCategoryId")
-                        .HasConstraintName("fk_ai_prompts_fragment_categories_fragment_category_id");
+                        .HasConstraintName("fk_ai_prompts_fragment_category_fragment_category_id");
 
                     b.Navigation("ArticleType");
 
@@ -1790,7 +1785,7 @@ namespace Medley.Infrastructure.Migrations
                         .HasForeignKey("FragmentCategoryId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_fragments_fragment_categories_fragment_category_id");
+                        .HasConstraintName("fk_fragments_fragment_category_fragment_category_id");
 
                     b.HasOne("Medley.Domain.Entities.Source", "Source")
                         .WithMany("Fragments")

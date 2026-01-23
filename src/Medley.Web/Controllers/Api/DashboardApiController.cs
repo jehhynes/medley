@@ -169,35 +169,10 @@ public class DashboardApiController : ControllerBase
         // Fragment metrics
         metrics.TotalFragments = await _fragmentRepository.Query().CountAsync();
         metrics.FragmentsByCategory = await _fragmentRepository.Query()
-            .Where(f => f.Category != null)
-            .GroupBy(f => f.Category)
-            .Select(g => new MetricItem { Label = g.Key ?? "Unknown", Count = g.Count() })
+            .Include(f => f.FragmentCategory)
+            .GroupBy(f => f.FragmentCategory.Name)
+            .Select(g => new MetricItem { Label = g.Key, Count = g.Count(), Icon = g.First().FragmentCategory.Icon })
             .ToListAsync();
-
-        // Populate icons for fragment categories
-        var articleTypes = await _articleTypeRepository.Query().ToListAsync();
-        foreach (var item in metrics.FragmentsByCategory)
-        {
-            var normalizedCategory = new string(item.Label.Where(char.IsLetter).ToArray()).ToLower();
-            
-            if (normalizedCategory == "bestpractice")
-            {
-                item.Icon = "shield-check";
-                continue;
-            }
-
-            var match = articleTypes.FirstOrDefault(at => 
-                new string(at.Name.Where(char.IsLetter).ToArray()).ToLower() == normalizedCategory);
-            
-            if (match != null)
-            {
-                item.Icon = match.Icon;
-            }
-            else
-            {
-                item.Icon = "file-text";
-            }
-        }
         
         metrics.FragmentsPendingEmbedding = await _fragmentRepository.Query()
             .CountAsync(f => f.Embedding == null);

@@ -12,7 +12,7 @@
           <div class="modal-body">
             <div class="mb-3">
               <span v-if="fragment.category" class="badge bg-secondary me-2">
-                <i :class="getIconClass(getFragmentCategoryIcon(fragment.category))" class="me-1"></i>{{ fragment.category }}
+                <i :class="getIconClass(fragment.categoryIcon, 'bi-puzzle')" class="me-1"></i>{{ fragment.category }}
               </span>
               <span 
                 v-if="fragment.confidence !== null && fragment.confidence !== undefined && fragment.confidenceComment" 
@@ -61,7 +61,6 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { 
   getIconClass, 
-  getFragmentCategoryIcon, 
   getConfidenceIcon, 
   getConfidenceColor
 } from '@/utils/helpers';

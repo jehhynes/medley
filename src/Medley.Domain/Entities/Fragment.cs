@@ -23,10 +23,15 @@ public class Fragment : BusinessEntity
     public required string Summary { get; set; }
 
     /// <summary>
-    /// Category of the fragment (e.g., Decision, Action Item, Feature Request)
+    /// The ID of the fragment category
     /// </summary>
-    [MaxLength(100)]
-    public required string Category { get; set; }
+    public Guid FragmentCategoryId { get; set; }
+
+    /// <summary>
+    /// Navigation to the fragment category
+    /// </summary>
+    [ForeignKey(nameof(FragmentCategoryId))]
+    public required virtual FragmentCategory FragmentCategory { get; set; }
 
     /// <summary>
     /// The text content of the fragment

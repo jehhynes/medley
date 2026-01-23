@@ -1,0 +1,47 @@
+@model Medley.Domain.Entities.FragmentCategory
+@{
+    ViewData["Title"] = "Edit Fragment Category";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="main-content-header d-flex justify-content-between align-items-center">
+    <h1 class="main-content-title">Edit Fragment Category</h1>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Fragment Category Details</h5>
+    </div>
+    <div class="card-body">
+        <form asp-action="Edit" method="post" class="form-layout">
+            <input type="hidden" asp-for="Id" />
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <div class="mb-3 form-group-overlap">
+                <label asp-for="Name">Name</label>
+                <input asp-for="Name" class="form-control" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3 form-group-overlap">
+                <label asp-for="Icon">Icon</label>
+                <input asp-for="Icon" class="form-control" placeholder="e.g., bi-tag, bi-bookmark, fa-puzzle-piece" />
+                <span asp-validation-for="Icon" class="text-danger"></span>
+                <small class="form-text text-muted">
+                    Use Bootstrap Icons (bi-*) or Font Awesome icons (fa-*). Will be rendered as "bi bi-tag" or "fas fa-puzzle-piece".
+                </small>
+            </div>
+
+            <div>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save Fragment Category</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+}

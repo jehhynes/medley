@@ -54,6 +54,16 @@
               "nullable": true
             },
             "x-position": 2
+          },
+          {
+            "name": "fragmentCategoryId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "guid",
+              "nullable": true
+            },
+            "x-position": 3
           }
         ],
         "responses": {
@@ -103,6 +113,16 @@
               "nullable": true
             },
             "x-position": 2
+          },
+          {
+            "name": "fragmentCategoryId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "guid",
+              "nullable": true
+            },
+            "x-position": 3
           }
         ],
         "requestBody": {
@@ -115,7 +135,7 @@
             }
           },
           "required": true,
-          "x-position": 3
+          "x-position": 4
         },
         "responses": {
           "200": {
@@ -159,6 +179,29 @@
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/ArticleTypeDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/prompts/fragment-categories": {
+      "get": {
+        "tags": [
+          "AiPromptApi"
+        ],
+        "operationId": "AiPromptApi_GetFragmentCategories",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FragmentCategoryDto"
                   }
                 }
               }
@@ -2542,6 +2585,18 @@
             "type": "string",
             "nullable": true
           },
+          "isPerFragmentCategory": {
+            "type": "boolean"
+          },
+          "fragmentCategoryId": {
+            "type": "string",
+            "format": "guid",
+            "nullable": true
+          },
+          "fragmentCategoryName": {
+            "type": "string",
+            "nullable": true
+          },
           "exists": {
             "type": "boolean"
           },
@@ -2568,7 +2623,8 @@
           "ArticleAgentMode",
           "ArticlePlanImplementation",
           "ArticleTypePlanMode",
-          "ArticleTypeAgentMode"
+          "ArticleTypeAgentMode",
+          "FragmentCategoryExtraction"
         ],
         "enum": [
           "FragmentExtraction",
@@ -2578,7 +2634,8 @@
           "ArticleAgentMode",
           "ArticlePlanImplementation",
           "ArticleTypePlanMode",
-          "ArticleTypeAgentMode"
+          "ArticleTypeAgentMode",
+          "FragmentCategoryExtraction"
         ]
       },
       "AiPromptDto": {
@@ -2609,6 +2666,18 @@
             "nullable": true
           },
           "articleTypeName": {
+            "type": "string",
+            "nullable": true
+          },
+          "isPerFragmentCategory": {
+            "type": "boolean"
+          },
+          "fragmentCategoryId": {
+            "type": "string",
+            "format": "guid",
+            "nullable": true
+          },
+          "fragmentCategoryName": {
             "type": "string",
             "nullable": true
           },
@@ -2669,6 +2738,23 @@
         }
       },
       "ArticleTypeDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "FragmentCategoryDto": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
@@ -3479,6 +3565,10 @@
           "category": {
             "type": "string"
           },
+          "categoryIcon": {
+            "type": "string",
+            "nullable": true
+          },
           "content": {
             "type": "string"
           },
@@ -3573,6 +3663,10 @@
           },
           "category": {
             "type": "string"
+          },
+          "categoryIcon": {
+            "type": "string",
+            "nullable": true
           },
           "sourceId": {
             "type": "string",
@@ -3720,6 +3814,10 @@
           },
           "category": {
             "type": "string"
+          },
+          "categoryIcon": {
+            "type": "string",
+            "nullable": true
           },
           "content": {
             "type": "string"

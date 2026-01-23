@@ -53,6 +53,12 @@ public enum PromptType
     /// Template for article chat assistant specific to article types
     /// </summary>
     [PromptTypeMetadata("Article Types (Agent Mode)", "Agent mode instructions for specific article types", IsPerArticleType = true)]
-    ArticleTypeAgentMode = 8
+    ArticleTypeAgentMode = 8,
+
+    /// <summary>
+    /// Template for extracting fragments specific to fragment categories
+    /// </summary>
+    [PromptTypeMetadata("Fragment Categories", "Category-specific extraction instructions", IsPerFragmentCategory = true)]
+    FragmentCategoryExtraction = 9
 }
 

@@ -9,11 +9,13 @@ public class PromptTypeMetadataAttribute : Attribute
     public string Name { get; }
     public string Description { get; }
     public bool IsPerArticleType { get; set; }
+    public bool IsPerFragmentCategory { get; set; }
 
     public PromptTypeMetadataAttribute(string name, string description)
     {
         Name = name;
         Description = description;
         IsPerArticleType = false;
+        IsPerFragmentCategory = false;
     }
 }

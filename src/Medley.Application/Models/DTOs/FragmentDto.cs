@@ -28,6 +28,11 @@ public class FragmentDto
     public required string Category { get; set; }
 
     /// <summary>
+    /// Icon for the fragment category
+    /// </summary>
+    public string? CategoryIcon { get; set; }
+
+    /// <summary>
     /// The text content of the fragment
     /// </summary>
     public required string Content { get; set; }
@@ -97,6 +102,11 @@ public class FragmentSearchResult
     /// Category of the fragment
     /// </summary>
     public required string Category { get; set; }
+
+    /// <summary>
+    /// Icon for the fragment category
+    /// </summary>
+    public string? CategoryIcon { get; set; }
 
     /// <summary>
     /// Source ID this fragment was extracted from

@@ -44,6 +44,21 @@ public class AiPromptListDto
     public string? ArticleTypeName { get; set; }
 
     /// <summary>
+    /// Whether this template type is per-fragment-category
+    /// </summary>
+    public required bool IsPerFragmentCategory { get; set; }
+
+    /// <summary>
+    /// Fragment category ID (for per-fragment-category templates)
+    /// </summary>
+    public Guid? FragmentCategoryId { get; set; }
+
+    /// <summary>
+    /// Fragment category name (for per-fragment-category templates)
+    /// </summary>
+    public string? FragmentCategoryName { get; set; }
+
+    /// <summary>
     /// Whether this template exists in the database
     /// </summary>
     public required bool Exists { get; set; }
@@ -98,6 +113,21 @@ public class AiPromptDto
     /// Article type name (for per-article-type templates)
     /// </summary>
     public string? ArticleTypeName { get; set; }
+
+    /// <summary>
+    /// Whether this template type is per-fragment-category
+    /// </summary>
+    public required bool IsPerFragmentCategory { get; set; }
+
+    /// <summary>
+    /// Fragment category ID (for per-fragment-category templates)
+    /// </summary>
+    public Guid? FragmentCategoryId { get; set; }
+
+    /// <summary>
+    /// Fragment category name (for per-fragment-category templates)
+    /// </summary>
+    public string? FragmentCategoryName { get; set; }
 
     /// <summary>
     /// Template content

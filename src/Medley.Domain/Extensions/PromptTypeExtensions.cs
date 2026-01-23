@@ -38,4 +38,14 @@ public static class PromptTypeExtensions
         var attribute = field?.GetCustomAttribute<PromptTypeMetadataAttribute>();
         return attribute?.IsPerArticleType ?? false;
     }
+
+    /// <summary>
+    /// Gets whether this prompt type is per-fragment-category
+    /// </summary>
+    public static bool GetIsPerFragmentCategory(this PromptType promptType)
+    {
+        var field = promptType.GetType().GetField(promptType.ToString());
+        var attribute = field?.GetCustomAttribute<PromptTypeMetadataAttribute>();
+        return attribute?.IsPerFragmentCategory ?? false;
+    }
 }

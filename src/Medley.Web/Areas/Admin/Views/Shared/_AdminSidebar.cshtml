@@ -10,6 +10,7 @@
     var isSourceImport = currentArea == "Admin" && currentController == "SourceImport";
     var isTagTypes = currentArea == "Admin" && currentController == "TagTypes";
     var isArticleTypes = currentArea == "Admin" && currentController == "ArticleTypes";
+    var isFragmentCategories = currentArea == "Admin" && currentController == "FragmentCategories";
 }
 
 <div class="sidebar-header">
@@ -46,6 +47,14 @@
                 <i class="list-item-icon bi bi-file-text"></i>
                 <div class="list-item-body">
                     <div class="list-item-title">Article Types</div>
+                </div>
+            </a>
+        </li>
+        <li class="list-item">
+            <a asp-area="Admin" asp-controller="FragmentCategories" asp-action="Index" class="list-item-content @(isFragmentCategories ? "active" : "")">
+                <i class="list-item-icon bi bi-puzzle"></i>
+                <div class="list-item-body">
+                    <div class="list-item-title">Fragment Categories</div>
                 </div>
             </a>
         </li>

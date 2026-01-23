@@ -4,10 +4,10 @@ using Microsoft.EntityFrameworkCore;
 namespace Medley.Domain.Entities;
 
 /// <summary>
-/// Represents a type of article (e.g., Index, HowTo, Tutorial, Reference, Concept, FAQ)
+/// Represents a category of fragment (e.g., Tutorial, How-To, Concept, Best Practice)
 /// </summary>
 [Index(nameof(Name), IsUnique = true)]
-public class ArticleType : BusinessEntity
+public class FragmentCategory : BusinessEntity
 {
     [MaxLength(100)]
     public required string Name { get; set; }
@@ -15,6 +15,5 @@ public class ArticleType : BusinessEntity
     [MaxLength(50)]
     public string? Icon { get; set; }
 
-    public virtual ICollection<Article> Articles { get; set; } = new List<Article>();
+    public virtual ICollection<Fragment> Fragments { get; set; } = new List<Fragment>();
 }
-

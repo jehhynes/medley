@@ -17,7 +17,6 @@ public interface IAiProcessingService
     Task<string> ProcessPromptAsync(
         string userPrompt, 
         string? systemPrompt = null, 
-        string? assistantPrompt = null,
         double? temperature = null,
         CancellationToken cancellationToken = default);
 
@@ -35,7 +34,6 @@ public interface IAiProcessingService
     Task<T> ProcessStructuredPromptAsync<T>(
         string userPrompt, 
         string? systemPrompt = null, 
-        string? assistantPrompt = null,
         double? temperature = null,
         CancellationToken cancellationToken = default);
 }

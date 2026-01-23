@@ -26,7 +26,17 @@ public class AiPrompt : BusinessEntity
     /// <summary>
     /// Navigation property to the article type
     /// </summary>
-    public ArticleType? ArticleType { get; set; }
+    public virtual ArticleType? ArticleType { get; set; }
+
+    /// <summary>
+    /// Optional fragment category ID for per-fragment-category templates
+    /// </summary>
+    public Guid? FragmentCategoryId { get; set; }
+
+    /// <summary>
+    /// Navigation property to the fragment category
+    /// </summary>
+    public virtual FragmentCategory? FragmentCategory { get; set; }
 
     /// <summary>
     /// Date when the template was last modified

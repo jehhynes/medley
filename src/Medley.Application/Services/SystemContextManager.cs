@@ -199,7 +199,7 @@ public class SystemContextManager
                             Id = pf.Fragment.Id,
                             Title = pf.Fragment.Title,
                             Summary = pf.Fragment.Summary,
-                            Category = pf.Fragment.Category,
+                            Category = pf.Fragment.FragmentCategory.Name,
                             Content = pf.Fragment.Content,
                             Instructions = pf.Instructions,
                             Confidence = pf.Fragment.Confidence?.ToString(),

@@ -50,13 +50,15 @@ export class AiPromptApiClient {
         return Promise.resolve<AiPromptListDto[]>(null as any);
     }
 
-    get(type: PromptType, articleTypeId?: string | null | undefined): Promise<AiPromptDto> {
+    get(type: PromptType, articleTypeId?: string | null | undefined, fragmentCategoryId?: string | null | undefined): Promise<AiPromptDto> {
         let url_ = this.baseUrl + "/api/prompts/{type}?";
         if (type === undefined || type === null)
             throw new globalThis.Error("The parameter 'type' must be defined.");
         url_ = url_.replace("{type}", encodeURIComponent("" + type));
         if (articleTypeId !== undefined && articleTypeId !== null)
             url_ += "articleTypeId=" + encodeURIComponent("" + articleTypeId) + "&";
+        if (fragmentCategoryId !== undefined && fragmentCategoryId !== null)
+            url_ += "fragmentCategoryId=" + encodeURIComponent("" + fragmentCategoryId) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: RequestInit = {
@@ -94,13 +96,15 @@ export class AiPromptApiClient {
         return Promise.resolve<AiPromptDto>(null as any);
     }
 
-    createOrUpdate(type: PromptType, request: CreateOrUpdateAiPromptRequest, articleTypeId?: string | null | undefined): Promise<AiPromptDto> {
+    createOrUpdate(type: PromptType, request: CreateOrUpdateAiPromptRequest, articleTypeId?: string | null | undefined, fragmentCategoryId?: string | null | undefined): Promise<AiPromptDto> {
         let url_ = this.baseUrl + "/api/prompts/{type}?";
         if (type === undefined || type === null)
             throw new globalThis.Error("The parameter 'type' must be defined.");
         url_ = url_.replace("{type}", encodeURIComponent("" + type));
         if (articleTypeId !== undefined && articleTypeId !== null)
             url_ += "articleTypeId=" + encodeURIComponent("" + articleTypeId) + "&";
+        if (fragmentCategoryId !== undefined && fragmentCategoryId !== null)
+            url_ += "fragmentCategoryId=" + encodeURIComponent("" + fragmentCategoryId) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         const content_ = JSON.stringify(request);
@@ -177,6 +181,39 @@ export class AiPromptApiClient {
             });
         }
         return Promise.resolve<ArticleTypeDto[]>(null as any);
+    }
+
+    getFragmentCategories(): Promise<FragmentCategoryDto[]> {
+        let url_ = this.baseUrl + "/api/prompts/fragment-categories";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processGetFragmentCategories(_response);
+        });
+    }
+
+    protected processGetFragmentCategories(response: Response): Promise<FragmentCategoryDto[]> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as FragmentCategoryDto[];
+            return result200;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<FragmentCategoryDto[]>(null as any);
     }
 }
 
@@ -2285,6 +2322,9 @@ export interface AiPromptListDto {
     isPerArticleType?: boolean;
     articleTypeId?: string | null;
     articleTypeName?: string | null;
+    isPerFragmentCategory?: boolean;
+    fragmentCategoryId?: string | null;
+    fragmentCategoryName?: string | null;
     exists?: boolean;
     createdAt?: Date | null;
     lastModifiedAt?: Date | null;
@@ -2299,6 +2339,7 @@ export enum PromptType {
     ArticlePlanImplementation = "ArticlePlanImplementation",
     ArticleTypePlanMode = "ArticleTypePlanMode",
     ArticleTypeAgentMode = "ArticleTypeAgentMode",
+    FragmentCategoryExtraction = "FragmentCategoryExtraction",
 }
 
 export interface AiPromptDto {
@@ -2309,6 +2350,9 @@ export interface AiPromptDto {
     isPerArticleType?: boolean;
     articleTypeId?: string | null;
     articleTypeName?: string | null;
+    isPerFragmentCategory?: boolean;
+    fragmentCategoryId?: string | null;
+    fragmentCategoryName?: string | null;
     content?: string;
     exists?: boolean;
     createdAt?: Date | null;
@@ -2330,6 +2374,12 @@ export interface CreateOrUpdateAiPromptRequest {
 }
 
 export interface ArticleTypeDto {
+    id?: string;
+    name?: string;
+    icon?: string | null;
+}
+
+export interface FragmentCategoryDto {
     id?: string;
     name?: string;
     icon?: string | null;
@@ -2581,6 +2631,7 @@ export interface FragmentDto {
     title?: string;
     summary?: string;
     category?: string;
+    categoryIcon?: string | null;
     content?: string;
     sourceId?: string | null;
     sourceName?: string | null;
@@ -2610,6 +2661,7 @@ export interface FragmentSearchResult {
     title?: string;
     summary?: string;
     category?: string;
+    categoryIcon?: string | null;
     sourceId?: string | null;
     sourceName?: string | null;
     sourceType?: SourceType | null;
@@ -2652,6 +2704,7 @@ export interface FragmentInPlanDto {
     title?: string;
     summary?: string;
     category?: string;
+    categoryIcon?: string | null;
     content?: string;
     confidence?: string | null;
     confidenceComment?: string | null;

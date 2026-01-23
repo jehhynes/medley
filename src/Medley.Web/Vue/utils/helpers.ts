@@ -1,4 +1,5 @@
-import type { ArticleDto, ArticleTypeDto, ArticleStatus } from '@/types/api-client';
+import type { ArticleTypeDto, ArticleStatus } from '@/types/api-client';
+import { articlesClient } from '@/utils/apiClients';
 
 let articleTypes: ArticleTypeDto[] = [];
 let articleTypesLoaded = false;
@@ -15,11 +16,7 @@ export const getArticleTypes = async (): Promise<ArticleTypeDto[]> => {
 
   articleTypesPromise = (async () => {
     try {
-      const response = await fetch('/api/articles/types');
-      if (!response.ok) {
-        throw new Error('Failed to load article types');
-      }
-      articleTypes = await response.json();
+      articleTypes = await articlesClient.getArticleTypes();
       articleTypesLoaded = true;
       return articleTypes;
     } catch (err) {
@@ -149,34 +146,6 @@ export const getIconClass = (icon: string | null | undefined, fallback: string =
 const normalizeText = (str: string | null | undefined): string => {
   if (!str) return '';
   return str.replace(/[^a-zA-Z]/g, '').toLowerCase();
-};
-
-export const getFragmentCategoryIcon = (category: string | null | undefined): string => {
-  if (!category) {
-    return 'bi-file-text';
-  }
-
-  const normalizedCategory = normalizeText(category);
-
-  const hardcodedIcons: Record<string, string> = {
-    'bestpractice': 'bi-shield-check'
-  };
-
-  if (hardcodedIcons[normalizedCategory]) {
-    return hardcodedIcons[normalizedCategory];
-  }
-
-  if (Array.isArray(articleTypes) && articleTypes.length > 0) {
-    const matchingType = articleTypes.find(
-      at => at.name && normalizeText(at.name) === normalizedCategory
-    );
-
-    if (matchingType && matchingType.icon) {
-      return matchingType.icon;
-    }
-  }
-
-  return 'bi-file-text';
 };
 
 export const getSourceTypeIcon = (type: string | null | undefined): string => {

@@ -5,6 +5,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Medley.Application.Services;
 
@@ -17,6 +19,7 @@ public class FragmentExtractionService
     private readonly IContentChunkingService _chunkingService;
     private readonly IRepository<Source> _sourceRepository;
     private readonly IRepository<Fragment> _fragmentRepository;
+    private readonly IRepository<FragmentCategory> _fragmentCategoryRepository;
     private readonly IRepository<AiPrompt> _promptRepository;
     private readonly ILogger<FragmentExtractionService> _logger;
     private readonly AiCallContext _aiCallContext;
@@ -29,6 +32,7 @@ public class FragmentExtractionService
         IContentChunkingService chunkingService,
         IRepository<Source> sourceRepository,
         IRepository<Fragment> fragmentRepository,
+        IRepository<FragmentCategory> fragmentCategoryRepository,
         IRepository<AiPrompt> promptRepository,
         ILogger<FragmentExtractionService> logger,
         AiCallContext aiCallContext)
@@ -37,6 +41,7 @@ public class FragmentExtractionService
         _chunkingService = chunkingService;
         _sourceRepository = sourceRepository;
         _fragmentRepository = fragmentRepository;
+        _fragmentCategoryRepository = fragmentCategoryRepository;
         _promptRepository = promptRepository;
         _logger = logger;
         _aiCallContext = aiCallContext;
@@ -102,30 +107,9 @@ public class FragmentExtractionService
             }
         }
 
-        // Retrieve the fragment extraction prompt template
-        var template = await _promptRepository.Query()
-            .FirstOrDefaultAsync(t => t.Type == PromptType.FragmentExtraction, cancellationToken);
-
-        if (template == null)
-        {
-            _logger.LogError("FragmentExtraction template not found in database");
-            throw new InvalidOperationException("FragmentExtraction template not configured");
-        }
-
-        // Load organization context template (if configured)
-        var orgContextTemplate = await _promptRepository.Query()
-            .FirstOrDefaultAsync(t => t.Type == PromptType.OrganizationContext, cancellationToken);
-
-        // Build system prompt with organization context if available
-        var systemPrompt = template.Content;
-        if (orgContextTemplate != null && !string.IsNullOrWhiteSpace(orgContextTemplate.Content))
-        {
-            systemPrompt = $@"{template.Content}
-
-## Company Context
-{orgContextTemplate.Content}";
-            _logger.LogInformation("Including organization context template in fragment extraction prompt");
-        }
+        // Build JSON-formatted system prompt
+        var systemPrompt = await BuildJsonSystemPromptAsync(cancellationToken);
+        _logger.LogInformation("Built JSON system prompt");
 
         // Try processing without chunking first (unless content is very large)
         var shouldChunk = source.Content.Length > ChunkingThreshold;
@@ -156,8 +140,8 @@ public class FragmentExtractionService
         }
 
         throw new InvalidOperationException("Fragment extraction failed unexpectedly");
+        }
     }
-}
 
     private async Task<(List<FragmentExtractionDto> Fragments, List<string> Messages)> ProcessSingleContentAsync(
         string content, 
@@ -284,17 +268,38 @@ public class FragmentExtractionService
             }
         }
 
+        // Load fragment categories for mapping
+        var categories = await _fragmentCategoryRepository.Query().ToListAsync(cancellationToken);
+        var categoryMap = categories.ToDictionary(c => c.Name, c => c.Id, StringComparer.OrdinalIgnoreCase);
+        
+        // Get fallback category (How-To)
+        var fallbackCategory = categories.FirstOrDefault(c => c.Name.Equals("How-To", StringComparison.OrdinalIgnoreCase));
+        var fallbackCategoryId = fallbackCategory?.Id ?? categories.First().Id;
+
         // Create Fragment entities and save them
         var fragmentCount = 0;
         foreach (var fragmentDto in fragmentDtos)
         {
             try
             {
+                // Map category name to FragmentCategory entity
+                FragmentCategory category;
+                if (!categoryMap.TryGetValue(fragmentDto.Category.Trim(), out var categoryId))
+                {
+                    category = fallbackCategory ?? categories.First();
+                    _logger.LogWarning("Category '{Category}' not found for fragment '{Title}', using fallback category", 
+                        fragmentDto.Category, fragmentDto.Title);
+                }
+                else
+                {
+                    category = categories.First(c => c.Id == categoryId);
+                }
+
                 var fragment = new Fragment
                 {
                     Title = fragmentDto.Title.Trim().Substring(0, Math.Min(200, fragmentDto.Title.Trim().Length)),
                     Summary = fragmentDto.Summary.Trim().Substring(0, Math.Min(500, fragmentDto.Summary.Trim().Length)),
-                    Category = fragmentDto.Category.Trim().Substring(0, Math.Min(100, fragmentDto.Category.Trim().Length)),
+                    FragmentCategory = category,
                     Content = fragmentDto.Content.Trim().Substring(0, Math.Min(10000, fragmentDto.Content.Trim().Length)),
                     Source = source,
                     LastModifiedAt = DateTimeOffset.UtcNow,
@@ -330,6 +335,71 @@ public class FragmentExtractionService
             FragmentCount = fragmentCount,
             Message = combinedMessage
         };
+    }
+
+    /// <summary>
+    /// Builds a JSON-formatted system prompt with global instructions and category-specific guidance
+    /// </summary>
+    private async Task<string> BuildJsonSystemPromptAsync(CancellationToken cancellationToken = default)
+    {
+        // Retrieve the fragment extraction prompt template
+        var template = await _promptRepository.Query()
+            .FirstOrDefaultAsync(t => t.Type == PromptType.FragmentExtraction, cancellationToken);
+
+        if (template == null)
+        {
+            _logger.LogError("FragmentExtraction template not found in database");
+            throw new InvalidOperationException("FragmentExtraction template not configured");
+        }
+
+        // Load organization context template (if configured)
+        var orgContextTemplate = await _promptRepository.Query()
+            .FirstOrDefaultAsync(t => t.Type == PromptType.OrganizationContext, cancellationToken);
+
+        // Load all fragment categories
+        var categories = await _fragmentCategoryRepository.Query()
+            .OrderBy(c => c.Name)
+            .ToListAsync(cancellationToken);
+
+        if (!categories.Any())
+        {
+            _logger.LogError("No fragment categories found in database");
+            throw new InvalidOperationException("Fragment categories not configured");
+        }
+
+        // Load per-category prompts
+        var categoryPrompts = await _promptRepository.Query()
+            .Where(t => t.Type == PromptType.FragmentCategoryExtraction && t.FragmentCategoryId != null)
+            .Include(t => t.FragmentCategory)
+            .ToListAsync(cancellationToken);
+
+        _logger.LogInformation("Loaded {CategoryCount} categories and {PromptCount} category-specific prompts", 
+            categories.Count, categoryPrompts.Count);
+
+        // Build category map with guidance by ID
+        var categoryGuidanceMap = categoryPrompts
+            .Where(p => p.FragmentCategoryId != null)
+            .ToDictionary(
+                p => p.FragmentCategoryId!.Value,
+                p => p.Content
+            );
+
+        var promptObject = new FragmentExtractionSystemPrompt
+        {
+            Instructions = template.Content,
+            OrganizationContext = orgContextTemplate?.Content,
+            FragmentCategories = categories.Select(c => new CategoryDefinition
+            {
+                Name = c.Name,
+                Guidance = categoryGuidanceMap.TryGetValue(c.Id, out var guidance) ? guidance : null
+            }).ToList()
+        };
+
+        return System.Text.Json.JsonSerializer.Serialize(promptObject, new System.Text.Json.JsonSerializerOptions
+        {
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
     }
 }
 
@@ -372,5 +442,27 @@ public class FragmentExtractionResult
 {
     public int FragmentCount { get; set; }
     public string? Message { get; set; }
+}
+
+/// <summary>
+/// System prompt structure for fragment extraction
+/// </summary>
+public class FragmentExtractionSystemPrompt
+{
+    public required string Instructions { get; set; }
+    
+    public string? OrganizationContext { get; set; }
+    
+    public required List<CategoryDefinition> FragmentCategories { get; set; }
+}
+
+/// <summary>
+/// Definition of a fragment category with extraction guidance
+/// </summary>
+public class CategoryDefinition
+{
+    public required string Name { get; set; }
+    
+    public string? Guidance { get; set; }
 }
 

@@ -122,7 +122,7 @@
               <!-- Header Row: Icon, Title, Badges -->
               <div class="row g-2">
                 <div class="col-auto" style="width: 60px; text-align: center;">
-                  <i class="list-item-icon" :class="getIconClass(getFragmentCategoryIcon(pf.fragment.category))" style="font-size: 1.5rem;position:relative;top:-0.33rem;"></i>
+                  <i class="list-item-icon" :class="getIconClass(pf.fragment.categoryIcon, 'bi-puzzle')" style="font-size: 1.5rem;position:relative;top:-0.33rem;"></i>
                 </div>
                 <div class="col">
                   <div class="fw-semibold fragment-title" @click="selectFragment(pf)">{{ pf.fragment.title || 'Untitled Fragment' }}</div>
@@ -200,7 +200,7 @@
               <!-- Header Row: Icon, Title, Badges -->
               <div class="row g-2">
                 <div class="col-auto" style="width: 60px; text-align: center;">
-                  <i class="list-item-icon" :class="getIconClass(getFragmentCategoryIcon(pf.fragment.category))" style="font-size: 1.5rem;position:relative;top:-0.33rem;"></i>
+                  <i class="list-item-icon" :class="getIconClass(pf.fragment.categoryIcon, 'bi-puzzle')" style="font-size: 1.5rem;position:relative;top:-0.33rem;"></i>
                 </div>
                 <div class="col">
                   <div class="fw-semibold fragment-title" @click="selectFragment(pf)">{{ pf.fragment.title || 'Untitled Fragment' }}</div>
@@ -269,7 +269,6 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import FragmentModal from '../../sources/components/FragmentModal.vue';
 import { 
-  getFragmentCategoryIcon, 
   getIconClass, 
   getConfidenceIcon, 
   getConfidenceColor,

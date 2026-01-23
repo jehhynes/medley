@@ -53,6 +53,7 @@ public class FragmentsApiController : ControllerBase
     {
         var fragments = await _fragmentRepository.Query()
             .Include(f => f.Source)
+            .Include(f => f.FragmentCategory)
             .OrderByDescending(f => f.Source!.Date)
             .ThenByDescending(f => f.CreatedAt)
             .ThenBy(f => f.Id) // Deterministic tiebreaker for pagination
@@ -63,7 +64,8 @@ public class FragmentsApiController : ControllerBase
                 Id = f.Id,
                 Title = f.Title,
                 Summary = f.Summary,
-                Category = f.Category,
+                Category = f.FragmentCategory.Name,
+                CategoryIcon = f.FragmentCategory.Icon,
                 Content = f.Content,
                 SourceId = f.Source == null ? null : (Guid?)f.Source.Id,
                 SourceName = f.Source == null ? null : (string?)f.Source.Name,
@@ -90,6 +92,7 @@ public class FragmentsApiController : ControllerBase
     {
         var fragment = await _fragmentRepository.Query()
             .Include(f => f.Source)
+            .Include(f => f.FragmentCategory)
             .FirstOrDefaultAsync(f => f.Id == id);
 
         if (fragment == null)
@@ -102,7 +105,8 @@ public class FragmentsApiController : ControllerBase
             Id = fragment.Id,
             Title = fragment.Title,
             Summary = fragment.Summary,
-            Category = fragment.Category,
+            Category = fragment.FragmentCategory.Name,
+            CategoryIcon = fragment.FragmentCategory.Icon,
             Content = fragment.Content,
             SourceId = fragment.Source == null ? null : (Guid?)fragment.Source.Id,
             SourceName = fragment.Source == null ? null : (string?)fragment.Source.Name,
@@ -126,6 +130,7 @@ public class FragmentsApiController : ControllerBase
     {
         var fragments = await _fragmentRepository.Query()
             .Include(f => f.Source)
+            .Include(f => f.FragmentCategory)
             .Where(f => f.Source!.Id == sourceId)
             .OrderByDescending(f => f.CreatedAt)
             .ThenBy(f => f.Id) // Deterministic tiebreaker
@@ -134,7 +139,8 @@ public class FragmentsApiController : ControllerBase
                 Id = f.Id,
                 Title = f.Title,
                 Summary = f.Summary,
-                Category = f.Category,
+                Category = f.FragmentCategory.Name,
+                CategoryIcon = f.FragmentCategory.Icon,
                 Content = f.Content,
                 SourceId = f.Source!.Id,
                 SourceName = f.Source.Name,
@@ -202,6 +208,7 @@ public class FragmentsApiController : ControllerBase
             
             var fragmentsWithSource = await _fragmentRepository.Query()
                 .Include(f => f.Source)
+                .Include(f => f.FragmentCategory)
                 .Where(f => fragmentIds.Contains(f.Id))
                 .ToListAsync();
 
@@ -217,7 +224,8 @@ public class FragmentsApiController : ControllerBase
                         Id = fragment.Id,
                         Title = fragment.Title,
                         Summary = fragment.Summary,
-                        Category = fragment.Category,
+                        Category = fragment.FragmentCategory.Name,
+                        CategoryIcon = fragment.FragmentCategory.Icon,
                         SourceId = fragment.Source == null ? null : (Guid?)fragment.Source.Id,
                         SourceName = fragment.Source == null ? null : (string?)fragment.Source.Name,
                         SourceType = fragment.Source == null ? null : (SourceType?)fragment.Source.Type,

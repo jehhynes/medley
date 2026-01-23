@@ -5,7 +5,7 @@
          class="list-item-content" 
          :class="{ active: selectedId === fragment.id }"
          @click.prevent="selectFragment(fragment)">
-        <i class="list-item-icon" :class="getIconClass(getFragmentCategoryIcon(fragment.category))"></i>
+        <i class="list-item-icon" :class="getIconClass(fragment.categoryIcon, 'bi-puzzle')"></i>
         <div class="list-item-body">
           <div class="list-item-title">{{ fragment.title || 'Untitled Fragment' }}</div>
           <div class="list-item-subtitle">
@@ -31,7 +31,6 @@
 import { 
   formatDate, 
   getSourceTypeIcon, 
-  getFragmentCategoryIcon, 
   getIconClass, 
   getConfidenceIcon, 
   getConfidenceColor

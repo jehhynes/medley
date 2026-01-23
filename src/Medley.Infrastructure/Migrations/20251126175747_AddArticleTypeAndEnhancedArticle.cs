@@ -70,7 +70,7 @@ namespace Medley.Infrastructure.Migrations
                 values: new object[,]
                 {
                     { Guid.NewGuid(), "Index", "bi-folder", now },
-                    { Guid.NewGuid(), "HowTo", "bi-card-checklist", now },
+                    { Guid.NewGuid(), "How-To", "bi-card-checklist", now },
                     { Guid.NewGuid(), "Tutorial", "bi-play-circle", now },
                     { Guid.NewGuid(), "Reference", "bi-book", now },
                     { Guid.NewGuid(), "Concept", "bi-lightbulb", now },
