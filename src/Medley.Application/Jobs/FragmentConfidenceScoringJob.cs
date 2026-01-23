@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Hangfire.Server;
 using Hangfire.Storage;
 using Medley.Application.Interfaces;
@@ -24,6 +26,12 @@ public class FragmentConfidenceScoringJob : BaseHangfireJob<FragmentConfidenceSc
     private readonly IRepository<Source> _sourceRepository;
     private readonly IRepository<AiPrompt> _promptRepository;
     private readonly AiCallContext _aiCallContext;
+    
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
 
     public FragmentConfidenceScoringJob(
         IAiProcessingService aiProcessingService,
@@ -89,9 +97,9 @@ public class FragmentConfidenceScoringJob : BaseHangfireJob<FragmentConfidenceSc
             _logger.LogInformation("Scoring {Count} fragments for source {SourceId}", fragmentsToScore.Count, sourceId);
 
             var fragmentsList = fragmentsToScore.ToList();
-            var userPrompt = BuildUserPrompt(source.Content, fragmentsList);
+            var userPrompt = BuildJsonUserPrompt(source.Content, fragmentsList);
 
-            // Set AI call context for token tracking - use first fragment as representative
+            // Set AI call context for token tracking
             using (_aiCallContext.SetContext(nameof(FragmentConfidenceScoringJob), nameof(ExecuteAsync), nameof(Source), sourceId))
             {
                 var response = await _aiProcessingService.ProcessStructuredPromptAsync<ConfidenceScoringResponse>(
@@ -155,51 +163,31 @@ public class FragmentConfidenceScoringJob : BaseHangfireJob<FragmentConfidenceSc
         var orgContextTemplate = await _promptRepository.Query()
             .FirstOrDefaultAsync(t => t.Type == PromptType.OrganizationContext, cancellationToken);
 
-        if (orgContextTemplate != null && !string.IsNullOrWhiteSpace(orgContextTemplate.Content))
+        var promptObject = new ConfidenceScoringSystemPrompt
         {
-            return $@"{scoringTemplate.Content}
+            Instructions = scoringTemplate.Content,
+            OrganizationContext = orgContextTemplate?.Content
+        };
 
-## Company Context
-{orgContextTemplate.Content}";
-        }
-
-        return scoringTemplate.Content;
+        return JsonSerializer.Serialize(promptObject, JsonOptions);
     }
 
-    private static string BuildUserPrompt(string sourceContent, IEnumerable<Fragment> fragments)
+    private static string BuildJsonUserPrompt(string sourceContent, IEnumerable<Fragment> fragments)
     {
-        var sb = new System.Text.StringBuilder();
-        
-        sb.AppendLine("# Source Content");
-        sb.AppendLine();
-        sb.AppendLine(sourceContent);
-        sb.AppendLine();
-        sb.AppendLine("# Fragments to Score");
-        sb.AppendLine();
-
         var fragmentsList = fragments.ToList();
-        int index = 1;
-        foreach (var fragment in fragmentsList)
+        
+        var promptObject = new ConfidenceScoringUserPrompt
         {
-            sb.AppendLine($"## Fragment {index}");
-            sb.AppendLine($"- **ID**: {index}");
-            sb.AppendLine($"- **Category**: {fragment.FragmentCategory.Name}");
-            sb.AppendLine("- **Content**:");
-            sb.AppendLine();
-            sb.AppendLine(fragment.Content);
-            sb.AppendLine();
-            sb.AppendLine("---");
-            sb.AppendLine();
-            index++;
-        }
+            SourceContent = sourceContent,
+            Fragments = fragmentsList.Select((f, index) => new FragmentToScore
+            {
+                Id = index + 1,
+                Category = f.FragmentCategory.Name,
+                Content = f.Content
+            }).ToList()
+        };
 
-        if (fragmentsList.Count > 0)
-        {
-            sb.AppendLine();
-            sb.AppendLine($"**Important**: Please return a confidence score for every fragment Id from 1 to {fragmentsList.Count}. Each fragment must have a score.");
-        }
-
-        return sb.ToString();
+        return JsonSerializer.Serialize(promptObject, JsonOptions);
     }
 
     private static string? TrimConfidenceComment(string? comment)
@@ -214,12 +202,36 @@ public class FragmentConfidenceScoringJob : BaseHangfireJob<FragmentConfidenceSc
     }
 }
 
+public class ConfidenceScoringSystemPrompt
+{
+    public required string Instructions { get; set; }
+    
+    public string? OrganizationContext { get; set; }
+}
+
+public class ConfidenceScoringUserPrompt
+{
+    public required string SourceContent { get; set; }
+    
+    public required List<FragmentToScore> Fragments { get; set; }
+}
+
+public class FragmentToScore
+{
+    public int Id { get; set; }
+    
+    public required string Category { get; set; }
+
+    public required string Content { get; set; }
+}
+
 /// <summary>
 /// Response DTO for confidence scoring
 /// </summary>
 public class ConfidenceScoringResponse
 {
     public List<FragmentConfidenceScore> Scores { get; set; } = new();
+    
     [Description("Any comments or caveats about the scoring process")]
     public string? Message { get; set; }
 }
@@ -231,7 +243,9 @@ public class FragmentConfidenceScore
 {
     [Description("The fragment Id")]
     public int FragmentId { get; set; }
+    
     public ConfidenceLevel? Confidence { get; set; }
+    
     [MaxLength(1000)]
     [Description("Brief explanation of factors affecting the assigned confidence")]
     public string? ConfidenceComment { get; set; }

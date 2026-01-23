@@ -11,7 +11,7 @@ public class CreatePlanRequest
     /// <summary>
     /// Overall instructions for how to improve the article using the recommended fragments
     /// </summary>
-    [Description("Overall instructions for how to improve the article using the recommended fragments")]
+    [Description("Overall instructions for how to improve the article using the recommended fragments in markdown format")]
     [Required]
     public required string Instructions { get; set; }
 
