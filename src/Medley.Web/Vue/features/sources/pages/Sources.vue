@@ -268,6 +268,11 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+
+// Define props to handle attributes passed by router
+defineProps<{
+  id?: string;
+}>();
 import { sourcesClient, fragmentsClient } from '@/utils/apiClients';
 import { 
   getIconClass, 

@@ -171,6 +171,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+
+// Define props to handle attributes passed by router
+defineProps<{
+  id?: string;
+}>();
 import { speakersClient } from '@/utils/apiClients';
 import { useSidebarState } from '@/composables/useSidebarState';
 import type { SpeakerListDto, SpeakerDetailDto, TrustLevel } from '@/types/api-client';
