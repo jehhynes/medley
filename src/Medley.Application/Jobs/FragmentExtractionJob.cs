@@ -38,6 +38,58 @@ public class FragmentExtractionJob : BaseHangfireJob<FragmentExtractionJob>
     }
 
     /// <summary>
+    /// Processes all sources with ExtractionStatus.NotStarted
+    /// </summary>
+    [Mission]
+    public async Task ProcessAllPendingSourcesAsync(PerformContext context, CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Starting ProcessAllPendingSourcesAsync - processing all sources with NotStarted status");
+
+        int processedCount = 0;
+        int successCount = 0;
+        int failedCount = 0;
+
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            // Find next source with NotStarted status
+            var nextSourceId = await _sourceRepository.Query()
+                .Where(s => s.ExtractionStatus == ExtractionStatus.NotStarted)
+                .OrderByDescending(s => s.Date)
+                .Select(s => s.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (nextSourceId == Guid.Empty)
+            {
+                _logger.LogInformation("No more sources with NotStarted status. Processed {ProcessedCount} sources ({SuccessCount} succeeded, {FailedCount} failed)",
+                    processedCount, successCount, failedCount);
+                break;
+            }
+
+            processedCount++;
+            _logger.LogInformation("Processing source {SourceId} ({ProcessedCount} of pending sources)", nextSourceId, processedCount);
+
+            try
+            {
+                // Process this source using the existing logic
+                await ExecuteAsync(nextSourceId, context, cancellationToken);
+                successCount++;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to process source {SourceId} during batch processing", nextSourceId);
+                failedCount++;
+                // Continue with next source
+            }
+        }
+
+        if (cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning("ProcessAllPendingSourcesAsync was cancelled after processing {ProcessedCount} sources ({SuccessCount} succeeded, {FailedCount} failed)",
+                processedCount, successCount, failedCount);
+        }
+    }
+
+    /// <summary>
     /// Executes fragment extraction for a specific source
     /// </summary>
     /// <param name="sourceId">The source ID to extract fragments from</param>
