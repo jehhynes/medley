@@ -48,11 +48,11 @@ public class PlanFragment : BaseEntity
     /// AI agent's reasoning for why this fragment is recommended or not recommended
     /// </summary>
     [MaxLength(2000)]
-    public required string Reasoning { get; set; }
+    public string? Reasoning { get; set; }
 
     /// <summary>
     /// Instructions for how to use this fragment
     /// </summary>
     [MaxLength(2000)]
-    public required string Instructions { get; set; }
+    public string? Instructions { get; set; }
 }

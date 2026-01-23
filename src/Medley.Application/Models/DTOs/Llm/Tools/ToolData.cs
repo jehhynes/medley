@@ -45,15 +45,13 @@ public class PlanFragmentRecommendation
     [Description("Whether to include this fragment in the article improvement (true) or exclude it (false)")]
     public bool Include { get; set; }
 
-    [Required]
     [Description("Explanation of why this fragment should not be included in the article. Omit if Include=true")]
     [MaxLength(200)]
-    public required string Reasoning { get; set; }
+    public string? Reasoning { get; set; }
 
-    [Required]
     [Description("Optional instructions on how to incorporate this fragment into the article")]
     [MaxLength(200)]
-    public required string Instructions { get; set; }
+    public string? Instructions { get; set; }
 }
 
 public class CreateArticleVersionRequest
