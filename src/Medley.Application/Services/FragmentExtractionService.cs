@@ -411,6 +411,10 @@ public class FragmentExtractionService
             Instructions = template.Content,
             OrganizationContext = orgContextTemplate?.Content,
             Speakers = speakers.Count > 0 ? speakers : null,
+            SpeakersGuidance = 
+                speakers.Count == 0 ? null :
+                source.MetadataType == SourceMetadataType.Collector_Fellow ? "Any speaker not included in the list should be considered to be a customer" :
+                source.MetadataType == SourceMetadataType.Collector_GoogleDrive ? "Only the primary employee is known. The source content does not identify speech segments by speakers." : null,
             FragmentCategories = categories.Select(c => new CategoryDefinition
             {
                 Name = c.Name,
@@ -477,8 +481,11 @@ public class FragmentExtractionSystemPrompt
     public string? OrganizationContext { get; set; }
     
     public List<SpeakerInfo>? Speakers { get; set; }
-    
+
+    public string? SpeakersGuidance { get; internal set; }
+
     public required List<CategoryDefinition> FragmentCategories { get; set; }
+    
 }
 
 /// <summary>
