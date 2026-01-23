@@ -331,30 +331,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.sidebar-breadcrumb-title {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-}
-
-.sidebar-breadcrumb-title a {
-  color: var(--bs-secondary-color);
-  text-decoration: none;
-  font-weight: 500;
-}
-
-.sidebar-breadcrumb-title a:hover {
-  color: var(--bs-primary);
-}
-
-.sidebar-breadcrumb-title i {
-  font-size: 0.6rem;
-  color: var(--bs-secondary-color);
-}
-
-.sidebar-breadcrumb-title span {
-  color: var(--bs-body-color);
-}
 
 .sidebar-filters {
   padding: 0.75rem 1rem;
