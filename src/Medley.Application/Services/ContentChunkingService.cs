@@ -3,6 +3,7 @@ using Medley.Application.Integrations.Models.Fellow;
 using Medley.Application.Interfaces;
 using Medley.Application.Models;
 using Medley.Domain.Entities;
+using Medley.Domain.Enums;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -65,19 +66,22 @@ public class ContentChunkingService : IContentChunkingService
 
         try
         {
-            // Try parsing as Fellow recording
-            var fellowRecording = JsonSerializer.Deserialize<FellowRecordingImportModel>(source.MetadataJson);
-            if (fellowRecording?.Transcript?.SpeechSegments != null && fellowRecording.Transcript.SpeechSegments.Count > 0)
+            if (source.MetadataType == SourceMetadataType.Collector_Fellow)
             {
-                return CombineFellowSegmentsBySpeaker(fellowRecording.Transcript.SpeechSegments);
+                var fellowRecording = JsonSerializer.Deserialize<FellowRecordingImportModel>(source.MetadataJson);
+                if (fellowRecording?.Transcript?.SpeechSegments != null && fellowRecording.Transcript.SpeechSegments.Count > 0)
+                {
+                    return CombineFellowSegmentsBySpeaker(fellowRecording.Transcript.SpeechSegments);
+                }
             }
-
-            // Try parsing as Google Drive video
-            var googleVideo = JsonSerializer.Deserialize<GoogleDriveVideoImportModel>(source.MetadataJson);
-            if (googleVideo?.Transcript != null && googleVideo.Transcript.Count > 0)
+            else if (source.MetadataType == SourceMetadataType.Collector_GoogleDrive)
             {
-                // Google Drive transcripts don't break at sentence endings, so we need to re-segment
-                return SplitGoogleSegmentsBySentence(googleVideo.Transcript);
+                var googleVideo = JsonSerializer.Deserialize<GoogleDriveVideoImportModel>(source.MetadataJson);
+                if (googleVideo?.Transcript != null && googleVideo.Transcript.Count > 0)
+                {
+                    // Google Drive transcripts don't break at sentence endings, so we need to re-segment
+                    return SplitGoogleSegmentsBySentence(googleVideo.Transcript);
+                }
             }
         }
         catch (Exception ex)
@@ -85,7 +89,7 @@ public class ContentChunkingService : IContentChunkingService
             _logger.LogWarning(ex, "Failed to parse speech segments from source metadata");
         }
 
-        return null;
+        throw new InvalidOperationException("Unable to extract speech segments from source metadata");
     }
 
     private List<SpeechSegment> CombineFellowSegmentsBySpeaker(List<FellowSpeechSegmentImportModel> fellowSegments)

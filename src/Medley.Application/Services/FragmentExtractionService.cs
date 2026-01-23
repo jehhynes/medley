@@ -59,9 +59,10 @@ public class FragmentExtractionService
         {
             _logger.LogInformation("Starting fragment extraction for source {SourceId}", sourceId);
 
-            // Load source with content
+            // Load source with content and speakers
             var source = await _sourceRepository.Query()
             .Include(s => s.Integration)
+            .Include(s => s.Speakers)
             .FirstOrDefaultAsync(s => s.Id == sourceId, cancellationToken);
 
         if (source == null)
@@ -107,8 +108,8 @@ public class FragmentExtractionService
             }
         }
 
-        // Build JSON-formatted system prompt
-        var systemPrompt = await BuildJsonSystemPromptAsync(cancellationToken);
+        // Build JSON-formatted system prompt with speaker information
+        var systemPrompt = await BuildJsonSystemPromptAsync(source, cancellationToken);
         _logger.LogInformation("Built JSON system prompt");
 
         // Try processing without chunking first (unless content is very large)
@@ -143,7 +144,7 @@ public class FragmentExtractionService
         }
     }
 
-    private async Task<(List<FragmentExtractionDto> Fragments, List<string> Messages)> ProcessSingleContentAsync(
+    private async Task<(List<ExtractedFragmentDto> Fragments, List<string> Messages)> ProcessSingleContentAsync(
         string content, 
         string systemPrompt,
         CancellationToken cancellationToken = default)
@@ -156,7 +157,7 @@ public class FragmentExtractionService
                 systemPrompt: systemPrompt,
                 cancellationToken: cancellationToken);
 
-            var fragments = new List<FragmentExtractionDto>();
+            var fragments = new List<ExtractedFragmentDto>();
             var messages = new List<string>();
 
             if (extractionResponse != null)
@@ -177,7 +178,7 @@ public class FragmentExtractionService
         }
     }
 
-    private async Task<(List<FragmentExtractionDto> Fragments, List<string> Messages)> ProcessChunkedContentAsync(
+    private async Task<(List<ExtractedFragmentDto> Fragments, List<string> Messages)> ProcessChunkedContentAsync(
         Source source, 
         string systemPrompt,
         CancellationToken cancellationToken = default)
@@ -188,7 +189,7 @@ public class FragmentExtractionService
         if (contentChunks.Count == 0)
         {
             _logger.LogWarning("Chunking service returned no chunks for source {SourceId}", source.Id);
-            return (new List<FragmentExtractionDto>(), new List<string>());
+            return (new List<ExtractedFragmentDto>(), new List<string>());
         }
 
         // Process all chunks in parallel
@@ -214,7 +215,7 @@ public class FragmentExtractionService
                             ? extractionResponse.Message.Trim() 
                             : null;
 
-                        var fragments = extractionResponse.Fragments ?? new List<FragmentExtractionDto>();
+                        var fragments = extractionResponse.Fragments ?? new List<ExtractedFragmentDto>();
                         
                         _logger.LogInformation("Extracted {Count} fragments from chunk {ChunkNumber}",
                             fragments.Count, chunkNumber);
@@ -222,7 +223,7 @@ public class FragmentExtractionService
                         return (Fragments: fragments, Message: message, ChunkNumber: chunkNumber);
                     }
 
-                    return (Fragments: new List<FragmentExtractionDto>(), Message: (string?)null, ChunkNumber: chunkNumber);
+                    return (Fragments: new List<ExtractedFragmentDto>(), Message: (string?)null, ChunkNumber: chunkNumber);
                 }
             }
             catch (Exception ex)
@@ -248,15 +249,24 @@ public class FragmentExtractionService
 
     private async Task<FragmentExtractionResult> SaveFragmentsAndReturnResultAsync(
         Source source,
-        List<FragmentExtractionDto> fragmentDtos,
+        List<ExtractedFragmentDto> fragmentDtos,
         List<string> messages,
         CancellationToken cancellationToken = default)
     {
 
-        // Combine all messages into a single message
-        var combinedMessage = messages.Count > 0 
-            ? string.Join("\n\n", messages) 
-            : null;
+        // Combine all messages into a single message with numbered prefixes
+        string? combinedMessage = null;
+        if (messages.Count > 0)
+        {
+            if (messages.Count == 1)
+            {
+                combinedMessage = messages[0];
+            }
+            else
+            {
+                combinedMessage = string.Join("\n\n", messages.Select((msg, index) => $"({index + 1}) {msg}"));
+            }
+        }
 
         // Zero fragments is now a successful outcome, not an error
         if (fragmentDtos.Count == 0)
@@ -340,7 +350,7 @@ public class FragmentExtractionService
     /// <summary>
     /// Builds a JSON-formatted system prompt with global instructions and category-specific guidance
     /// </summary>
-    private async Task<string> BuildJsonSystemPromptAsync(CancellationToken cancellationToken = default)
+    private async Task<string> BuildJsonSystemPromptAsync(Source source, CancellationToken cancellationToken = default)
     {
         // Retrieve the fragment extraction prompt template
         var template = await _promptRepository.Query()
@@ -384,10 +394,23 @@ public class FragmentExtractionService
                 p => p.Content
             );
 
+        // Build speaker information
+        var speakers = source.Speakers?
+            .Select(s => new SpeakerInfo
+            {
+                Name = s.Name,
+                Role = s.IsInternal == true ? "Employee" : "Customer",
+                TrustLevel = s.TrustLevel?.ToString()
+            })
+            .OrderBy(s => s.Role)
+            .ThenBy(s => s.Name)
+            .ToList() ?? new List<SpeakerInfo>();
+
         var promptObject = new FragmentExtractionSystemPrompt
         {
             Instructions = template.Content,
             OrganizationContext = orgContextTemplate?.Content,
+            Speakers = speakers.Count > 0 ? speakers : null,
             FragmentCategories = categories.Select(c => new CategoryDefinition
             {
                 Name = c.Name,
@@ -408,7 +431,7 @@ public class FragmentExtractionService
 /// </summary>
 public class FragmentExtractionResponse
 {
-    public List<FragmentExtractionDto> Fragments { get; set; } = new();
+    public List<ExtractedFragmentDto> Fragments { get; set; } = new();
     [Description("Any comments or information besides fragments goes here.")]
     public string? Message { get; set; }
 }
@@ -416,7 +439,7 @@ public class FragmentExtractionResponse
 /// <summary>
 /// DTO for individual fragment from AI response (internal to extraction service)
 /// </summary>
-public class FragmentExtractionDto
+public class ExtractedFragmentDto
 {
     [Required]
     [Description("Clear, descriptive heading")]
@@ -453,7 +476,21 @@ public class FragmentExtractionSystemPrompt
     
     public string? OrganizationContext { get; set; }
     
+    public List<SpeakerInfo>? Speakers { get; set; }
+    
     public required List<CategoryDefinition> FragmentCategories { get; set; }
+}
+
+/// <summary>
+/// Information about a speaker in the source
+/// </summary>
+public class SpeakerInfo
+{
+    public required string Name { get; set; }
+    
+    public required string Role { get; set; }
+    
+    public string? TrustLevel { get; set; }
 }
 
 /// <summary>

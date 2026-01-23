@@ -61,7 +61,7 @@ public class FragmentConfidenceScoringJob : BaseHangfireJob<FragmentConfidenceSc
             }
 
             var source = await _sourceRepository.Query()
-                .Include(s => s.Fragments)
+                .Include(s => s.Fragments).ThenInclude(x => x.FragmentCategory)
                 .FirstOrDefaultAsync(s => s.Id == sourceId, cancellationToken);
 
             if (source == null)
