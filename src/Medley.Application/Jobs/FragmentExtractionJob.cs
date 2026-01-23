@@ -1,4 +1,5 @@
 using Hangfire;
+using Hangfire.Console;
 using Hangfire.MissionControl;
 using Hangfire.Server;
 using Hangfire.Storage;
@@ -43,7 +44,7 @@ public class FragmentExtractionJob : BaseHangfireJob<FragmentExtractionJob>
     [Mission]
     public async Task ProcessAllPendingSourcesAsync(PerformContext context, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Starting ProcessAllPendingSourcesAsync - processing all sources with NotStarted status");
+        LogInfo(context, "Starting ProcessAllPendingSourcesAsync - processing all sources with NotStarted status");
 
         int processedCount = 0;
         int successCount = 0;
@@ -60,13 +61,12 @@ public class FragmentExtractionJob : BaseHangfireJob<FragmentExtractionJob>
 
             if (nextSourceId == Guid.Empty)
             {
-                _logger.LogInformation("No more sources with NotStarted status. Processed {ProcessedCount} sources ({SuccessCount} succeeded, {FailedCount} failed)",
-                    processedCount, successCount, failedCount);
+                LogInfo(context, $"No more sources with NotStarted status. Processed {processedCount} sources ({successCount} succeeded, {failedCount} failed)");
                 break;
             }
 
             processedCount++;
-            _logger.LogInformation("Processing source {SourceId} ({ProcessedCount} of pending sources)", nextSourceId, processedCount);
+            LogInfo(context, $"Processing source {nextSourceId} ({processedCount} of pending sources)");
 
             try
             {
@@ -76,7 +76,7 @@ public class FragmentExtractionJob : BaseHangfireJob<FragmentExtractionJob>
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to process source {SourceId} during batch processing", nextSourceId);
+                LogError(context, ex, $"Failed to process source {nextSourceId} during batch processing");
                 failedCount++;
                 // Continue with next source
             }
@@ -84,8 +84,7 @@ public class FragmentExtractionJob : BaseHangfireJob<FragmentExtractionJob>
 
         if (cancellationToken.IsCancellationRequested)
         {
-            _logger.LogWarning("ProcessAllPendingSourcesAsync was cancelled after processing {ProcessedCount} sources ({SuccessCount} succeeded, {FailedCount} failed)",
-                processedCount, successCount, failedCount);
+            LogWarning(context, $"ProcessAllPendingSourcesAsync was cancelled after processing {processedCount} sources ({successCount} succeeded, {failedCount} failed)");
         }
     }
 
@@ -107,17 +106,18 @@ public class FragmentExtractionJob : BaseHangfireJob<FragmentExtractionJob>
         {
             await ExecuteWithTransactionAsync(async () =>
             {
-                _logger.LogInformation("Fragment extraction job started for source {SourceId}", sourceId);
+                LogInfo(context, $"Fragment extraction job started for source {sourceId}");
 
                 var result = await _fragmentExtractionService.ExtractFragmentsAsync(sourceId, cancellationToken);
                 fragmentCount = result.FragmentCount;
+
+                LogSuccess(context, $"Extracted {fragmentCount} fragments from source {sourceId}");
 
                 // Set status to Completed within the same transaction as fragment creation
                 // Zero fragments is a successful outcome, not a failure
                 await SetExtractionStatusInTransactionAsync(sourceId, ExtractionStatus.Completed, cancellationToken);
 
-                _logger.LogInformation("Fragment extraction job completed for source {SourceId}. Extracted {Count} fragments.", 
-                    sourceId, fragmentCount);
+                LogInfo(context, $"Fragment extraction job completed for source {sourceId}. Extracted {fragmentCount} fragments.");
                 
                 success = true;
             });
@@ -130,18 +130,18 @@ public class FragmentExtractionJob : BaseHangfireJob<FragmentExtractionJob>
                 var scoringJobId = _backgroundJobClient.ContinueJobWith<FragmentConfidenceScoringJob>(
                     currentJobId,
                     j => j.ExecuteAsync(sourceId, default!, default));
-                _logger.LogInformation("Enqueued confidence scoring job for source {SourceId}", sourceId);
+                LogInfo(context, $"Enqueued confidence scoring job for source {sourceId}");
 
                 // Enqueue embedding generation job after confidence scoring completes
                 _backgroundJobClient.ContinueJobWith<EmbeddingGenerationJob>(
                     scoringJobId,
                     j => j.GenerateFragmentEmbeddings(default!, default, sourceId, null));
-                _logger.LogInformation("Enqueued embedding generation job for source {SourceId}", sourceId);
+                LogInfo(context, $"Enqueued embedding generation job for source {sourceId}");
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Fragment extraction job failed for source {SourceId}", sourceId);
+            LogError(context, ex, $"Fragment extraction job failed for source {sourceId}");
             errorMessage = ex.Message;
             success = false;
 
@@ -173,7 +173,7 @@ public class FragmentExtractionJob : BaseHangfireJob<FragmentExtractionJob>
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to update extraction status for source {SourceId}", sourceId);
+            LogDebug($"Failed to update extraction status for source {sourceId}: {ex.Message}");
             // Don't throw - status update failure shouldn't break the job
         }
     }
@@ -190,11 +190,11 @@ public class FragmentExtractionJob : BaseHangfireJob<FragmentExtractionJob>
         {
             source.ExtractionStatus = status;
             
-            _logger.LogDebug("Updated extraction status for source {SourceId} to {Status}", sourceId, status);
+            LogDebug($"Updated extraction status for source {sourceId} to {status}");
         }
         else
         {
-            _logger.LogWarning("Source {SourceId} not found when updating extraction status", sourceId);
+            LogDebug($"Source {sourceId} not found when updating extraction status");
         }
     }
 }

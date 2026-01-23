@@ -1,4 +1,5 @@
 using Hangfire;
+using Hangfire.Console;
 using Hangfire.MissionControl;
 using Hangfire.Server;
 using Medley.Application.Helpers;
@@ -57,7 +58,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
         PerformContext context,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Processing chat message {MessageId}", userMessageId);
+        LogInfo(context, $"Processing chat message {userMessageId}");
 
         try
         {
@@ -71,22 +72,22 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
 
                 if (userMessage == null)
                 {
-                    _logger.LogWarning("User message {MessageId} not found", userMessageId);
+                    LogWarning(context, $"User message {userMessageId} not found");
                     return;
                 }
 
                 var conversation = userMessage.Conversation;
                 if (conversation == null)
                 {
-                    _logger.LogWarning("Conversation not found for message {MessageId}", userMessageId);
+                    LogWarning(context, $"Conversation not found for message {userMessageId}");
                     return;
                 }
 
                 var article = conversation.Article;
                 if (article == null)
                 {
-                    _logger.LogWarning("Article not found for conversation {ConversationId}", conversation.Id);
-                    await SendErrorNotification(conversation.Id, "Article not found", cancellationToken);
+                    LogWarning(context, $"Article not found for conversation {conversation.Id}");
+                    await SendErrorNotification(conversation.Id, "Article not found", context, cancellationToken);
                     return;
                 }
 
@@ -99,7 +100,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                     });
 
                 // Process AI response with streaming
-                _logger.LogInformation("Requesting AI response with streaming for conversation {ConversationId}", conversation.Id);
+                LogInfo(context, $"Requesting AI response with streaming for conversation {conversation.Id}");
                 
                 await foreach (var update in _chatService.ProcessConversationStreamingAsync(
                     conversation.Id,
@@ -153,8 +154,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
 
                         case Models.StreamUpdateType.MessageComplete:
                             // Send final complete message
-                            _logger.LogInformation("Chat message processed successfully for conversation {ConversationId}, response saved with ID {MessageId}",
-                                conversation.Id, update.MessageId);
+                            LogSuccess(context, $"Chat message processed successfully for conversation {conversation.Id}");
 
                             await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
                                 .ChatMessageComplete(new ChatMessageCompletePayload
@@ -190,8 +190,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
 
                     if (plan != null)
                     {
-                        _logger.LogInformation("Sending PlanGenerated event for plan {PlanId}, article {ArticleId}",
-                            plan.Id, conversation.ArticleId);
+                        LogDebug($"Sending PlanGenerated event for plan {plan.Id}, article {conversation.ArticleId}");
 
                         await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
                             .PlanGenerated(new PlanGeneratedPayload
@@ -216,8 +215,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
 
                     if (aiVersion != null)
                     {
-                        _logger.LogInformation("Sending VersionCreated event for AI version {VersionId}, article {ArticleId}",
-                            aiVersion.Id, conversation.ArticleId);
+                        LogDebug($"Sending VersionCreated event for AI version {aiVersion.Id}, article {conversation.ArticleId}");
 
                         await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
                             .VersionCreated(new VersionCreatedPayload
@@ -236,7 +234,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing chat message {MessageId}", userMessageId);
+            LogError(context, ex, $"Error processing chat message {userMessageId}");
             
             // Try to get conversation ID for error notification
             var userMessage = await _chatMessageRepository.Query()
@@ -245,7 +243,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
             
             if (userMessage != null)
             {
-                await SendErrorNotification(userMessage.ConversationId, ex.Message, cancellationToken);
+                await SendErrorNotification(userMessage.ConversationId, ex.Message, context, cancellationToken);
             }
             
             throw; // Re-throw for Hangfire retry logic
@@ -255,7 +253,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
     /// <summary>
     /// Send error notification via SignalR
     /// </summary>
-    private async Task SendErrorNotification(Guid conversationId, string errorMessage, CancellationToken cancellationToken)
+    private async Task SendErrorNotification(Guid conversationId, string errorMessage, PerformContext context, CancellationToken cancellationToken)
     {
         try
         {
@@ -263,7 +261,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
             var conversation = await _chatService.GetConversationAsync(conversationId, cancellationToken);
             if (conversation == null)
             {
-                _logger.LogWarning("Cannot send error notification - conversation {ConversationId} not found", conversationId);
+                LogWarning(context, $"Cannot send error notification - conversation {conversationId} not found");
                 return;
             }
 
@@ -278,7 +276,7 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send error notification for conversation {ConversationId}", conversationId);
+            LogError(context, ex, $"Failed to send error notification for conversation {conversationId}");
         }
     }
 

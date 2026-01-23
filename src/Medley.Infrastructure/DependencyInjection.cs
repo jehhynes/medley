@@ -2,6 +2,7 @@ using Amazon;
 using Amazon.BedrockRuntime;
 using Amazon.S3;
 using Hangfire;
+using Hangfire.Console;
 using Hangfire.MissionControl;
 using Hangfire.PostgreSql;
 using Hangfire.RecurringJobCleanUpManager;
@@ -113,6 +114,7 @@ public static class DependencyInjection
                 options.UseNpgsqlConnection(connectionString);
             })
             .UseMissionControl(typeof(BaseHangfireJob<>).Assembly)
+            .UseConsole()
         );
 
         // Register Hangfire servers (skip in test environment)

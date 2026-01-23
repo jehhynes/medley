@@ -1,4 +1,5 @@
 using Hangfire;
+using Hangfire.Console;
 using Hangfire.Server;
 using Medley.Application.Integrations.Interfaces;
 using Medley.Application.Integrations.Models.Fellow;
@@ -41,7 +42,7 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
     /// </summary>
     public async Task SyncTranscriptsAsync(PerformContext context, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Starting Fellow transcript sync");
+        LogInfo(context, "Starting Fellow transcript sync");
 
         var fellowIntegrations = _integrationService.Query()
             .Where(i => i.Type == IntegrationType.Fellow && i.Status == ConnectionStatus.Connected)
@@ -49,17 +50,17 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
 
         if (fellowIntegrations.Count == 0)
         {
-            _logger.LogInformation("No connected Fellow integrations found. Skipping transcript sync.");
+            LogInfo(context, "No connected Fellow integrations found. Skipping transcript sync.");
             return;
         }
 
-        _logger.LogInformation("Found {Count} connected Fellow integration(s)", fellowIntegrations.Count);
+        LogInfo(context, $"Found {fellowIntegrations.Count} connected Fellow integration(s)");
 
         foreach (var integration in fellowIntegrations)
         {
             if (cancellationToken.IsCancellationRequested)
             {
-                _logger.LogInformation("Cancellation requested. Stopping transcript sync.");
+                LogInfo(context, "Cancellation requested. Stopping transcript sync.");
                 break;
             }
 
@@ -69,13 +70,12 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to sync transcripts for integration {IntegrationId} ({Name})",
-                    integration.Id, integration.Name);
+                LogError(context, ex, $"Failed to sync transcripts for integration {integration.Id} ({integration.Name})");
                 // Continue with other integrations
             }
         }
 
-        _logger.LogInformation("Fellow transcript sync completed");
+        LogInfo(context, "Fellow transcript sync completed");
     }
 
     /// <summary>
@@ -85,13 +85,11 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
     {
         if (string.IsNullOrWhiteSpace(integration.ApiKey) || string.IsNullOrWhiteSpace(integration.BaseUrl))
         {
-            _logger.LogWarning("Integration {IntegrationId} is missing ApiKey or BaseUrl. Skipping.",
-                integration.Id);
+            LogWarning(context, $"Integration {integration.Id} is missing ApiKey or BaseUrl. Skipping.");
             return;
         }
 
-        _logger.LogInformation("Syncing transcripts for integration {IntegrationId} ({Name})",
-            integration.Id, integration.Name);
+        LogInfo(context, $"Syncing transcripts for integration {integration.Id} ({integration.Name})");
 
         var options = new FellowRecordingsRequestOptions
         {
@@ -102,8 +100,7 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
         // Determine sync mode: initial or incremental
         if (!integration.InitialSyncCompleted)
         {
-            _logger.LogInformation("Performing initial sync (no date filter) for integration {IntegrationId}",
-                integration.Id);
+            LogInfo(context, $"Performing initial sync (no date filter) for integration {integration.Id}");
             // No date filter for initial sync
         }
         else
@@ -121,13 +118,11 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
                 {
                     CreatedAtStart = lastSourceDate
                 };
-                _logger.LogInformation("Performing incremental sync from {StartDate} for integration {IntegrationId}",
-                    lastSourceDate.Value, integration.Id);
+                LogInfo(context, $"Performing incremental sync from {lastSourceDate.Value} for integration {integration.Id}");
             }
             else
             {
-                _logger.LogInformation("No existing sources found. Performing full sync for integration {IntegrationId}",
-                    integration.Id);
+                LogInfo(context, $"No existing sources found. Performing full sync for integration {integration.Id}");
             }
         }
 
@@ -141,7 +136,7 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
         {
             if (cancellationToken.IsCancellationRequested)
             {
-                _logger.LogInformation("Cancellation requested. Stopping page processing.");
+                LogInfo(context, "Cancellation requested. Stopping page processing.");
                 break;
             }
 
@@ -159,12 +154,12 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
 
             if (response?.Recordings?.Data == null || response.Recordings.Data.Count == 0)
             {
-                _logger.LogDebug("No recordings returned for integration {IntegrationId}", integration.Id);
+                LogDebug($"No recordings returned for integration {integration.Id}");
                 break;
             }
 
             // Process this page in a transaction
-            (int processedCount, int createdCount, int skippedCount, List<Guid> createdSourceIds) = await ProcessPage(integration, response, cancellationToken);
+            (int processedCount, int createdCount, int skippedCount, List<Guid> createdSourceIds) = await ProcessPage(integration, response, context, cancellationToken);
 
             totalProcessedCount += processedCount;
             totalCreatedCount += createdCount;
@@ -177,17 +172,15 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
                 _backgroundJobClient.ContinueJobWith<SmartTagProcessorJob>(
                     currentJobId,
                     j => j.ExecuteAsync(default!, default, sourceId));
-                _logger.LogDebug("Enqueued smart tag processing job for source {SourceId}", sourceId);
+                LogDebug($"Enqueued smart tag processing job for source {sourceId}");
 
                 _backgroundJobClient.ContinueJobWith<SpeakerExtractionJob>(
                     currentJobId,
                     j => j.ExecuteAsync(default!, default, sourceId));
-                _logger.LogDebug("Enqueued speaker extraction job for source {SourceId}", sourceId);
+                LogDebug($"Enqueued speaker extraction job for source {sourceId}");
             }
 
-            _logger.LogInformation(
-                "Page {PageNumber} completed for integration {IntegrationId}. Processed: {Processed}, Created: {Created}, Skipped: {Skipped}",
-                pageNumber, integration.Id, processedCount, createdCount, skippedCount);
+            LogInfo(context, $"Page {pageNumber} completed for integration {integration.Id}. Processed: {processedCount}, Created: {createdCount}, Skipped: {skippedCount}");
 
             cursor = response.Recordings.PageInfo?.Cursor;
 
@@ -200,17 +193,14 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
             {
                 integration.InitialSyncCompleted = true;
                 
-                _logger.LogInformation("Initial sync completed for integration {IntegrationId}. Flag set to true.",
-                    integration.Id);
+                LogInfo(context, $"Initial sync completed for integration {integration.Id}. Flag set to true.");
             });
         }
 
-        _logger.LogInformation(
-            "Sync completed for integration {IntegrationId} ({Name}). Total - Processed: {Processed}, Created: {Created}, Skipped: {Skipped}",
-            integration.Id, integration.Name, totalProcessedCount, totalCreatedCount, totalSkippedCount);
+        LogInfo(context, $"Sync completed for integration {integration.Id} ({integration.Name}). Total - Processed: {totalProcessedCount}, Created: {totalCreatedCount}, Skipped: {totalSkippedCount}");
     }
 
-    private async Task<(int processedCount, int createdCount, int skippedCount, List<Guid> createdSourceIds)> ProcessPage(Integration integration, FellowRecordingsResponse response, CancellationToken cancellationToken = default)
+    private async Task<(int processedCount, int createdCount, int skippedCount, List<Guid> createdSourceIds)> ProcessPage(Integration integration, FellowRecordingsResponse response, PerformContext context, CancellationToken cancellationToken = default)
     {
         return await ExecuteWithTransactionAsync(async () =>
         {
@@ -225,14 +215,14 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
 
                 if (string.IsNullOrWhiteSpace(recording.Id))
                 {
-                    _logger.LogWarning("Recording has no ID. Skipping.");
+                    LogWarning(context, "Recording has no ID. Skipping.");
                     pageSkipped++;
                     continue;
                 }
 
                 if (recording.StartedAt != null && recording.StartedAt.Value > DateTimeOffset.Now.AddHours(-2))
                 {
-                    _logger.LogWarning("Recording has not started yet or was started within the past 2 hours. Skipping.");
+                    LogWarning(context, "Recording has not started yet or was started within the past 2 hours. Skipping.");
                     pageSkipped++;
                     continue;
                 }
@@ -243,7 +233,7 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
 
                 if (existingSource != null)
                 {
-                    _logger.LogDebug("Source already exists for recording {RecordingId}. Skipping.", recording.Id);
+                    LogDebug($"Source already exists for recording {recording.Id}. Skipping.");
                     pageSkipped++;
                     continue;
                 }
@@ -277,8 +267,7 @@ public class FellowTranscriptSyncJob : BaseHangfireJob<FellowTranscriptSyncJob>
                 pageCreated++;
                 createdSourceIds.Add(source.Id);
 
-                _logger.LogDebug("Created source for recording {RecordingId} ({Title})",
-                    recording.Id, recording.Title);
+                LogDebug($"Created source for recording {recording.Id} ({recording.Title})");
             }
 
             return (pageProcessed, pageCreated, pageSkipped, createdSourceIds);

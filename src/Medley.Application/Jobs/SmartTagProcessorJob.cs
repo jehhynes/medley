@@ -1,4 +1,5 @@
 using Hangfire;
+using Hangfire.Console;
 using Hangfire.MissionControl;
 using Hangfire.Server;
 using Medley.Application.Interfaces;
@@ -47,7 +48,7 @@ public class SmartTagProcessorJob : BaseHangfireJob<SmartTagProcessorJob>
         var logMessage = sourceId.HasValue
             ? $"Starting SmartTagProcessor job for source {sourceId.Value}"
             : "Starting SmartTagProcessor job";
-        _logger.LogInformation(logMessage);
+        LogInfo(context, logMessage);
 
         try
         {
@@ -60,8 +61,7 @@ public class SmartTagProcessorJob : BaseHangfireJob<SmartTagProcessorJob>
 
             if (!organization.EnableSmartTagging)
             {
-                _logger.LogInformation("Smart tagging is disabled for organization {OrganizationId}. Skipping SmartTagProcessor job.",
-                    organization.Id);
+                LogInfo(context, $"Smart tagging is disabled for organization {organization.Id}. Skipping SmartTagProcessor job.");
                 return;
             }
 
@@ -82,11 +82,11 @@ public class SmartTagProcessorJob : BaseHangfireJob<SmartTagProcessorJob>
 
             if (sourceIds.Count == 0)
             {
-                _logger.LogInformation("No sources pending tagging.");
+                LogInfo(context, "No sources pending tagging.");
                 return;
             }
 
-            _logger.LogInformation("Processing batch of {Count} sources", sourceIds.Count);
+            LogInfo(context, $"Processing batch of {sourceIds.Count} sources");
 
             int processedCount = 0;
             int taggedInternalCount = 0;
@@ -97,7 +97,7 @@ public class SmartTagProcessorJob : BaseHangfireJob<SmartTagProcessorJob>
             {
                 if (cancellationToken.IsCancellationRequested)
                 {
-                    _logger.LogInformation("Cancellation requested. Stopping batch processing.");
+                    LogInfo(context, "Cancellation requested. Stopping batch processing.");
                     break;
                 }
 
@@ -120,18 +120,16 @@ public class SmartTagProcessorJob : BaseHangfireJob<SmartTagProcessorJob>
                 catch (Exception ex)
                 {
                     errorCount++;
-                    _logger.LogError(ex, "Error processing source {SourceId}", currentSourceId);
+                    LogError(context, ex, $"Error processing source {currentSourceId}");
                     // Continue processing other sources even if one fails
                 }
             }
 
-            _logger.LogInformation(
-                "SmartTagProcessor batch completed. Processed: {Processed}/{Total}, Tagged as internal: {TaggedInternal}, Errors: {Errors}",
-                processedCount, sourceIds.Count, taggedInternalCount, errorCount);
+            LogInfo(context, $"Batch completed: {processedCount}/{sourceIds.Count} processed, {taggedInternalCount} tagged as internal, {errorCount} errors");
 
             if (sourceIds.Count == BatchSize && !sourceId.HasValue)
             {
-                _logger.LogInformation("Rescheduling SmartTagProcessor job for remaining sources");
+                LogInfo(context, "Rescheduling SmartTagProcessor job for remaining sources");
                 
                 // Continue with the next batch after this job completes
                 var currentJobId = context.BackgroundJob.Id;
@@ -144,14 +142,14 @@ public class SmartTagProcessorJob : BaseHangfireJob<SmartTagProcessorJob>
                 var completionMessage = sourceId.HasValue
                     ? $"Source {sourceId.Value} has been processed"
                     : "All sources have been processed";
-                _logger.LogInformation(completionMessage);
+                LogInfo(context, completionMessage);
             }
             
-            _logger.LogInformation("SmartTagProcessor job completed successfully");
+            LogInfo(context, "SmartTagProcessor job completed successfully");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "SmartTagProcessor job failed");
+            LogError(context, ex, "SmartTagProcessor job failed");
             throw;
         }
     }

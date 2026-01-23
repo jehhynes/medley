@@ -1,4 +1,5 @@
 using Hangfire;
+using Hangfire.Console;
 using Hangfire.MissionControl;
 using Hangfire.Server;
 using Hangfire.Storage;
@@ -65,7 +66,7 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
                 : sourceId.HasValue
                     ? $"Starting embedding generation job for source {sourceId.Value}"
                     : "Starting embedding generation job for fragments without embeddings";
-            _logger.LogInformation(logMessage);
+            LogInfo(context, logMessage);
 
             // Query fragments that don't have embeddings
             var query = _fragmentRepository.Query()
@@ -91,12 +92,11 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
 
             if (fragmentsWithoutEmbeddings.Count == 0)
             {
-                _logger.LogInformation("No fragments found without embeddings");
+                LogInfo(context, "No fragments found without embeddings");
                 return;
             }
 
-            _logger.LogInformation("Found {Count} fragments without embeddings. Processing all in a single batch",
-                fragmentsWithoutEmbeddings.Count);
+            LogInfo(context, $"Found {fragmentsWithoutEmbeddings.Count} fragments without embeddings. Processing all in a single batch");
 
             int processedCount = 0;
             int errorCount = 0;
@@ -133,20 +133,18 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
                         
                         processedCount++;
 
-                        _logger.LogDebug("Generated embedding for fragment {FragmentId} (Title: {Title}) with {Dimensions} dimensions",
-                            fragment.Id, fragment.Title ?? "Untitled", embedding.Vector.Length);
+                        LogDebug($"Generated embedding for fragment {fragment.Id} (Title: {fragment.Title ?? "Untitled"}) with {embedding.Vector.Length} dimensions");
                     }
                 }
             }
             catch (Exception ex)
             {
                 errorCount = fragmentsWithoutEmbeddings.Count;
-                _logger.LogError(ex, "Failed to generate embeddings for fragments");
+                LogError(context, ex, "Failed to generate embeddings for fragments");
                 throw;
             }
 
-            _logger.LogInformation("Embedding generation job completed. Processed: {ProcessedCount}, Errors: {ErrorCount}",
-                processedCount, errorCount);
+            LogInfo(context, $"Embedding generation job completed. Processed: {processedCount}, Errors: {errorCount}");
         });
 
         // If we processed exactly BatchSize fragments, there might be more - requeue the job
@@ -157,7 +155,7 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
             var requeueMessage = sourceId.HasValue
                 ? $"Processed exactly {BatchSize} fragments for source {sourceId.Value}. Continuing with next batch"
                 : $"Processed exactly {BatchSize} fragments. Continuing with next batch";
-            _logger.LogInformation(requeueMessage);
+            LogInfo(context, requeueMessage);
 
             var currentJobId = context.BackgroundJob.Id;
             _backgroundJobClient.ContinueJobWith<EmbeddingGenerationJob>(

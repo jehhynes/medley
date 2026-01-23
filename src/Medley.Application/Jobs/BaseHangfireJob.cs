@@ -1,3 +1,5 @@
+using Hangfire.Console;
+using Hangfire.Server;
 using Medley.Application.Interfaces;
 using Microsoft.Extensions.Logging;
 using System.Data;
@@ -11,7 +13,7 @@ namespace Medley.Application.Jobs;
 public abstract class BaseHangfireJob<TJob> where TJob : class
 {
     protected readonly IUnitOfWork _unitOfWork;
-    protected readonly ILogger<TJob> _logger;
+    private readonly ILogger<TJob> _logger;
     private readonly string _jobName;
 
     protected BaseHangfireJob(IUnitOfWork unitOfWork, ILogger<TJob> logger)
@@ -19,6 +21,67 @@ public abstract class BaseHangfireJob<TJob> where TJob : class
         _unitOfWork = unitOfWork;
         _logger = logger;
         _jobName = typeof(TJob).Name;
+    }
+
+    /// <summary>
+    /// Logs a message to both Hangfire Console and ILogger at Information level
+    /// </summary>
+    protected void LogInfo(PerformContext? context, string message)
+    {
+        _logger.LogInformation(message);
+        context?.WriteLine(message);
+    }
+
+    /// <summary>
+    /// Logs a message to both Hangfire Console and ILogger at Warning level
+    /// </summary>
+    protected void LogWarning(PerformContext context, string message)
+    {
+        _logger.LogWarning(message);
+        context.SetTextColor(ConsoleTextColor.Yellow);
+        context.WriteLine($"⚠ {message}");
+        context.ResetTextColor();
+    }
+
+    /// <summary>
+    /// Logs a message to both Hangfire Console and ILogger at Error level
+    /// </summary>
+    protected void LogError(PerformContext context, string message)
+    {
+        _logger.LogError(message);
+        context.SetTextColor(ConsoleTextColor.Red);
+        context.WriteLine($"✗ {message}");
+        context.ResetTextColor();
+    }
+
+    /// <summary>
+    /// Logs a message to both Hangfire Console and ILogger at Error level with exception
+    /// </summary>
+    protected void LogError(PerformContext context, Exception ex, string message)
+    {
+        _logger.LogError(ex, message);
+        context.SetTextColor(ConsoleTextColor.Red);
+        context.WriteLine($"✗ {message}: {ex.Message}");
+        context.ResetTextColor();
+    }
+
+    /// <summary>
+    /// Logs a success message to both Hangfire Console and ILogger
+    /// </summary>
+    protected void LogSuccess(PerformContext context, string message)
+    {
+        _logger.LogInformation(message);
+        context.SetTextColor(ConsoleTextColor.Green);
+        context.WriteLine($"✓ {message}");
+        context.ResetTextColor();
+    }
+
+    /// <summary>
+    /// Logs a debug message to ILogger only (not shown in Hangfire Console)
+    /// </summary>
+    protected void LogDebug(string message)
+    {
+        _logger.LogDebug(message);
     }
 
     /// <summary>

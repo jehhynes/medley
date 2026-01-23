@@ -1,3 +1,4 @@
+using Hangfire.Console;
 using Hangfire.Server;
 using Medley.Application.Integrations.Interfaces;
 using Medley.Application.Interfaces;
@@ -28,6 +29,7 @@ public class IntegrationHealthCheckJob : BaseHangfireJob<IntegrationHealthCheckJ
     {
         await ExecuteWithTransactionAsync(async () =>
         {
+            LogInfo(context, "Starting integration health checks");
             var integrations = _integrationService.Query().ToList();
             var checkedCount = 0;
             var errorCount = 0;
@@ -36,7 +38,7 @@ public class IntegrationHealthCheckJob : BaseHangfireJob<IntegrationHealthCheckJ
             {
                 if (cancellationToken.IsCancellationRequested)
                 {
-                    _logger.LogInformation("Cancellation requested. Stopping health checks.");
+                    LogInfo(context, "Cancellation requested. Stopping health checks.");
                     break;
                 }
 
@@ -44,19 +46,16 @@ public class IntegrationHealthCheckJob : BaseHangfireJob<IntegrationHealthCheckJ
                 {
                     await _integrationService.TestConnectionAsync(integration, cancellationToken);
                     checkedCount++;
-                    _logger.LogDebug("Health check completed for integration {IntegrationId} ({IntegrationName})", 
-                        integration.Id, integration.Name);
+                    LogDebug($"Health check completed for integration {integration.Id} ({integration.Name})");
                 }
                 catch (Exception ex)
                 {
                     errorCount++;
-                    _logger.LogError(ex, "Health check failed for integration {IntegrationId} ({IntegrationName})", 
-                        integration.Id, integration.Name);
+                    LogError(context, ex, $"Health check failed for integration {integration.Id} ({integration.Name})");
                 }
             }
 
-            _logger.LogInformation("Periodic health check completed. Checked: {CheckedCount}, Errors: {ErrorCount}", 
-                checkedCount, errorCount);
+            LogInfo(context, $"Periodic health check completed. Checked: {checkedCount}, Errors: {errorCount}");
         });
     }
 
@@ -78,14 +77,13 @@ public class IntegrationHealthCheckJob : BaseHangfireJob<IntegrationHealthCheckJ
             var integration = await _integrationService.GetByIdAsync(integrationId, cancellationToken);
             if (integration == null)
             {
-                _logger.LogWarning("Integration {IntegrationId} not found for health check", integrationId);
+                LogWarning(context, $"Integration {integrationId} not found for health check");
                 return;
             }
 
             await _integrationService.TestConnectionAsync(integration, cancellationToken);
             
-            _logger.LogInformation("Health check completed for integration {IntegrationId} ({IntegrationName})", 
-                integration.Id, integration.Name);
+            LogInfo(context, $"Health check completed for integration {integration.Id} ({integration.Name})");
         });
     }
 }

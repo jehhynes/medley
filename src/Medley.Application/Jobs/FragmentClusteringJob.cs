@@ -1,4 +1,5 @@
 using Hangfire;
+using Hangfire.Console;
 using Hangfire.MissionControl;
 using Hangfire.Server;
 using Hangfire.Storage;
@@ -41,13 +42,13 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
     [Mission]
     public async Task ExecuteAsync(PerformContext context, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Starting Fragment Clustering Job");
+        LogInfo(context, "Starting Fragment Clustering Job");
 
         for (int i = 0; i < 10; i++) //Process 10 records per job run to avoid long executions
         {
             if (cancellationToken.IsCancellationRequested)
             {
-                _logger.LogInformation("Cancellation requested. Exiting job loop.");
+                LogInfo(context, "Cancellation requested. Exiting job loop.");
                 break;
             }
 
@@ -62,11 +63,11 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
 
                 if (candidate == null)
                 {
-                    _logger.LogInformation("No more unprocessed fragments found. Job finished.");
+                    LogInfo(context, "No more unprocessed fragments found. Job finished.");
                     return false;
                 }
 
-                _logger.LogInformation("Processing fragment {FragmentId}", candidate.Id);
+                LogInfo(context, $"Processing fragment {candidate.Id}");
 
                 // 2) Query for similar fragments
                 var minSimilarity = 0.85; // 0 to 1 where 1 is identical
@@ -84,7 +85,7 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
 
                 if (!similarFragments.Any())
                 {
-                    _logger.LogInformation("No similar fragments found for {FragmentId}. Marking as processed.", candidate.Id);
+                    LogInfo(context, $"No similar fragments found for {candidate.Id}. Marking as processed.");
                     candidate.ClusteringProcessed = DateTimeOffset.UtcNow;
                     return true;
                 }
@@ -92,13 +93,13 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
                 var clusterParticipants = new List<Fragment> { candidate };
                 clusterParticipants.AddRange(similarFragments);
 
-                _logger.LogInformation("Found {Count} similar fragments to cluster.", similarFragments.Count);
+                LogInfo(context, $"Found {similarFragments.Count} similar fragments to cluster.");
 
                 // 5) Pass contents to LLM
                 var clusterResponse = await GenerateClusterAsync(clusterParticipants, cancellationToken);
                 if (clusterResponse == null)
                 {
-                    _logger.LogWarning("Failed to generate cluster content for {FragmentId}. Marking as processed to avoid loops.", candidate.Id);
+                    LogWarning(context, $"Failed to generate cluster content for {candidate.Id}. Marking as processed to avoid loops.");
                     candidate.ClusteringProcessed = DateTimeOffset.UtcNow;
                     return true;
                 }
@@ -124,6 +125,8 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
                 await _fragmentRepository.AddAsync(cluster);
                 createdClusterId = cluster.Id;
 
+                LogSuccess(context, $"Created cluster {cluster.Id} with {clusterParticipants.Count} fragments");
+
                 // Update participants
                 foreach (var participant in clusterParticipants)
                 {
@@ -131,8 +134,7 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
                     participant.ClusteringProcessed = DateTimeOffset.UtcNow;
                 }
 
-                _logger.LogInformation("Created cluster {ClusterId} with {ParticipantCount} fragments. Message: {Message}",
-                    cluster.Id, clusterParticipants.Count, clusterResponse.Message);
+                LogDebug($"Created cluster {cluster.Id} with {clusterParticipants.Count} fragments. Message: {clusterResponse.Message}");
                 return true;
             });
 
@@ -143,7 +145,7 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
                 _backgroundJobClient.ContinueJobWith<EmbeddingGenerationJob>(
                     currentJobId,
                     j => j.GenerateFragmentEmbeddings(default!, default, null, createdClusterId.Value));
-                _logger.LogInformation("Enqueued embedding generation job for cluster fragment {ClusterId}", createdClusterId.Value);
+                LogInfo(context, $"Enqueued embedding generation job for cluster fragment {createdClusterId.Value}");
             }
 
             if (!shouldContinue)

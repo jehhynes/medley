@@ -1,4 +1,5 @@
 using Hangfire;
+using Hangfire.Console;
 using Hangfire.MissionControl;
 using Hangfire.Server;
 using Medley.Application.Integrations.Models.Collector;
@@ -68,7 +69,7 @@ public class SpeakerExtractionJob : BaseHangfireJob<SpeakerExtractionJob>
         var logMessage = sourceId.HasValue
             ? $"Starting SpeakerExtraction job for source {sourceId.Value}"
             : "Starting SpeakerExtraction job";
-        _logger.LogInformation(logMessage);
+        LogInfo(context, logMessage);
 
         try
         {
@@ -81,8 +82,7 @@ public class SpeakerExtractionJob : BaseHangfireJob<SpeakerExtractionJob>
 
             if (!organization.EnableSpeakerExtraction)
             {
-                _logger.LogInformation("Speaker extraction is disabled for organization {OrganizationId}. Skipping SpeakerExtraction job.",
-                    organization.Id);
+                LogInfo(context, $"Speaker extraction is disabled for organization {organization.Id}. Skipping SpeakerExtraction job.");
                 return;
             }
 
@@ -106,11 +106,11 @@ public class SpeakerExtractionJob : BaseHangfireJob<SpeakerExtractionJob>
 
             if (sourceIds.Count == 0)
             {
-                _logger.LogInformation("No sources pending speaker extraction.");
+                LogInfo(context, "No sources pending speaker extraction.");
                 return;
             }
 
-            _logger.LogInformation("Processing batch of {Count} sources", sourceIds.Count);
+            LogInfo(context, $"Processing batch of {sourceIds.Count} sources");
 
             int processedCount = 0;
             int speakersExtractedCount = 0;
@@ -121,7 +121,7 @@ public class SpeakerExtractionJob : BaseHangfireJob<SpeakerExtractionJob>
             {
                 if (cancellationToken.IsCancellationRequested)
                 {
-                    _logger.LogInformation("Cancellation requested. Stopping batch processing.");
+                    LogInfo(context, "Cancellation requested. Stopping batch processing.");
                     break;
                 }
 
@@ -138,7 +138,7 @@ public class SpeakerExtractionJob : BaseHangfireJob<SpeakerExtractionJob>
                 catch (Exception ex)
                 {
                     errorCount++;
-                    _logger.LogError(ex, "Error processing source {SourceId}", currentSourceId);
+                    LogError(context, ex, $"Error processing source {currentSourceId}");
                     
                     // Mark as processed even on error to avoid retry loops
                     try
@@ -154,18 +154,16 @@ public class SpeakerExtractionJob : BaseHangfireJob<SpeakerExtractionJob>
                     }
                     catch (Exception markEx)
                     {
-                        _logger.LogError(markEx, "Failed to mark source {SourceId} as processed after error", currentSourceId);
+                        LogError(context, markEx, $"Failed to mark source {currentSourceId} as processed after error");
                     }
                 }
             }
 
-            _logger.LogInformation(
-                "SpeakerExtraction batch completed. Processed: {Processed}/{Total}, Speakers extracted: {Speakers}, Errors: {Errors}",
-                processedCount, sourceIds.Count, speakersExtractedCount, errorCount);
+            LogInfo(context, $"Batch completed: {processedCount}/{sourceIds.Count} processed, {speakersExtractedCount} speakers extracted, {errorCount} errors");
 
             if (sourceIds.Count == BatchSize && !sourceId.HasValue)
             {
-                _logger.LogInformation("Rescheduling SpeakerExtraction job for remaining sources");
+                LogInfo(context, "Rescheduling SpeakerExtraction job for remaining sources");
                 
                 // Continue with the next batch after this job completes
                 var currentJobId = context.BackgroundJob.Id;
@@ -178,14 +176,14 @@ public class SpeakerExtractionJob : BaseHangfireJob<SpeakerExtractionJob>
                 var completionMessage = sourceId.HasValue
                     ? $"Source {sourceId.Value} has been processed"
                     : "All sources have been processed";
-                _logger.LogInformation(completionMessage);
+                LogInfo(context, completionMessage);
             }
             
-            _logger.LogInformation("SpeakerExtraction job completed successfully");
+            LogInfo(context, "SpeakerExtraction job completed successfully");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "SpeakerExtraction job failed");
+            LogError(context, ex, "SpeakerExtraction job failed");
             throw;
         }
     }
@@ -202,7 +200,7 @@ public class SpeakerExtractionJob : BaseHangfireJob<SpeakerExtractionJob>
 
         if (source == null)
         {
-            _logger.LogWarning("Source {SourceId} not found", sourceId);
+            LogDebug($"Source {sourceId} not found");
             return 0;
         }
 
@@ -221,7 +219,7 @@ public class SpeakerExtractionJob : BaseHangfireJob<SpeakerExtractionJob>
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error extracting speakers from source {SourceId}", sourceId);
+            LogDebug($"Error extracting speakers from source {sourceId}: {ex.Message}");
             throw;
         }
     }
@@ -237,16 +235,16 @@ public class SpeakerExtractionJob : BaseHangfireJob<SpeakerExtractionJob>
         {
             recording = JsonSerializer.Deserialize<FellowRecordingImportModel>(source.MetadataJson);
         }
-        catch (JsonException ex)
+        catch (JsonException)
         {
-            _logger.LogWarning(ex, "Failed to deserialize Fellow metadata for source {SourceId}. Marking as processed.", source.Id);
+            LogDebug($"Failed to deserialize Fellow metadata for source {source.Id}. Marking as processed.");
             source.SpeakersExtracted = DateTimeOffset.UtcNow;
             return 0;
         }
 
         if (recording?.Transcript?.SpeechSegments == null || recording.Transcript.SpeechSegments.Count == 0)
         {
-            _logger.LogDebug("No speech segments found for Fellow source {SourceId}", source.Id);
+            LogDebug($"No speech segments found for Fellow source {source.Id}");
             source.SpeakersExtracted = DateTimeOffset.UtcNow;
             return 0;
         }
@@ -262,15 +260,14 @@ public class SpeakerExtractionJob : BaseHangfireJob<SpeakerExtractionJob>
 
         if (speakerData.Count == 0)
         {
-            _logger.LogDebug("No valid speakers found for Fellow source {SourceId}", source.Id);
+            LogDebug($"No valid speakers found for Fellow source {source.Id}");
             source.SpeakersExtracted = DateTimeOffset.UtcNow;
             return 0;
         }
 
         var speakerNames = speakerData.Select(x => x.Speaker).ToList();
 
-        _logger.LogDebug("Found {Count} unique speakers for Fellow source {SourceId}: {Speakers}",
-            speakerNames.Count, source.Id, string.Join(", ", speakerNames));
+        LogDebug($"Found {speakerNames.Count} unique speakers for Fellow source {source.Id}: {string.Join(", ", speakerNames)}");
 
         // Get attendee emails for IsInternal matching
         var attendeeEmails = recording.Note?.EventAttendees?
@@ -310,8 +307,7 @@ public class SpeakerExtractionJob : BaseHangfireJob<SpeakerExtractionJob>
 
         source.SpeakersExtracted = DateTimeOffset.UtcNow;
 
-        _logger.LogInformation("Extracted {Count} speakers for Fellow source {SourceId} ({SourceName})",
-            speakers.Count, source.Id, source.Name);
+        LogDebug($"Extracted {speakers.Count} speakers for Fellow source {source.Id} ({source.Name})");
 
         return speakers.Count;
     }
@@ -327,16 +323,16 @@ public class SpeakerExtractionJob : BaseHangfireJob<SpeakerExtractionJob>
         {
             video = JsonSerializer.Deserialize<GoogleDriveVideoImportModel>(source.MetadataJson);
         }
-        catch (JsonException ex)
+        catch (JsonException)
         {
-            _logger.LogWarning(ex, "Failed to deserialize Google Drive metadata for source {SourceId}. Marking as processed.", source.Id);
+            LogDebug($"Failed to deserialize Google Drive metadata for source {source.Id}. Marking as processed.");
             source.SpeakersExtracted = DateTimeOffset.UtcNow;
             return 0;
         }
 
         if (video == null)
         {
-            _logger.LogDebug("No video metadata found for Google Drive source {SourceId}", source.Id);
+            LogDebug($"No video metadata found for Google Drive source {source.Id}");
             source.SpeakersExtracted = DateTimeOffset.UtcNow;
             return 0;
         }
@@ -344,7 +340,7 @@ public class SpeakerExtractionJob : BaseHangfireJob<SpeakerExtractionJob>
         // Google Drive videos have a single speaker - the last modifying user
         if (string.IsNullOrWhiteSpace(video.LastModifyingUserDisplayName))
         {
-            _logger.LogDebug("No LastModifyingUserDisplayName found for Google Drive source {SourceId}", source.Id);
+            LogDebug($"No LastModifyingUserDisplayName found for Google Drive source {source.Id}");
             source.SpeakersExtracted = DateTimeOffset.UtcNow;
             return 0;
         }
@@ -368,13 +364,11 @@ public class SpeakerExtractionJob : BaseHangfireJob<SpeakerExtractionJob>
             if (existingSpeaker != null)
             {
                 speakerEmail = inferredEmail;
-                _logger.LogDebug("Inferred email {Email} for Google Drive source {SourceId} from existing speaker {SpeakerId}",
-                    speakerEmail, source.Id, existingSpeaker.Id);
+                LogDebug($"Inferred email {speakerEmail} for Google Drive source {source.Id} from existing speaker {existingSpeaker.Id}");
             }
         }
 
-        _logger.LogDebug("Found speaker for Google Drive source {SourceId}: {Speaker} ({Email})",
-            source.Id, speakerName, speakerEmail ?? "no email");
+        LogDebug($"Found speaker for Google Drive source {source.Id}: {speakerName} ({speakerEmail ?? "no email"})");
 
         List<Speaker> speakers;
 
@@ -411,8 +405,7 @@ public class SpeakerExtractionJob : BaseHangfireJob<SpeakerExtractionJob>
 
         source.SpeakersExtracted = DateTimeOffset.UtcNow;
 
-        _logger.LogInformation("Extracted {Count} speaker(s) for Google Drive source {SourceId} ({SourceName})",
-            speakers.Count, source.Id, source.Name);
+        LogDebug($"Extracted {speakers.Count} speaker(s) for Google Drive source {source.Id} ({source.Name})");
 
         return speakers.Count;
     }
@@ -422,8 +415,7 @@ public class SpeakerExtractionJob : BaseHangfireJob<SpeakerExtractionJob>
     /// </summary>
     private async Task<int> HandleUnsupportedMetadataTypeAsync(Source source, CancellationToken cancellationToken)
     {
-        _logger.LogWarning("Unsupported metadata type {MetadataType} for source {SourceId}. Marking as processed.",
-            source.MetadataType, source.Id);
+        LogDebug($"Unsupported metadata type {source.MetadataType} for source {source.Id}. Marking as processed.");
         source.SpeakersExtracted = DateTimeOffset.UtcNow;
         return 0;
     }
@@ -456,8 +448,7 @@ public class SpeakerExtractionJob : BaseHangfireJob<SpeakerExtractionJob>
             await _speakerRepository.AddAsync(speaker);
             existingSpeakers.Add(speaker);
 
-            _logger.LogDebug("Created new speaker: {SpeakerName} with IsInternal={IsInternal}, Email={Email}",
-                speakerInfo.Name, speakerInfo.IsInternal?.ToString() ?? "null", speakerInfo.Email ?? "null");
+            LogDebug($"Created new speaker: {speakerInfo.Name} with IsInternal={speakerInfo.IsInternal?.ToString() ?? "null"}, Email={speakerInfo.Email ?? "null"}");
         }
 
         return existingSpeakers;

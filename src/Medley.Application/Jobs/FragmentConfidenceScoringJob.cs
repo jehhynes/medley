@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Hangfire.Console;
 using Hangfire.Server;
 using Hangfire.Storage;
 using Medley.Application.Interfaces;
@@ -59,12 +60,12 @@ public class FragmentConfidenceScoringJob : BaseHangfireJob<FragmentConfidenceSc
     {
         await ExecuteWithTransactionAsync(async () =>
         {
-            _logger.LogInformation("Starting confidence scoring for source {SourceId}", sourceId);
+            LogInfo(context, $"Starting confidence scoring for source {sourceId}");
 
             var systemPrompt = await BuildSystemPromptAsync(cancellationToken);
             if (string.IsNullOrWhiteSpace(systemPrompt))
             {
-                _logger.LogWarning("Confidence scoring template not configured; skipping job.");
+                LogWarning(context, "Confidence scoring template not configured; skipping job.");
                 return;
             }
 
@@ -74,13 +75,13 @@ public class FragmentConfidenceScoringJob : BaseHangfireJob<FragmentConfidenceSc
 
             if (source == null)
             {
-                _logger.LogWarning("Source {SourceId} not found while scoring confidence", sourceId);
+                LogWarning(context, $"Source {sourceId} not found while scoring confidence");
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(source.Content))
             {
-                _logger.LogWarning("Source {SourceId} has no content; skipping confidence scoring", sourceId);
+                LogWarning(context, $"Source {sourceId} has no content; skipping confidence scoring");
                 return;
             }
 
@@ -90,11 +91,11 @@ public class FragmentConfidenceScoringJob : BaseHangfireJob<FragmentConfidenceSc
 
             if (fragmentsToScore.Count == 0)
             {
-                _logger.LogInformation("Source {SourceId} has no fragments pending confidence scoring", sourceId);
+                LogInfo(context, $"Source {sourceId} has no fragments pending confidence scoring");
                 return;
             }
 
-            _logger.LogInformation("Scoring {Count} fragments for source {SourceId}", fragmentsToScore.Count, sourceId);
+            LogInfo(context, $"Scoring {fragmentsToScore.Count} fragments for source {sourceId}");
 
             var fragmentsList = fragmentsToScore.ToList();
             var userPrompt = BuildJsonUserPrompt(source.Content, fragmentsList);
@@ -109,7 +110,7 @@ public class FragmentConfidenceScoringJob : BaseHangfireJob<FragmentConfidenceSc
 
                 if (response?.Scores == null || response.Scores.Count == 0)
                 {
-                    _logger.LogWarning("Confidence scoring returned no scores for source {SourceId}", sourceId);
+                    LogWarning(context, $"Confidence scoring returned no scores for source {sourceId}");
                     return;
                 }
                 try
@@ -124,7 +125,7 @@ public class FragmentConfidenceScoringJob : BaseHangfireJob<FragmentConfidenceSc
 
                         if (!scoresById.TryGetValue(fragmentIndex, out var score) || !score.Confidence.HasValue)
                         {
-                            _logger.LogWarning("No confidence score returned for fragment {FragmentId} (index {Index})", fragment.Id, fragmentIndex);
+                            LogWarning(context, $"No confidence score returned for fragment {fragment.Id} (index {fragmentIndex})");
                             continue;
                         }
 
@@ -134,12 +135,12 @@ public class FragmentConfidenceScoringJob : BaseHangfireJob<FragmentConfidenceSc
                         
                         scoredCount++;
 
-                        _logger.LogDebug("Updated confidence for fragment {FragmentId} (index {Index}): {Confidence}",
-                            fragment.Id, fragmentIndex, score.Confidence.Value);
+                        LogSuccess(context, $"✓ Fragment {fragmentIndex}: {score.Confidence.Value}");
+
+                        LogDebug($"Updated confidence for fragment {fragment.Id} (index {fragmentIndex}): {score.Confidence.Value}");
                     }
 
-                    _logger.LogInformation("Successfully scored {ScoredCount} of {TotalCount} fragments for source {SourceId}",
-                        scoredCount, fragmentsToScore.Count, sourceId);
+                    LogSuccess(context, $"Successfully scored {scoredCount} of {fragmentsToScore.Count} fragments");
                 }
             catch (Exception)
             {
@@ -156,7 +157,7 @@ public class FragmentConfidenceScoringJob : BaseHangfireJob<FragmentConfidenceSc
 
         if (scoringTemplate == null)
         {
-            _logger.LogWarning("Confidence scoring template not found in database.");
+            LogDebug("Confidence scoring template not found in database.");
             return null;
         }
 
