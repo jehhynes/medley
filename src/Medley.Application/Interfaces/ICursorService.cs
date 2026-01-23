@@ -10,11 +10,13 @@ public interface ICursorService
     /// </summary>
     /// <param name="articleContent">The original article content</param>
     /// <param name="instructions">Instructions for how to improve the article</param>
+    /// <param name="articleTypeId">Optional article type ID to lookup and sync the associated prompt</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Result containing improved content and change summary</returns>
     Task<CursorReviewResult> ReviewArticleAsync(
         string articleContent,
         string instructions,
+        Guid? articleTypeId = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>

@@ -42,6 +42,11 @@ public class AiPrompt : BusinessEntity
     /// Date when the template was last modified
     /// </summary>
     public DateTimeOffset? LastModifiedAt { get; set; }
+
+    /// <summary>
+    /// Date when the prompt was last synced to Cursor workspace
+    /// </summary>
+    public DateTimeOffset? LastSyncedWithCursor { get; set; }
 }
 
 

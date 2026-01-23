@@ -1,6 +1,9 @@
 using System.Text;
 using Medley.Application.Configuration;
 using Medley.Application.Interfaces;
+using Medley.Domain.Entities;
+using Medley.Domain.Enums;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Renci.SshNet;
@@ -14,19 +17,26 @@ public class CursorService : ICursorService
 {
     private readonly CursorSettings _settings;
     private readonly ILogger<CursorService> _logger;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IRepository<AiPrompt> _promptRepository;
 
     public CursorService(
         IOptions<CursorSettings> settings,
-        ILogger<CursorService> logger)
+        ILogger<CursorService> logger,
+        IUnitOfWork unitOfWork,
+        IRepository<AiPrompt> promptRepository)
     {
         _settings = settings.Value;
         _logger = logger;
+        _unitOfWork = unitOfWork;
+        _promptRepository = promptRepository;
     }
 
     /// <inheritdoc />
     public async Task<CursorReviewResult> ReviewArticleAsync(
         string articleContent,
         string instructions,
+        Guid? articleTypeId = null,
         CancellationToken cancellationToken = default)
     {
         var remoteFileName = $"article_{Guid.NewGuid():N}.md";
@@ -49,12 +59,29 @@ public class CursorService : ICursorService
 
             _logger.LogInformation("Connected to SSH server successfully");
 
+            // Sync CursorReview prompt (global instructions for Cursor)
+            var cursorReviewPromptPath = await SyncCursorReviewPromptAsync(client, cancellationToken);
+
+            // Sync article type prompt if articleTypeId is provided
+            string? articleTypePromptPath = null;
+            if (articleTypeId.HasValue)
+            {
+                articleTypePromptPath = await SyncArticleTypePromptAsync(
+                    client, 
+                    articleTypeId.Value, 
+                    cancellationToken);
+            }
+
             // Step 1: Write article content to remote file
             await WriteRemoteFileAsync(client, remotePath, articleContent, cancellationToken);
             _logger.LogInformation("Article content written to remote file: {RemotePath}", remotePath);
 
             // Step 2: Execute Cursor CLI
-            var (cursorCommand, stdinInput) = BuildArticleReviewCommand(remoteFileName, instructions);
+            var (cursorCommand, stdinInput) = BuildArticleReviewCommand(
+                remoteFileName, 
+                instructions,
+                cursorReviewPromptPath,
+                articleTypePromptPath);
             var (exitCode, stdout, stderr) = await ExecuteCommandAsync(client, cursorCommand, cancellationToken, stdinInput);
 
             if (exitCode != 0)
@@ -345,10 +372,150 @@ public class CursorService : ICursorService
     }
 
     /// <summary>
+    /// Syncs a prompt to the remote Cursor workspace if needed
+    /// </summary>
+    /// <param name="client">Connected SSH client</param>
+    /// <param name="prompt">The prompt to sync</param>
+    /// <param name="relativeFilePath">The relative file path where the prompt should be synced</param>
+    /// <param name="promptDescription">Description of the prompt for logging purposes</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>The relative path to the synced prompt file</returns>
+    private async Task<string> SyncPromptAsync(
+        SshClient client,
+        AiPrompt prompt,
+        string relativeFilePath,
+        string promptDescription,
+        CancellationToken cancellationToken)
+    {
+        // Determine if sync is needed
+        var needsSync = prompt.LastSyncedWithCursor == null || 
+                       (prompt.LastModifiedAt.HasValue && 
+                        prompt.LastSyncedWithCursor < prompt.LastModifiedAt);
+
+        var fullPromptPath = $"{_settings.WorkspaceDirectory}{relativeFilePath}";
+
+        if (needsSync)
+        {
+            _logger.LogInformation(
+                "Syncing {PromptDescription} to {Path}", 
+                promptDescription, 
+                fullPromptPath);
+
+            // Write the prompt content to remote file
+            await WriteRemoteFileAsync(client, fullPromptPath, prompt.Content, cancellationToken);
+
+            // Update LastSyncedWithCursor timestamp
+            prompt.LastSyncedWithCursor = DateTimeOffset.UtcNow;
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation(
+                "Successfully synced {PromptDescription}", 
+                promptDescription);
+        }
+        else
+        {
+            _logger.LogInformation(
+                "{PromptDescription} is already up to date (last synced: {LastSynced})",
+                promptDescription,
+                prompt.LastSyncedWithCursor);
+        }
+
+        return relativeFilePath;
+    }
+
+    /// <summary>
+    /// Syncs an article type prompt to the remote Cursor workspace if needed
+    /// </summary>
+    /// <param name="client">Connected SSH client</param>
+    /// <param name="articleTypeId">The article type ID to lookup and sync the prompt for</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>The relative path to the synced prompt file, or null if no prompt found</returns>
+    private async Task<string?> SyncArticleTypePromptAsync(
+        SshClient client,
+        Guid articleTypeId,
+        CancellationToken cancellationToken)
+    {
+        // Lookup the article type prompt
+        var articleTypePrompt = await _promptRepository
+            .Query()
+            .Include(p => p.ArticleType)
+            .FirstOrDefaultAsync(
+                p => p.Type == PromptType.ArticleTypeAgentMode && 
+                     p.ArticleTypeId == articleTypeId,
+                cancellationToken);
+
+        if (articleTypePrompt == null)
+        {
+            _logger.LogWarning(
+                "No ArticleTypeAgentMode prompt found for ArticleTypeId: {ArticleTypeId}", 
+                articleTypeId);
+            return null;
+        }
+
+        if (articleTypePrompt.ArticleType == null)
+        {
+            throw new InvalidOperationException("ArticleType must be loaded for syncing");
+        }
+
+        // Sanitize article type name for file system
+        var sanitizedName = SanitizeFileName(articleTypePrompt.ArticleType.Name);
+        var relativePromptPath = $"/medley-tmp/article-types/{sanitizedName}.md";
+        var promptDescription = $"article type prompt '{articleTypePrompt.ArticleType.Name}'";
+
+        return await SyncPromptAsync(client, articleTypePrompt, relativePromptPath, promptDescription, cancellationToken);
+    }
+
+    /// <summary>
+    /// Syncs the CursorReview prompt to the remote Cursor workspace if needed
+    /// </summary>
+    /// <param name="client">Connected SSH client</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>The relative path to the synced prompt file</returns>
+    private async Task<string> SyncCursorReviewPromptAsync(
+        SshClient client,
+        CancellationToken cancellationToken)
+    {
+        // Lookup the CursorReview prompt
+        var cursorReviewPrompt = await _promptRepository
+            .Query()
+            .FirstOrDefaultAsync(
+                p => p.Type == PromptType.CursorReview,
+                cancellationToken);
+
+        if (cursorReviewPrompt == null)
+        {
+            throw new InvalidOperationException("CursorReview prompt not found. Please create one in the system.");
+        }
+
+        var relativePromptPath = "/medley-tmp/cursor-review.md";
+        var promptDescription = "CursorReview prompt";
+
+        return await SyncPromptAsync(client, cursorReviewPrompt, relativePromptPath, promptDescription, cancellationToken);
+    }
+
+    /// <summary>
+    /// Sanitizes a file name by removing or replacing invalid characters
+    /// </summary>
+    private static string SanitizeFileName(string fileName)
+    {
+        var invalidChars = Path.GetInvalidFileNameChars();
+        var sanitized = string.Join("_", fileName.Split(invalidChars, StringSplitOptions.RemoveEmptyEntries));
+        return sanitized.Trim();
+    }
+
+    /// <summary>
     /// Builds the Cursor CLI command and stdin input
     /// </summary>
+    /// <param name="remoteFileName">The article file name</param>
+    /// <param name="instructions">Review instructions</param>
+    /// <param name="cursorReviewPromptPath">Path to the CursorReview prompt file</param>
+    /// <param name="articleTypePromptPath">Optional path to article type prompt file</param>
     /// <returns>Tuple of (command, stdinInput)</returns>
-    private (string command, string stdinInput) BuildArticleReviewCommand(string remoteFileName, string instructions)
+    private (string command, string stdinInput) BuildArticleReviewCommand(
+        string remoteFileName, 
+        string instructions,
+        string cursorReviewPromptPath,
+        string? articleTypePromptPath = null)
     {
         // Build the command - execute from workspace root
         // Use -p (print mode) with --force to modify files
@@ -357,6 +524,15 @@ public class CursorService : ICursorService
 
         // The instructions/prompt and file reference are passed via stdin to avoid command line parsing issues
         var stdinInput = $"Improve this article based on: {instructions}. File: /medley-tmp/{remoteFileName}";
+        
+        // Reference the CursorReview prompt (general instructions)
+        stdinInput += $"\n\nGeneral review instructions can be found in: {cursorReviewPromptPath}";
+        
+        // If article type prompt is provided, reference it as additional directions
+        if (!string.IsNullOrEmpty(articleTypePromptPath))
+        {
+            stdinInput += $"\n\nAdditional directions for this article type can be found in: {articleTypePromptPath}";
+        }
 
         return (command, stdinInput);
     }

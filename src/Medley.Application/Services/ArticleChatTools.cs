@@ -791,9 +791,10 @@ public class ArticleChatTools
 
             // Call CursorService to review the article
             var result = await _cursorService.ReviewArticleAsync(
-                article.Content ?? string.Empty,
-                instructions,
-                cancellationToken);
+                articleContent: article.Content ?? string.Empty,
+                instructions: instructions,
+                articleTypeId: article.ArticleTypeId,
+                cancellationToken: cancellationToken);
 
             if (!result.Success)
             {

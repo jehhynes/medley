@@ -59,6 +59,12 @@ public enum PromptType
     /// Template for extracting fragments specific to fragment categories
     /// </summary>
     [PromptTypeMetadata("Fragment Categories", "Category-specific extraction instructions", IsPerFragmentCategory = true)]
-    FragmentCategoryExtraction = 9
+    FragmentCategoryExtraction = 9,
+
+    /// <summary>
+    /// Template for Cursor AI review instructions
+    /// </summary>
+    [PromptTypeMetadata("Cursor Review", "General instructions for Cursor Agent when reviewing articles")]
+    CursorReview = 10
 }
 
