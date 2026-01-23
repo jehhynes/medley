@@ -2625,7 +2625,8 @@
           "ArticleTypePlanMode",
           "ArticleTypeAgentMode",
           "FragmentCategoryExtraction",
-          "CursorReview"
+          "CursorReview",
+          "CursorQuestion"
         ],
         "enum": [
           "FragmentExtraction",
@@ -2637,7 +2638,8 @@
           "ArticleTypePlanMode",
           "ArticleTypeAgentMode",
           "FragmentCategoryExtraction",
-          "CursorReview"
+          "CursorReview",
+          "CursorQuestion"
         ]
       },
       "AiPromptDto": {

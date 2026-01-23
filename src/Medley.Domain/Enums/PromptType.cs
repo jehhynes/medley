@@ -65,6 +65,12 @@ public enum PromptType
     /// Template for Cursor AI review instructions
     /// </summary>
     [PromptTypeMetadata("Cursor Review", "General instructions for Cursor Agent when reviewing articles")]
-    CursorReview = 10
+    CursorReview = 10,
+
+    /// <summary>
+    /// Template for Cursor AI question answering instructions
+    /// </summary>
+    [PromptTypeMetadata("Cursor Question", "General instructions for Cursor Agent when answering questions")]
+    CursorQuestion = 11
 }
 

@@ -2341,6 +2341,7 @@ export enum PromptType {
     ArticleTypeAgentMode = "ArticleTypeAgentMode",
     FragmentCategoryExtraction = "FragmentCategoryExtraction",
     CursorReview = "CursorReview",
+    CursorQuestion = "CursorQuestion",
 }
 
 export interface AiPromptDto {

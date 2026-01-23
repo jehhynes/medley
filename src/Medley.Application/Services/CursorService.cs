@@ -325,8 +325,11 @@ public class CursorService : ICursorService
 
             _logger.LogInformation("Connected to SSH server successfully");
 
+            // Sync CursorQuestion prompt (global instructions for Cursor)
+            var cursorQuestionPromptPath = await SyncCursorQuestionPromptAsync(client, cancellationToken);
+
             // Build command - no file operations needed
-            var (command, stdinInput) = BuildQuestionCommand(question);
+            var (command, stdinInput) = BuildQuestionCommand(question, cursorQuestionPromptPath);
             
             // Execute command
             var (exitCode, stdout, stderr) = await ExecuteCommandAsync(client, command, cancellationToken, stdinInput);
@@ -462,7 +465,10 @@ public class CursorService : ICursorService
         var relativePromptPath = $"/medley-tmp/article-types/{sanitizedName}.md";
         var promptDescription = $"article type prompt '{articleTypePrompt.ArticleType.Name}'";
 
-        return await SyncPromptAsync(client, articleTypePrompt, relativePromptPath, promptDescription, cancellationToken);
+        await SyncPromptAsync(client, articleTypePrompt, relativePromptPath, promptDescription, cancellationToken);
+        
+        // Return path with @ prefix for Cursor reference
+        return $"@medley-tmp/article-types/{sanitizedName}.md";
     }
 
     /// <summary>
@@ -490,7 +496,41 @@ public class CursorService : ICursorService
         var relativePromptPath = "/medley-tmp/cursor-review.md";
         var promptDescription = "CursorReview prompt";
 
-        return await SyncPromptAsync(client, cursorReviewPrompt, relativePromptPath, promptDescription, cancellationToken);
+        await SyncPromptAsync(client, cursorReviewPrompt, relativePromptPath, promptDescription, cancellationToken);
+        
+        // Return path with @ prefix for Cursor reference
+        return "@medley-tmp/cursor-review.md";
+    }
+
+    /// <summary>
+    /// Syncs the CursorQuestion prompt to the remote Cursor workspace if needed
+    /// </summary>
+    /// <param name="client">Connected SSH client</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>The relative path to the synced prompt file</returns>
+    private async Task<string> SyncCursorQuestionPromptAsync(
+        SshClient client,
+        CancellationToken cancellationToken)
+    {
+        // Lookup the CursorQuestion prompt
+        var cursorQuestionPrompt = await _promptRepository
+            .Query()
+            .FirstOrDefaultAsync(
+                p => p.Type == PromptType.CursorQuestion,
+                cancellationToken);
+
+        if (cursorQuestionPrompt == null)
+        {
+            throw new InvalidOperationException("CursorQuestion prompt not found. Please create one in the system.");
+        }
+
+        var relativePromptPath = "/medley-tmp/cursor-question.md";
+        var promptDescription = "CursorQuestion prompt";
+
+        await SyncPromptAsync(client, cursorQuestionPrompt, relativePromptPath, promptDescription, cancellationToken);
+        
+        // Return path with @ prefix for Cursor reference
+        return "@medley-tmp/cursor-question.md";
     }
 
     /// <summary>
@@ -523,7 +563,8 @@ public class CursorService : ICursorService
         var command = $"cd {_settings.WorkspaceDirectory} && {_settings.AgentPath} --model {_settings.Model} -p --force";
 
         // The instructions/prompt and file reference are passed via stdin to avoid command line parsing issues
-        var stdinInput = $"Improve this article based on: {instructions}. File: /medley-tmp/{remoteFileName}";
+        // Use @ prefix for Cursor file references
+        var stdinInput = $"Improve this article based on: {instructions}. File: @medley-tmp/{remoteFileName}";
         
         // Reference the CursorReview prompt (general instructions)
         stdinInput += $"\n\nGeneral review instructions can be found in: {cursorReviewPromptPath}";
@@ -540,8 +581,10 @@ public class CursorService : ICursorService
     /// <summary>
     /// Builds a question command for Cursor CLI
     /// </summary>
+    /// <param name="question">The question to ask</param>
+    /// <param name="cursorQuestionPromptPath">Path to the CursorQuestion prompt file</param>
     /// <returns>Tuple of (command, stdinInput)</returns>
-    private (string command, string stdinInput) BuildQuestionCommand(string question)
+    private (string command, string stdinInput) BuildQuestionCommand(string question, string cursorQuestionPromptPath)
     {
         // Build the command - execute from workspace root
         // Use -p (print mode) for text output only, no file modifications
@@ -549,6 +592,9 @@ public class CursorService : ICursorService
         
         // The question is passed via stdin to avoid command line parsing issues
         var stdinInput = question;
+        
+        // Reference the CursorQuestion prompt (general instructions)
+        stdinInput += $"\n\nGeneral instructions for answering questions can be found in: {cursorQuestionPromptPath}";
         
         return (command, stdinInput);
     }
