@@ -35,6 +35,24 @@
     }
 }
 
+/* Smaller empty state for sidebars and compact areas */
+.empty-state-small {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--bs-gray-600);
+
+    .empty-state-icon {
+        font-size: 2rem;
+        margin-bottom: 0.75rem;
+        opacity: 0.3;
+    }
+
+    p {
+        font-size: 0.8125rem;
+        margin-bottom: 0;
+    }
+}
+
 /* Make main content use flexbox for independent tab scrolling */
 .main-content {
     display: flex;

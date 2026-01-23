@@ -1,5 +1,12 @@
 <template>
+  <div v-if="myWorkArticles.length === 0" class="empty-state-small" v-cloak>
+    <div class="empty-state-icon">
+      <i class="bi bi-person-check"></i>
+    </div>
+    <p class="text-muted">No articles assigned to you or awaiting your action</p>
+  </div>
   <virtual-scroller 
+    v-else
     :items="myWorkArticles" 
     :item-height="itemHeight"
     :buffer="buffer"
