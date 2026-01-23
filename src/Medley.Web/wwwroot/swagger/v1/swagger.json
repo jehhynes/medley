@@ -4118,7 +4118,8 @@
         "properties": {
           "speakerId": {
             "type": "string",
-            "format": "guid"
+            "format": "guid",
+            "nullable": true
           },
           "speakerName": {
             "type": "string"

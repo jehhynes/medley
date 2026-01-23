@@ -115,8 +115,7 @@
               <button 
                 class="btn btn-primary" 
                 @click="extractFragments" 
-                :disabled="selectedSource.extractionStatus === 'InProgress'"
-                v-if="selectedSource.content">
+                :disabled="selectedSource.extractionStatus === 'InProgress'">
                 <span v-if="selectedSource.extractionStatus === 'InProgress'" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                 <i v-else class="bi bi-magic"></i> 
                 {{ selectedSource.extractionStatus === 'Completed' ? 'Re-extract Fragments' : 'Extract Fragments' }}
@@ -624,8 +623,8 @@ const getTrustLevelClass = (trustLevel: string | null): string => {
   }
 };
 
-const getSpeakerInfo = (speakerId: string) => {
-  if (!selectedSource.value?.speakers) return null;
+const getSpeakerInfo = (speakerId: string | null) => {
+  if (!speakerId || !selectedSource.value?.speakers) return null;
   return selectedSource.value.speakers.find(s => s.id === speakerId);
 };
 

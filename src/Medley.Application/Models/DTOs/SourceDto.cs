@@ -243,9 +243,9 @@ public class TaggingResponse
 public class SpeechSegmentDto
 {
     /// <summary>
-    /// Speaker ID
+    /// Speaker ID (null for unknown speakers)
     /// </summary>
-    public required Guid SpeakerId { get; set; }
+    public Guid? SpeakerId { get; set; }
 
     /// <summary>
     /// Speaker name

@@ -274,22 +274,21 @@ public class SourcesApiController : ControllerBase
 
             foreach (var segment in recording.Transcript.SpeechSegments)
             {
-                if (string.IsNullOrWhiteSpace(segment.Speaker) || string.IsNullOrWhiteSpace(segment.Text))
+                if (string.IsNullOrWhiteSpace(segment.Text))
                 {
                     continue;
                 }
 
-                var cleanedSpeakerName = RemoveSpeakerSuffixes(segment.Speaker);
+                var cleanedSpeakerName = string.IsNullOrWhiteSpace(segment.Speaker) 
+                    ? "Unknown Speaker" 
+                    : RemoveSpeakerSuffixes(segment.Speaker);
 
                 // Find the speaker entity
-                if (!speakerLookup.TryGetValue(cleanedSpeakerName, out var speaker))
-                {
-                    // Speaker not found, skip this segment
-                    continue;
-                }
+                Speaker? speaker = null;
+                speakerLookup.TryGetValue(cleanedSpeakerName, out speaker);
 
                 // Add speaker to the list if not already added
-                if (!seenSpeakers.Contains(speaker.Id))
+                if (speaker != null && !seenSpeakers.Contains(speaker.Id))
                 {
                     speakers.Add(new SpeakerDto
                     {
@@ -302,8 +301,8 @@ public class SourcesApiController : ControllerBase
                     seenSpeakers.Add(speaker.Id);
                 }
 
-                // Merge adjacent segments by the same speaker
-                if (currentSegment != null && currentSegment.SpeakerId == speaker.Id)
+                // Merge adjacent segments by the same speaker (based on cleaned name)
+                if (currentSegment != null && currentSegment.SpeakerName == cleanedSpeakerName)
                 {
                     currentSegment.Text += " " + segment.Text.Trim();
                 }
@@ -317,8 +316,8 @@ public class SourcesApiController : ControllerBase
 
                     currentSegment = new SpeechSegmentDto
                     {
-                        SpeakerId = speaker.Id,
-                        SpeakerName = speaker.Name,
+                        SpeakerId = speaker?.Id,
+                        SpeakerName = cleanedSpeakerName,
                         Text = segment.Text.Trim()
                     };
                 }

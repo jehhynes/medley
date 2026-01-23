@@ -2800,7 +2800,7 @@ export enum SourceMetadataType {
 }
 
 export interface SpeechSegmentDto {
-    speakerId?: string;
+    speakerId?: string | null;
     speakerName?: string;
     text?: string;
 }
