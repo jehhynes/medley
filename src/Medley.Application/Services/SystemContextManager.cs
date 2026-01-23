@@ -182,6 +182,9 @@ public class SystemContextManager
                     .ThenInclude(pf => pf.Fragment)
                         .ThenInclude(f => f.Source)
                             .ThenInclude(s => s!.PrimarySpeaker)
+                .Include(p => p.PlanFragments.Where(pf => pf.Include))
+                    .ThenInclude(pf => pf.Fragment)
+                        .ThenInclude(f => f.FragmentCategory)
                 .FirstOrDefaultAsync(p => p.Id == planId.Value, cancellationToken);
 
             if (plan != null)

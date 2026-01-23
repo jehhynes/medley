@@ -1,7 +1,10 @@
 using Medley.Application.Configuration;
+using Medley.Application.Hubs;
+using Medley.Application.Hubs.Clients;
 using Medley.Application.Interfaces;
 using Medley.Application.Services;
 using Medley.Domain.Entities;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -24,6 +27,7 @@ public class ArticleChatToolsFactory
     private readonly ILoggerFactory _loggerFactory;
     private readonly IOptions<EmbeddingSettings> _embeddingSettings;
     private readonly AiCallContext _aiCallContext;
+    private readonly IHubContext<ArticleHub, IArticleClient> _hubContext;
     private readonly ICursorService? _cursorService;
     private readonly IOptions<CursorSettings>? _cursorSettings;
 
@@ -39,6 +43,7 @@ public class ArticleChatToolsFactory
         ILoggerFactory loggerFactory,
         IOptions<EmbeddingSettings> embeddingSettings,
         AiCallContext aiCallContext,
+        IHubContext<ArticleHub, IArticleClient> hubContext,
         ICursorService? cursorService = null,
         IOptions<CursorSettings>? cursorSettings = null)
     {
@@ -53,6 +58,7 @@ public class ArticleChatToolsFactory
         _loggerFactory = loggerFactory;
         _embeddingSettings = embeddingSettings;
         _aiCallContext = aiCallContext;
+        _hubContext = hubContext;
         _cursorService = cursorService;
         _cursorSettings = cursorSettings;
     }
@@ -85,6 +91,7 @@ public class ArticleChatToolsFactory
             logger,
             _embeddingSettings,
             _aiCallContext,
+            _hubContext,
             _cursorService,
             _cursorSettings);
     }

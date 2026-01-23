@@ -605,6 +605,7 @@ public class ArticleVersionService : IArticleVersionService
                 latestUserVersion, 
                 user.Id, 
                 cancellationToken);
+            newUserVersion.ChangeMessage = aiVersion.ChangeMessage;
 
             // Mark the AI version as accepted with review tracking
             aiVersion.ReviewAction = ReviewAction.Accepted;

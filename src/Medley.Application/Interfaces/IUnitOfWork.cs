@@ -32,4 +32,15 @@ public interface IUnitOfWork : IDisposable
     /// </summary>
     /// <param name="cancellationToken">Cancellation token</param>
     Task RollbackTransactionAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Registers an action to be executed after the transaction commits successfully
+    /// </summary>
+    /// <param name="action">The action to execute after commit</param>
+    void RegisterPostCommitAction(Func<Task> action);
+
+    /// <summary>
+    /// Clears all registered post-commit actions
+    /// </summary>
+    void ClearPostCommitActions();
 }

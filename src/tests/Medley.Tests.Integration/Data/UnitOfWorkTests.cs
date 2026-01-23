@@ -1,6 +1,8 @@
 using Medley.Application.Interfaces;
 using Medley.Domain.Entities;
 using Medley.Infrastructure.Data;
+using Microsoft.Extensions.Logging;
+using Moq;
 using Xunit;
 
 namespace Medley.Tests.Integration.Data;
@@ -19,7 +21,8 @@ public class UnitOfWorkTests : IClassFixture<UnitOfWorkDatabaseFixture>
     {
         // Arrange - Each test gets its own isolated database
         using var dbContext = await _fixture.CreateIsolatedDbContextAsync();
-        using var unitOfWork = new UnitOfWork(dbContext);
+        var logger = new Mock<ILogger<UnitOfWork>>();
+        using var unitOfWork = new UnitOfWork(dbContext, logger.Object);
         
         var user = new User 
         { 
@@ -47,7 +50,8 @@ public class UnitOfWorkTests : IClassFixture<UnitOfWorkDatabaseFixture>
     {
         // Arrange - Each test gets its own isolated database
         using var dbContext = await _fixture.CreateIsolatedDbContextAsync();
-        using var unitOfWork = new UnitOfWork(dbContext);
+        var logger = new Mock<ILogger<UnitOfWork>>();
+        using var unitOfWork = new UnitOfWork(dbContext, logger.Object);
 
         // Act
         var result = await unitOfWork.SaveChangesAsync();
@@ -61,7 +65,8 @@ public class UnitOfWorkTests : IClassFixture<UnitOfWorkDatabaseFixture>
     {
         // Arrange - Each test gets its own isolated database
         using var dbContext = await _fixture.CreateIsolatedDbContextAsync();
-        using var unitOfWork = new UnitOfWork(dbContext);
+        var logger = new Mock<ILogger<UnitOfWork>>();
+        using var unitOfWork = new UnitOfWork(dbContext, logger.Object);
         
         var user1 = new User 
         { 
@@ -98,7 +103,8 @@ public class UnitOfWorkTests : IClassFixture<UnitOfWorkDatabaseFixture>
     {
         // Arrange - Each test gets its own isolated database
         using var dbContext = await _fixture.CreateIsolatedDbContextAsync();
-        using var unitOfWork = new UnitOfWork(dbContext);
+        var logger = new Mock<ILogger<UnitOfWork>>();
+        using var unitOfWork = new UnitOfWork(dbContext, logger.Object);
 
         // Act & Assert
         var exception = Record.Exception(() => unitOfWork.Dispose());

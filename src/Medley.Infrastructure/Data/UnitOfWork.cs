@@ -1,6 +1,7 @@
 using Medley.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Logging;
 using System.Data;
 
 namespace Medley.Infrastructure.Data;
@@ -11,12 +12,15 @@ namespace Medley.Infrastructure.Data;
 public class UnitOfWork : IUnitOfWork
 {
     private readonly ApplicationDbContext _context;
+    private readonly ILogger<UnitOfWork> _logger;
     private IDbContextTransaction? _transaction;
+    private readonly List<Func<Task>> _postCommitActions = new();
     private bool _disposed = false;
 
-    public UnitOfWork(ApplicationDbContext context)
+    public UnitOfWork(ApplicationDbContext context, ILogger<UnitOfWork> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
@@ -43,6 +47,9 @@ public class UnitOfWork : IUnitOfWork
         await _transaction.CommitAsync(cancellationToken);
         await _transaction.DisposeAsync();
         _transaction = null;
+
+        // Execute post-commit actions after successful commit
+        await ExecutePostCommitActionsAsync();
     }
 
     public async Task RollbackTransactionAsync(CancellationToken cancellationToken = default)
@@ -55,6 +62,50 @@ public class UnitOfWork : IUnitOfWork
         await _transaction.RollbackAsync(cancellationToken);
         await _transaction.DisposeAsync();
         _transaction = null;
+
+        // Clear post-commit actions on rollback
+        ClearPostCommitActions();
+    }
+
+    public void RegisterPostCommitAction(Func<Task> action)
+    {
+        if (action == null)
+        {
+            throw new ArgumentNullException(nameof(action));
+        }
+
+        _postCommitActions.Add(action);
+    }
+
+    public void ClearPostCommitActions()
+    {
+        _postCommitActions.Clear();
+    }
+
+    private async Task ExecutePostCommitActionsAsync()
+    {
+        if (_postCommitActions.Count == 0)
+        {
+            return;
+        }
+
+        _logger.LogDebug("Executing {Count} post-commit actions", _postCommitActions.Count);
+
+        foreach (var action in _postCommitActions)
+        {
+            try
+            {
+                await action();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to execute post-commit action");
+                // Continue executing other actions even if one fails
+            }
+        }
+
+        // Clear actions after execution
+        ClearPostCommitActions();
     }
 
     public void Dispose()
@@ -69,6 +120,7 @@ public class UnitOfWork : IUnitOfWork
         {
             _transaction?.Dispose();
             _context.Dispose();
+            ClearPostCommitActions();
         }
         _disposed = true;
     }

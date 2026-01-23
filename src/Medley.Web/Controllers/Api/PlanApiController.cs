@@ -70,6 +70,9 @@ public class PlanApiController : ControllerBase
             .Include(p => p.PlanFragments)
                 .ThenInclude(pf => pf.Fragment)
                     .ThenInclude(f => f.Source)
+            .Include(p => p.PlanFragments)
+                .ThenInclude(pf => pf.Fragment)
+                    .ThenInclude(f => f.FragmentCategory)
             .Include(p => p.CreatedBy)
             .OrderByDescending(p => p.CreatedAt)
             .FirstOrDefaultAsync();
@@ -131,6 +134,9 @@ public class PlanApiController : ControllerBase
             .Include(p => p.PlanFragments)
                 .ThenInclude(pf => pf.Fragment)
                     .ThenInclude(f => f.Source)
+            .Include(p => p.PlanFragments)
+                .ThenInclude(pf => pf.Fragment)
+                    .ThenInclude(f => f.FragmentCategory)
             .Include(p => p.CreatedBy)
             .FirstOrDefaultAsync();
 

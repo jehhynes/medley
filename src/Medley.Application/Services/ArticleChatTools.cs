@@ -4,6 +4,8 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Medley.Application.Configuration;
+using Medley.Application.Hubs;
+using Medley.Application.Hubs.Clients;
 using Medley.Application.Interfaces;
 using Medley.Application.Models.DTOs;
 using Medley.Application.Models.DTOs.Llm;
@@ -11,6 +13,7 @@ using Medley.Application.Models.DTOs.Llm.Tools;
 using Medley.Application.Services;
 using Medley.Domain.Entities;
 using Medley.Domain.Enums;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -40,6 +43,7 @@ public class ArticleChatTools
     private readonly Guid _currentUserId;
     private readonly ICursorService? _cursorService;
     private readonly IOptions<CursorSettings>? _cursorSettings;
+    private readonly IHubContext<ArticleHub, IArticleClient> _hubContext;
     
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -64,6 +68,7 @@ public class ArticleChatTools
         ILogger<ArticleChatTools> logger,
         IOptions<EmbeddingSettings> embeddingSettings,
         AiCallContext aiCallContext,
+        IHubContext<ArticleHub, IArticleClient> hubContext,
         ICursorService? cursorService = null,
         IOptions<CursorSettings>? cursorSettings = null)
     {
@@ -82,6 +87,7 @@ public class ArticleChatTools
         _logger = logger;
         _embeddingSettings = embeddingSettings.Value;
         _aiCallContext = aiCallContext;
+        _hubContext = hubContext;
         _cursorService = cursorService;
         _cursorSettings = cursorSettings;
     }
@@ -604,6 +610,19 @@ public class ArticleChatTools
                 await _planFragmentRepository.AddAsync(planFragment);
             }
 
+            // Register post-commit action to send SignalR notification
+            var payload = new PlanGeneratedPayload
+            {
+                ArticleId = _articleId,
+                PlanId = plan.Id,
+                Timestamp = DateTimeOffset.UtcNow
+            };
+            _unitOfWork.RegisterPostCommitAction(async () =>
+            {
+                await _hubContext.Clients.Group($"Article_{_articleId}")
+                    .PlanGenerated(payload);
+            });
+
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("Created plan {PlanId} for article {ArticleId}", plan.Id, _articleId);
@@ -673,6 +692,21 @@ public class ArticleChatTools
                 }
             }
             
+            // Register post-commit action to send SignalR notification
+            var payload = new VersionCreatedPayload
+            {
+                ArticleId = _articleId,
+                VersionId = versionDto.Id,
+                VersionNumber = versionDto.VersionNumber,
+                VersionType = VersionType.AI,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+            _unitOfWork.RegisterPostCommitAction(async () =>
+            {
+                await _hubContext.Clients.Group($"Article_{_articleId}")
+                    .VersionCreated(payload);
+            });
+
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             var response = new CreateArticleVersionResponse
@@ -783,6 +817,21 @@ public class ArticleChatTools
                 changeMessage,
                 _conversationId,
                 cancellationToken);
+
+            // Register post-commit action to send SignalR notification
+            var payload = new VersionCreatedPayload
+            {
+                ArticleId = _articleId,
+                VersionId = versionDto.Id,
+                VersionNumber = versionDto.VersionNumber,
+                VersionType = VersionType.AI,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+            _unitOfWork.RegisterPostCommitAction(async () =>
+            {
+                await _hubContext.Clients.Group($"Article_{_articleId}")
+                    .VersionCreated(payload);
+            });
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 

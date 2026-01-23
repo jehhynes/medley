@@ -27,6 +27,7 @@ public class FragmentRepository : Repository<Fragment>, IFragmentRepository
         var vector = new Vector(embedding);
 
         var query = _context.Fragments
+            .Include(f => f.FragmentCategory)
             .Where(f => f.Embedding != null);
 
         if (minSimilarity.HasValue)

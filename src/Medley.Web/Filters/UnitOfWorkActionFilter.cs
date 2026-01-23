@@ -48,9 +48,6 @@ public class UnitOfWorkActionFilter : IAsyncActionFilter
                     
                     _logger.LogDebug("Transaction committed successfully for action {ActionName}", 
                         context.ActionDescriptor.DisplayName);
-                    
-                    // Execute any registered post-commit actions
-                    await ExecutePostCommitActionsAsync(context.HttpContext);
                 }
                 else
                 {
@@ -90,27 +87,6 @@ public class UnitOfWorkActionFilter : IAsyncActionFilter
 
             // Re-throw the original exception so error handling works correctly
             throw;
-        }
-    }
-
-    private async Task ExecutePostCommitActionsAsync(HttpContext httpContext)
-    {
-        // Execute any post-commit actions registered by controllers
-        if (httpContext.Items.TryGetValue("PostCommitActions", out var actionsObj) && 
-            actionsObj is List<Func<Task>> actions)
-        {
-            foreach (var action in actions)
-            {
-                try
-                {
-                    await action();
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to execute post-commit action");
-                    // Continue executing other actions even if one fails
-                }
-            }
         }
     }
 

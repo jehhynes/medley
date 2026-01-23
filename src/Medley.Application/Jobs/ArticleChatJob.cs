@@ -180,55 +180,6 @@ public class ArticleChatJob : BaseHangfireJob<ArticleChatJob>
                     }
                 }
 
-                // Get the created plan and send PlanGenerated event
-                if (conversation.Mode == ConversationMode.Plan)
-                {
-                    var plan = await _planRepository.Query()
-                        .Where(p => p.ArticleId == conversation.ArticleId && p.Status == PlanStatus.Draft)
-                        .OrderByDescending(p => p.CreatedAt)
-                        .FirstOrDefaultAsync(cancellationToken);
-
-                    if (plan != null)
-                    {
-                        LogDebug($"Sending PlanGenerated event for plan {plan.Id}, article {conversation.ArticleId}");
-
-                        await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
-                            .PlanGenerated(new PlanGeneratedPayload
-                            {
-                                ArticleId = conversation.ArticleId,
-                                PlanId = plan.Id,
-                                Timestamp = DateTimeOffset.UtcNow
-                            });
-                    }
-                }
-
-                // Get the created AI version and send VersionCreated event
-                if (conversation.Mode == ConversationMode.Agent)
-                {
-                    var aiVersion = await _versionRepository.Query()
-                        .Include(x => x.ParentVersion)
-                        .Where(v => v.ArticleId == conversation.ArticleId
-                            && v.ConversationId == conversation.Id
-                            && v.VersionType == VersionType.AI)
-                        .OrderByDescending(v => v.CreatedAt)
-                        .FirstOrDefaultAsync(cancellationToken);
-
-                    if (aiVersion != null)
-                    {
-                        LogDebug($"Sending VersionCreated event for AI version {aiVersion.Id}, article {conversation.ArticleId}");
-
-                        await _hubContext.Clients.Group($"Article_{conversation.ArticleId}")
-                            .VersionCreated(new VersionCreatedPayload
-                            {
-                                ArticleId = conversation.ArticleId,
-                                VersionId = aiVersion.Id,
-                                VersionNumber = $"{aiVersion.ParentVersion!.VersionNumber}.{aiVersion.VersionNumber}",
-                                VersionType = VersionType.AI,
-                                CreatedAt = aiVersion.CreatedAt
-                            });
-                    }
-                }
-
                 conversation.IsRunning = false;
             });
         }

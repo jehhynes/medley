@@ -1,6 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using Medley.Application.Interfaces;
 using Microsoft.AspNetCore.Http;
 
 namespace Medley.Web.Extensions;
@@ -11,21 +9,21 @@ namespace Medley.Web.Extensions;
 public static class HttpContextExtensions
 {
     /// <summary>
-    /// Registers an action to be executed after the database transaction commits
+    /// Registers an action to be executed after the database transaction commits.
+    /// This is a convenience method that delegates to IUnitOfWork.RegisterPostCommitAction.
     /// </summary>
     /// <param name="httpContext">The HTTP context</param>
     /// <param name="action">The action to execute after commit</param>
     public static void RegisterPostCommitAction(this HttpContext httpContext, Func<Task> action)
     {
-        const string key = "PostCommitActions";
+        var unitOfWork = httpContext.RequestServices.GetService(typeof(IUnitOfWork)) as IUnitOfWork;
         
-        if (!httpContext.Items.ContainsKey(key))
+        if (unitOfWork == null)
         {
-            httpContext.Items[key] = new List<Func<Task>>();
+            throw new InvalidOperationException("IUnitOfWork service is not available in the request services.");
         }
         
-        var actions = (List<Func<Task>>)httpContext.Items[key]!;
-        actions.Add(action);
+        unitOfWork.RegisterPostCommitAction(action);
     }
 }
 
