@@ -211,63 +211,15 @@
             </div>
           </div>
           <div class="tab-pane" id="fragments-pane" role="tabpanel" aria-labelledby="fragments-tab">
-            <div v-if="loadingFragments" class="text-center py-4">
-              <div class="spinner-border spinner-border-sm" role="status">
-                <span class="visually-hidden">Loading...</span>
-              </div>
-            </div>
-            <div v-else-if="fragmentsError" class="alert alert-danger" v-cloak>
-              {{ fragmentsError }}
-            </div>
-            <template v-else>
-              <div v-if="selectedSource && selectedSource.extractionMessage && fragments.length === 0" class="alert alert-info mb-3" v-cloak>
-                <div class="d-flex align-items-start">
-                  <i class="bi bi-info-circle me-2 mt-1"></i>
-                  <div class="flex-grow-1">
-                    <strong>Extraction Message:</strong>
-                    <div class="mt-1">{{ selectedSource.extractionMessage }}</div>
-                  </div>
-                </div>
-              </div>
-              <div v-if="fragments.length === 0 && (!selectedSource || !selectedSource.extractionMessage)" class="text-muted">
-                No fragments available. Click "Extract Fragments" to generate fragments from this source.
-              </div>
-              <div v-else class="fragment-list">
-                <table class="table table-hover">
-                  <tbody>
-                    <tr 
-                      v-for="fragment in fragments" 
-                      :key="fragment.id"
-                      class="fragment-item"
-                      @click="selectFragment(fragment)"
-                      style="cursor: pointer;"
-                    >
-                      <td class="align-middle" style="width: 50px;">
-                        <i 
-                          :class="getIconClass(fragment.categoryIcon, 'bi-puzzle')" 
-                          :title="fragment.category || ''"
-                          style="font-size: 1.25rem;"
-                        ></i>
-                      </td>
-                      <td>
-                        <div class="fw-semibold">{{ fragment.title || 'Untitled Fragment' }}</div>
-                        <div v-if="fragment.summary" class="text-muted small">
-                          {{ fragment.summary }}
-                        </div>
-                      </td>
-                      <td class="align-middle text-end" style="width: 100px;" v-if="fragment.confidence !== null && fragment.confidence !== undefined">
-                        <i 
-                          :class="'fa-duotone ' + getConfidenceIcon(fragment.confidence)" 
-                          :style="{ color: getConfidenceColor(fragment.confidence) }"
-                          :title="'Confidence: ' + (fragment.confidence || '')"
-                          style="font-size: 1.25rem;"
-                        ></i>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </template>
+            <fragment-list
+              :fragments="fragments"
+              :loading="loadingFragments"
+              :error="fragmentsError"
+              :show-extraction-message="true"
+              :extraction-message="selectedSource?.extractionMessage"
+              empty-message="No fragments available. Click 'Extract Fragments' to generate fragments from this source."
+              @select-fragment="selectFragment"
+            />
           </div>
           <div class="tab-pane" id="metadata-pane" role="tabpanel" aria-labelledby="metadata-tab">
             <div v-if="parsedMetadata">
@@ -317,6 +269,7 @@ import { useDropDown } from '@/composables/useDropDown';
 import { createAdminHubConnection } from '@/utils/signalr';
 import type { SourceDto, FragmentDto, TagDto } from '@/types/api-client';
 import type { AdminHubConnection } from '@/types/admin-hub';
+import FragmentList from '@/components/FragmentList.vue';
 
 // Interfaces
 interface PaginationState {
@@ -873,15 +826,6 @@ json-viewer {
 .content-preview {
   white-space: pre-wrap;
   word-wrap: break-word;
-}
-
-/* Fragment list styles */
-.fragment-list {
-  width: 100%;
-}
-
-.fragment-list .fragment-item:hover {
-  background-color: var(--bs-secondary-bg);
 }
 
 /* Tag filtering styles */

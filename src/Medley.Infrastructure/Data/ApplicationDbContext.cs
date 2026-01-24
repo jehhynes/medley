@@ -91,5 +91,11 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
         // Global query filter to exclude deleted sources
         builder.Entity<Source>()
             .HasQueryFilter(s => !s.IsDeleted);
+
+        // Configure many-to-many relationship between Article and Fragment
+        builder.Entity<Article>()
+            .HasMany(a => a.Fragments)
+            .WithMany()
+            .UsingEntity(j => j.ToTable("article_fragments"));
     }
 }

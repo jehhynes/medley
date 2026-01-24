@@ -10,6 +10,14 @@
       {{ error }}
     </div>
 
+    <div v-else-if="!plan" class="empty-state">
+      <div class="empty-state-icon">
+        <i class="bi bi-list-check"></i>
+      </div>
+      <div class="empty-state-title">No Active Plan</div>
+      <div class="empty-state-text">There is no active plan for this article yet</div>
+    </div>
+
     <template v-else-if="plan">
       <!-- Instructions Editor (serves as page header) -->
       <tiptap-editor
@@ -320,7 +328,7 @@ interface PlanDto {
 
 // Props
 interface Props {
-  planId: string;
+  planId: string | null;
   articleId: string;
 }
 
@@ -369,7 +377,14 @@ const canEditPlan = computed<boolean>(() => {
 
 // Watch
 watch(() => props.planId, () => {
-  loadPlan();
+  if (props.planId) {
+    loadPlan();
+  } else {
+    // No plan ID means no active plan exists
+    plan.value = null;
+    loading.value = false;
+    error.value = null;
+  }
 }, { immediate: true });
 
 watch(() => plan.value?.instructions, (newVal) => {

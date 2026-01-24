@@ -19,6 +19,7 @@ namespace Medley.Web.Controllers.Api;
 public class FragmentsApiController : ControllerBase
 {
     private readonly IFragmentRepository _fragmentRepository;
+    private readonly IRepository<Article> _articleRepository;
     private readonly IEmbeddingGenerator<string, Embedding<float>> _embeddingGenerator;
     private readonly IEmbeddingHelper _embeddingHelper;
     private readonly EmbeddingSettings _embeddingSettings;
@@ -29,6 +30,7 @@ public class FragmentsApiController : ControllerBase
 
     public FragmentsApiController(
         IFragmentRepository fragmentRepository,
+        IRepository<Article> articleRepository,
         IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
         IEmbeddingHelper embeddingHelper,
         IOptions<EmbeddingSettings> embeddingSettings,
@@ -38,6 +40,7 @@ public class FragmentsApiController : ControllerBase
         IMedleyContext medleyContext)
     {
         _fragmentRepository = fragmentRepository;
+        _articleRepository = articleRepository;
         _embeddingGenerator = embeddingGenerator;
         _embeddingHelper = embeddingHelper;
         _embeddingSettings = embeddingSettings.Value;
@@ -140,26 +143,62 @@ public class FragmentsApiController : ControllerBase
             .Where(f => f.Source!.Id == sourceId)
             .OrderByDescending(f => f.CreatedAt)
             .ThenBy(f => f.Id) // Deterministic tiebreaker
-            .Select(f => new FragmentDto
-            {
-                Id = f.Id,
-                Title = f.Title,
-                Summary = f.Summary,
-                Category = f.FragmentCategory.Name,
-                CategoryIcon = f.FragmentCategory.Icon,
-                Content = f.Content,
-                SourceId = f.Source!.Id,
-                SourceName = f.Source.Name,
-                SourceType = f.Source.Type,
-                SourceDate = f.Source.Date,
-                CreatedAt = f.CreatedAt,
-                LastModifiedAt = f.LastModifiedAt,
-                Confidence = f.Confidence,
-                ConfidenceComment = f.ConfidenceComment
-            })
+            .Select(f => MapToFragmentDto(f))
             .ToListAsync();
 
         return Ok(fragments);
+    }
+
+    /// <summary>
+    /// Get all fragments for a specific article
+    /// </summary>
+    /// <param name="articleId">Article ID</param>
+    /// <returns>List of fragments linked to the article</returns>
+    [HttpGet("by-article/{articleId}")]
+    [ProducesResponseType(typeof(List<FragmentDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<List<FragmentDto>>> GetByArticleId(Guid articleId)
+    {
+        // Get fragment IDs from the join table first
+        var fragmentIds = await _articleRepository.Query()
+            .Where(a => a.Id == articleId)
+            .SelectMany(a => a.Fragments.Select(f => f.Id))
+            .ToListAsync();
+
+        // Now get the full fragment data
+        var fragments = await _fragmentRepository.Query()
+            .Include(f => f.Source)
+            .Include(f => f.FragmentCategory)
+            .Where(f => fragmentIds.Contains(f.Id))
+            .OrderBy(f => f.Title)
+            .ThenBy(f => f.Id) // Deterministic tiebreaker
+            .Select(f => MapToFragmentDto(f))
+            .ToListAsync();
+
+        return Ok(fragments);
+    }
+
+    /// <summary>
+    /// Helper method to map Fragment entity to FragmentDto
+    /// </summary>
+    private static FragmentDto MapToFragmentDto(Fragment f)
+    {
+        return new FragmentDto
+        {
+            Id = f.Id,
+            Title = f.Title,
+            Summary = f.Summary,
+            Category = f.FragmentCategory.Name,
+            CategoryIcon = f.FragmentCategory.Icon,
+            Content = f.Content,
+            SourceId = f.Source == null ? null : (Guid?)f.Source.Id,
+            SourceName = f.Source == null ? null : (string?)f.Source.Name,
+            SourceType = f.Source == null ? null : (SourceType?)f.Source.Type,
+            SourceDate = f.Source == null ? null : (DateTimeOffset?)f.Source.Date,
+            CreatedAt = f.CreatedAt,
+            LastModifiedAt = f.LastModifiedAt,
+            Confidence = f.Confidence,
+            ConfidenceComment = f.ConfidenceComment
+        };
     }
 
     /// <summary>

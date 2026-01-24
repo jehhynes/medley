@@ -99,8 +99,8 @@
         <div class="empty-state-text">Select an article from the sidebar to view its details</div>
       </div>
       <template v-else v-cloak>
-        <!-- Content Tabs (only show if more than Editor tab exists) -->
-        <div v-if="availableTabs.length > 1" class="content-tabs-container">
+        <!-- Content Tabs (always visible) -->
+        <div class="content-tabs-container">
           <ul class="nav nav-tabs">
             <li v-for="tab in availableTabs" :key="tab.id" class="nav-item">
               <button
@@ -115,6 +115,24 @@
                   @click.stop="closeContentTab(tab.id)"
                   aria-label="Close"></i>
               </button>
+            </li>
+            <!-- Add Tab Button -->
+            <li v-if="availableTabsToOpen.length > 0" class="nav-item ms-2 py-1">
+              <div class="dropdown-container position-relative">
+                <button
+                  class="btn btn-sm btn-outline-secondary"
+                  @click="toggleDropdown($event, 'add-tab')"
+                  title="Open Tab">
+                  <i class="bi bi-plus-lg"></i>
+                </button>
+                <ul v-if="isDropdownOpen('add-tab')" class="dropdown-menu show" :class="getPositionClasses()">
+                  <li v-for="tab in availableTabsToOpen" :key="tab.id">
+                    <button class="dropdown-item" @click="openTabFromDropdown(tab.id)">
+                      <i :class="tab.icon + ' me-2'"></i>{{ tab.label }}
+                    </button>
+                  </li>
+                </ul>
+              </div>
             </li>
           </ul>
         </div>
@@ -158,6 +176,17 @@
               :article-id="articles.selectedId"
               @conversation-created="handlePlanConversationCreated"
               @close-plan="closeContentTab('plan')" />
+          </div>
+
+          <!-- Fragments Tab -->
+          <div
+            v-if="contentTabs.fragmentsOpen"
+            v-show="contentTabs.activeTabId === 'fragments'"
+            class="content-tab-pane">
+            <fragments-viewer
+              ref="fragmentsViewer"
+              :article-id="articles.selectedId"
+              @open-fragment="handleOpenFragment" />
           </div>
         </div>
       </template>
@@ -436,6 +465,7 @@ import ArticleList from '../components/ArticleList.vue';
 import TiptapEditor from '@/components/TiptapEditor.vue';
 import PlanViewer from '../components/PlanViewer.vue';
 import VerticalMenu from '@/components/VerticalMenu.vue';
+import FragmentsViewer from '../components/FragmentsViewer.vue';
 
 // Global types
 declare const bootbox: any;
@@ -468,7 +498,8 @@ interface EditorState {
 interface ContentTabsState {
   activeTabId: string;
   versionData: { versionId: string; versionNumber: number } | null;
-  planData: { planId: string } | null;
+  planData: { planId: string | null } | null;
+  fragmentsOpen: boolean;
 }
 
 interface UIState {
@@ -509,6 +540,11 @@ interface ChatPanelRef {
 
 interface VersionsPanelRef {
   loadVersions: () => Promise<void>;
+  openLatestVersion: () => void;
+}
+
+interface FragmentsViewerRef {
+  loadFragments: () => Promise<void>;
 }
 
 // Window types
@@ -539,6 +575,7 @@ const { leftSidebarVisible, rightSidebarVisible } = useSidebarState();
 const tiptapEditor = ref<TiptapEditorRef | null>(null);
 const chatPanel = ref<ChatPanelRef | null>(null);
 const versionsPanel = ref<VersionsPanelRef | null>(null);
+const fragmentsViewer = ref<FragmentsViewerRef | null>(null);
 const titleInput = ref<HTMLInputElement | null>(null);
 const editTitleInput = ref<HTMLInputElement | null>(null);
 const filterSearchInput = ref<HTMLInputElement | null>(null);
@@ -572,7 +609,8 @@ const editor = reactive<EditorState>({
 const contentTabs = reactive<ContentTabsState>({
   activeTabId: 'editor',
   versionData: null,
-  planData: null
+  planData: null,
+  fragmentsOpen: false
 });
 
 // UI state
@@ -722,7 +760,27 @@ const availableTabs = computed<ContentTab[]>(() => {
     });
   }
 
+  if (contentTabs.fragmentsOpen) {
+    tabs.push({
+      id: 'fragments',
+      label: 'Fragments',
+      closeable: true,
+      type: 'fragments'
+    });
+  }
+
   return tabs;
+});
+
+const availableTabsToOpen = computed(() => {
+  const openTabIds = new Set(availableTabs.value.map(t => t.id));
+  const allTabs = [
+    { id: 'fragments', label: 'Fragments', icon: 'bi-puzzle' },
+    { id: 'plan', label: 'Plan', icon: 'bi-list-check' },
+    { id: 'version', label: 'Versions', icon: 'bi-clock-history' }
+  ];
+  
+  return allTabs.filter(tab => !openTabIds.has(tab.id));
 });
 
 // ============================================================================
@@ -772,6 +830,10 @@ const selectArticle = async (article: ArticleSummaryDto, replaceState: boolean =
   }
 
   try {
+    // Clear tabs and version selection BEFORE changing articles to avoid stale data
+    clearVersionSelection();
+    clearAllTabs();
+
     const fullArticle = await apiClients.articles.get(article.id!);
 
     if (articles.selectedId && signalr.connection && signalr.connection.state === HubConnectionState.Connected) {
@@ -786,9 +848,6 @@ const selectArticle = async (article: ArticleSummaryDto, replaceState: boolean =
     if (signalr.connection && signalr.connection.state === HubConnectionState.Connected && article.id) {
       await signalr.connection.invoke('JoinArticle', article.id);
     }
-
-    clearVersionSelection();
-    clearAllTabs();
     
     // Only proceed if article has an ID
     if (article.id) {
@@ -976,12 +1035,20 @@ const closeContentTab = (tabId: string): void => {
   } else if (tabId === 'plan') {
     contentTabs.planData = null;
     contentTabs.activeTabId = 'editor';
+  } else if (tabId === 'fragments') {
+    contentTabs.fragmentsOpen = false;
+    contentTabs.activeTabId = 'editor';
   }
 };
 
-const openPlanTab = (planId: string): void => {
+const openPlanTab = (planId: string | null): void => {
   contentTabs.planData = { planId };
   contentTabs.activeTabId = 'plan';
+};
+
+const openFragmentsTab = (): void => {
+  contentTabs.fragmentsOpen = true;
+  contentTabs.activeTabId = 'fragments';
 };
 
 const openVersionTab = async (version: ArticleVersionDto | string): Promise<void> => {
@@ -1010,7 +1077,29 @@ const openVersionTab = async (version: ArticleVersionDto | string): Promise<void
 const clearAllTabs = (): void => {
   contentTabs.versionData = null;
   contentTabs.planData = null;
+  contentTabs.fragmentsOpen = false;
   contentTabs.activeTabId = 'editor';
+};
+
+const openTabFromDropdown = async (tabId: string): Promise<void> => {
+  closeDropdown();
+  
+  if (tabId === 'fragments') {
+    openFragmentsTab();
+  } else if (tabId === 'plan') {
+    // Always open plan tab - PlanViewer will handle empty state
+    // Open with null first to ensure the tab opens, then load the plan
+    openPlanTab(null);
+    if (articles.selectedId) {
+      await loadDraftPlan(articles.selectedId);
+    }
+  } else if (tabId === 'version') {
+    // Open the latest AI version, or if none exists, the latest user version
+    // Use the VersionsPanel's method which uses already-loaded versions
+    if (versionsPanel.value) {
+      versionsPanel.value.openLatestVersion();
+    }
+  }
 };
 
 // ============================================================================
@@ -1063,6 +1152,8 @@ const loadDraftPlan = async (articleId: string | undefined): Promise<void> => {
     }
   } catch (err: any) {
     if (err.response && err.response.status === 204) {
+      // No active plan found - still open the tab with empty state
+      openPlanTab(null);
       return;
     }
     console.error('Error loading draft plan:', err);

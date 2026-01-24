@@ -107,6 +107,32 @@ function selectVersion(version: ArticleVersionDto): void {
   (window as any).MedleySidebar?.collapseRightSidebar();
 }
 
+function openLatestVersion(): void {
+  // Use the already-loaded versions from the state
+  const allVersions = versionState.versions.value;
+  
+  if (allVersions.length === 0) {
+    return; // No versions available
+  }
+
+  // Find latest AI version (status = PendingAiVersion and type = AI)
+  const latestAiVersion = allVersions.find(v => 
+    v.status === 'PendingAiVersion' &&
+    v.versionType === 'AI'
+  );
+
+  if (latestAiVersion) {
+    selectVersion(latestAiVersion);
+    return;
+  }
+
+  // If no AI version, get the latest user version (most recent one)
+  const latestVersion = allVersions[0]; // Versions are ordered by version number descending
+  if (latestVersion) {
+    selectVersion(latestVersion);
+  }
+}
+
 function formatDate(dateString: Date | undefined): string {
   if (!dateString) return '';
   return formatRelativeTime(dateString, { short: false, includeTime: true });
@@ -114,6 +140,7 @@ function formatDate(dateString: Date | undefined): string {
 
 // Expose methods to parent component
 defineExpose({
-  loadVersions
+  loadVersions,
+  openLatestVersion
 });
 </script>

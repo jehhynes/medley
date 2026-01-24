@@ -1,5 +1,5 @@
 import { ref, computed, type Ref, type ComputedRef } from 'vue';
-import type { ArticleVersionDto, VersionType } from '@/types/api-client';
+import type { ArticleVersionDto, VersionType, VersionStatus } from '@/types/api-client';
 
 interface VersionsState {
   versions: Ref<ArticleVersionDto[]>;
@@ -38,7 +38,7 @@ export function useVersionsState(articleId: Ref<string | null | undefined>) {
   );
 
   const pendingAiVersion = computed(() => 
-    versions.value.find(v => v.versionType === 'AI' as VersionType)
+    versions.value.find(v => v.status === 'PendingAiVersion')
   );
 
   const getVersionById = (versionId: string) => {

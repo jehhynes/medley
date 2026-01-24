@@ -1554,6 +1554,41 @@
         }
       }
     },
+    "/api/fragments/by-article/{articleId}": {
+      "get": {
+        "tags": [
+          "FragmentsApi"
+        ],
+        "operationId": "FragmentsApi_GetByArticleId",
+        "parameters": [
+          {
+            "name": "articleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FragmentDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/fragments/search": {
       "get": {
         "tags": [

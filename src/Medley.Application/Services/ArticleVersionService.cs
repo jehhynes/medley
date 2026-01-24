@@ -15,6 +15,7 @@ public class ArticleVersionService : IArticleVersionService
     private readonly IRepository<ArticleVersion> _versionRepository;
     private readonly IRepository<Article> _articleRepository;
     private readonly IRepository<User> _userRepository;
+    private readonly IRepository<Plan> _planRepository;
     private readonly ILogger<ArticleVersionService> _logger;
     private readonly diff_match_patch _diffMatchPatch;
 
@@ -22,11 +23,13 @@ public class ArticleVersionService : IArticleVersionService
         IRepository<ArticleVersion> versionRepository,
         IRepository<Article> articleRepository,
         IRepository<User> userRepository,
+        IRepository<Plan> planRepository,
         ILogger<ArticleVersionService> logger)
     {
         _versionRepository = versionRepository;
         _articleRepository = articleRepository;
         _userRepository = userRepository;
+        _planRepository = planRepository;
         _logger = logger;
         _diffMatchPatch = new diff_match_patch();
     }
@@ -616,6 +619,12 @@ public class ArticleVersionService : IArticleVersionService
             var article = aiVersion.Article;
             article.Content = newContent;
 
+            // Copy fragments from plan to article if this version is from a plan implementation
+            if (aiVersion.ConversationId.HasValue)
+            {
+                await CopyFragmentsFromPlan(aiVersion, article, cancellationToken);
+            }
+
             _logger.LogInformation(
                 "Accepted AI version {AiVersionId} for article {ArticleId}, created new User version {UserVersionId}",
                 versionId, article.Id, newUserVersion.Id);
@@ -638,6 +647,54 @@ public class ArticleVersionService : IArticleVersionService
         {
             _logger.LogError(ex, "Failed to accept AI version {VersionId}", versionId);
             throw;
+        }
+    }
+
+    private async Task CopyFragmentsFromPlan(ArticleVersion aiVersion, Article article, CancellationToken cancellationToken)
+    {
+        // Check if this conversation is implementing a plan
+        var plan = await _planRepository.Query()
+            .Include(p => p.PlanFragments)
+                .ThenInclude(pf => pf.Fragment)
+            .FirstOrDefaultAsync(p => p.ConversationId != null && p.ConversationId == aiVersion.ConversationId, cancellationToken);
+
+        if (plan != null)
+        {
+            // Load article with fragments to check for duplicates
+            var articleWithFragments = await _articleRepository.Query()
+                .Include(a => a.Fragments)
+                .FirstOrDefaultAsync(a => a.Id == article.Id, cancellationToken);
+
+            if (articleWithFragments != null)
+            {
+                // Get fragments marked for inclusion
+                var fragmentsToAdd = plan.PlanFragments
+                    .Where(pf => pf.Include)
+                    .Select(pf => pf.Fragment)
+                    .ToList();
+
+                // Add fragments that aren't already linked
+                var addedCount = 0;
+                foreach (var fragment in fragmentsToAdd)
+                {
+                    if (!articleWithFragments.Fragments.Any(f => f.Id == fragment.Id))
+                    {
+                        articleWithFragments.Fragments.Add(fragment);
+                        addedCount++;
+                    }
+                }
+
+                if (addedCount > 0)
+                {
+                    _logger.LogInformation(
+                        "Copied {Count} fragments from plan {PlanId} to article {ArticleId}",
+                        addedCount, plan.Id, article.Id);
+                }
+
+                // Mark plan as completed
+                plan.Status = PlanStatus.Applied;
+                plan.AppliedAt = DateTimeOffset.UtcNow;
+            }
         }
     }
 
