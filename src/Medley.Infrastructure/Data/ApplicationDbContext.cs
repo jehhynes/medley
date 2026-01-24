@@ -87,5 +87,9 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
         // Global query filter to exclude deleted fragments
         builder.Entity<Fragment>()
             .HasQueryFilter(f => !f.IsDeleted);
+
+        // Global query filter to exclude deleted sources
+        builder.Entity<Source>()
+            .HasQueryFilter(s => !s.IsDeleted);
     }
 }

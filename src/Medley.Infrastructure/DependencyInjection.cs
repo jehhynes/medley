@@ -15,6 +15,7 @@ using Medley.Application.Integrations.Services;
 using Medley.Application.Interfaces;
 using Medley.Application.Jobs;
 using Medley.Application.Services;
+using Medley.Domain.Entities;
 using Medley.Infrastructure.Data;
 using Medley.Infrastructure.Data.Repositories;
 using Medley.Infrastructure.Services;
@@ -65,6 +66,9 @@ public static class DependencyInjection
         // Register repositories and unit of work
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<IFragmentRepository, FragmentRepository>();
+        services.AddScoped<IRepository<Fragment>>(sp => sp.GetRequiredService<IFragmentRepository>());
+        services.AddScoped<ISourceRepository, SourceRepository>();
+        services.AddScoped<IRepository<Source>>(sp => sp.GetRequiredService<ISourceRepository>());
         services.AddScoped<IObservationRepository, ObservationRepository>();
         services.AddScoped<IFindingRepository, FindingRepository>();
         services.AddScoped<IInsightRepository, InsightRepository>();

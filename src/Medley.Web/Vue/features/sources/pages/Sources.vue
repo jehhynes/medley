@@ -111,23 +111,48 @@
                 </span>
               </div>
             </div>
-            <div>
+            <div class="dropdown-container">
               <button 
+                type="button" 
                 class="btn btn-primary" 
-                @click="extractFragments" 
-                :disabled="selectedSource.extractionStatus === 'InProgress'">
-                <span v-if="selectedSource.extractionStatus === 'InProgress'" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                <i v-else class="bi bi-magic"></i> 
-                {{ selectedSource.extractionStatus === 'Completed' ? 'Re-extract Fragments' : 'Extract Fragments' }}
+                @click="(e) => toggleDropdown(e, 'source-actions')"
+                title="Actions">
+                <i class="bi bi-three-dots"></i>
               </button>
-              <button 
-                class="btn btn-outline-secondary ms-2" 
-                @click="generateTags" 
-                :disabled="tagging || !selectedSource"
-                v-if="!selectedSource.tagsGenerated">
-                <span v-if="tagging" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                <i v-else class="bi bi-tags"></i> Generate Tags
-              </button>
+              <ul 
+                v-if="isDropdownOpen('source-actions')" 
+                class="dropdown-menu show"
+                :class="getPositionClasses()">
+                <li>
+                  <button 
+                    class="dropdown-item" 
+                    @click="extractFragments(); closeDropdown();" 
+                    :disabled="selectedSource.extractionStatus === 'InProgress'">
+                    <span v-if="selectedSource.extractionStatus === 'InProgress'" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    <i v-else class="bi bi-magic me-2"></i>
+                    {{ selectedSource.extractionStatus === 'Completed' ? 'Re-extract Fragments' : 'Extract Fragments' }}
+                  </button>
+                </li>
+                <li v-if="!selectedSource.tagsGenerated">
+                  <button 
+                    class="dropdown-item" 
+                    @click="generateTags(); closeDropdown();" 
+                    :disabled="tagging || !selectedSource">
+                    <span v-if="tagging" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    <i v-else class="bi bi-tags me-2"></i>
+                    Generate Tags
+                  </button>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                  <button 
+                    class="dropdown-item text-danger" 
+                    @click="deleteSource(); closeDropdown();">
+                    <i class="bi bi-trash me-2"></i>
+                    Delete Source
+                  </button>
+                </li>
+              </ul>
             </div>
           </div>
         </div>
@@ -288,6 +313,7 @@ import {
 } from '@/utils/helpers';
 import { useSidebarState } from '@/composables/useSidebarState';
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll';
+import { useDropDown } from '@/composables/useDropDown';
 import { createAdminHubConnection } from '@/utils/signalr';
 import type { SourceDto, FragmentDto, TagDto } from '@/types/api-client';
 import type { AdminHubConnection } from '@/types/admin-hub';
@@ -310,6 +336,12 @@ interface TagFilter {
 const { leftSidebarVisible } = useSidebarState();
 const router = useRouter();
 const route = useRoute();
+const { 
+  toggleDropdown, 
+  closeDropdown, 
+  isDropdownOpen, 
+  getPositionClasses 
+} = useDropDown();
 
 // Reactive state
 const sources = ref<SourceDto[]>([]);
@@ -590,6 +622,59 @@ const generateTags = async (): Promise<void> => {
   } finally {
     tagging.value = false;
   }
+};
+
+const deleteSource = async (): Promise<void> => {
+  if (!selectedSource.value) return;
+  const sourceId = selectedSource.value.id!;
+  const sourceName = selectedSource.value.name;
+  const fragmentCount = selectedSource.value.fragmentsCount || 0;
+
+  const confirmMessage = fragmentCount > 0
+    ? `Are you sure you want to delete "${sourceName}"? This will also delete ${fragmentCount} fragment(s). This action cannot be undone.`
+    : `Are you sure you want to delete "${sourceName}"? This action cannot be undone.`;
+
+  (window as any).bootbox.confirm({
+    title: 'Confirm Delete',
+    message: confirmMessage,
+    buttons: {
+      confirm: {
+        label: 'Delete',
+        className: 'btn-danger'
+      },
+      cancel: {
+        label: 'Cancel',
+        className: 'btn-secondary'
+      }
+    },
+    callback: async (result: boolean) => {
+      if (result) {
+        try {
+          const response = await sourcesClient.deleteSource(sourceId);
+          
+          if (response.success) {
+            showToast('success', response.message || 'Source deleted successfully');
+            
+            // Remove from sources list
+            sources.value = sources.value.filter(s => s.id !== sourceId);
+            
+            // Clear selection
+            selectedSource.value = null;
+            selectedSourceId.value = null;
+            
+            // Clear URL query
+            await router.replace({ query: {} });
+          } else {
+            showToast('error', response.message || 'Failed to delete source');
+          }
+        } catch (err: any) {
+          console.error('Delete source error:', err);
+          const errorMessage = err.message || 'Failed to delete source. Please try again.';
+          showToast('error', errorMessage);
+        }
+      }
+    }
+  });
 };
 
 const loadFragments = async (): Promise<void> => {

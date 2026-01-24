@@ -19,7 +19,7 @@ namespace Medley.Web.Controllers.Api;
 [Authorize]
 public class SourcesApiController : ControllerBase
 {
-    private readonly IRepository<Source> _sourceRepository;
+    private readonly ISourceRepository _sourceRepository;
     private readonly IRepository<TagType> _tagTypeRepository;
     private readonly IRepository<Speaker> _speakerRepository;
     private readonly ITaggingService _taggingService;
@@ -28,7 +28,7 @@ public class SourcesApiController : ControllerBase
     private readonly ILogger<SourcesApiController> _logger;
 
     public SourcesApiController(
-        IRepository<Source> sourceRepository,
+        ISourceRepository sourceRepository,
         IRepository<TagType> tagTypeRepository,
         IRepository<Speaker> speakerRepository,
         ITaggingService taggingService,
@@ -247,6 +247,95 @@ public class SourcesApiController : ControllerBase
             IsInternal = result.IsInternal,
             TagCount = result.TagCount
         });
+    }
+
+    /// <summary>
+    /// Delete a source (soft delete)
+    /// </summary>
+    /// <param name="id">Source ID</param>
+    /// <returns>Success or error message</returns>
+    [HttpDelete("{id}")]
+    [ProducesResponseType(typeof(DeleteSourceResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<DeleteSourceResponse>> DeleteSource(Guid id)
+    {
+        try
+        {
+            // Use IgnoreQueryFilters to bypass the IsDeleted filter so we can find already deleted sources
+            var source = await _sourceRepository.Query()
+                .IgnoreQueryFilters()
+                .Include(s => s.Fragments)
+                    .ThenInclude(f => f.ClusteredInto)
+                .FirstOrDefaultAsync(s => s.Id == id);
+
+            if (source == null)
+            {
+                return NotFound(new DeleteSourceResponse 
+                { 
+                    Success = false, 
+                    Message = "Source not found" 
+                });
+            }
+
+            if (source.IsDeleted)
+            {
+                return BadRequest(new DeleteSourceResponse 
+                { 
+                    Success = false, 
+                    Message = "Source is already deleted" 
+                });
+            }
+
+            // Check if any fragments have been merged/clustered into another fragment
+            var clusteredFragments = source.Fragments
+                .Where(f => !f.IsDeleted && f.ClusteredIntoId.HasValue)
+                .ToList();
+
+            if (clusteredFragments.Any())
+            {
+                var fragmentTitles = string.Join(", ", clusteredFragments.Take(3).Select(f => $"'{f.Title}'"));
+                var moreCount = clusteredFragments.Count - 3;
+                var message = clusteredFragments.Count == 1
+                    ? $"Cannot delete source because fragment {fragmentTitles} has been clustered into another fragment."
+                    : $"Cannot delete source because {clusteredFragments.Count} fragments ({fragmentTitles}{(moreCount > 0 ? $" and {moreCount} more" : "")}) have been clustered into other fragments.";
+
+                return BadRequest(new DeleteSourceResponse
+                {
+                    Success = false,
+                    Message = message
+                });
+            }
+
+            // Delete the source (and cascade to fragments via soft delete)
+            source.IsDeleted = true;
+            
+            // Also soft delete all fragments
+            foreach (var fragment in source.Fragments.Where(f => !f.IsDeleted))
+            {
+                fragment.IsDeleted = true;
+                fragment.LastModifiedAt = DateTimeOffset.UtcNow;
+            }
+
+            await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation("Source {SourceId} and {FragmentCount} fragments deleted", id, source.Fragments.Count(f => !f.IsDeleted));
+
+            return Ok(new DeleteSourceResponse
+            {
+                Success = true,
+                Message = $"Source and {source.Fragments.Count} fragment(s) deleted successfully"
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting source {SourceId}", id);
+            return StatusCode(500, new DeleteSourceResponse
+            {
+                Success = false,
+                Message = "Failed to delete source. Please try again."
+            });
+        }
     }
 
     /// <summary>

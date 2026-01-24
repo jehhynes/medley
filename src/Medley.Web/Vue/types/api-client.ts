@@ -2143,6 +2143,54 @@ export class SourcesApiClient {
         return Promise.resolve<SourceDto>(null as any);
     }
 
+    deleteSource(id: string): Promise<DeleteSourceResponse> {
+        let url_ = this.baseUrl + "/api/sources/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "DELETE",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processDeleteSource(_response);
+        });
+    }
+
+    protected processDeleteSource(response: Response): Promise<DeleteSourceResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as DeleteSourceResponse;
+            return result200;
+            });
+        } else if (status === 400) {
+            return response.text().then((_responseText) => {
+            let result400: any = null;
+            result400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            result404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<DeleteSourceResponse>(null as any);
+    }
+
     extractFragments(id: string): Promise<FragmentExtractionResponse> {
         let url_ = this.baseUrl + "/api/sources/{id}/extract-fragments";
         if (id === undefined || id === null)
@@ -2944,6 +2992,11 @@ export interface TaggingResponse {
     message?: string;
     isInternal?: boolean | null;
     tagCount?: number;
+}
+
+export interface DeleteSourceResponse {
+    success?: boolean;
+    message?: string | null;
 }
 
 export interface SpeakerListDto {

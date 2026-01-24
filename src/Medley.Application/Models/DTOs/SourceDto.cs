@@ -288,3 +288,19 @@ public class SpeakerDto
     /// </summary>
     public string? TrustLevel { get; set; }
 }
+
+/// <summary>
+/// Response for source delete operation
+/// </summary>
+public class DeleteSourceResponse
+{
+    /// <summary>
+    /// Whether the operation was successful
+    /// </summary>
+    public required bool Success { get; set; }
+
+    /// <summary>
+    /// Message describing the result
+    /// </summary>
+    public string? Message { get; set; }
+}

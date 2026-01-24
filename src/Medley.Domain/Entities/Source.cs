@@ -69,6 +69,11 @@ public class Source : BusinessEntity
     public string? ExtractionMessage { get; set; }
 
     /// <summary>
+    /// Indicates if this source has been deleted (soft delete)
+    /// </summary>
+    public bool IsDeleted { get; set; } = false;
+
+    /// <summary>
     /// The integration this source was imported from
     /// </summary>
     public virtual required Integration Integration { get; set; }

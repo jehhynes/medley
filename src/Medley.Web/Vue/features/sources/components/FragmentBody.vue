@@ -150,7 +150,8 @@ import {
   getIconClass,
   getConfidenceIcon, 
   getConfidenceColor,
-  formatDate
+  formatDate,
+  showToast
 } from '@/utils/helpers';
 import { fragmentsClient } from '@/utils/apiClients';
 import type { FragmentDto, ConfidenceLevel, UpdateFragmentConfidenceRequest } from '@/types/api-client';
@@ -368,8 +369,8 @@ async function deleteFragment(): Promise<void> {
       return;
     }
     
-    // Success - emit event to parent
-    console.log('Fragment deleted successfully');
+    // Success - emit event to parent and show toast
+    showToast('success', 'Fragment deleted successfully');
     emit('deleted', props.fragment.id!);
     
   } catch (error: any) {
