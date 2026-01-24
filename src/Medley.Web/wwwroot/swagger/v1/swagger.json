@@ -1612,6 +1612,70 @@
         }
       }
     },
+    "/api/fragments/{id}/confidence": {
+      "put": {
+        "tags": [
+          "FragmentsApi"
+        ],
+        "operationId": "FragmentsApi_UpdateConfidence",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFragmentConfidenceRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FragmentDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/articles/{articleId}/plans/active": {
       "get": {
         "tags": [
@@ -3726,6 +3790,24 @@
           },
           "title": {
             "type": "string"
+          }
+        }
+      },
+      "UpdateFragmentConfidenceRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "confidence": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ConfidenceLevel"
+              }
+            ]
+          },
+          "confidenceComment": {
+            "type": "string",
+            "nullable": true
           }
         }
       },

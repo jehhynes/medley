@@ -65,60 +65,18 @@
     </div>
     <div v-else class="d-flex flex-column h-100">
       <div class="main-content-header">
-        <div class="d-flex justify-content-between align-items-start mb-3">
+        <div class="d-flex justify-content-between align-items-start">
           <div>
             <h1 class="main-content-title">{{ selectedFragment.title || 'Untitled Fragment' }}</h1>
-            <div class="text-muted">
-              <span class="badge bg-secondary" v-if="selectedFragment.category">
-                <i :class="getIconClass(selectedFragment.categoryIcon, 'bi-puzzle')" class="me-1"></i>{{ selectedFragment.category }}
-              </span>
-              <span 
-                v-if="selectedFragment.confidence !== null && selectedFragment.confidence !== undefined && selectedFragment.confidenceComment" 
-                class="badge bg-light text-dark ms-2"
-                @click="toggleConfidenceComment"
-                style="cursor: pointer;"
-                :title="showConfidenceComment ? 'Hide confidence note' : 'Show confidence note'">
-                <i 
-                  :class="'fa-duotone ' + getConfidenceIcon(selectedFragment.confidence)" 
-                  :style="{ color: getConfidenceColor(selectedFragment.confidence) }"
-                  class="me-1"
-                ></i>
-                {{ selectedFragment.confidence || '' }}
-                <i :class="showConfidenceComment ? 'bi bi-chevron-up ms-1' : 'bi bi-chevron-down ms-1'"></i>
-              </span>
-              <span 
-                v-else-if="selectedFragment.confidence !== null && selectedFragment.confidence !== undefined" 
-                class="badge bg-light text-dark ms-2">
-                <i 
-                  :class="'fa-duotone ' + getConfidenceIcon(selectedFragment.confidence)" 
-                  :style="{ color: getConfidenceColor(selectedFragment.confidence) }"
-                  class="me-1"
-                ></i>
-                {{ selectedFragment.confidence || '' }}
-              </span>
-              <span class="ms-2">
-                <i class="bi bi-calendar3"></i>
-                {{ formatDate(selectedFragment.sourceDate) }}
-              </span>
-              <a :href="'/Sources?id=' + selectedFragment.sourceId" class="ms-2 source-link">
-                <i class="bi bi-camera-video me-1"></i>{{ selectedFragment.sourceName || 'View Source' }}
-              </a>
-            </div>
           </div>
         </div>
       </div>
 
       <div class="fragment-content-area">
-        <div v-if="selectedFragment.confidenceComment && showConfidenceComment" class="alert alert-info mb-3">
-          <div class="d-flex align-items-start">
-            <i class="bi bi-info-circle me-2 mt-1"></i>
-            <div>
-              <strong>Confidence Note:</strong>
-              <div class="mt-1">{{ selectedFragment.confidenceComment }}</div>
-            </div>
-          </div>
-        </div>
-        <div class="markdown-container" v-html="renderedMarkdown"></div>
+        <fragment-body 
+          :fragment="selectedFragment" 
+          @updated="handleFragmentUpdated"
+        />
       </div>
     </div>
   </div>
@@ -127,6 +85,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import FragmentBody from '../components/FragmentBody.vue';
 
 // Define props to handle attributes passed by router
 defineProps<{
@@ -134,14 +93,8 @@ defineProps<{
 }>();
 import { fragmentsClient } from '@/utils/apiClients';
 import { 
-  getIconClass, 
-  getConfidenceIcon, 
-  getConfidenceColor, 
-  formatDate, 
-  initializeMarkdownRenderer, 
   getArticleTypes, 
   findInList, 
-  showToast,
   debounce
 } from '@/utils/helpers';
 import { useSidebarState } from '@/composables/useSidebarState';
@@ -169,8 +122,6 @@ const loading = ref<boolean>(false);
 const searching = ref<boolean>(false);
 const error = ref<string | null>(null);
 const searchQuery = ref<string>('');
-const markdownRenderer = ref<any>(null);
-const showConfidenceComment = ref<boolean>(false);
 const userDisplayName = ref<string>(window.MedleyUser?.displayName || 'User');
 const userIsAuthenticated = ref<boolean>(window.MedleyUser?.isAuthenticated || false);
 
@@ -185,19 +136,6 @@ const {
 } = useInfiniteScroll({
   loadMoreItems,
   pageSize: 50
-});
-
-// Computed properties
-const renderedMarkdown = computed(() => {
-  if (!selectedFragment.value || !selectedFragment.value.content || !markdownRenderer.value) {
-    return '';
-  }
-  try {
-    return markdownRenderer.value.parse(selectedFragment.value.content, { breaks: true, gfm: true });
-  } catch (e) {
-    console.error('Failed to render markdown:', e);
-    return selectedFragment.value.content;
-  }
 });
 
 // Methods
@@ -218,7 +156,6 @@ const loadFragments = async (): Promise<void> => {
 
 const selectFragment = async (fragment: FragmentDto, replaceState = false): Promise<void> => {
   selectedFragmentId.value = fragment.id!;
-  showConfidenceComment.value = false;
 
   if (replaceState) {
     await router.replace({ query: { id: fragment.id } });
@@ -234,8 +171,14 @@ const selectFragment = async (fragment: FragmentDto, replaceState = false): Prom
   }
 };
 
-const toggleConfidenceComment = (): void => {
-  showConfidenceComment.value = !showConfidenceComment.value;
+const handleFragmentUpdated = async (updatedFragment: FragmentDto): Promise<void> => {
+  // Update the fragment in the local fragments array
+  const index = fragments.value.findIndex(f => f.id === updatedFragment.id);
+  if (index !== -1) {
+    fragments.value[index] = updatedFragment;
+  }
+  // Update the selected fragment to show the new data
+  selectedFragment.value = updatedFragment;
 };
 
 const onSearchInput = (): void => {
@@ -282,8 +225,6 @@ async function loadMoreItems(): Promise<FragmentDto[]> {
 
 // Lifecycle hooks
 onMounted(async () => {
-  markdownRenderer.value = initializeMarkdownRenderer();
-
   searchDebounced = debounce(() => {
     performSearch();
   }, 500);

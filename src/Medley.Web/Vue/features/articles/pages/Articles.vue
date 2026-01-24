@@ -382,7 +382,8 @@
     <fragment-modal
       :fragment="selectedFragment"
       :visible="!!selectedFragment"
-      @close="closeFragmentModal" />
+      @close="closeFragmentModal"
+      @updated="handleFragmentUpdated" />
 </template>
 
 <script setup lang="ts">
@@ -1132,6 +1133,11 @@ const handleOpenVersion = async (versionId: string): Promise<void> => {
 
 const closeFragmentModal = (): void => {
   selectedFragment.value = null;
+};
+
+const handleFragmentUpdated = (updatedFragment: FragmentDto): void => {
+  // Update the selected fragment to show the new data
+  selectedFragment.value = updatedFragment;
 };
 
 // ============================================================================

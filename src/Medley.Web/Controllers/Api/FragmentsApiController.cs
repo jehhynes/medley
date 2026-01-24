@@ -24,6 +24,8 @@ public class FragmentsApiController : ControllerBase
     private readonly EmbeddingSettings _embeddingSettings;
     private readonly ILogger<FragmentsApiController> _logger;
     private readonly AiCallContext _aiCallContext;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IMedleyContext _medleyContext;
 
     public FragmentsApiController(
         IFragmentRepository fragmentRepository,
@@ -31,7 +33,9 @@ public class FragmentsApiController : ControllerBase
         IEmbeddingHelper embeddingHelper,
         IOptions<EmbeddingSettings> embeddingSettings,
         ILogger<FragmentsApiController> logger,
-        AiCallContext aiCallContext)
+        AiCallContext aiCallContext,
+        IUnitOfWork unitOfWork,
+        IMedleyContext medleyContext)
     {
         _fragmentRepository = fragmentRepository;
         _embeddingGenerator = embeddingGenerator;
@@ -39,6 +43,8 @@ public class FragmentsApiController : ControllerBase
         _embeddingSettings = embeddingSettings.Value;
         _logger = logger;
         _aiCallContext = aiCallContext;
+        _unitOfWork = unitOfWork;
+        _medleyContext = medleyContext;
     }
 
     /// <summary>
@@ -287,6 +293,93 @@ public class FragmentsApiController : ControllerBase
         {
             _logger.LogError(ex, "Error retrieving fragment titles");
             return StatusCode(500, new { message = "Failed to retrieve fragment titles. Please try again." });
+        }
+    }
+
+    /// <summary>
+    /// Update the confidence level of a fragment
+    /// </summary>
+    /// <param name="id">Fragment ID</param>
+    /// <param name="request">Update request with new confidence level and optional comment</param>
+    /// <returns>Updated fragment details</returns>
+    [HttpPut("{id}/confidence")]
+    [ProducesResponseType(typeof(FragmentDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<FragmentDto>> UpdateConfidence(Guid id, [FromBody] UpdateFragmentConfidenceRequest request)
+    {
+        try
+        {
+            var fragment = await _fragmentRepository.Query()
+                .Include(f => f.Source)
+                .Include(f => f.FragmentCategory)
+                .FirstOrDefaultAsync(f => f.Id == id);
+
+            if (fragment == null)
+            {
+                return NotFound(new { message = "Fragment not found" });
+            }
+
+            // Get current user info
+            var currentUser = await _medleyContext.GetCurrentUserAsync();
+            var userName = currentUser?.FullName ?? "Unknown User";
+            var oldValue = fragment.Confidence?.ToString() ?? "None";
+            var newValue = request.Confidence?.ToString() ?? "None";
+            var changeDate = DateTimeOffset.UtcNow;
+
+            // Build audit trail entry
+            var auditEntry = $"\r\n - {userName} changed from {oldValue} to {newValue} on {changeDate:yyyy-MM-dd HH:mm:ss} UTC";
+
+            // Update confidence level
+            fragment.Confidence = request.Confidence;
+
+            // Append audit trail to confidence comment
+            if (!string.IsNullOrWhiteSpace(request.ConfidenceComment))
+            {
+                fragment.ConfidenceComment = request.ConfidenceComment + auditEntry;
+            }
+            else if (!string.IsNullOrWhiteSpace(fragment.ConfidenceComment))
+            {
+                fragment.ConfidenceComment += auditEntry;
+            }
+            else
+            {
+                fragment.ConfidenceComment = auditEntry.TrimStart('\r', '\n');
+            }
+
+            // Update last modified timestamp
+            fragment.LastModifiedAt = changeDate;
+
+            // Save changes
+            await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation(
+                "Fragment {FragmentId} confidence updated from {OldValue} to {NewValue} by user {UserId}",
+                id, oldValue, newValue, currentUser?.Id);
+
+            // Return updated fragment
+            return Ok(new FragmentDto
+            {
+                Id = fragment.Id,
+                Title = fragment.Title,
+                Summary = fragment.Summary,
+                Category = fragment.FragmentCategory.Name,
+                CategoryIcon = fragment.FragmentCategory.Icon,
+                Content = fragment.Content,
+                SourceId = fragment.Source == null ? null : (Guid?)fragment.Source.Id,
+                SourceName = fragment.Source == null ? null : (string?)fragment.Source.Name,
+                SourceType = fragment.Source == null ? null : (SourceType?)fragment.Source.Type,
+                SourceDate = fragment.Source == null ? null : (DateTimeOffset?)fragment.Source.Date,
+                CreatedAt = fragment.CreatedAt,
+                LastModifiedAt = fragment.LastModifiedAt,
+                Confidence = fragment.Confidence,
+                ConfidenceComment = fragment.ConfidenceComment
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating fragment confidence for fragment {FragmentId}", id);
+            return StatusCode(500, new { message = "Failed to update fragment confidence. Please try again." });
         }
     }
 }

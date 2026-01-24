@@ -261,6 +261,7 @@
       :fragment="selectedFragment"
       :visible="!!selectedFragment"
       @close="closeFragmentModal"
+      @updated="handleFragmentUpdated"
     />
 </template>
 
@@ -611,6 +612,16 @@ const selectFragment = (fragment: FragmentDto): void => {
 
 const closeFragmentModal = (): void => {
   selectedFragment.value = null;
+};
+
+const handleFragmentUpdated = (updatedFragment: FragmentDto): void => {
+  // Update the fragment in the local fragments array
+  const index = fragments.value.findIndex(f => f.id === updatedFragment.id);
+  if (index !== -1) {
+    fragments.value[index] = updatedFragment;
+  }
+  // Update the selected fragment to show the new data
+  selectedFragment.value = updatedFragment;
 };
 
 const getTrustLevelClass = (trustLevel: string | null): string => {

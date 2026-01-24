@@ -164,3 +164,19 @@ public class FragmentTitleDto
     /// </summary>
     public required string Title { get; set; }
 }
+
+/// <summary>
+/// Request to update fragment confidence level
+/// </summary>
+public class UpdateFragmentConfidenceRequest
+{
+    /// <summary>
+    /// New confidence level (null to clear)
+    /// </summary>
+    public ConfidenceLevel? Confidence { get; set; }
+
+    /// <summary>
+    /// Optional comment explaining the confidence level
+    /// </summary>
+    public string? ConfidenceComment { get; set; }
+}

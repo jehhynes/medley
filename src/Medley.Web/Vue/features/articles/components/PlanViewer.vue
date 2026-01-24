@@ -261,6 +261,7 @@
       :fragment="selectedFragment"
       :visible="!!selectedFragment"
       @close="closeFragmentModal"
+      @updated="handleFragmentUpdated"
     />
   </div>
 </template>
@@ -595,6 +596,11 @@ function selectFragment(planFragment: PlanFragmentDto): void {
 
 function closeFragmentModal(): void {
   selectedFragment.value = null;
+}
+
+function handleFragmentUpdated(updatedFragment: FragmentDto): void {
+  // Update the selected fragment to show the new data
+  selectedFragment.value = updatedFragment;
 }
 
 async function updateFragmentInclude(planFragment: PlanFragmentDto): Promise<void> {
