@@ -383,7 +383,8 @@
       :fragment="selectedFragment"
       :visible="!!selectedFragment"
       @close="closeFragmentModal"
-      @updated="handleFragmentUpdated" />
+      @updated="handleFragmentUpdated"
+      @deleted="handleFragmentDeleted" />
 </template>
 
 <script setup lang="ts">
@@ -1138,6 +1139,12 @@ const closeFragmentModal = (): void => {
 const handleFragmentUpdated = (updatedFragment: FragmentDto): void => {
   // Update the selected fragment to show the new data
   selectedFragment.value = updatedFragment;
+};
+
+const handleFragmentDeleted = (fragmentId: string): void => {
+  // Close the modal - fragment is now deleted
+  selectedFragment.value = null;
+  // Note: The fragment will no longer appear in searches since it's archived
 };
 
 // ============================================================================

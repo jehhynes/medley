@@ -76,6 +76,7 @@
         <fragment-body 
           :fragment="selectedFragment" 
           @updated="handleFragmentUpdated"
+          @deleted="handleFragmentDeleted"
         />
       </div>
     </div>
@@ -179,6 +180,18 @@ const handleFragmentUpdated = async (updatedFragment: FragmentDto): Promise<void
   }
   // Update the selected fragment to show the new data
   selectedFragment.value = updatedFragment;
+};
+
+const handleFragmentDeleted = async (fragmentId: string): Promise<void> => {
+  // Remove the deleted fragment from the list
+  fragments.value = fragments.value.filter(f => f.id !== fragmentId);
+  
+  // Clear selection
+  selectedFragment.value = null;
+  selectedFragmentId.value = null;
+  
+  // Clear URL query
+  await router.replace({ query: {} });
 };
 
 const onSearchInput = (): void => {

@@ -382,4 +382,77 @@ public class FragmentsApiController : ControllerBase
             return StatusCode(500, new { message = "Failed to update fragment confidence. Please try again." });
         }
     }
+
+    /// <summary>
+    /// Delete a fragment (soft delete)
+    /// </summary>
+    /// <param name="id">Fragment ID</param>
+    /// <returns>Success or error message</returns>
+    [HttpDelete("{id}")]
+    [ProducesResponseType(typeof(DeleteFragmentResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<DeleteFragmentResponse>> DeleteFragment(Guid id)
+    {
+        try
+        {
+            // Use IgnoreQueryFilters to bypass the IsDeleted filter so we can find already deleted fragments
+            var fragment = await _fragmentRepository.Query()
+                .IgnoreQueryFilters()
+                .Include(f => f.ClusteredInto)
+                .FirstOrDefaultAsync(f => f.Id == id);
+
+            if (fragment == null)
+            {
+                return NotFound(new DeleteFragmentResponse 
+                { 
+                    Success = false, 
+                    Message = "Fragment not found" 
+                });
+            }
+
+            if (fragment.IsDeleted)
+            {
+                return BadRequest(new DeleteFragmentResponse 
+                { 
+                    Success = false, 
+                    Message = "Fragment is already deleted" 
+                });
+            }
+
+            // Check if fragment has been merged/clustered into another fragment
+            if (fragment.ClusteredIntoId.HasValue)
+            {
+                var clusterTitle = fragment.ClusteredInto?.Title ?? "another fragment";
+                return BadRequest(new DeleteFragmentResponse
+                {
+                    Success = false,
+                    Message = $"Cannot delete fragment because it has been clustered into '{clusterTitle}'."
+                });
+            }
+
+            // Delete the fragment
+            fragment.IsDeleted = true;
+            fragment.LastModifiedAt = DateTimeOffset.UtcNow;
+
+            await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation("Fragment {FragmentId} deleted", id);
+
+            return Ok(new DeleteFragmentResponse
+            {
+                Success = true,
+                Message = "Fragment deleted successfully"
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting fragment {FragmentId}", id);
+            return StatusCode(500, new DeleteFragmentResponse
+            {
+                Success = false,
+                Message = "Failed to delete fragment. Please try again."
+            });
+        }
+    }
 }

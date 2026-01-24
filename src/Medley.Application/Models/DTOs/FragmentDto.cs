@@ -180,3 +180,20 @@ public class UpdateFragmentConfidenceRequest
     /// </summary>
     public string? ConfidenceComment { get; set; }
 }
+/// <summary>
+/// Response for fragment delete operation
+/// <summary>
+/// Response for fragment delete operation
+/// </summary>
+public class DeleteFragmentResponse
+{
+    /// <summary>
+    /// Whether the operation was successful
+    /// </summary>
+    public required bool Success { get; set; }
+
+    /// <summary>
+    /// Message describing the result
+    /// </summary>
+    public string? Message { get; set; }
+}

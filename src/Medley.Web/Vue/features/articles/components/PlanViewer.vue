@@ -262,6 +262,7 @@
       :visible="!!selectedFragment"
       @close="closeFragmentModal"
       @updated="handleFragmentUpdated"
+      @deleted="handleFragmentDeleted"
     />
   </div>
 </template>
@@ -329,6 +330,7 @@ const props = defineProps<Props>();
 interface Emits {
   (e: 'conversation-created', conversationId: string): void;
   (e: 'close-plan'): void;
+  (e: 'fragment-deleted', fragmentId: string): void;
 }
 
 const emit = defineEmits<Emits>();
@@ -601,6 +603,16 @@ function closeFragmentModal(): void {
 function handleFragmentUpdated(updatedFragment: FragmentDto): void {
   // Update the selected fragment to show the new data
   selectedFragment.value = updatedFragment;
+}
+
+function handleFragmentDeleted(fragmentId: string): void {
+  // Close the modal
+  selectedFragment.value = null;
+  
+  // Note: The fragment is now deleted and won't appear in the plan anymore
+  // The plan will need to be refreshed to reflect this change
+  // Emit event to parent to reload the plan
+  emit('fragment-deleted', fragmentId);
 }
 
 async function updateFragmentInclude(planFragment: PlanFragmentDto): Promise<void> {

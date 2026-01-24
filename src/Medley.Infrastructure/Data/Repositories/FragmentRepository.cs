@@ -20,6 +20,16 @@ public class FragmentRepository : Repository<Fragment>, IFragmentRepository
     }
 
     /// <summary>
+    /// Gets a fragment by ID, respecting the global query filter for IsDeleted
+    /// </summary>
+    public override async Task<Fragment?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        // Use FirstOrDefaultAsync instead of FindAsync because FindAsync bypasses query filters
+        return await _context.Fragments
+            .FirstOrDefaultAsync(f => f.Id == id, cancellationToken);
+    }
+
+    /// <summary>
     /// Finds fragments similar to the given embedding vector using cosine distance
     /// </summary>
     public async Task<IEnumerable<FragmentSimilarityResult>> FindSimilarAsync(float[] embedding, int limit, double? minSimilarity = null, CancellationToken cancellationToken = default)

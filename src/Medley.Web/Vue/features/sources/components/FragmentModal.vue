@@ -13,6 +13,7 @@
             <fragment-body 
               :fragment="fragment" 
               @updated="handleFragmentUpdated"
+              @deleted="handleFragmentDeleted"
               ref="fragmentBodyRef"
             />
           </div>
@@ -43,6 +44,7 @@ const props = withDefaults(defineProps<Props>(), {
 interface Emits {
   (e: 'close'): void;
   (e: 'updated', fragment: FragmentDto): void;
+  (e: 'deleted', fragmentId: string): void;
 }
 
 const emit = defineEmits<Emits>();
@@ -74,6 +76,12 @@ function handleBackdropClick(): void {
 
 function handleFragmentUpdated(updatedFragment: FragmentDto): void {
   emit('updated', updatedFragment);
+}
+
+function handleFragmentDeleted(fragmentId: string): void {
+  // Close modal and emit deleted event
+  emit('deleted', fragmentId);
+  emit('close');
 }
 
 function handleKeydown(event: KeyboardEvent): void {

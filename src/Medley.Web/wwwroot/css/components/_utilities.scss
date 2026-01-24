@@ -114,3 +114,12 @@
 .svg-icon {
     filter: var(--svg-icon-filter);
 }
+
+/* Nested Modal Styles - for bootbox dialogs inside modals */
+.modal.nested-modal {
+    z-index: 1060 !important;
+
+    + .modal-backdrop {
+        z-index: 1059 !important;
+    }
+}

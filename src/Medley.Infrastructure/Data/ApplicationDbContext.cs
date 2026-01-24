@@ -83,5 +83,9 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
             .WithMany()
             .HasForeignKey(s => s.PrimarySpeakerId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        // Global query filter to exclude deleted fragments
+        builder.Entity<Fragment>()
+            .HasQueryFilter(f => !f.IsDeleted);
     }
 }

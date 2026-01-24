@@ -262,6 +262,7 @@
       :visible="!!selectedFragment"
       @close="closeFragmentModal"
       @updated="handleFragmentUpdated"
+      @deleted="handleFragmentDeleted"
     />
 </template>
 
@@ -622,6 +623,19 @@ const handleFragmentUpdated = (updatedFragment: FragmentDto): void => {
   }
   // Update the selected fragment to show the new data
   selectedFragment.value = updatedFragment;
+};
+
+const handleFragmentDeleted = (fragmentId: string): void => {
+  // Remove the deleted fragment from the list
+  fragments.value = fragments.value.filter(f => f.id !== fragmentId);
+  
+  // Update fragment count for the current source
+  if (selectedSource.value) {
+    selectedSource.value.fragmentsCount = Math.max(0, (selectedSource.value.fragmentsCount || 0) - 1);
+  }
+  
+  // Close the modal
+  selectedFragment.value = null;
 };
 
 const getTrustLevelClass = (trustLevel: string | null): string => {

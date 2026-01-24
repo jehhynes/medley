@@ -1,31 +1,54 @@
 <template>
   <div v-if="fragment">
-    <!-- Fragment Metadata (Category, Confidence, Date, Source Link) -->
-    <div class="mb-3">
-      <span v-if="fragment.category" class="badge bg-secondary me-2">
-        <i :class="getIconClass(fragment.categoryIcon, 'bi-puzzle')" class="me-1"></i>{{ fragment.category }}
-      </span>
-      <span 
-        v-if="fragment.confidence !== null && fragment.confidence !== undefined"
-        class="badge bg-light text-dark me-2"
-        @click="toggleConfidenceComment"
-        style="cursor: pointer;"
-        :title="showConfidenceComment ? 'Hide confidence note' : 'Show confidence note'">
-        <i 
-          :class="'fa-duotone ' + getConfidenceIcon(fragment.confidence)" 
-          :style="{ color: getConfidenceColor(fragment.confidence) }"
-          class="me-1"
-        ></i>
-        Confidence: {{ fragment.confidence || '' }}
-        <i v-if="fragment.confidenceComment" :class="showConfidenceComment ? 'bi bi-chevron-up ms-1' : 'bi bi-chevron-down ms-1'"></i>
-      </span>
-      <span v-if="fragment.sourceDate" class="text-muted me-2">
-        <i class="bi bi-calendar3"></i>
-        {{ formatDate(fragment.sourceDate?.toString()) }}
-      </span>
-      <a v-if="fragment.sourceId" :href="'/Sources?id=' + fragment.sourceId" class="source-link">
-        <i class="bi bi-camera-video me-1"></i>{{ fragment.sourceName || 'View Source' }}
-      </a>
+    <!-- Fragment Metadata (Category, Confidence, Date, Source Link, Actions) -->
+    <div class="mb-3 d-flex align-items-center justify-content-between">
+      <div>
+        <span v-if="fragment.category" class="badge bg-secondary me-2">
+          <i :class="getIconClass(fragment.categoryIcon, 'bi-puzzle')" class="me-1"></i>{{ fragment.category }}
+        </span>
+        <span 
+          v-if="fragment.confidence !== null && fragment.confidence !== undefined"
+          class="badge bg-light text-dark me-2"
+          @click="toggleConfidenceComment"
+          style="cursor: pointer;"
+          :title="showConfidenceComment ? 'Hide confidence note' : 'Show confidence note'">
+          <i 
+            :class="'fa-duotone ' + getConfidenceIcon(fragment.confidence)" 
+            :style="{ color: getConfidenceColor(fragment.confidence) }"
+            class="me-1"
+          ></i>
+          Confidence: {{ fragment.confidence || '' }}
+          <i v-if="fragment.confidenceComment" :class="showConfidenceComment ? 'bi bi-chevron-up ms-1' : 'bi bi-chevron-down ms-1'"></i>
+        </span>
+        <span v-if="fragment.sourceDate" class="text-muted me-2">
+          <i class="bi bi-calendar3"></i>
+          {{ formatDate(fragment.sourceDate?.toString()) }}
+        </span>
+        <a v-if="fragment.sourceId" :href="'/Sources?id=' + fragment.sourceId" class="source-link">
+          <i class="bi bi-camera-video me-1"></i>{{ fragment.sourceName || 'View Source' }}
+        </a>
+      </div>
+      
+      <!-- Actions Dropdown -->
+      <div class="dropdown-container">
+        <button 
+          class="btn btn-sm btn-outline-secondary"
+          @click.stop="toggleDropdown($event, 'fragment-actions')"
+          title="Actions">
+          <i class="bi bi-three-dots"></i>
+        </button>
+        <ul v-if="dropdownOpen" class="dropdown-menu dropdown-menu-end show">
+          <li>
+            <button 
+              class="dropdown-item text-danger" 
+              @click.stop="confirmDelete(); closeDropdown()"
+              :disabled="isDeleting">
+              <i class="bi bi-trash me-2"></i>
+              {{ isDeleting ? 'Deleting...' : 'Delete Fragment' }}
+            </button>
+          </li>
+        </ul>
+      </div>
     </div>
 
     <!-- Confidence Alert with Comment (only show when expanded or editing) -->
@@ -122,6 +145,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
+import { useDropDown } from '@/composables/useDropDown';
 import { 
   getIconClass,
   getConfidenceIcon, 
@@ -130,6 +154,28 @@ import {
 } from '@/utils/helpers';
 import { fragmentsClient } from '@/utils/apiClients';
 import type { FragmentDto, ConfidenceLevel, UpdateFragmentConfidenceRequest } from '@/types/api-client';
+
+// Declare bootbox as global
+declare const bootbox: {
+  confirm: (options: {
+    title: string;
+    message: string;
+    buttons: {
+      confirm: { label: string; className: string };
+      cancel: { label: string; className: string };
+    };
+    callback: (result: boolean) => void;
+    className?: string;
+  }) => void;
+  alert: (options: {
+    title: string;
+    message: string;
+    buttons: {
+      ok: { label: string; className: string };
+    };
+    className?: string;
+  }) => void;
+};
 
 // Declare marked as global
 declare const marked: {
@@ -148,9 +194,19 @@ const props = withDefaults(defineProps<Props>(), {
 // Emits
 interface Emits {
   (e: 'updated', fragment: FragmentDto): void;
+  (e: 'deleted', fragmentId: string): void;
 }
 
 const emit = defineEmits<Emits>();
+
+// Dropdown management
+const { 
+  isDropdownOpen, 
+  toggleDropdown, 
+  closeDropdown 
+} = useDropDown();
+
+const dropdownOpen = computed(() => isDropdownOpen('fragment-actions'));
 
 // State
 const isEditingConfidence = ref<boolean>(false);
@@ -159,6 +215,7 @@ const editedConfidence = ref<ConfidenceLevel | null>(null);
 const editedComment = ref<string>('');
 const isSaving = ref<boolean>(false);
 const hasUnsavedChanges = ref<boolean>(false);
+const isDeleting = ref<boolean>(false);
 
 // Computed
 const renderedMarkdown = computed<string>(() => {
@@ -194,9 +251,28 @@ function startEditingConfidence(): void {
 
 function cancelEditingConfidence(): void {
   if (hasUnsavedChanges.value) {
-    if (!confirm('Discard changes to confidence level?')) {
-      return;
-    }
+    bootbox.confirm({
+      title: 'Discard Changes',
+      message: 'You have unsaved changes to the confidence level. Are you sure you want to discard them?',
+      buttons: {
+        confirm: {
+          label: 'Discard',
+          className: 'btn-danger'
+        },
+        cancel: {
+          label: 'Keep Editing',
+          className: 'btn-secondary'
+        }
+      },
+      className: 'nested-modal',
+      callback: (result: boolean) => {
+        if (result) {
+          isEditingConfidence.value = false;
+          hasUnsavedChanges.value = false;
+        }
+      }
+    });
+    return;
   }
   isEditingConfidence.value = false;
   hasUnsavedChanges.value = false;
@@ -226,9 +302,107 @@ async function saveConfidence(): Promise<void> {
     
   } catch (error: any) {
     console.error('Error updating confidence:', error);
-    alert('Failed to update confidence level. Please try again.');
+    bootbox.alert({
+      title: 'Error',
+      message: 'Failed to update confidence level. Please try again.',
+      buttons: {
+        ok: {
+          label: 'OK',
+          className: 'btn-primary'
+        }
+      },
+      className: 'nested-modal'
+    });
   } finally {
     isSaving.value = false;
+  }
+}
+
+async function confirmDelete(): Promise<void> {
+  if (!props.fragment) return;
+  
+  bootbox.confirm({
+    title: 'Delete Fragment',
+    message: 'Are you sure you want to delete this fragment?<br><br>' +
+             '<strong>Note:</strong> Deleted fragments will be hidden from all views and excluded from AI searches.<br><br>' +
+             'You cannot delete a fragment that has been merged with another fragment.',
+    buttons: {
+      confirm: {
+        label: '<i class="bi bi-trash me-1"></i> Delete',
+        className: 'btn-danger'
+      },
+      cancel: {
+        label: 'Cancel',
+        className: 'btn-secondary'
+      }
+    },
+    className: 'nested-modal',
+    callback: async (result: boolean) => {
+      if (result) {
+        await deleteFragment();
+      }
+    }
+  });
+}
+
+async function deleteFragment(): Promise<void> {
+  if (!props.fragment) return;
+  
+  isDeleting.value = true;
+  
+  try {
+    const result = await fragmentsClient.deleteFragment(props.fragment.id!);
+    
+    if (!result.success) {
+      bootbox.alert({
+        title: 'Cannot Delete Fragment',
+        message: result.message || 'Failed to delete fragment. Please try again.',
+        buttons: {
+          ok: {
+            label: 'OK',
+            className: 'btn-primary'
+          }
+        },
+        className: 'nested-modal'
+      });
+      return;
+    }
+    
+    // Success - emit event to parent
+    console.log('Fragment deleted successfully');
+    emit('deleted', props.fragment.id!);
+    
+  } catch (error: any) {
+    console.error('Error deleting fragment:', error);
+    
+    // Check if error has a response with a message
+    let errorMessage = 'Failed to delete fragment. Please try again.';
+    if (error.response) {
+      try {
+        const errorData = JSON.parse(error.response);
+        if (errorData.message) {
+          errorMessage = errorData.message;
+        }
+      } catch (parseError) {
+        // Ignore parse errors, use default message
+      }
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    bootbox.alert({
+      title: 'Error',
+      message: errorMessage,
+      buttons: {
+        ok: {
+          label: 'OK',
+          className: 'btn-primary'
+        }
+      },
+      className: 'nested-modal'
+    });
+  } finally {
+    isDeleting.value = false;
   }
 }
 

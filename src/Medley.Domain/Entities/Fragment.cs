@@ -92,6 +92,11 @@ public class Fragment : BusinessEntity
     /// </summary>
     [MaxLength(1000)]
     public string? ConfidenceComment { get; set; }
+
+    /// <summary>
+    /// Indicates if this fragment has been deleted (soft delete)
+    /// </summary>
+    public bool IsDeleted { get; set; } = false;
     
     /// <summary>
     /// Plan fragments that reference this fragment
