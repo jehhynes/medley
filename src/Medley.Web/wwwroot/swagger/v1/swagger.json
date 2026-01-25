@@ -1761,48 +1761,6 @@
         }
       }
     },
-    "/api/articles/{articleId}/plans/active": {
-      "get": {
-        "tags": [
-          "PlanApi"
-        ],
-        "operationId": "PlanApi_GetActivePlan",
-        "parameters": [
-          {
-            "name": "articleId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "guid"
-            },
-            "x-position": 1
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlanDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/articles/{articleId}/plans": {
       "get": {
         "tags": [
@@ -3338,11 +3296,48 @@
               }
             ]
           },
+          "currentPlan": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PlanRef"
+              }
+            ]
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
           }
         }
+      },
+      "PlanRef": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PlanStatus"
+          }
+        }
+      },
+      "PlanStatus": {
+        "type": "string",
+        "description": "",
+        "x-enumNames": [
+          "Draft",
+          "InProgress",
+          "Applied",
+          "Archived"
+        ],
+        "enum": [
+          "Draft",
+          "InProgress",
+          "Applied",
+          "Archived"
+        ]
       },
       "ArticleCreateRequest": {
         "type": "object",
@@ -3959,6 +3954,34 @@
           }
         }
       },
+      "PlanSummaryDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PlanStatus"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "changesSummary": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdBy": {
+            "$ref": "#/components/schemas/UserRef"
+          }
+        }
+      },
       "PlanDto": {
         "type": "object",
         "additionalProperties": false,
@@ -3975,7 +3998,7 @@
             "type": "string"
           },
           "status": {
-            "type": "string"
+            "$ref": "#/components/schemas/PlanStatus"
           },
           "version": {
             "type": "integer",
@@ -4091,34 +4114,6 @@
           "date": {
             "type": "string",
             "format": "date-time"
-          }
-        }
-      },
-      "PlanSummaryDto": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "guid"
-          },
-          "version": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "status": {
-            "type": "string"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "changesSummary": {
-            "type": "string",
-            "nullable": true
-          },
-          "createdBy": {
-            "$ref": "#/components/schemas/UserRef"
           }
         }
       },

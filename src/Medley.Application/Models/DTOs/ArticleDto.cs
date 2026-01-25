@@ -95,6 +95,11 @@ public class ArticleDto
     public ConversationSummaryDto? CurrentConversation { get; set; }
 
     /// <summary>
+    /// Current plan reference (if any)
+    /// </summary>
+    public PlanRef? CurrentPlan { get; set; }
+
+    /// <summary>
     /// When the article was created
     /// </summary>
     public required DateTimeOffset CreatedAt { get; set; }

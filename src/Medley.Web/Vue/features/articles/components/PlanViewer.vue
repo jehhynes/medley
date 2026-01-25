@@ -406,6 +406,14 @@ watch(() => plan.value?.fragments, () => {
 
 // Methods
 async function loadPlan(): Promise<void> {
+  if (!props.planId) {
+    // No plan ID means no active plan exists
+    plan.value = null;
+    loading.value = false;
+    error.value = null;
+    return;
+  }
+
   loading.value = true;
   error.value = null;
 
@@ -413,14 +421,9 @@ async function loadPlan(): Promise<void> {
     // Load all plans for version dropdown
     allPlans.value = await apiClients.plans.getAllPlans(props.articleId);
 
-    // Load active plan
-    try {
-      plan.value = await apiClients.plans.getActivePlan(props.articleId);
-      planInstructions.value = plan.value.instructions || '';
-    } catch (err: any) {
-      error.value = 'No active plan found';
-      return;
-    }
+    // Load the specific plan by ID
+    plan.value = await apiClients.plans.getPlan(props.articleId, props.planId);
+    planInstructions.value = plan.value.instructions || '';
     
     // Auto-expand textareas after plan loads
     nextTick(() => {

@@ -481,7 +481,7 @@ interface ParentPathItem {
 
 interface ArticlesState {
   list: ArticleSummaryDto[];
-  selected: ArticleSummaryDto | null;
+  selected: ArticleDto | null;
   selectedId: string | null;
   expandedIds: Set<string>;
   index: Map<string, ArticleDto>;
@@ -851,8 +851,13 @@ const selectArticle = async (article: ArticleSummaryDto, replaceState: boolean =
     
     // Only proceed if article has an ID
     if (article.id) {
-      // Load plan and AI version - load AI version last so it takes priority if both exist
-      await loadDraftPlan(article.id);
+      // Check if article has a current plan with Draft or InProgress status
+      if (fullArticle.currentPlan && 
+          (fullArticle.currentPlan.status === 'Draft' || fullArticle.currentPlan.status === 'InProgress')) {
+        openPlanTab(fullArticle.currentPlan.id);
+      }
+      
+      // Load AI version last so it takes priority if both exist
       await loadLatestAIVersion(article.id);
       expandParents(article.id);
     }
@@ -1087,12 +1092,10 @@ const openTabFromDropdown = async (tabId: string): Promise<void> => {
   if (tabId === 'fragments') {
     openFragmentsTab();
   } else if (tabId === 'plan') {
-    // Always open plan tab - PlanViewer will handle empty state
-    // Open with null first to ensure the tab opens, then load the plan
-    openPlanTab(null);
-    if (articles.selectedId) {
-      await loadDraftPlan(articles.selectedId);
-    }
+    // Always open plan tab when manually requested - PlanViewer will handle empty state
+    // Open with current plan ID if it exists, otherwise null
+    const planId = articles.selected?.currentPlan?.id ?? null;
+    openPlanTab(planId);
   } else if (tabId === 'version') {
     // Open the latest AI version, or if none exists, the latest user version
     // Use the VersionsPanel's method which uses already-loaded versions
@@ -1140,25 +1143,6 @@ const handleVersionRejected = async (versionId: string): Promise<void> => {
 // ============================================================================
 // METHODS - Plan Loading
 // ============================================================================
-
-const loadDraftPlan = async (articleId: string | undefined): Promise<void> => {
-  if (!articleId) return;
-  
-  try {
-    const plan = await apiClients.plans.getActivePlan(articleId);
-
-    if (plan && plan.id) {
-      openPlanTab(plan.id);
-    }
-  } catch (err: any) {
-    if (err.response && err.response.status === 204) {
-      // No active plan found - still open the tab with empty state
-      openPlanTab(null);
-      return;
-    }
-    console.error('Error loading draft plan:', err);
-  }
-};
 
 const loadLatestAIVersion = async (articleId: string | undefined): Promise<void> => {
   if (!articleId) return;

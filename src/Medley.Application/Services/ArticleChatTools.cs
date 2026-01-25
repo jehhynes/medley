@@ -586,6 +586,10 @@ public class ArticleChatTools
 
             await _planRepository.AddAsync(plan);
 
+            // Set as current plan on the article
+            article.CurrentPlanId = plan.Id;
+            article.CurrentPlan = plan;
+
             // Create plan fragments
             foreach (var rec in request.Recommendations)
             {
@@ -687,7 +691,6 @@ public class ArticleChatTools
                 {
                     plan.Status = PlanStatus.Applied;
                     plan.AppliedAt = DateTimeOffset.UtcNow;
-                    
                     _logger.LogInformation("Marked plan {PlanId} as Applied", _implementingPlanId.Value);
                 }
             }

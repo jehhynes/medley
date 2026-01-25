@@ -3,6 +3,22 @@ using Medley.Domain.Enums;
 namespace Medley.Application.Models.DTOs;
 
 /// <summary>
+/// Minimal plan reference with just ID and status
+/// </summary>
+public class PlanRef
+{
+    /// <summary>
+    /// Unique identifier for the plan
+    /// </summary>
+    public required Guid Id { get; set; }
+
+    /// <summary>
+    /// Current status of the plan
+    /// </summary>
+    public required PlanStatus Status { get; set; }
+}
+
+/// <summary>
 /// Detailed plan information with fragments and source details
 /// </summary>
 public class PlanDto
@@ -25,7 +41,7 @@ public class PlanDto
     /// <summary>
     /// Current status of the plan
     /// </summary>
-    public required string Status { get; set; }
+    public required PlanStatus Status { get; set; }
 
     /// <summary>
     /// Version number of this plan (per article)
@@ -189,7 +205,7 @@ public class PlanSummaryDto
     /// <summary>
     /// Current status of the plan
     /// </summary>
-    public required string Status { get; set; }
+    public required PlanStatus Status { get; set; }
 
     /// <summary>
     /// When this plan was created

@@ -95,6 +95,18 @@ public class Article : BusinessEntity
     [DeleteBehavior(DeleteBehavior.SetNull)]
     public virtual ArticleVersion? CurrentVersion { get; set; }
 
+    /// <summary>
+    /// ID of the current active plan (Draft or InProgress)
+    /// </summary>
+    public Guid? CurrentPlanId { get; set; }
+
+    /// <summary>
+    /// Navigation property to the current plan
+    /// </summary>
+    [ForeignKey(nameof(CurrentPlanId))]
+    [DeleteBehavior(DeleteBehavior.SetNull)]
+    public virtual Plan? CurrentPlan { get; set; }
+
     
     /// <summary>
     /// Navigation property to child articles

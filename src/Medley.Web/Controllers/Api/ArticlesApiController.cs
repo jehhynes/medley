@@ -172,6 +172,7 @@ public class ArticlesApiController : ControllerBase
         var article = await _articleRepository.Query()
             .Include(a => a.ParentArticle)
             .Include(a => a.CurrentConversation)
+            .Include(a => a.CurrentPlan)
             .FirstOrDefaultAsync(a => a.Id == id);
 
         if (article == null)
@@ -192,6 +193,11 @@ public class ArticlesApiController : ControllerBase
                 Id = article.CurrentConversation.Id,
                 IsRunning = article.CurrentConversation.IsRunning,
                 State = article.CurrentConversation.State
+            } : null,
+            CurrentPlan = article.CurrentPlan != null ? new PlanRef
+            {
+                Id = article.CurrentPlan.Id,
+                Status = article.CurrentPlan.Status
             } : null
         });
     }

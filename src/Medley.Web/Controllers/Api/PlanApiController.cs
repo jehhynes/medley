@@ -52,40 +52,6 @@ public class PlanApiController : ControllerBase
     }
 
     /// <summary>
-    /// Get the active plan for an article
-    /// </summary>
-    [HttpGet("active")]
-    [ProducesResponseType(typeof(PlanDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<PlanDto>> GetActivePlan(Guid articleId)
-    {
-        var article = await _articleRepository.GetByIdAsync(articleId);
-        if (article == null)
-        {
-            return NotFound(new { message = "Article not found" });
-        }
-
-        var plan = await _planRepository.Query()
-            .Where(p => p.ArticleId == articleId && p.Status == PlanStatus.Draft)
-            .Include(p => p.PlanFragments)
-                .ThenInclude(pf => pf.Fragment)
-                    .ThenInclude(f => f.Source)
-            .Include(p => p.PlanFragments)
-                .ThenInclude(pf => pf.Fragment)
-                    .ThenInclude(f => f.FragmentCategory)
-            .Include(p => p.CreatedBy)
-            .OrderByDescending(p => p.CreatedAt)
-            .FirstOrDefaultAsync();
-
-        if (plan == null)
-        {
-            return Ok(null);
-        }
-
-        return Ok(MapPlanToDto(plan));
-    }
-
-    /// <summary>
     /// Get all plans for an article (including archived)
     /// </summary>
     [HttpGet]
@@ -107,7 +73,7 @@ public class PlanApiController : ControllerBase
             {
                 Id = p.Id,
                 Version = p.Version,
-                Status = p.Status.ToString(),
+                Status = p.Status,
                 CreatedAt = p.CreatedAt,
                 ChangesSummary = p.ChangesSummary,
                 CreatedBy = new UserRef
@@ -158,6 +124,7 @@ public class PlanApiController : ControllerBase
     public async Task<ActionResult<PlanActionResponse>> RestorePlan(Guid articleId, Guid planId)
     {
         var planToRestore = await _planRepository.Query()
+            .Include(x => x.Article).ThenInclude(x => x.CurrentPlan)
             .Where(p => p.Id == planId && p.ArticleId == articleId)
             .FirstOrDefaultAsync();
 
@@ -171,18 +138,23 @@ public class PlanApiController : ControllerBase
             return BadRequest(new { message = "Plan is already active" });
         }
 
-        // Archive current draft plan (if any)
-        var currentDraft = await _planRepository.Query()
-            .Where(p => p.ArticleId == articleId && p.Status == PlanStatus.Draft)
-            .FirstOrDefaultAsync();
+        var article = planToRestore.Article;
+        
 
-        if (currentDraft != null)
+        // Archive current plan (if different)
+        if (article.CurrentPlanId.HasValue && article.CurrentPlanId != planId)
         {
-            currentDraft.Status = PlanStatus.Archived;
+            var oldPlan = article.CurrentPlan;
+            if (oldPlan != null)
+            {
+                oldPlan.Status = PlanStatus.Archived;
+            }
         }
 
-        // Restore the selected plan
+        // Restore the selected plan and set as current
         planToRestore.Status = PlanStatus.Draft;
+        article.CurrentPlan = planToRestore;
+        article.CurrentPlanId = planId;
 
         return Ok(new PlanActionResponse { Success = true, Message = "Plan restored successfully" });
     }
@@ -425,7 +397,7 @@ public class PlanApiController : ControllerBase
             Id = plan.Id,
             ArticleId = plan.ArticleId,
             Instructions = plan.Instructions,
-            Status = plan.Status.ToString(),
+            Status = plan.Status,
             Version = plan.Version,
             ChangesSummary = plan.ChangesSummary,
             CreatedAt = plan.CreatedAt,

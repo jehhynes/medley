@@ -71,6 +71,19 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
             .HasForeignKey(c => c.ArticleId)
             .OnDelete(DeleteBehavior.Cascade); // When article is deleted, delete all conversations
 
+        // Configure circular relationship between Article and Plan
+        builder.Entity<Article>()
+            .HasOne(a => a.CurrentPlan)
+            .WithOne()
+            .HasForeignKey<Article>(a => a.CurrentPlanId)
+            .OnDelete(DeleteBehavior.SetNull); // When plan is deleted, set Article.CurrentPlanId to null (not cascade)
+
+        builder.Entity<Plan>()
+            .HasOne(c => c.Article)
+            .WithMany(a => a.Plans)
+            .HasForeignKey(c => c.ArticleId)
+            .OnDelete(DeleteBehavior.Cascade); // When article is deleted, delete all plans
+
         // Configure many-to-many relationship between Source and Speaker
         builder.Entity<Source>()
             .HasMany(s => s.Speakers)
