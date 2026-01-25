@@ -62,7 +62,9 @@ export interface UseArticleSignalROptions {
   moveArticleInTree: (articleId: string, oldParentId: string | null, newParentId: string | null) => void;
   openPlanTab?: (planId: string) => void;
   openVersionTab?: (version: { id: string; versionNumber: number; createdAt: string }) => void;
-  loadVersions?: () => Promise<void>;
+  onVersionCreated?: (version: any) => void;
+  onVersionUpdated?: (version: any) => void;
+  onVersionDeleted?: (versionId: string) => void;
   selectedArticleId: Ref<string | null>;
   articlesIndex: Map<string, ArticleDto>;
   clearSelectedArticle?: () => void;
@@ -221,10 +223,10 @@ export function useArticleSignalR(options: UseArticleSignalROptions) {
         matches: selectedId === eventArticleId
       });
 
-      // Refresh the versions panel if it's for the currently selected article
+      // Notify store handler if it's for the currently selected article
       if (selectedId === eventArticleId) {
-        if (options.loadVersions) {
-          await options.loadVersions();
+        if (options.onVersionCreated) {
+          options.onVersionCreated(data);
         }
 
         // Auto-open AI versions

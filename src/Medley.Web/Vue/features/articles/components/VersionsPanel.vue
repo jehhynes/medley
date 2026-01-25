@@ -48,10 +48,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
-import { articlesClient } from '@/utils/apiClients';
+import { computed, inject } from 'vue';
 import { formatRelativeTime } from '@/utils/helpers';
-import { useVersionsState } from '../composables/useVersionsState';
+import type { ArticleVersionsStore } from '../stores/useArticleVersionsStore';
 import type { ArticleVersionDto } from '@/types/api-client';
 
 interface Props {
@@ -70,37 +69,17 @@ interface Emits {
 
 const emit = defineEmits<Emits>();
 
-const articleIdRef = computed(() => props.articleId);
-const versionState = useVersionsState(articleIdRef);
+// Inject versions store
+const versionsStore = inject<ArticleVersionsStore>('versionsStore');
 
-const userVersions = computed(() => versionState.userVersions.value);
-const loading = computed(() => versionState.loading.value);
-const error = computed(() => versionState.error.value);
-
-watch(() => props.articleId, async (newArticleId) => {
-  if (newArticleId) {
-    await loadVersions();
-  } else {
-    versionState.setVersions([]);
-  }
-}, { immediate: true });
-
-async function loadVersions(): Promise<void> {
-  if (!props.articleId) return;
-  
-  versionState.setLoading(true);
-  versionState.setError(null);
-  
-  try {
-    const versions = await articlesClient.getVersionHistory(props.articleId);
-    versionState.setVersions(versions);
-  } catch (err: any) {
-    versionState.setError('Failed to load version history: ' + err.message);
-    console.error('Error loading versions:', err);
-  } finally {
-    versionState.setLoading(false);
-  }
+if (!versionsStore) {
+  throw new Error('VersionsPanel must be used within Articles page');
 }
+
+// Use store data
+const userVersions = computed(() => versionsStore.userVersions.value);
+const loading = computed(() => versionsStore.loading.value);
+const error = computed(() => versionsStore.error.value);
 
 function selectVersion(version: ArticleVersionDto): void {
   emit('select-version', version);
@@ -108,8 +87,8 @@ function selectVersion(version: ArticleVersionDto): void {
 }
 
 function openLatestVersion(): void {
-  // Use the already-loaded versions from the state
-  const allVersions = versionState.versions.value;
+  // Use the already-loaded versions from the store
+  const allVersions = versionsStore.versions.value;
   
   if (allVersions.length === 0) {
     return; // No versions available
@@ -140,7 +119,6 @@ function formatDate(dateString: Date | undefined): string {
 
 // Expose methods to parent component
 defineExpose({
-  loadVersions,
   openLatestVersion
 });
 </script>

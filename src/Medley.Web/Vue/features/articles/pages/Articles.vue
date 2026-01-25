@@ -446,13 +446,15 @@ import type { ArticleHubConnection } from '../types/article-hub';
 import { useSidebarState } from '@/composables/useSidebarState';
 import { useArticleTree } from '../composables/useArticleTree';
 import { useMyWork } from '../composables/useMyWork';
-import { useVersionsState } from '../composables/useVersionsState';
 import { useArticleModal } from '../composables/useArticleModal';
 import { useVersionViewer } from '../composables/useVersionViewer';
 import { useArticleSignalR } from '../composables/useArticleSignalR';
 import { useArticleFilter } from '../composables/useArticleFilter';
 import { useArticleTypes } from '../composables/useArticleTypes';
 import { useDropDown } from '@/composables/useDropDown';
+
+// Store
+import { createArticleVersionsStore } from '../stores/useArticleVersionsStore';
 
 // Components
 import FragmentModal from '../../sources/components/FragmentModal.vue';
@@ -648,8 +650,12 @@ const selectedFragment = ref<FragmentDto | null>(null);
 provide('dragState', dragState);
 
 // ============================================================================
-// COMPOSABLES
+// COMPOSABLES & STORES
 // ============================================================================
+
+// Create and provide versions store
+const { store: versionsStore, _internal: versionsInternal } = createArticleVersionsStore();
+provide('versionsStore', versionsStore);
 
 // Dropdown composable
 const { toggleDropdown, closeDropdown, isDropdownOpen, getPositionClasses } = useDropDown();
@@ -730,6 +736,14 @@ const {
 
 // SignalR composable (initialized in onMounted)
 let signalRMethods: ReturnType<typeof useArticleSignalR> | null = null;
+
+// Watch for pending AI version and auto-open (set up at top level, before onMounted)
+watch(() => versionsStore.pendingAiVersion.value, (pendingAi) => {
+  if (pendingAi) {
+    console.log('Pending AI version detected, opening tab:', pendingAi);
+    openVersionTab(pendingAi);
+  }
+});
 
 // ============================================================================
 // COMPUTED PROPERTIES
@@ -833,6 +847,7 @@ const selectArticle = async (article: ArticleSummaryDto, replaceState: boolean =
     // Clear tabs and version selection BEFORE changing articles to avoid stale data
     clearVersionSelection();
     clearAllTabs();
+    versionsInternal.clearVersions();
 
     const fullArticle = await apiClients.articles.get(article.id!);
 
@@ -851,14 +866,15 @@ const selectArticle = async (article: ArticleSummaryDto, replaceState: boolean =
     
     // Only proceed if article has an ID
     if (article.id) {
+      // Load versions for the new article
+      await versionsInternal.loadVersions(article.id);
+      
       // Check if article has a current plan with Draft or InProgress status
       if (fullArticle.currentPlan && 
           (fullArticle.currentPlan.status === 'Draft' || fullArticle.currentPlan.status === 'InProgress')) {
         openPlanTab(fullArticle.currentPlan.id);
       }
       
-      // Load AI version last so it takes priority if both exist
-      await loadLatestAIVersion(article.id);
       expandParents(article.id);
     }
 
@@ -1144,30 +1160,6 @@ const handleVersionRejected = async (versionId: string): Promise<void> => {
 // METHODS - Plan Loading
 // ============================================================================
 
-const loadLatestAIVersion = async (articleId: string | undefined): Promise<void> => {
-  if (!articleId) return;
-  
-  // Use composable to find pending AI version by status
-  const versionState = useVersionsState(computed(() => articleId));
-  
-  // Wait for versions to be loaded if not already
-  if (!versionState.loaded.value) {
-    // Versions will be loaded by VersionsPanel watch handler
-    // Check again after a tick
-    nextTick(() => {
-      if (versionState.pendingAiVersion.value) {
-        openVersionTab(versionState.pendingAiVersion.value);
-      }
-    });
-    return;
-  }
-
-  // Use cached data - pendingAiVersion is found by status filter
-  if (versionState.pendingAiVersion.value) {
-    openVersionTab(versionState.pendingAiVersion.value);
-  }
-};
-
 const handlePlanConversationCreated = async (conversationId: string): Promise<void> => {
   // Switch to the assistant tab
   setActiveRightTab('assistant');
@@ -1279,11 +1271,9 @@ onMounted(async () => {
     moveArticleInTree,
     openPlanTab,
     openVersionTab,
-    loadVersions: async () => {
-      if (versionsPanel.value) {
-        await versionsPanel.value.loadVersions();
-      }
-    },
+    onVersionCreated: (version) => versionsInternal.handleVersionCreated(version),
+    onVersionUpdated: (version) => versionsInternal.handleVersionUpdated(version),
+    onVersionDeleted: (versionId) => versionsInternal.handleVersionDeleted(versionId),
     selectedArticleId: computed(() => articles.selectedId),
     articlesIndex: articles.index,
     clearSelectedArticle: () => {

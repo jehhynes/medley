@@ -65,7 +65,7 @@
             style="min-width: 400px;"
             @click.stop>
             <div 
-              v-for="v in allVersions" 
+              v-for="v in versionsStore.versions.value" 
               :key="v.id" 
               class="tiptap-dropdown-item"
               :class="{ 'is-active': v.id === version.id }"
@@ -102,10 +102,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount, inject } from 'vue';
 import { articlesClient } from '@/utils/apiClients';
 import { htmlDiff } from '@/utils/htmlDiff';
-import { useVersionsState } from '../composables/useVersionsState';
+import type { ArticleVersionsStore } from '../stores/useArticleVersionsStore';
 import type { ArticleVersionDto, ArticleVersionComparisonDto, VersionType } from '@/types/api-client';
 
 // Declare global types
@@ -147,13 +147,15 @@ interface Emits {
 
 const emit = defineEmits<Emits>();
 
-// Composable
-const articleIdRef = computed(() => props.articleId);
-const versionState = useVersionsState(articleIdRef);
+// Inject versions store
+const versionsStore = inject<ArticleVersionsStore>('versionsStore');
+
+if (!versionsStore) {
+  throw new Error('VersionViewer must be used within Articles page');
+}
 
 // State
 const version = ref<ArticleVersionDto | null>(null);
-const allVersions = ref<ArticleVersionDto[]>([]);
 const loading = ref<boolean>(true);
 const error = ref<string | null>(null);
 const loadingDiff = ref<boolean>(false);
@@ -162,6 +164,7 @@ const diffHtml = ref<string | null>(null);
 const isProcessing = ref<boolean>(false);
 const versionDropdownOpen = ref<boolean>(false);
 const versionDropdown = ref<HTMLElement | null>(null);
+const loadingVersionId = ref<string | null>(null);
 
 // Computed
 const isAIVersion = computed<boolean>(() => {
@@ -173,13 +176,25 @@ const canReviewVersion = computed<boolean>(() => {
 });
 
 // Watch
-watch([() => props.articleId, () => props.versionId], ([newArticleId, newVersionId], [oldArticleId, oldVersionId]) => {
-  // If article changed, clear the cache for the old article to force reload
-  if (oldArticleId && newArticleId !== oldArticleId) {
-    versionState.clearCache(oldArticleId);
+watch(() => props.articleId, (newArticleId, oldArticleId) => {
+  // When article changes, reset version state
+  if (newArticleId !== oldArticleId) {
+    version.value = null;
+    diffHtml.value = null;
+    loadingVersionId.value = null;
   }
-  
-  if (newArticleId && newVersionId) {
+});
+
+watch(() => versionsStore.versions.value, () => {
+  // When versions are loaded/updated, try to load the current version
+  if (props.versionId && !version.value && loadingVersionId.value !== props.versionId) {
+    loadVersion();
+  }
+}, { immediate: true });
+
+watch(() => props.versionId, (newVersionId, oldVersionId) => {
+  // When versionId prop changes, reload the version
+  if (newVersionId && newVersionId !== oldVersionId && loadingVersionId.value !== newVersionId) {
     loadVersion();
   }
 }, { immediate: true });
@@ -190,15 +205,25 @@ async function loadVersion(): Promise<void> {
     return;
   }
 
+  // Prevent duplicate loads
+  if (loadingVersionId.value === props.versionId) {
+    console.log('Already loading version:', props.versionId);
+    return;
+  }
+
+  // If we already have this version loaded, don't reload
+  if (version.value?.id === props.versionId) {
+    console.log('Version already loaded:', props.versionId);
+    return;
+  }
+
+  loadingVersionId.value = props.versionId;
   loading.value = true;
   error.value = null;
 
   try {
-    // Use cached versions from composable
-    allVersions.value = versionState.versions.value;
-    
-    // Find specific version in cached data using helper
-    const foundVersion = versionState.getVersionById(props.versionId);
+    // Find specific version in loaded data using store
+    const foundVersion = versionsStore.getVersionById(props.versionId);
     
     if (!foundVersion) {
       throw new Error(`Version ${props.versionId} not found`);
@@ -213,6 +238,7 @@ async function loadVersion(): Promise<void> {
     error.value = err.message || 'Failed to load version';
   } finally {
     loading.value = false;
+    loadingVersionId.value = null;
   }
 }
 
@@ -402,6 +428,11 @@ async function rejectVersion(): Promise<void> {
 // Lifecycle
 onMounted(() => {
   document.addEventListener('click', handleClickOutside);
+  
+  // Load version on mount if we have the necessary data and it's not already loading
+  if (props.versionId && versionsStore.versions.value.length > 0 && loadingVersionId.value !== props.versionId) {
+    loadVersion();
+  }
 });
 
 onBeforeUnmount(() => {
