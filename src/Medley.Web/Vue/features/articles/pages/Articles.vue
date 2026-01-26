@@ -871,7 +871,7 @@ const selectArticle = async (article: ArticleSummaryDto, replaceState: boolean =
       
       // Check if article has a current plan with Draft or InProgress status
       if (fullArticle.currentPlan && 
-          (fullArticle.currentPlan.status === 'Draft' || fullArticle.currentPlan.status === 'InProgress')) {
+          (fullArticle.currentPlan.status === 'Draft')) {
         openPlanTab(fullArticle.currentPlan.id);
       }
       

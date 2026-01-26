@@ -2897,7 +2897,7 @@ export interface SourceInPlanDto {
 export interface PlanActionResponse {
     success?: boolean;
     message?: string | null;
-    conversationId?: string | null;
+    conversationId?: string;
 }
 
 export interface UpdatePlanRequest {

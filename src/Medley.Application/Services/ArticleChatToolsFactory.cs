@@ -19,6 +19,7 @@ public class ArticleChatToolsFactory
     private readonly IFragmentRepository _fragmentRepository;
     private readonly IEmbeddingGenerator<string, Embedding<float>> _embeddingGenerator;
     private readonly IRepository<Article> _articleRepository;
+    private readonly IRepository<ChatConversation> _conversationRepository;
     private readonly IRepository<Plan> _planRepository;
     private readonly IRepository<PlanFragment> _planFragmentRepository;
     private readonly IRepository<User> _userRepository;
@@ -35,6 +36,7 @@ public class ArticleChatToolsFactory
         IFragmentRepository fragmentRepository,
         IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
         IRepository<Article> articleRepository,
+        IRepository<ChatConversation> conversationRepository,
         IRepository<Plan> planRepository,
         IRepository<PlanFragment> planFragmentRepository,
         IRepository<User> userRepository,
@@ -50,6 +52,7 @@ public class ArticleChatToolsFactory
         _fragmentRepository = fragmentRepository;
         _embeddingGenerator = embeddingGenerator;
         _articleRepository = articleRepository;
+        _conversationRepository = conversationRepository;
         _planRepository = planRepository;
         _planFragmentRepository = planFragmentRepository;
         _userRepository = userRepository;
@@ -71,7 +74,7 @@ public class ArticleChatToolsFactory
     /// <param name="implementingPlanId">Optional plan ID if implementing a plan</param>
     /// <param name="conversationId">Optional conversation ID for tracking the conversation</param>
     /// <returns>A new ArticleAssistantPlugins instance</returns>
-    public ArticleChatTools Create(Guid articleId, Guid userId, Guid? implementingPlanId = null, Guid? conversationId = null)
+    public ArticleChatTools Create(Guid articleId, Guid userId, Guid conversationId, Guid? implementingPlanId = null)
     {
         var logger = _loggerFactory.CreateLogger<ArticleChatTools>();
         
@@ -83,6 +86,7 @@ public class ArticleChatToolsFactory
             _fragmentRepository,
             _embeddingGenerator,
             _articleRepository,
+            _conversationRepository,
             _planRepository,
             _planFragmentRepository,
             _userRepository,

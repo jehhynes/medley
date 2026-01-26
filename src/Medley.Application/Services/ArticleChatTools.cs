@@ -28,10 +28,11 @@ public class ArticleChatTools
 {
     private readonly Guid _articleId;
     private readonly Guid? _implementingPlanId;
-    private readonly Guid? _conversationId;
+    private readonly Guid _conversationId;
     private readonly IFragmentRepository _fragmentRepository;
     private readonly IEmbeddingGenerator<string, Embedding<float>> _embeddingGenerator;
     private readonly IRepository<Article> _articleRepository;
+    private readonly IRepository<ChatConversation> _conversationRepository;
     private readonly IRepository<Plan> _planRepository;
     private readonly IRepository<PlanFragment> _planFragmentRepository;
     private readonly IRepository<User> _userRepository;
@@ -56,10 +57,11 @@ public class ArticleChatTools
         Guid articleId,
         Guid userId,
         Guid? implementingPlanId,
-        Guid? conversationId,
+        Guid conversationId,
         IFragmentRepository fragmentRepository,
         IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
         IRepository<Article> articleRepository,
+        IRepository<ChatConversation> conversationRepository,
         IRepository<Plan> planRepository,
         IRepository<PlanFragment> planFragmentRepository,
         IRepository<User> userRepository,
@@ -79,6 +81,7 @@ public class ArticleChatTools
         _fragmentRepository = fragmentRepository;
         _embeddingGenerator = embeddingGenerator;
         _articleRepository = articleRepository;
+        _conversationRepository = conversationRepository;
         _planRepository = planRepository;
         _planFragmentRepository = planFragmentRepository;
         _userRepository = userRepository;
@@ -570,6 +573,12 @@ public class ArticleChatTools
                 throw new InvalidOperationException($"User {_currentUserId} not found");
             }
 
+            var conversation = await _conversationRepository.GetByIdAsync(_conversationId);
+            if(conversation == null)
+            {
+                throw new InvalidOperationException($"Conversation {_conversationId} not found");
+            }
+
             // Create new plan
             var plan = new Plan
             {
@@ -581,7 +590,7 @@ public class ArticleChatTools
                 Version = newVersion,
                 ParentPlanId = parentPlanId,
                 ChangesSummary = request.ChangesSummary,
-                ConversationId = _conversationId
+                Conversation = conversation
             };
 
             await _planRepository.AddAsync(plan);

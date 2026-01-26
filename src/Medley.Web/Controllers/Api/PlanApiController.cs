@@ -301,14 +301,11 @@ public class PlanApiController : ControllerBase
         }
 
         // 1. Archive the planning conversation (if exists)
-        if (plan.ConversationId.HasValue)
+        var planningConversation = await _conversationRepository.GetByIdAsync(plan.ConversationId);
+        if (planningConversation != null)
         {
-            var planningConversation = await _conversationRepository.GetByIdAsync(plan.ConversationId.Value);
-            if (planningConversation != null)
-            {
-                planningConversation.State = ConversationState.Archived;
+            planningConversation.State = ConversationState.Archived;
                 
-            }
         }
 
         // 2. Create new Agent conversation for implementation

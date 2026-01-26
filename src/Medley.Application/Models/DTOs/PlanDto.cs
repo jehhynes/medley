@@ -241,5 +241,5 @@ public class PlanActionResponse
     /// <summary>
     /// ID of the conversation created for implementation (when accepting a plan)
     /// </summary>
-    public Guid? ConversationId { get; set; }
+    public Guid ConversationId { get; set; }
 }

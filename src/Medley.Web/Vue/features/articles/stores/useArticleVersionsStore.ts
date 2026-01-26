@@ -17,7 +17,7 @@ export interface ArticleVersionsStore {
 interface ArticleVersionsStoreInternal {
   loadVersions(articleId: string): Promise<void>;
   clearVersions(): void;
-  handleVersionCreated(version: ArticleVersionDto): void;
+  handleVersionCreated(version: ArticleVersionDto): Promise<void>;
   handleVersionUpdated(version: ArticleVersionDto): void;
   handleVersionDeleted(versionId: string): void;
 }
@@ -76,8 +76,12 @@ export function createArticleVersionsStore() {
     error.value = null;
   }
 
-  function handleVersionCreated(version: ArticleVersionDto): void {
-    versions.value = [version, ...versions.value];
+  async function handleVersionCreated(version: ArticleVersionDto): Promise<void> {
+    // Reload the full version list to ensure we have complete data
+    // The SignalR payload only contains minimal fields, but we need full ArticleVersionDto
+    if (version.articleId) {
+      await loadVersions(version.articleId);
+    }
   }
 
   function handleVersionUpdated(version: ArticleVersionDto): void {

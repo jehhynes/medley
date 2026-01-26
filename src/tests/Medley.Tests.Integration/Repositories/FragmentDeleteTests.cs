@@ -517,6 +517,13 @@ public class FragmentDeleteTests : DatabaseTestBase
         };
         await _dbContext.Articles.AddAsync(article);
 
+        var conversation = new ChatConversation()
+        {
+            Article = article,
+            CreatedBy = user
+        };
+        await _dbContext.ChatConversations.AddAsync(conversation);
+
         var plan = new Plan
         {
             Id = Guid.NewGuid(),
@@ -525,7 +532,8 @@ public class FragmentDeleteTests : DatabaseTestBase
             Status = Domain.Enums.PlanStatus.Draft,
             CreatedBy = user,
             CreatedAt = DateTimeOffset.UtcNow,
-            Version = 1
+            Version = 1,
+            Conversation = conversation
         };
         await _dbContext.Plans.AddAsync(plan);
 

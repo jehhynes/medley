@@ -49,7 +49,7 @@ public interface IArticleVersionService
         Guid articleId, 
         string content, 
         string changeMessage, 
-        Guid? conversationId = null,
+        Guid conversationId,
         CancellationToken cancellationToken = default);
 
     /// <summary>

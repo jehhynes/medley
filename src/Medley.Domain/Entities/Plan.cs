@@ -26,14 +26,14 @@ public class Plan : BaseEntity
     /// <summary>
     /// The conversation that created this plan (optional)
     /// </summary>
-    public Guid? ConversationId { get; set; }
+    public Guid ConversationId { get; set; }
 
     /// <summary>
     /// Navigation property to the conversation
     /// </summary>
     [ForeignKey(nameof(ConversationId))]
     [DeleteBehavior(DeleteBehavior.SetNull)]
-    public virtual ChatConversation? Conversation { get; set; }
+    public required virtual ChatConversation Conversation { get; set; }
 
     /// <summary>
     /// Markdown-formatted instructions from the AI agent

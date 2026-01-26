@@ -139,7 +139,7 @@ public class ArticleChatService : IArticleChatService
             }
 
             // Create article-scoped plugins instance
-            var tools = _toolsFactory.Create(article.Id, latestUserMessage.User.Id, conversation.ImplementingPlan?.Id);
+            var tools = _toolsFactory.Create(article.Id, latestUserMessage.User.Id, conversationId, conversation.ImplementingPlan?.Id);
             
             // Determine prompt type and plan ID based on conversation mode
             var promptType = conversation.Mode == ConversationMode.Plan

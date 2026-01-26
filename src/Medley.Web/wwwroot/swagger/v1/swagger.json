@@ -4130,8 +4130,7 @@
           },
           "conversationId": {
             "type": "string",
-            "format": "guid",
-            "nullable": true
+            "format": "guid"
           }
         }
       },

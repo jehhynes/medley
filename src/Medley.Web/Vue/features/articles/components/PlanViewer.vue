@@ -51,7 +51,7 @@
           <div class="tiptap-toolbar-divider"></div>
         </template>
         <template #toolbar-append>
-          <!-- Restore Button (for archived plans) -->
+          <!-- Restore Button (for archived plans only) -->
           <button 
             v-if="isArchivedPlan"
             type="button"
@@ -101,6 +101,12 @@
           <div v-if="plan.changesSummary" class="alert alert-info mx-3 mt-3 mb-0">
             <strong><i class="bi bi-info-circle me-2"></i>Changes from v{{ plan.version - 1 }}:</strong>
             <div class="mt-2">{{ plan.changesSummary }}</div>
+          </div>
+
+          <!-- In Progress Plan Info -->
+          <div v-if="isInProgressPlan" class="alert alert-info mx-3 mt-3 mb-0">
+            <i class="bi bi-hourglass-split me-2"></i>
+            This plan is currently being implemented.
           </div>
 
           <!-- Archived Plan Warning -->
@@ -368,7 +374,11 @@ const excludedFragments = computed<PlanFragmentDto[]>(() => {
 });
 
 const isArchivedPlan = computed<boolean>(() => {
-  return plan.value !== null && plan.value.status !== 'Draft';
+  return plan.value !== null && plan.value.status === 'Archived';
+});
+
+const isInProgressPlan = computed<boolean>(() => {
+  return plan.value !== null && plan.value.status === 'InProgress';
 });
 
 const canEditPlan = computed<boolean>(() => {
