@@ -178,6 +178,7 @@ defineProps<{
 }>();
 import { speakersClient } from '@/utils/apiClients';
 import { useSidebarState } from '@/composables/useSidebarState';
+import { getTrustLevelClass } from '@/utils/helpers';
 import type { SpeakerListDto, SpeakerDetailDto, TrustLevel } from '@/types/api-client';
 
 // Setup composables
@@ -286,16 +287,6 @@ const cancelEdit = (): void => {
   if (selectedSpeaker.value) {
     editingIsInternal.value = selectedSpeaker.value.isInternal;
     editingTrustLevel.value = selectedSpeaker.value.trustLevel;
-  }
-};
-
-const getTrustLevelClass = (trustLevel: string | null): string => {
-  if (!trustLevel) return '';
-  switch (trustLevel) {
-    case 'High': return 'text-success';
-    case 'Medium': return 'text-warning';
-    case 'Low': return 'text-danger';
-    default: return '';
   }
 };
 

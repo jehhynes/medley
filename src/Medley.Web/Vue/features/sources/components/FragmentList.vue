@@ -13,6 +13,14 @@
             <span v-if="fragment.similarity !== undefined" class="badge bg-info ms-2" :title="'Similarity: ' + (fragment.similarity * 100).toFixed(1) + '%'">
               {{ (fragment.similarity * 100).toFixed(0) }}%
             </span>
+            <span v-if="fragment.primarySpeaker">
+              • {{ fragment.primarySpeaker.name }}
+              <i 
+                v-if="fragment.primarySpeaker.trustLevel" 
+                class="bi bi-shield-check ms-1" 
+                :class="getTrustLevelClass(fragment.primarySpeaker.trustLevel)"
+              ></i>
+            </span>
             <span v-if="fragment.confidence !== null && fragment.confidence !== undefined" class="ms-2">
               <i 
                 :class="'fa-duotone ' + getConfidenceIcon(fragment.confidence)" 
@@ -33,7 +41,8 @@ import {
   getSourceTypeIcon, 
   getIconClass, 
   getConfidenceIcon, 
-  getConfidenceColor
+  getConfidenceColor,
+  getTrustLevelClass
 } from '@/utils/helpers';
 import type { FragmentDto, FragmentSearchResult } from '@/types/api-client';
 

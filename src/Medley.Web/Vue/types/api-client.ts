@@ -2841,6 +2841,7 @@ export interface FragmentDto {
     sourceName?: string | null;
     sourceType?: SourceType | null;
     sourceDate?: Date | null;
+    primarySpeaker?: SpeakerSummaryDto | null;
     createdAt?: Date;
     lastModifiedAt?: Date | null;
     confidence?: ConfidenceLevel | null;
@@ -2850,6 +2851,18 @@ export interface FragmentDto {
 export enum SourceType {
     Unknown = "Unknown",
     Meeting = "Meeting",
+}
+
+export interface SpeakerSummaryDto {
+    id?: string;
+    name?: string;
+    trustLevel?: TrustLevel | null;
+}
+
+export enum TrustLevel {
+    High = "High",
+    Medium = "Medium",
+    Low = "Low",
 }
 
 export enum ConfidenceLevel {
@@ -2870,6 +2883,7 @@ export interface FragmentSearchResult {
     sourceName?: string | null;
     sourceType?: SourceType | null;
     sourceDate?: Date | null;
+    primarySpeaker?: SpeakerSummaryDto | null;
     createdAt?: Date;
     confidence?: ConfidenceLevel | null;
     confidenceComment?: string | null;
@@ -2967,8 +2981,7 @@ export interface SourceSummaryDto {
     integrationName?: string;
     fragmentsCount?: number;
     extractionStatus?: ExtractionStatus;
-    primarySpeakerName?: string | null;
-    primarySpeakerTrustLevel?: TrustLevel | null;
+    primarySpeaker?: SpeakerSummaryDto | null;
 }
 
 export enum ExtractionStatus {
@@ -2976,12 +2989,6 @@ export enum ExtractionStatus {
     InProgress = "InProgress",
     Completed = "Completed",
     Failed = "Failed",
-}
-
-export enum TrustLevel {
-    High = "High",
-    Medium = "Medium",
-    Low = "Low",
 }
 
 export interface SourceDto {
@@ -2997,8 +3004,7 @@ export interface SourceDto {
     date?: Date;
     isInternal?: boolean | null;
     tagsGenerated?: Date | null;
-    primarySpeakerName?: string | null;
-    primarySpeakerTrustLevel?: TrustLevel | null;
+    primarySpeaker?: SpeakerSummaryDto | null;
     extractionStatus?: ExtractionStatus;
     extractionMessage?: string | null;
     integrationName?: string;

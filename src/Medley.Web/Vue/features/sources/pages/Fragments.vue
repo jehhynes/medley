@@ -96,7 +96,8 @@ import { fragmentsClient } from '@/utils/apiClients';
 import { 
   getArticleTypes, 
   findInList, 
-  debounce
+  debounce,
+  getTrustLevelClass
 } from '@/utils/helpers';
 import { useSidebarState } from '@/composables/useSidebarState';
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll';

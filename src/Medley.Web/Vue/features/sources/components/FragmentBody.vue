@@ -24,6 +24,15 @@
           <i class="bi bi-calendar3"></i>
           {{ formatDate(fragment.sourceDate?.toString()) }}
         </span>
+        <span v-if="fragment.primarySpeaker" class="text-muted me-2">
+          <i class="bi bi-person"></i>
+          {{ fragment.primarySpeaker.name }}
+          <i 
+            v-if="fragment.primarySpeaker.trustLevel" 
+            class="bi bi-shield-check ms-1" 
+            :class="getTrustLevelClass(fragment.primarySpeaker.trustLevel)"
+          ></i>
+        </span>
         <a v-if="fragment.sourceId" :href="'/Sources?id=' + fragment.sourceId" class="source-link">
           <i class="bi bi-camera-video me-1"></i>{{ fragment.sourceName || 'View Source' }}
         </a>
@@ -151,7 +160,8 @@ import {
   getConfidenceIcon, 
   getConfidenceColor,
   formatDate,
-  showToast
+  showToast,
+  getTrustLevelClass
 } from '@/utils/helpers';
 import { fragmentsClient } from '@/utils/apiClients';
 import type { FragmentDto, ConfidenceLevel, UpdateFragmentConfidenceRequest } from '@/types/api-client';

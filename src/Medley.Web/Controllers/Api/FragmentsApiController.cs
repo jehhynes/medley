@@ -62,6 +62,7 @@ public class FragmentsApiController : ControllerBase
     {
         var fragments = await _fragmentRepository.Query()
             .Include(f => f.Source)
+                .ThenInclude(s => s!.PrimarySpeaker)
             .Include(f => f.FragmentCategory)
             .OrderByDescending(f => f.Source!.Date)
             .ThenByDescending(f => f.CreatedAt)
@@ -80,6 +81,12 @@ public class FragmentsApiController : ControllerBase
                 SourceName = f.Source == null ? null : (string?)f.Source.Name,
                 SourceType = f.Source == null ? null : (SourceType?)f.Source.Type,
                 SourceDate = f.Source == null ? null : (DateTimeOffset?)f.Source.Date,
+                PrimarySpeaker = f.Source == null || f.Source.PrimarySpeaker == null ? null : new SpeakerSummaryDto
+                {
+                    Id = f.Source.PrimarySpeaker.Id,
+                    Name = f.Source.PrimarySpeaker.Name,
+                    TrustLevel = f.Source.PrimarySpeaker.TrustLevel
+                },
                 CreatedAt = f.CreatedAt,
                 Confidence = f.Confidence,
                 ConfidenceComment = f.ConfidenceComment
@@ -101,6 +108,7 @@ public class FragmentsApiController : ControllerBase
     {
         var fragment = await _fragmentRepository.Query()
             .Include(f => f.Source)
+                .ThenInclude(s => s!.PrimarySpeaker)
             .Include(f => f.FragmentCategory)
             .FirstOrDefaultAsync(f => f.Id == id);
 
@@ -121,6 +129,12 @@ public class FragmentsApiController : ControllerBase
             SourceName = fragment.Source == null ? null : (string?)fragment.Source.Name,
             SourceType = fragment.Source == null ? null : (SourceType?)fragment.Source.Type,
             SourceDate = fragment.Source == null ? null : (DateTimeOffset?)fragment.Source.Date,
+            PrimarySpeaker = fragment.Source == null || fragment.Source.PrimarySpeaker == null ? null : new SpeakerSummaryDto
+            {
+                Id = fragment.Source.PrimarySpeaker.Id,
+                Name = fragment.Source.PrimarySpeaker.Name,
+                TrustLevel = fragment.Source.PrimarySpeaker.TrustLevel
+            },
             CreatedAt = fragment.CreatedAt,
             LastModifiedAt = fragment.LastModifiedAt,
             Confidence = fragment.Confidence,
@@ -139,6 +153,7 @@ public class FragmentsApiController : ControllerBase
     {
         var fragments = await _fragmentRepository.Query()
             .Include(f => f.Source)
+                .ThenInclude(s => s!.PrimarySpeaker)
             .Include(f => f.FragmentCategory)
             .Where(f => f.Source!.Id == sourceId)
             .OrderByDescending(f => f.CreatedAt)
@@ -167,6 +182,7 @@ public class FragmentsApiController : ControllerBase
         // Now get the full fragment data
         var fragments = await _fragmentRepository.Query()
             .Include(f => f.Source)
+                .ThenInclude(s => s!.PrimarySpeaker)
             .Include(f => f.FragmentCategory)
             .Where(f => fragmentIds.Contains(f.Id))
             .OrderBy(f => f.Title)
@@ -194,6 +210,12 @@ public class FragmentsApiController : ControllerBase
             SourceName = f.Source == null ? null : (string?)f.Source.Name,
             SourceType = f.Source == null ? null : (SourceType?)f.Source.Type,
             SourceDate = f.Source == null ? null : (DateTimeOffset?)f.Source.Date,
+            PrimarySpeaker = f.Source == null || f.Source.PrimarySpeaker == null ? null : new SpeakerSummaryDto
+            {
+                Id = f.Source.PrimarySpeaker.Id,
+                Name = f.Source.PrimarySpeaker.Name,
+                TrustLevel = f.Source.PrimarySpeaker.TrustLevel
+            },
             CreatedAt = f.CreatedAt,
             LastModifiedAt = f.LastModifiedAt,
             Confidence = f.Confidence,
@@ -253,6 +275,7 @@ public class FragmentsApiController : ControllerBase
             
             var fragmentsWithSource = await _fragmentRepository.Query()
                 .Include(f => f.Source)
+                    .ThenInclude(s => s!.PrimarySpeaker)
                 .Include(f => f.FragmentCategory)
                 .Where(f => fragmentIds.Contains(f.Id))
                 .ToListAsync();
@@ -275,6 +298,12 @@ public class FragmentsApiController : ControllerBase
                         SourceName = fragment.Source == null ? null : (string?)fragment.Source.Name,
                         SourceType = fragment.Source == null ? null : (SourceType?)fragment.Source.Type,
                         SourceDate = fragment.Source == null ? null : (DateTimeOffset?)fragment.Source.Date,
+                        PrimarySpeaker = fragment.Source == null || fragment.Source.PrimarySpeaker == null ? null : new SpeakerSummaryDto
+                        {
+                            Id = fragment.Source.PrimarySpeaker.Id,
+                            Name = fragment.Source.PrimarySpeaker.Name,
+                            TrustLevel = fragment.Source.PrimarySpeaker.TrustLevel
+                        },
                         CreatedAt = fragment.CreatedAt,
                         Confidence = fragment.Confidence,
                         ConfidenceComment = fragment.ConfidenceComment,
@@ -351,6 +380,7 @@ public class FragmentsApiController : ControllerBase
         {
             var fragment = await _fragmentRepository.Query()
                 .Include(f => f.Source)
+                    .ThenInclude(s => s!.PrimarySpeaker)
                 .Include(f => f.FragmentCategory)
                 .FirstOrDefaultAsync(f => f.Id == id);
 
@@ -409,6 +439,12 @@ public class FragmentsApiController : ControllerBase
                 SourceName = fragment.Source == null ? null : (string?)fragment.Source.Name,
                 SourceType = fragment.Source == null ? null : (SourceType?)fragment.Source.Type,
                 SourceDate = fragment.Source == null ? null : (DateTimeOffset?)fragment.Source.Date,
+                PrimarySpeaker = fragment.Source == null || fragment.Source.PrimarySpeaker == null ? null : new SpeakerSummaryDto
+                {
+                    Id = fragment.Source.PrimarySpeaker.Id,
+                    Name = fragment.Source.PrimarySpeaker.Name,
+                    TrustLevel = fragment.Source.PrimarySpeaker.TrustLevel
+                },
                 CreatedAt = fragment.CreatedAt,
                 LastModifiedAt = fragment.LastModifiedAt,
                 Confidence = fragment.Confidence,

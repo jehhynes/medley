@@ -58,6 +58,11 @@ public class FragmentDto
     public DateTimeOffset? SourceDate { get; set; }
 
     /// <summary>
+    /// Primary speaker for the source
+    /// </summary>
+    public SpeakerSummaryDto? PrimarySpeaker { get; set; }
+
+    /// <summary>
     /// When the fragment was created
     /// </summary>
     public required DateTimeOffset CreatedAt { get; set; }
@@ -127,6 +132,11 @@ public class FragmentSearchResult
     /// Source date
     /// </summary>
     public DateTimeOffset? SourceDate { get; set; }
+
+    /// <summary>
+    /// Primary speaker for the source
+    /// </summary>
+    public SpeakerSummaryDto? PrimarySpeaker { get; set; }
 
     /// <summary>
     /// When the fragment was created

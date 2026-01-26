@@ -96,8 +96,12 @@ public class SourcesApiController : ControllerBase
                 IntegrationName = s.Integration.Name,
                 FragmentsCount = s.Fragments.Count,
                 ExtractionStatus = s.ExtractionStatus,
-                PrimarySpeakerName = s.PrimarySpeaker != null ? s.PrimarySpeaker.Name : null,
-                PrimarySpeakerTrustLevel = s.PrimarySpeaker != null ? s.PrimarySpeaker.TrustLevel : null
+                PrimarySpeaker = s.PrimarySpeaker != null ? new SpeakerSummaryDto
+                {
+                    Id = s.PrimarySpeaker.Id,
+                    Name = s.PrimarySpeaker.Name,
+                    TrustLevel = s.PrimarySpeaker.TrustLevel
+                } : null
             })
             .ToListAsync();
 
@@ -146,8 +150,12 @@ public class SourcesApiController : ControllerBase
             ExtractionMessage = source.ExtractionMessage,
             CreatedAt = source.CreatedAt,
             TagsGenerated = source.TagsGenerated,
-            PrimarySpeakerName = source.PrimarySpeaker?.Name,
-            PrimarySpeakerTrustLevel = source.PrimarySpeaker?.TrustLevel,
+            PrimarySpeaker = source.PrimarySpeaker != null ? new SpeakerSummaryDto
+            {
+                Id = source.PrimarySpeaker.Id,
+                Name = source.PrimarySpeaker.Name,
+                TrustLevel = source.PrimarySpeaker.TrustLevel
+            } : null,
             Tags = source.Tags.Select(t => new SourceTagDto
             {
                 TagTypeId = t.TagTypeId,

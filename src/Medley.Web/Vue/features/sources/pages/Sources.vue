@@ -84,13 +84,13 @@
                   <i class="bi bi-puzzle"></i>
                   {{ selectedSource.fragmentsCount }} fragments
                 </span>
-                <span class="ms-2" v-if="selectedSource.primarySpeakerName">
+                <span class="ms-2" v-if="selectedSource.primarySpeaker">
                   <i class="bi bi-person"></i>
-                  {{ selectedSource.primarySpeakerName }}
+                  {{ selectedSource.primarySpeaker.name }}
                   <i 
-                    v-if="selectedSource.primarySpeakerTrustLevel" 
+                    v-if="selectedSource.primarySpeaker.trustLevel" 
                     class="bi bi-shield-check ms-1" 
-                    :class="getTrustLevelClass(selectedSource.primarySpeakerTrustLevel)"
+                    :class="getTrustLevelClass(selectedSource.primarySpeaker.trustLevel)"
                   ></i>
                 </span>
               </div>
@@ -261,7 +261,8 @@ import {
   initializeMarkdownRenderer, 
   getArticleTypes, 
   findInList, 
-  showToast 
+  showToast,
+  getTrustLevelClass
 } from '@/utils/helpers';
 import { useSidebarState } from '@/composables/useSidebarState';
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll';
@@ -674,16 +675,6 @@ const handleFragmentDeleted = (fragmentId: string): void => {
   
   // Close the modal
   selectedFragment.value = null;
-};
-
-const getTrustLevelClass = (trustLevel: string | null): string => {
-  if (!trustLevel) return '';
-  switch (trustLevel) {
-    case 'High': return 'text-success';
-    case 'Medium': return 'text-warning';
-    case 'Low': return 'text-danger';
-    default: return '';
-  }
 };
 
 const getSpeakerInfo = (speakerId: string | null) => {

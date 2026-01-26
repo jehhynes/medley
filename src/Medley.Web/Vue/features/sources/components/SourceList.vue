@@ -10,13 +10,13 @@
           <div class="list-item-title">{{ source.name || 'Untitled' }}</div>
           <div class="list-item-subtitle">
             <span>{{ formatDate(source.date) }} • {{ source.type }}</span>
-            <span v-if="source.primarySpeakerName">
+            <span v-if="source.primarySpeaker">
               •
-              {{ source.primarySpeakerName }}
+              {{ source.primarySpeaker.name }}
               <i 
-                v-if="source.primarySpeakerTrustLevel" 
+                v-if="source.primarySpeaker.trustLevel" 
                 class="bi bi-shield-check" 
-                :class="getTrustLevelClass(source.primarySpeakerTrustLevel)"
+                :class="getTrustLevelClass(source.primarySpeaker.trustLevel)"
               ></i>
             </span>
           </div>
@@ -41,7 +41,8 @@
 <script setup lang="ts">
 import { 
   formatDate, 
-  getSourceTypeIcon 
+  getSourceTypeIcon,
+  getTrustLevelClass
 } from '@/utils/helpers';
 import type { SourceDto } from '@/types/api-client';
 
@@ -68,16 +69,6 @@ function selectSource(source: SourceDto): void {
   emit('select', source);
   // Collapse left sidebar on mobile after selection
   (window as any).MedleySidebar?.collapseLeftSidebar();
-}
-
-function getTrustLevelClass(trustLevel: string | null | undefined): string {
-  if (!trustLevel) return '';
-  switch (trustLevel) {
-    case 'High': return 'text-success';
-    case 'Medium': return 'text-warning';
-    case 'Low': return 'text-danger';
-    default: return '';
-  }
 }
 
 // Expose utility functions to template

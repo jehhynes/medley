@@ -186,6 +186,16 @@ export const getConfidenceColor = (confidence: string | null | undefined): strin
   }
 };
 
+export const getTrustLevelClass = (trustLevel: string | null | undefined): string => {
+  if (!trustLevel) return '';
+  switch (trustLevel) {
+    case 'High': return 'text-success';
+    case 'Medium': return 'text-warning';
+    case 'Low': return 'text-danger';
+    default: return '';
+  }
+};
+
 export const getStatusIcon = (status: ArticleStatus | string | null | undefined): string => {
   const iconMap: Record<string, string> = {
     'Draft': 'fa fa-pen-circle',

@@ -3866,6 +3866,14 @@
             "format": "date-time",
             "nullable": true
           },
+          "primarySpeaker": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SpeakerSummaryDto"
+              }
+            ]
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -3899,6 +3907,41 @@
         "enum": [
           "Unknown",
           "Meeting"
+        ]
+      },
+      "SpeakerSummaryDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "trustLevel": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/TrustLevel"
+              }
+            ]
+          }
+        }
+      },
+      "TrustLevel": {
+        "type": "string",
+        "description": "",
+        "x-enumNames": [
+          "High",
+          "Medium",
+          "Low"
+        ],
+        "enum": [
+          "High",
+          "Medium",
+          "Low"
         ]
       },
       "ConfidenceLevel": {
@@ -3961,6 +4004,14 @@
             "type": "string",
             "format": "date-time",
             "nullable": true
+          },
+          "primarySpeaker": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SpeakerSummaryDto"
+              }
+            ]
           },
           "createdAt": {
             "type": "string",
@@ -4267,15 +4318,11 @@
           "extractionStatus": {
             "$ref": "#/components/schemas/ExtractionStatus"
           },
-          "primarySpeakerName": {
-            "type": "string",
-            "nullable": true
-          },
-          "primarySpeakerTrustLevel": {
+          "primarySpeaker": {
             "nullable": true,
             "oneOf": [
               {
-                "$ref": "#/components/schemas/TrustLevel"
+                "$ref": "#/components/schemas/SpeakerSummaryDto"
               }
             ]
           }
@@ -4295,20 +4342,6 @@
           "InProgress",
           "Completed",
           "Failed"
-        ]
-      },
-      "TrustLevel": {
-        "type": "string",
-        "description": "",
-        "x-enumNames": [
-          "High",
-          "Medium",
-          "Low"
-        ],
-        "enum": [
-          "High",
-          "Medium",
-          "Low"
         ]
       },
       "SourceDto": {
@@ -4366,15 +4399,11 @@
             "format": "date-time",
             "nullable": true
           },
-          "primarySpeakerName": {
-            "type": "string",
-            "nullable": true
-          },
-          "primarySpeakerTrustLevel": {
+          "primarySpeaker": {
             "nullable": true,
             "oneOf": [
               {
-                "$ref": "#/components/schemas/TrustLevel"
+                "$ref": "#/components/schemas/SpeakerSummaryDto"
               }
             ]
           },
