@@ -2484,6 +2484,7 @@ export enum PromptType {
     FragmentCategoryExtraction = "FragmentCategoryExtraction",
     CursorReview = "CursorReview",
     CursorQuestion = "CursorQuestion",
+    FragmentWeighting = "FragmentWeighting",
 }
 
 export interface AiPromptDto {

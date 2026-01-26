@@ -71,6 +71,12 @@ public enum PromptType
     /// Template for Cursor AI question answering instructions
     /// </summary>
     [PromptTypeMetadata("Cursor Question", "General instructions for Cursor Agent when answering questions")]
-    CursorQuestion = 11
+    CursorQuestion = 11,
+
+    /// <summary>
+    /// Template for weighting fragments based on relevance and importance
+    /// </summary>
+    [PromptTypeMetadata("Fragment Weighting", "Instructions for assigning relevance weights to fragments")]
+    FragmentWeighting = 12
 }
 

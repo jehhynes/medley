@@ -2783,7 +2783,8 @@
           "ArticleTypeAgentMode",
           "FragmentCategoryExtraction",
           "CursorReview",
-          "CursorQuestion"
+          "CursorQuestion",
+          "FragmentWeighting"
         ],
         "enum": [
           "FragmentExtraction",
@@ -2796,7 +2797,8 @@
           "ArticleTypeAgentMode",
           "FragmentCategoryExtraction",
           "CursorReview",
-          "CursorQuestion"
+          "CursorQuestion",
+          "FragmentWeighting"
         ]
       },
       "AiPromptDto": {

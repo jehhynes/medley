@@ -95,6 +95,19 @@ public class SystemContextManager
             _logger.LogDebug("Organization context prompt not found");
         }
 
+        // 1b. Always append fragment weighting guidance if available
+        var fragmentWeightingPrompt = await _promptRepository.Query()
+            .FirstOrDefaultAsync(t => t.Type == PromptType.FragmentWeighting, cancellationToken);
+
+        if (fragmentWeightingPrompt != null)
+        {
+            promptData.FragmentWeightingGuidance = fragmentWeightingPrompt.Content;
+        }
+        else
+        {
+            _logger.LogDebug("Fragment weighting guidance not found");
+        }
+
         // 2. Always append article context (required)
         var article = await _articleRepository.Query()
             .Include(a => a.ArticleType)
@@ -211,7 +224,7 @@ public class SystemContextManager
                                 {
                                     Date = pf.Fragment.Source.Date.Date,
                                     SourceType = pf.Fragment.Source.Type.ToString(),
-                                    Scope = pf.Fragment.Source.IsInternal == true ? "Internal" : pf.Fragment.Source.IsInternal == false ? "External" : null,
+                                    Scope = pf.Fragment.Source.IsInternal == true ? "Internal" : "External",
                                     PrimarySpeaker = pf.Fragment.Source.PrimarySpeaker?.Name,
                                     PrimarySpeakerTrustLevel = pf.Fragment.Source.PrimarySpeaker?.TrustLevel?.ToString(),
                                     Tags = pf.Fragment.Source.Tags.Select(t => new TagData
@@ -379,6 +392,7 @@ public class SystemContextManager
         public required string UserName { get; set; }
         public string? PrimaryGuidance { get; set; }
         public string? OrganizationContext { get; set; }
+        public string? FragmentWeightingGuidance { get; set; }
         public string? ArticleTypeGuidance { get; set; }
         public ArticleData? Article { get; set; }
         public AiDraftData? PendingAiDraft { get; set; }
