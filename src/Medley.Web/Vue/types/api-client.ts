@@ -227,6 +227,48 @@ export class ArticleChatApiClient {
         this.baseUrl = baseUrl ?? "";
     }
 
+    getConversations(articleId: string): Promise<ConversationListDto[]> {
+        let url_ = this.baseUrl + "/api/articles/{articleId}/chat/conversations";
+        if (articleId === undefined || articleId === null)
+            throw new globalThis.Error("The parameter 'articleId' must be defined.");
+        url_ = url_.replace("{articleId}", encodeURIComponent("" + articleId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processGetConversations(_response);
+        });
+    }
+
+    protected processGetConversations(response: Response): Promise<ConversationListDto[]> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ConversationListDto[];
+            return result200;
+            });
+        } else if (status === 404) {
+            return response.text().then((_responseText) => {
+            let result404: any = null;
+            result404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
+            return throwException("A server side error occurred.", status, _responseText, _headers, result404);
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<ConversationListDto[]>(null as any);
+    }
+
     getConversation(articleId: string, conversationId?: string | null | undefined): Promise<ConversationDto> {
         let url_ = this.baseUrl + "/api/articles/{articleId}/chat/conversation?";
         if (articleId === undefined || articleId === null)
@@ -314,12 +356,6 @@ export class ArticleChatApiClient {
             let result404: any = null;
             result404 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
             return throwException("A server side error occurred.", status, _responseText, _headers, result404);
-            });
-        } else if (status === 409) {
-            return response.text().then((_responseText) => {
-            let result409: any = null;
-            result409 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
-            return throwException("A server side error occurred.", status, _responseText, _headers, result409);
             });
         } else if (status !== 200 && status !== 204) {
             return response.text().then((_responseText) => {
@@ -2530,6 +2566,32 @@ export interface FragmentCategoryDto {
     icon?: string | null;
 }
 
+export interface ConversationListDto {
+    id?: string;
+    mode?: ConversationMode;
+    state?: ConversationState;
+    createdAt?: Date;
+    createdBy?: UserRef | null;
+    firstUserMessageAt?: Date | null;
+    firstUserMessageText?: string | null;
+}
+
+export enum ConversationMode {
+    Agent = "Agent",
+    Plan = "Plan",
+}
+
+export enum ConversationState {
+    Active = "Active",
+    Complete = "Complete",
+    Archived = "Archived",
+}
+
+export interface UserRef {
+    id?: string;
+    fullName?: string;
+}
+
 export interface ConversationDto {
     id?: string;
     state?: string;
@@ -2539,11 +2601,6 @@ export interface ConversationDto {
     createdBy?: string;
     implementingPlanId?: string | null;
     implementingPlanVersion?: number | null;
-}
-
-export enum ConversationMode {
-    Agent = "Agent",
-    Plan = "Plan",
 }
 
 export interface ChatMessageDto {
@@ -2597,12 +2654,6 @@ export interface ConversationStatusResponse {
     id?: string;
     state?: ConversationState;
     timestamp?: Date;
-}
-
-export enum ConversationState {
-    Active = "Active",
-    Complete = "Complete",
-    Archived = "Archived",
 }
 
 export interface ArticleSummaryDto {
@@ -2713,11 +2764,6 @@ export interface ArticleVersionDto {
     reviewedAt?: Date | null;
     reviewedBy?: UserRef | null;
     status?: VersionStatus | null;
-}
-
-export interface UserRef {
-    id?: string;
-    fullName?: string;
 }
 
 export enum VersionType {

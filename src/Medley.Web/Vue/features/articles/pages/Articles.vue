@@ -454,7 +454,7 @@ import { useArticleTypes } from '../composables/useArticleTypes';
 import { useDropDown } from '@/composables/useDropDown';
 
 // Store
-import { createArticleVersionsStore } from '../stores/useArticleVersionsStore';
+import { createArticleVersionsStore } from '../stores/versionStore';
 
 // Components
 import FragmentModal from '../../sources/components/FragmentModal.vue';

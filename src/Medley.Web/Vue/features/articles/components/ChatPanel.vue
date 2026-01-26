@@ -12,6 +12,26 @@
     </div>
 
     <template v-else>
+      <!-- Conversation Selector (only show if conversations exist) -->
+      <div v-if="conversations.length > 0" class="conversation-selector-bar">
+        <select 
+          v-model="selectedConversationId" 
+          @change="onConversationChange"
+          :disabled="isAiTurn"
+          class="form-select form-select-sm">
+          <option :value="null" v-if="!selectedConversationId">New conversation</option>
+          <option v-for="conv in conversations" :key="conv.id" :value="conv.id">
+            {{ formatConversationLabel(conv) }}
+          </option>
+        </select>
+        <button 
+          @click="createNewConversation"
+          :disabled="isAiTurn"
+          class="btn btn-sm btn-outline-primary ms-2"
+          title="New Conversation">
+          <i class="bi bi-plus-lg"></i>
+        </button>
+      </div>
 
       <div class="chat-messages" ref="messagesContainer">
         <div v-if="!hasMessages && !isAiTurn" class="empty-state" v-cloak>
@@ -217,6 +237,8 @@ interface Emits {
 const emit = defineEmits<Emits>();
 
 const conversationId = ref<string | null>(null);
+const conversations = ref<any[]>([]);
+const selectedConversationId = ref<string | null>(null);
 const messages = ref<ChatMessage[]>([]);
 const newMessage = ref<string>('');
 const isAiTurn = ref<boolean>(false);
@@ -249,7 +271,7 @@ watch(() => props.articleId, async (newId, oldId) => {
     reset();
 
     if (newId) {
-      await loadConversation();
+      await loadConversations();
     }
   }
 }, { immediate: true });
@@ -297,6 +319,55 @@ function removeEventListeners(conn: HubConnection) {
   conn.off('ChatError', onChatError);
 }
 
+async function loadConversations(): Promise<void> {
+  if (!props.articleId) return;
+
+  isLoading.value = true;
+  error.value = null;
+
+  try {
+    // Load all conversations for this article
+    const allConversations = await apiClients.articleChat.getConversations(props.articleId);
+    conversations.value = allConversations;
+
+    if (allConversations.length === 0) {
+      // No conversations exist yet
+      conversationId.value = null;
+      selectedConversationId.value = null;
+      messages.value = [];
+      return;
+    }
+
+    // Load the current conversation (from article's CurrentConversation)
+    try {
+      const currentConversation = await apiClients.articleChat.getConversation(props.articleId, null as any);
+      conversationId.value = currentConversation.id;
+      selectedConversationId.value = currentConversation.id;
+      mode.value = currentConversation.mode || ConversationMode.Agent;
+      implementingPlanId.value = currentConversation.implementingPlanId || null;
+      implementingPlanVersion.value = currentConversation.implementingPlanVersion || null;
+      
+      await loadMessages();
+    } catch (err: any) {
+      // No current conversation set, select the most recent one
+      const mostRecent = allConversations[0];
+      if (mostRecent) {
+        await switchConversation(mostRecent.id!);
+      }
+    }
+  } catch (err) {
+    console.error('Error loading conversations:', err);
+    error.value = (err as Error).message || 'Failed to load conversations';
+  } finally {
+    isLoading.value = false;
+    nextTick(() => {
+      nextTick(() => {
+        scrollToBottom();
+      });
+    });
+  }
+}
+
 async function loadConversation(conversationIdParam: string | null = null): Promise<void> {
   if (!props.articleId) return;
 
@@ -308,6 +379,7 @@ async function loadConversation(conversationIdParam: string | null = null): Prom
       // Load specific conversation
       const conversation = await apiClients.articleChat.getConversation(props.articleId, conversationIdParam);
       conversationId.value = conversation.id;
+      selectedConversationId.value = conversation.id;
       mode.value = conversation.mode || ConversationMode.Agent;
       implementingPlanId.value = conversation.implementingPlanId || null;
       implementingPlanVersion.value = conversation.implementingPlanVersion || null;
@@ -316,12 +388,14 @@ async function loadConversation(conversationIdParam: string | null = null): Prom
       try {
         const conversation = await apiClients.articleChat.getConversation(props.articleId, null as any);
         conversationId.value = conversation.id;
+        selectedConversationId.value = conversation.id;
         mode.value = conversation.mode || ConversationMode.Agent;
         implementingPlanId.value = conversation.implementingPlanId || null;
         implementingPlanVersion.value = conversation.implementingPlanVersion || null;
       } catch (err: any) {
         // No conversation exists yet
         conversationId.value = null;
+        selectedConversationId.value = null;
         messages.value = [];
         return;
       }
@@ -373,8 +447,13 @@ async function sendMessage(): Promise<void> {
 
   try {
     if (!conversationId.value) {
+      // Create conversation when sending first message
       const conversation = await apiClients.articleChat.createConversation(props.articleId!, mode.value);
       conversationId.value = conversation.id;
+      selectedConversationId.value = conversation.id;
+      
+      // Reload conversations list to include the new one
+      await loadConversations();
     }
 
     await apiClients.articleChat.sendMessage(props.articleId!, conversationId.value, {
@@ -574,6 +653,8 @@ function scrollToBottom(): void {
 
 function reset(): void {
   conversationId.value = null;
+  conversations.value = [];
+  selectedConversationId.value = null;
   messages.value = [];
   newMessage.value = '';
   isAiTurn.value = false;
@@ -582,6 +663,70 @@ function reset(): void {
   mode.value = ConversationMode.Agent;
   implementingPlanId.value = null;
   implementingPlanVersion.value = null;
+}
+
+async function switchConversation(newConversationId: string): Promise<void> {
+  if (!props.articleId || !newConversationId) return;
+  
+  try {
+    const conversation = await apiClients.articleChat.getConversation(props.articleId, newConversationId);
+    conversationId.value = conversation.id;
+    selectedConversationId.value = conversation.id;
+    mode.value = conversation.mode || ConversationMode.Agent;
+    implementingPlanId.value = conversation.implementingPlanId || null;
+    implementingPlanVersion.value = conversation.implementingPlanVersion || null;
+    
+    await loadMessages();
+    
+    nextTick(() => {
+      nextTick(() => {
+        scrollToBottom();
+      });
+    });
+  } catch (err) {
+    console.error('Error switching conversation:', err);
+    error.value = 'Failed to switch conversation';
+  }
+}
+
+async function onConversationChange(): Promise<void> {
+  if (selectedConversationId.value) {
+    await switchConversation(selectedConversationId.value);
+  } else {
+    // User selected "New conversation" from dropdown
+    createNewConversation();
+  }
+}
+
+async function createNewConversation(): Promise<void> {
+  if (!props.articleId || isAiTurn.value) return;
+
+  // Don't actually create the conversation yet - just clear the current state
+  // The conversation will be created when the first message is sent
+  conversationId.value = null;
+  selectedConversationId.value = null;
+  messages.value = [];
+  mode.value = ConversationMode.Agent;
+  
+  nextTick(() => {
+    chatInput.value?.focus();
+  });
+}
+
+function formatConversationLabel(conv: any): string {
+  // Start with creator's name
+  let label = conv.createdBy?.fullName || 'Unknown';
+  
+  // Add mode in parentheses
+  label += ` (${conv.mode} Mode)`;
+  
+  // Add timestamp
+  const timestamp = conv.firstUserMessageAt || conv.createdAt;
+  const timeStr = formatRelativeTime(timestamp, { short: true });
+  label += ` - ${timeStr}`;
+
+
+  return label;
 }
 
 function toggleMessageExpansion(messageId: string): void {
@@ -648,4 +793,3 @@ defineExpose({
   loadConversation
 });
 </script>
-

@@ -63,6 +63,60 @@ public class ArticleChatApiController : ControllerBase
     }
 
     /// <summary>
+    /// Get all conversations for an article
+    /// </summary>
+    [HttpGet("conversations")]
+    [ProducesResponseType(typeof(List<ConversationListDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<List<ConversationListDto>>> GetConversations(Guid articleId)
+    {
+        var article = await _articleRepository.GetByIdAsync(articleId);
+        if (article == null)
+        {
+            return NotFound(new { message = "Article not found" });
+        }
+
+        var conversations = await _conversationRepository.Query()
+            .Include(c => c.Messages)
+            .Include(c => c.CreatedBy)
+            .Where(c => c.ArticleId == articleId)
+            .OrderByDescending(c => c.CreatedAt)
+            .ToListAsync();
+
+        var conversationDtos = conversations.Select(c =>
+        {
+            var firstUserMessage = c.Messages
+                .Where(m => m.Role == ChatMessageRole.User)
+                .OrderBy(m => m.CreatedAt)
+                .FirstOrDefault();
+
+            // Truncate first message text to 50 characters
+            var firstMessageText = firstUserMessage?.Text;
+            if (!string.IsNullOrEmpty(firstMessageText) && firstMessageText.Length > 50)
+            {
+                firstMessageText = firstMessageText.Substring(0, 50) + "...";
+            }
+
+            return new ConversationListDto
+            {
+                Id = c.Id,
+                Mode = c.Mode,
+                State = c.State,
+                CreatedAt = c.CreatedAt,
+                CreatedBy = c.CreatedBy != null ? new UserRef 
+                { 
+                    Id = c.CreatedBy.Id, 
+                    FullName = c.CreatedBy.FullName 
+                } : null,
+                FirstUserMessageAt = firstUserMessage?.CreatedAt,
+                FirstUserMessageText = firstMessageText
+            };
+        }).ToList();
+
+        return Ok(conversationDtos);
+    }
+
+    /// <summary>
     /// Get a conversation for an article (active or by ID)
     /// </summary>
     [HttpGet("conversation")]
@@ -135,7 +189,6 @@ public class ArticleChatApiController : ControllerBase
     [HttpPost("conversation")]
     [ProducesResponseType(typeof(ConversationDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<ConversationDto>> CreateConversation(Guid articleId, [FromQuery] ConversationMode mode = ConversationMode.Agent)
     {
@@ -143,12 +196,6 @@ public class ArticleChatApiController : ControllerBase
         if (article == null)
         {
             return NotFound(new { message = "Article not found" });
-        }
-  
-        // Check if active conversation already exists
-        if (article.CurrentConversationId != null)
-        {
-            return Conflict(new { message = "An active conversation already exists for this article" });
         }
  
         var userId = _medleyContext.CurrentUserId;

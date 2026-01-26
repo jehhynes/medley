@@ -50,7 +50,7 @@
 <script setup lang="ts">
 import { computed, inject } from 'vue';
 import { formatRelativeTime } from '@/utils/helpers';
-import type { ArticleVersionsStore } from '../stores/useArticleVersionsStore';
+import type { ArticleVersionsStore } from '../stores/versionStore';
 import type { ArticleVersionDto } from '@/types/api-client';
 
 interface Props {

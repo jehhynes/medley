@@ -7,6 +7,22 @@
     overflow: hidden;
 }
 
+.conversation-selector-bar {
+    display: flex;
+    align-items: center;
+    padding: 0rem 1rem 0.75rem .75rem;
+
+    .form-select {
+        flex: 1;
+        font-size: 0.875rem;
+    }
+
+    .btn {
+        flex-shrink: 0;
+        padding: 0.25rem 0.5rem;
+    }
+}
+
 .chat-messages {
     flex: 1;
     overflow-y: auto;

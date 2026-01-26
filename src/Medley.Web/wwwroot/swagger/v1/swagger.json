@@ -210,6 +210,51 @@
         }
       }
     },
+    "/api/articles/{articleId}/chat/conversations": {
+      "get": {
+        "tags": [
+          "ArticleChatApi"
+        ],
+        "operationId": "ArticleChatApi_GetConversations",
+        "parameters": [
+          {
+            "name": "articleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConversationListDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/articles/{articleId}/chat/conversation": {
       "get": {
         "tags": [
@@ -303,16 +348,6 @@
             }
           },
           "404": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "409": {
             "description": "",
             "content": {
               "application/json": {
@@ -2934,6 +2969,82 @@
           }
         }
       },
+      "ConversationListDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/ConversationMode"
+          },
+          "state": {
+            "$ref": "#/components/schemas/ConversationState"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdBy": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/UserRef"
+              }
+            ]
+          },
+          "firstUserMessageAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "firstUserMessageText": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "ConversationMode": {
+        "type": "string",
+        "description": "",
+        "x-enumNames": [
+          "Agent",
+          "Plan"
+        ],
+        "enum": [
+          "Agent",
+          "Plan"
+        ]
+      },
+      "ConversationState": {
+        "type": "string",
+        "description": "",
+        "x-enumNames": [
+          "Active",
+          "Complete",
+          "Archived"
+        ],
+        "enum": [
+          "Active",
+          "Complete",
+          "Archived"
+        ]
+      },
+      "UserRef": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "fullName": {
+            "type": "string"
+          }
+        }
+      },
       "ConversationDto": {
         "type": "object",
         "additionalProperties": false,
@@ -2970,18 +3081,6 @@
             "nullable": true
           }
         }
-      },
-      "ConversationMode": {
-        "type": "string",
-        "description": "",
-        "x-enumNames": [
-          "Agent",
-          "Plan"
-        ],
-        "enum": [
-          "Agent",
-          "Plan"
-        ]
       },
       "ChatMessageDto": {
         "type": "object",
@@ -3142,20 +3241,6 @@
             "format": "date-time"
           }
         }
-      },
-      "ConversationState": {
-        "type": "string",
-        "description": "",
-        "x-enumNames": [
-          "Active",
-          "Complete",
-          "Archived"
-        ],
-        "enum": [
-          "Active",
-          "Complete",
-          "Archived"
-        ]
       },
       "ArticleSummaryDto": {
         "type": "object",
@@ -3535,19 +3620,6 @@
                 "$ref": "#/components/schemas/VersionStatus"
               }
             ]
-          }
-        }
-      },
-      "UserRef": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "guid"
-          },
-          "fullName": {
-            "type": "string"
           }
         }
       },

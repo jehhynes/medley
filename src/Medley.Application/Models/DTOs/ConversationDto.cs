@@ -70,6 +70,47 @@ public class ConversationSummaryDto
 }
 
 /// <summary>
+/// List item for conversations (for GetConversations endpoint)
+/// </summary>
+public class ConversationListDto
+{
+    /// <summary>
+    /// Unique identifier for the conversation
+    /// </summary>
+    public required Guid Id { get; set; }
+
+    /// <summary>
+    /// The mode of this conversation
+    /// </summary>
+    public required ConversationMode Mode { get; set; }
+
+    /// <summary>
+    /// Current state of the conversation
+    /// </summary>
+    public required ConversationState State { get; set; }
+
+    /// <summary>
+    /// When this conversation was created
+    /// </summary>
+    public required DateTimeOffset CreatedAt { get; set; }
+
+    /// <summary>
+    /// User who created this conversation
+    /// </summary>
+    public UserRef? CreatedBy { get; set; }
+
+    /// <summary>
+    /// Timestamp of the first user message (used for display name)
+    /// </summary>
+    public DateTimeOffset? FirstUserMessageAt { get; set; }
+
+    /// <summary>
+    /// Text of the first user message (truncated for display)
+    /// </summary>
+    public string? FirstUserMessageText { get; set; }
+}
+
+/// <summary>
 /// Response after sending a message
 /// </summary>
 public class SendMessageResponse

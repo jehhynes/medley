@@ -105,7 +105,7 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount, inject } from 'vue';
 import { articlesClient } from '@/utils/apiClients';
 import { htmlDiff } from '@/utils/htmlDiff';
-import type { ArticleVersionsStore } from '../stores/useArticleVersionsStore';
+import type { ArticleVersionsStore } from '../stores/versionStore';
 import type { ArticleVersionDto, ArticleVersionComparisonDto, VersionType } from '@/types/api-client';
 
 // Declare global types
