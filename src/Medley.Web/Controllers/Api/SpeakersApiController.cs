@@ -80,26 +80,25 @@ public class SpeakersApiController : ControllerBase
     public async Task<ActionResult<SpeakerDetailDto>> GetById(Guid id)
     {
         var speaker = await _speakerRepository.Query()
-            .Include(s => s.Sources)
-            .FirstOrDefaultAsync(s => s.Id == id);
+            .Where(s => s.Id == id)
+            .Select(s => new SpeakerDetailDto
+            {
+                Id = s.Id,
+                Name = s.Name,
+                Email = s.Email,
+                IsInternal = s.IsInternal,
+                TrustLevel = s.TrustLevel,
+                SourceCount = s.Sources.Count,
+                CreatedAt = s.CreatedAt
+            })
+            .FirstOrDefaultAsync();
 
         if (speaker == null)
         {
             return NotFound(new { message = "Speaker not found" });
         }
 
-        var dto = new SpeakerDetailDto
-        {
-            Id = speaker.Id,
-            Name = speaker.Name,
-            Email = speaker.Email,
-            IsInternal = speaker.IsInternal,
-            TrustLevel = speaker.TrustLevel,
-            SourceCount = speaker.Sources.Count,
-            CreatedAt = speaker.CreatedAt
-        };
-
-        return Ok(dto);
+        return Ok(speaker);
     }
 
     /// <summary>
@@ -116,7 +115,6 @@ public class SpeakersApiController : ControllerBase
         try
         {
             var speaker = await _speakerRepository.Query()
-                .Include(s => s.Sources)
                 .FirstOrDefaultAsync(s => s.Id == id);
 
             if (speaker == null)
@@ -133,16 +131,20 @@ public class SpeakersApiController : ControllerBase
             _logger.LogInformation("Updated speaker {SpeakerId}: IsInternal={IsInternal}, TrustLevel={TrustLevel}",
                 id, request.IsInternal, request.TrustLevel);
 
-            var dto = new SpeakerDetailDto
-            {
-                Id = speaker.Id,
-                Name = speaker.Name,
-                Email = speaker.Email,
-                IsInternal = speaker.IsInternal,
-                TrustLevel = speaker.TrustLevel,
-                SourceCount = speaker.Sources.Count,
-                CreatedAt = speaker.CreatedAt
-            };
+            // Fetch the updated data with source count
+            var dto = await _speakerRepository.Query()
+                .Where(s => s.Id == id)
+                .Select(s => new SpeakerDetailDto
+                {
+                    Id = s.Id,
+                    Name = s.Name,
+                    Email = s.Email,
+                    IsInternal = s.IsInternal,
+                    TrustLevel = s.TrustLevel,
+                    SourceCount = s.Sources.Count,
+                    CreatedAt = s.CreatedAt
+                })
+                .FirstAsync();
 
             return Ok(dto);
         }
