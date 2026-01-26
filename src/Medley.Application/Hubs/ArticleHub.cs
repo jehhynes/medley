@@ -15,6 +15,7 @@ namespace Medley.Application.Hubs;
 /// - ChatMessageComplete: Sent when the AI response is complete and saved to database
 /// - ChatError: Sent when an error occurs during chat processing
 /// - PlanGenerated: Sent when an improvement plan is created
+/// - PlanUpdated: Sent when fragments are added to an existing plan
 /// </summary>
 [Authorize]
 public class ArticleHub : Hub<IArticleClient>

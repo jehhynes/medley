@@ -1,3 +1,5 @@
+using Medley.Domain.Enums;
+
 namespace Medley.Application.Models.DTOs.Llm;
 
 /// <summary>
@@ -9,7 +11,7 @@ public class FragmentData
     public required string Title { get; set; }
     public string? Summary { get; set; }
     public string? Category { get; set; }
-    public string? Confidence { get; set; }
+    public ConfidenceLevel? Confidence { get; set; }
     public string? ConfidenceComment { get; set; }
     public SourceData? Source { get; set; }
 }
@@ -33,7 +35,7 @@ public class PlanFragmentData
     public string? Category { get; set; }
     public required string Content { get; set; }
     public string? Instructions { get; set; }
-    public string? Confidence { get; set; }
+    public ConfidenceLevel? Confidence { get; set; }
     public SourceData? Source { get; set; }
 }
 

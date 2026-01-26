@@ -50,6 +50,13 @@ export interface PlanGeneratedPayload {
   timestamp: string;
 }
 
+export interface PlanUpdatedPayload {
+  articleId: string;
+  planId: string;
+  fragmentsAdded: number;
+  timestamp: string;
+}
+
 export interface ChatTurnStartedPayload {
   conversationId: string;
   articleId: string;
@@ -140,6 +147,7 @@ export interface ArticleHubServerMethods {
   ArticleAssignmentChanged: (payload: ArticleAssignmentChangedPayload) => void;
   VersionCreated: (payload: VersionCreatedPayload) => void;
   PlanGenerated: (payload: PlanGeneratedPayload) => void;
+  PlanUpdated: (payload: PlanUpdatedPayload) => void;
   ChatTurnStarted: (payload: ChatTurnStartedPayload) => void;
   ChatTurnComplete: (payload: ChatTurnCompletePayload) => void;
   ChatMessageStreaming: (payload: ChatMessageStreamingPayload) => void;

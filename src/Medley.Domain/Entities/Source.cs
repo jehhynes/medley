@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.EntityFrameworkCore;
 using Medley.Domain.Enums;
 
 namespace Medley.Domain.Entities;
@@ -6,6 +7,7 @@ namespace Medley.Domain.Entities;
 /// <summary>
 /// A concrete data source within an integration (e.g., a repo, calendar, meeting)
 /// </summary>
+[Index(nameof(PrimarySpeakerId))]
 public class Source : BusinessEntity
 {
     public required SourceType Type { get; set; }

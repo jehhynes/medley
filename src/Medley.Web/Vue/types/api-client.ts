@@ -2929,7 +2929,7 @@ export interface FragmentInPlanDto {
     category?: string;
     categoryIcon?: string | null;
     content?: string;
-    confidence?: string | null;
+    confidence?: ConfidenceLevel | null;
     confidenceComment?: string | null;
     source?: SourceInPlanDto | null;
 }

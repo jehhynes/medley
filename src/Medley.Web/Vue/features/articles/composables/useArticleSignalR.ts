@@ -61,6 +61,7 @@ export interface UseArticleSignalROptions {
   removeArticleFromTree: (articleId: string) => void;
   moveArticleInTree: (articleId: string, oldParentId: string | null, newParentId: string | null) => void;
   openPlanTab?: (planId: string) => void;
+  reloadPlan?: (planId: string) => void;
   openVersionTab?: (version: { id: string; versionNumber: number; createdAt: string }) => void;
   onVersionCreated?: (version: any) => Promise<void>;
   onVersionUpdated?: (version: any) => void;
@@ -260,6 +261,28 @@ export function useArticleSignalR(options: UseArticleSignalROptions) {
         options.openPlanTab(data.planId);
       } else {
         console.log('Plan generated for different article, not opening tab');
+      }
+    });
+
+    // Plan updated event
+    connection.value.on('PlanUpdated', (data) => {
+      const selectedId = normalizeId(options.selectedArticleId.value);
+      const eventArticleId = normalizeId(data.articleId);
+
+      console.log('PlanUpdated event received:', {
+        eventArticleId,
+        selectedId,
+        planId: data.planId,
+        fragmentsAdded: data.fragmentsAdded,
+        matches: selectedId === eventArticleId
+      });
+
+      // Reload plan when fragments are added for the currently selected article
+      if (selectedId === eventArticleId && options.reloadPlan) {
+        console.log('Reloading plan after fragments added:', data.planId);
+        options.reloadPlan(data.planId);
+      } else {
+        console.log('Plan updated for different article, not reloading');
       }
     });
 

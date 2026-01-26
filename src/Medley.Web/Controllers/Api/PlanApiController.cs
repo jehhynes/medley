@@ -423,7 +423,7 @@ public class PlanApiController : ControllerBase
                         Category = pf.Fragment.FragmentCategory.Name,
                         CategoryIcon = pf.Fragment.FragmentCategory.Icon,
                         Content = pf.Fragment.Content,
-                        Confidence = pf.Fragment.Confidence?.ToString(),
+                        Confidence = pf.Fragment.Confidence,
                         ConfidenceComment = pf.Fragment.ConfidenceComment,
                         Source = pf.Fragment.Source != null ? new SourceInPlanDto
                         {

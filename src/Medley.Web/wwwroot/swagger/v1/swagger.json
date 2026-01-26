@@ -4154,8 +4154,12 @@
             "type": "string"
           },
           "confidence": {
-            "type": "string",
-            "nullable": true
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ConfidenceLevel"
+              }
+            ]
           },
           "confidenceComment": {
             "type": "string",

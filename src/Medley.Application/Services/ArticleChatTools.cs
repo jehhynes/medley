@@ -203,7 +203,7 @@ public class ArticleChatTools
                     Summary = fragment.Summary,
                     Category = fragment.FragmentCategory.Name,
                     SimilarityScore = result.Similarity,
-                    Confidence = fragment.Confidence?.ToString(),
+                    Confidence = fragment.Confidence,
                     ConfidenceComment = fragment.ConfidenceComment,
                     Source = sourceData
                 });
@@ -357,7 +357,7 @@ public class ArticleChatTools
                     Summary = fragment.Summary,
                     Category = fragment.FragmentCategory.Name,
                     SimilarityScore = result.Similarity,
-                    Confidence = fragment.Confidence?.ToString(),
+                    Confidence = fragment.Confidence,
                     ConfidenceComment = fragment.ConfidenceComment,
                     Source = sourceData
                 });
@@ -430,6 +430,7 @@ public class ArticleChatTools
             _logger.LogInformation("Getting fragment content for fragment: {FragmentId}", fragmentId);
 
             var fragment = await _fragmentRepository.Query()
+                .Include(f => f.FragmentCategory)
                 .Include(f => f.Source)
                     .ThenInclude(s => s!.Tags)
                         .ThenInclude(t => t.TagType)
@@ -475,7 +476,7 @@ public class ArticleChatTools
                     Summary = fragment.Summary,
                     Category = fragment.FragmentCategory.Name,
                     Content = fragment.Content,
-                    Confidence = fragment.Confidence?.ToString(),
+                    Confidence = fragment.Confidence,
                     ConfidenceComment = fragment.ConfidenceComment,
                     Source = sourceData
                 }
@@ -947,6 +948,164 @@ public class ArticleChatTools
             {
                 Success = false,
                 Error = $"Error asking Cursor question: {ex.Message}"
+            };
+            return JsonSerializer.Serialize(errorResponse, _jsonOptions);
+        }
+    }
+
+    /// <summary>
+    /// Add fragments to an existing plan
+    /// </summary>
+    [Description("Add additional fragment recommendations to an existing draft plan. " +
+        "Use this to incrementally build a plan by adding more fragments without creating a new plan version.")]
+    public virtual async Task<string> AddFragmentsToPlanAsync(
+        [Description("Request containing the plan ID and fragment recommendations to add")] AddFragmentsToPlanRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogInformation("Adding fragments to plan: {PlanId} for article: {ArticleId}", 
+                request.PlanId, _articleId);
+
+            // Validate request
+            if (request.Recommendations == null || request.Recommendations.Length == 0)
+            {
+                var errorResponse = new AddFragmentsToPlanResponse
+                {
+                    Success = false,
+                    Error = "At least one fragment recommendation is required"
+                };
+                return JsonSerializer.Serialize(errorResponse, _jsonOptions);
+            }
+
+            // Load the plan with existing fragments
+            var plan = await _planRepository.Query()
+                .Include(p => p.PlanFragments)
+                .Where(p => p.Id == request.PlanId)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (plan == null)
+            {
+                _logger.LogWarning("Plan not found: {PlanId}", request.PlanId);
+                var errorResponse = new AddFragmentsToPlanResponse
+                {
+                    Success = false,
+                    Error = "Plan not found"
+                };
+                return JsonSerializer.Serialize(errorResponse, _jsonOptions);
+            }
+
+            // Validate plan belongs to the current article
+            if (plan.ArticleId != _articleId)
+            {
+                _logger.LogWarning("Plan {PlanId} does not belong to article {ArticleId}", 
+                    request.PlanId, _articleId);
+                var errorResponse = new AddFragmentsToPlanResponse
+                {
+                    Success = false,
+                    Error = "Plan does not belong to this article"
+                };
+                return JsonSerializer.Serialize(errorResponse, _jsonOptions);
+            }
+
+            // Validate plan is in Draft status
+            if (plan.Status != PlanStatus.Draft)
+            {
+                _logger.LogWarning("Plan {PlanId} is not in Draft status (current: {Status})", 
+                    request.PlanId, plan.Status);
+                var errorResponse = new AddFragmentsToPlanResponse
+                {
+                    Success = false,
+                    Error = $"Cannot add fragments to a plan with status: {plan.Status}. Only Draft plans can be modified."
+                };
+                return JsonSerializer.Serialize(errorResponse, _jsonOptions);
+            }
+
+            // Get existing fragment IDs to prevent duplicates
+            var existingFragmentIds = plan.PlanFragments
+                .Select(pf => pf.FragmentId)
+                .ToHashSet();
+
+            int addedCount = 0;
+            int skippedCount = 0;
+
+            // Process each recommendation
+            foreach (var rec in request.Recommendations)
+            {
+                // Check if fragment already exists in plan
+                if (existingFragmentIds.Contains(rec.FragmentId))
+                {
+                    _logger.LogDebug("Fragment {FragmentId} already exists in plan {PlanId}, skipping", 
+                        rec.FragmentId, request.PlanId);
+                    skippedCount++;
+                    continue;
+                }
+
+                // Load fragment to validate it exists
+                var fragment = await _fragmentRepository.GetByIdAsync(rec.FragmentId, cancellationToken);
+                if (fragment == null)
+                {
+                    _logger.LogWarning("Fragment {FragmentId} not found, skipping", rec.FragmentId);
+                    skippedCount++;
+                    continue;
+                }
+
+                // Create plan fragment
+                var planFragment = new PlanFragment
+                {
+                    Plan = plan,
+                    Fragment = fragment,
+                    SimilarityScore = rec.SimilarityScore,
+                    Include = rec.Include,
+                    Reasoning = rec.Reasoning,
+                    Instructions = rec.Instructions
+                };
+
+                await _planFragmentRepository.AddAsync(planFragment);
+                addedCount++;
+                
+                _logger.LogDebug("Added fragment {FragmentId} to plan {PlanId}", 
+                    rec.FragmentId, request.PlanId);
+            }
+
+            // Register post-commit action to send SignalR notification
+            if (addedCount > 0)
+            {
+                var payload = new PlanUpdatedPayload
+                {
+                    ArticleId = _articleId,
+                    PlanId = request.PlanId,
+                    FragmentsAdded = addedCount,
+                    Timestamp = DateTimeOffset.UtcNow
+                };
+                _unitOfWork.RegisterPostCommitAction(async () =>
+                {
+                    await _hubContext.Clients.Group($"Article_{_articleId}")
+                        .PlanUpdated(payload);
+                });
+            }
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("Added {AddedCount} fragments to plan {PlanId}, skipped {SkippedCount}", 
+                addedCount, request.PlanId, skippedCount);
+
+            var response = new AddFragmentsToPlanResponse
+            {
+                Success = true,
+                AddedCount = addedCount,
+                SkippedCount = skippedCount,
+                Message = $"Added {addedCount} fragment(s) to plan. {skippedCount} fragment(s) skipped (duplicates or not found)."
+            };
+            return JsonSerializer.Serialize(response, _jsonOptions);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error adding fragments to plan: {PlanId}", request.PlanId);
+            var errorResponse = new AddFragmentsToPlanResponse
+            {
+                Success = false,
+                Error = $"Error adding fragments to plan: {ex.Message}"
             };
             return JsonSerializer.Serialize(errorResponse, _jsonOptions);
         }

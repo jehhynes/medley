@@ -156,3 +156,36 @@ public class AskQuestionWithCursorResponse
     public string? Error { get; set; }
     public string? Response { get; set; }
 }
+
+/// <summary>
+/// Request for adding fragments to an existing plan
+/// </summary>
+public class AddFragmentsToPlanRequest
+{
+    /// <summary>
+    /// The unique identifier of the plan to add fragments to
+    /// </summary>
+    [Description("The unique identifier of the plan to add fragments to")]
+    [Required]
+    public Guid PlanId { get; set; }
+
+    /// <summary>
+    /// Array of fragment recommendations to add
+    /// </summary>
+    [Description("Array of fragment recommendations to add")]
+    [Required]
+    [MinLength(1)]
+    public required PlanFragmentRecommendation[] Recommendations { get; set; }
+}
+
+/// <summary>
+/// Response for AddFragmentsToPlanAsync
+/// </summary>
+public class AddFragmentsToPlanResponse
+{
+    public required bool Success { get; set; }
+    public string? Error { get; set; }
+    public int AddedCount { get; set; }
+    public int SkippedCount { get; set; }
+    public string? Message { get; set; }
+}

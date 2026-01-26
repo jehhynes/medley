@@ -172,6 +172,7 @@
             v-show="contentTabs.activeTabId === 'plan'"
             class="content-tab-pane">
             <plan-viewer
+              :key="contentTabs.planData.key"
               :plan-id="contentTabs.planData.planId"
               :article-id="articles.selectedId"
               @conversation-created="handlePlanConversationCreated"
@@ -500,7 +501,7 @@ interface EditorState {
 interface ContentTabsState {
   activeTabId: string;
   versionData: { versionId: string; versionNumber: number } | null;
-  planData: { planId: string | null } | null;
+  planData: { planId: string | null; key: number } | null;
   fragmentsOpen: boolean;
 }
 
@@ -1063,8 +1064,16 @@ const closeContentTab = (tabId: string): void => {
 };
 
 const openPlanTab = (planId: string | null): void => {
-  contentTabs.planData = { planId };
+  contentTabs.planData = { planId, key: Date.now() };
   contentTabs.activeTabId = 'plan';
+};
+
+const reloadPlan = (planId: string): void => {
+  // If the plan tab is already open with this plan, trigger a reload by updating the key
+  if (contentTabs.activeTabId === 'plan' && contentTabs.planData?.planId === planId) {
+    // Create a new object reference with a new key to trigger reactivity and force reload
+    contentTabs.planData = { planId, key: Date.now() };
+  }
 };
 
 const openFragmentsTab = (): void => {
@@ -1270,6 +1279,7 @@ onMounted(async () => {
     removeArticleFromTree,
     moveArticleInTree,
     openPlanTab,
+    reloadPlan,
     openVersionTab,
     onVersionCreated: (version) => versionsInternal.handleVersionCreated(version),
     onVersionUpdated: (version) => versionsInternal.handleVersionUpdated(version),

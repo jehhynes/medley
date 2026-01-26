@@ -218,7 +218,7 @@ public class SystemContextManager
                             Category = pf.Fragment.FragmentCategory.Name,
                             Content = pf.Fragment.Content,
                             Instructions = pf.Instructions,
-                            Confidence = pf.Fragment.Confidence?.ToString(),
+                            Confidence = pf.Fragment.Confidence,
                             Source = pf.Fragment.Source != null
                                 ? new SourceData
                                 {

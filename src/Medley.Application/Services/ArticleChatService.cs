@@ -592,6 +592,7 @@ public class ArticleChatService : IArticleChatService
         if (mode == ConversationMode.Plan)
         {
             tools.Add(AIFunctionFactory.Create(plugins.CreatePlanAsync));
+            tools.Add(AIFunctionFactory.Create(plugins.AddFragmentsToPlanAsync));
         }
 
         if (mode == ConversationMode.Agent)

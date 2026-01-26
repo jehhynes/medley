@@ -81,6 +81,17 @@ public record PlanGeneratedPayload
 }
 
 /// <summary>
+/// Payload for PlanUpdated event
+/// </summary>
+public record PlanUpdatedPayload
+{
+    public required Guid ArticleId { get; init; }
+    public required Guid PlanId { get; init; }
+    public required int FragmentsAdded { get; init; }
+    public required DateTimeOffset Timestamp { get; init; }
+}
+
+/// <summary>
 /// Payload for ChatTurnStarted event
 /// </summary>
 public record ChatTurnStartedPayload

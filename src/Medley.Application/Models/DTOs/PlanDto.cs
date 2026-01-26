@@ -148,7 +148,7 @@ public class FragmentInPlanDto
     /// <summary>
     /// Confidence level
     /// </summary>
-    public string? Confidence { get; set; }
+    public ConfidenceLevel? Confidence { get; set; }
 
     /// <summary>
     /// Confidence comment
