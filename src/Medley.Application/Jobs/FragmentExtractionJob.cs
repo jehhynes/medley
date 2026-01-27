@@ -40,6 +40,7 @@ public class FragmentExtractionJob : BaseHangfireJob<FragmentExtractionJob>
 
     /// <summary>
     /// Processes all sources with ExtractionStatus.NotStarted
+    /// Runs for a maximum of 10 minutes, then requeues itself if more work remains
     /// </summary>
     [AutomaticRetry(Attempts = 0)]
     [Mission]
@@ -47,6 +48,8 @@ public class FragmentExtractionJob : BaseHangfireJob<FragmentExtractionJob>
     {
         LogInfo(context, "Starting ProcessAllPendingSourcesAsync - processing all sources with NotStarted status");
 
+        var startTime = DateTime.UtcNow;
+        var maxRuntime = TimeSpan.FromMinutes(10);
         int processedCount = 0;
         Guid? currentSourceId = null;
 
@@ -54,6 +57,26 @@ public class FragmentExtractionJob : BaseHangfireJob<FragmentExtractionJob>
         {
             while (!cancellationToken.IsCancellationRequested)
             {
+                // Check if we've exceeded the maximum runtime
+                var elapsed = DateTime.UtcNow - startTime;
+                if (elapsed >= maxRuntime)
+                {
+                    LogInfo(context, $"Maximum runtime of {maxRuntime.TotalMinutes} minutes reached after processing {processedCount} sources");
+                    
+                    // Check if there are more sources to process
+                    var hasMoreSources = await _sourceRepository.Query()
+                        .AnyAsync(s => s.ExtractionStatus == ExtractionStatus.NotStarted, cancellationToken);
+                    
+                    if (hasMoreSources)
+                    {
+                        LogInfo(context, "More sources remain - requeuing ProcessAllPendingSourcesAsync to continue");
+                        _backgroundJobClient.Enqueue<FragmentExtractionJob>(
+                            j => j.ProcessAllPendingSourcesAsync(default!, default));
+                    }
+                    
+                    break;
+                }
+
                 // Find next source with NotStarted status
                 var nextSourceId = await _sourceRepository.Query()
                     .Where(s => s.ExtractionStatus == ExtractionStatus.NotStarted)
@@ -69,7 +92,7 @@ public class FragmentExtractionJob : BaseHangfireJob<FragmentExtractionJob>
 
                 currentSourceId = nextSourceId;
                 processedCount++;
-                LogInfo(context, $"Processing source {nextSourceId} ({processedCount} of pending sources)");
+                LogInfo(context, $"Processing source {nextSourceId} ({processedCount} sources processed, {elapsed.TotalMinutes:F1} minutes elapsed)");
 
                 // Process this source using the existing logic - let exceptions propagate to halt the batch
                 await ExecuteAsync(nextSourceId, context, cancellationToken);
