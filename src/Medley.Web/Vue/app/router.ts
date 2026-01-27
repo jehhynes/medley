@@ -76,8 +76,7 @@ const routes: RouteRecordRaw[] = [
     name: 'token-usage',
     component: TokenUsage,
     meta: { 
-        title: 'Token Usage',
-        hasLeftSidebar: false
+        title: 'Token Usage'
     } as RouteMeta
   }
 ];

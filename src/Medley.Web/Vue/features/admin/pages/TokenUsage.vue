@@ -4,6 +4,11 @@
     :is-authenticated="userIsAuthenticated"
   />
 
+  <admin-sidebar 
+    breadcrumb-title="Token Usage"
+    :is-admin="userIsAdmin"
+  />
+
   <div class="main-content">
     <div class="token-usage-container">
       <div class="token-usage-header">
@@ -128,7 +133,6 @@
               <div class="chart-container">
                 <canvas ref="allTimeByTypeChart"></canvas>
               </div>
-              <div ref="allTimeByTypeLegend" class="mt-3 text-center"></div>
             </div>
           </div>
           <div class="col-lg-6">
@@ -137,7 +141,6 @@
               <div class="chart-container">
                 <canvas ref="last30DaysByTypeChart"></canvas>
               </div>
-              <div ref="last30DaysByTypeLegend" class="mt-3 text-center"></div>
             </div>
           </div>
         </div>
@@ -151,7 +154,6 @@
               <div class="chart-container">
                 <canvas ref="allTimeByServiceChart"></canvas>
               </div>
-              <div ref="allTimeByServiceLegend" class="mt-3 text-center"></div>
             </div>
           </div>
           <div class="col-lg-6">
@@ -160,7 +162,6 @@
               <div class="chart-container">
                 <canvas ref="last30DaysByServiceChart"></canvas>
               </div>
-              <div ref="last30DaysByServiceLegend" class="mt-3 text-center"></div>
             </div>
           </div>
         </div>
@@ -182,6 +183,7 @@ import { Chart, registerables } from 'chart.js';
 import { tokenUsageClient } from '@/utils/apiClients';
 import type { TokenUsageMetrics, CostEstimateMetrics } from '@/types/api-client';
 import CostParametersModal from '../components/CostParametersModal.vue';
+import AdminSidebar from '@/components/AdminSidebar.vue';
 
 // Register Chart.js components
 Chart.register(...registerables);
@@ -208,6 +210,7 @@ const showCostModal = ref<boolean>(false);
 
 const userDisplayName = ref<string>(window.MedleyUser?.displayName || 'User');
 const userIsAuthenticated = ref<boolean>(window.MedleyUser?.isAuthenticated || false);
+const userIsAdmin = ref<boolean>(true); // Token Usage page requires Admin role
 
 // Refs for chart canvases
 const dailyUsageChart = ref<HTMLCanvasElement | null>(null);
@@ -216,10 +219,6 @@ const allTimeByTypeChart = ref<HTMLCanvasElement | null>(null);
 const last30DaysByTypeChart = ref<HTMLCanvasElement | null>(null);
 const allTimeByServiceChart = ref<HTMLCanvasElement | null>(null);
 const last30DaysByServiceChart = ref<HTMLCanvasElement | null>(null);
-const allTimeByTypeLegend = ref<HTMLDivElement | null>(null);
-const last30DaysByTypeLegend = ref<HTMLDivElement | null>(null);
-const allTimeByServiceLegend = ref<HTMLDivElement | null>(null);
-const last30DaysByServiceLegend = ref<HTMLDivElement | null>(null);
 
 // Methods
 const loadMetrics = async (): Promise<void> => {
@@ -279,43 +278,22 @@ const initializeCharts = (): void => {
     }
   };
 
-  const generateHtmlLegend = (chart: Chart, container: HTMLDivElement | null): void => {
-    if (!container) return;
-
-    container.innerHTML = '';
-
-    const data = chart.data;
-    if (!data.labels || !data.labels.length || !data.datasets.length) return;
-
-    const dataset = data.datasets[0];
-    if (!dataset) return;
-
-    data.labels.forEach((label, i) => {
-      const hidden = !chart.getDataVisibility(i);
-
-      const badge = document.createElement('span');
-      badge.className = 'badge rounded-pill me-2 mb-2 p-2';
-      badge.style.backgroundColor = (dataset.backgroundColor as string[])[i] || '#ccc';
-      badge.style.color = '#fff';
-      badge.style.cursor = 'pointer';
-      badge.style.fontSize = '0.9rem';
-      badge.style.transition = 'all 0.2s';
-
-      if (hidden) {
-        badge.style.textDecoration = 'line-through';
-        badge.style.opacity = '0.5';
+  const pieChartOptions: any = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: true,
+        position: 'bottom',
+        labels: {
+          padding: 15,
+          usePointStyle: true,
+          font: {
+            size: 12
+          }
+        }
       }
-
-      badge.onclick = () => {
-        chart.toggleDataVisibility(i);
-        chart.update();
-        generateHtmlLegend(chart, container);
-      };
-
-      badge.innerHTML = `${label || ''}`;
-
-      container.appendChild(badge);
-    });
+    }
   };
 
   // Daily Usage Chart (Stacked Bar)
@@ -469,9 +447,9 @@ const initializeCharts = (): void => {
         }]
       },
       options: {
-        ...defaultOptions,
+        ...pieChartOptions,
         plugins: {
-          ...defaultOptions.plugins,
+          ...pieChartOptions.plugins,
           tooltip: {
             callbacks: {
               label: function(context) {
@@ -487,7 +465,6 @@ const initializeCharts = (): void => {
         }
       }
     });
-    generateHtmlLegend(charts.value.allTimeByType, allTimeByTypeLegend.value);
   }
 
   // Last 30 Days by Type Chart
@@ -509,9 +486,9 @@ const initializeCharts = (): void => {
         }]
       },
       options: {
-        ...defaultOptions,
+        ...pieChartOptions,
         plugins: {
-          ...defaultOptions.plugins,
+          ...pieChartOptions.plugins,
           tooltip: {
             callbacks: {
               label: function(context) {
@@ -527,7 +504,6 @@ const initializeCharts = (): void => {
         }
       }
     });
-    generateHtmlLegend(charts.value.last30DaysByType, last30DaysByTypeLegend.value);
   }
 
   // All Time by Service Chart
@@ -543,9 +519,9 @@ const initializeCharts = (): void => {
         }]
       },
       options: {
-        ...defaultOptions,
+        ...pieChartOptions,
         plugins: {
-          ...defaultOptions.plugins,
+          ...pieChartOptions.plugins,
           tooltip: {
             callbacks: {
               label: function(context) {
@@ -561,7 +537,6 @@ const initializeCharts = (): void => {
         }
       }
     });
-    generateHtmlLegend(charts.value.allTimeByService, allTimeByServiceLegend.value);
   }
 
   // Last 30 Days by Service Chart
@@ -577,9 +552,9 @@ const initializeCharts = (): void => {
         }]
       },
       options: {
-        ...defaultOptions,
+        ...pieChartOptions,
         plugins: {
-          ...defaultOptions.plugins,
+          ...pieChartOptions.plugins,
           tooltip: {
             callbacks: {
               label: function(context) {
@@ -595,7 +570,6 @@ const initializeCharts = (): void => {
         }
       }
     });
-    generateHtmlLegend(charts.value.last30DaysByService, last30DaysByServiceLegend.value);
   }
 };
 
@@ -624,7 +598,8 @@ onBeforeUnmount(() => {
 <style scoped>
 .token-usage-container {
   padding: 2rem;
-  max-width: 1400px;
+  width: 1400px;
+  max-width: 100%;
   margin: 0 auto;
 }
 
