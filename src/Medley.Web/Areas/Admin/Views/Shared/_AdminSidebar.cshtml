@@ -11,6 +11,7 @@
     var isTagTypes = currentArea == "Admin" && currentController == "TagTypes";
     var isArticleTypes = currentArea == "Admin" && currentController == "ArticleTypes";
     var isFragmentCategories = currentArea == "Admin" && currentController == "FragmentCategories";
+    var isTokenUsage = currentArea == "Admin" && currentController == "TokenUsage";
 }
 
 <div class="sidebar-header">
@@ -108,6 +109,14 @@
                     <i class="list-item-icon bi bi-file-earmark-arrow-up"></i>
                     <div class="list-item-body">
                         <div class="list-item-title">Collector Import</div>
+                    </div>
+                </a>
+            </li>
+            <li class="list-item">
+                <a asp-area="Admin" asp-controller="TokenUsage" asp-action="Index" class="list-item-content @(isTokenUsage ? "active" : "")">
+                    <i class="list-item-icon bi bi-graph-up"></i>
+                    <div class="list-item-body">
+                        <div class="list-item-title">Token Usage</div>
                     </div>
                 </a>
             </li>

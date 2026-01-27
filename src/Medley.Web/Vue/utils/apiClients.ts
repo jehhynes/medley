@@ -7,7 +7,8 @@ import {
   SourcesApiClient,
   TagTypesApiClient,
   AiPromptApiClient,
-  SpeakersApiClient
+  SpeakersApiClient,
+  TokenUsageApiClient
 } from '@/types/api-client';
 
 export const apiClients = {
@@ -19,7 +20,8 @@ export const apiClients = {
   sources: new SourcesApiClient(),
   tagTypes: new TagTypesApiClient(),
   aiPrompts: new AiPromptApiClient(),
-  speakers: new SpeakersApiClient()
+  speakers: new SpeakersApiClient(),
+  tokenUsage: new TokenUsageApiClient()
 } as const;
 
 export const {
@@ -31,5 +33,6 @@ export const {
   sources: sourcesClient,
   tagTypes: tagTypesClient,
   aiPrompts: aiPromptsClient,
-  speakers: speakersClient
+  speakers: speakersClient,
+  tokenUsage: tokenUsageClient
 } = apiClients;

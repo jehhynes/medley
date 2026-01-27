@@ -14,6 +14,7 @@ const Fragments = () => import('../features/sources/pages/Fragments.vue');
 const Articles = () => import('../features/articles/pages/Articles.vue');
 const AiPrompts = () => import('../features/admin/pages/AiPrompts.vue');
 const Speakers = () => import('../features/admin/pages/Speakers.vue');
+const TokenUsage = () => import('../features/admin/pages/TokenUsage.vue');
 
 const routes: RouteRecordRaw[] = [
   {
@@ -69,6 +70,15 @@ const routes: RouteRecordRaw[] = [
         title: 'Speakers'
     } as RouteMeta,
     props: route => ({ id: route.query.id })
+  },
+  {
+    path: '/Admin/TokenUsage',
+    name: 'token-usage',
+    component: TokenUsage,
+    meta: { 
+        title: 'Token Usage',
+        hasLeftSidebar: false
+    } as RouteMeta
   }
 ];
 

@@ -2742,6 +2742,26 @@
           }
         }
       }
+    },
+    "/api/token-usage/metrics": {
+      "get": {
+        "tags": [
+          "TokenUsageApi"
+        ],
+        "operationId": "TokenUsageApi_GetMetrics",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenUsageMetrics"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -4695,6 +4715,75 @@
           "MarkInternalIfUnknown",
           "MarkExternalIfUnknown"
         ]
+      },
+      "TokenUsageMetrics": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "dailyUsage": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DailyTokenUsage"
+            }
+          },
+          "allTimeByType": {
+            "$ref": "#/components/schemas/TokensByType"
+          },
+          "last30DaysByType": {
+            "$ref": "#/components/schemas/TokensByType"
+          },
+          "allTimeByService": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MetricItem"
+            }
+          },
+          "last30DaysByService": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MetricItem"
+            }
+          }
+        }
+      },
+      "DailyTokenUsage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "inputTokens": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "outputTokens": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "embeddingTokens": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "TokensByType": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "inputTokens": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "outputTokens": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "embeddingTokens": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
       }
     }
   }
