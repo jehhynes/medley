@@ -127,7 +127,7 @@ public static class DependencyInjection
             // Default queue server for background processing
             services.AddHangfireServer(options =>
             {
-                options.WorkerCount = 4; //Environment.ProcessorCount * 2;
+                options.WorkerCount = 6; //Environment.ProcessorCount * 2;
                 options.Queues = new[] { "default" };
                 options.ServerName = "Background";
                 //options.ServerTimeout = TimeSpan.FromMinutes(4);
