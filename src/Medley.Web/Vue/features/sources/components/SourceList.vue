@@ -28,10 +28,10 @@
                 style="width: 1em; height: 1em;">
             <span class="visually-hidden">Extracting...</span>
           </span>
-          <i v-else-if="source.extractionStatus === 'Completed'" 
-             class="bi bi-check-lg text-success"></i>
+          <i v-else-if="source.extractionStatus === 'NotStarted'" 
+             class="bi bi-hourglass text-muted"></i>
           <i v-else-if="source.extractionStatus === 'Failed'" 
-             class="bi bi-x-square text-danger"></i>
+             class="bi bi-x-circle text-danger"></i>
         </span>
       </a>
     </li>

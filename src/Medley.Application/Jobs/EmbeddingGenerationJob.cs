@@ -52,7 +52,7 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
     [Mission]
     public async Task GenerateFragmentEmbeddings(PerformContext context, CancellationToken cancellationToken)
     {
-        await GenerateFragmentEmbeddings(context, cancellationToken);
+        await GenerateFragmentEmbeddings(context, cancellationToken, null, null);
     }
 
     /// <summary>
