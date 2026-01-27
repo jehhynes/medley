@@ -2534,6 +2534,183 @@ export class TokenUsageApiClient {
         }
         return Promise.resolve<TokenUsageMetrics>(null as any);
     }
+
+    getModels(): Promise<ModelInfo[]> {
+        let url_ = this.baseUrl + "/api/token-usage/models";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processGetModels(_response);
+        });
+    }
+
+    protected processGetModels(response: Response): Promise<ModelInfo[]> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ModelInfo[];
+            return result200;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<ModelInfo[]>(null as any);
+    }
+
+    getCostParameters(): Promise<ModelCostParameter[]> {
+        let url_ = this.baseUrl + "/api/token-usage/cost-parameters";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processGetCostParameters(_response);
+        });
+    }
+
+    protected processGetCostParameters(response: Response): Promise<ModelCostParameter[]> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ModelCostParameter[];
+            return result200;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<ModelCostParameter[]>(null as any);
+    }
+
+    saveCostParameter(request: SaveCostParameterRequest): Promise<ModelCostParameter> {
+        let url_ = this.baseUrl + "/api/token-usage/cost-parameters";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(request);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processSaveCostParameter(_response);
+        });
+    }
+
+    protected processSaveCostParameter(response: Response): Promise<ModelCostParameter> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ModelCostParameter;
+            return result200;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<ModelCostParameter>(null as any);
+    }
+
+    deleteCostParameter(id: string): Promise<FileResponse> {
+        let url_ = this.baseUrl + "/api/token-usage/cost-parameters/{id}";
+        if (id === undefined || id === null)
+            throw new globalThis.Error("The parameter 'id' must be defined.");
+        url_ = url_.replace("{id}", encodeURIComponent("" + id));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "DELETE",
+            headers: {
+                "Accept": "application/octet-stream"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processDeleteCostParameter(_response);
+        });
+    }
+
+    protected processDeleteCostParameter(response: Response): Promise<FileResponse> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200 || status === 206) {
+            const contentDisposition = response.headers ? response.headers.get("content-disposition") : undefined;
+            let fileNameMatch = contentDisposition ? /filename\*=(?:(\\?['"])(.*?)\1|(?:[^\s]+'.*?')?([^;\n]*))/g.exec(contentDisposition) : undefined;
+            let fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[3] || fileNameMatch[2] : undefined;
+            if (fileName) {
+                fileName = decodeURIComponent(fileName);
+            } else {
+                fileNameMatch = contentDisposition ? /filename="?([^"]*?)"?(;|$)/g.exec(contentDisposition) : undefined;
+                fileName = fileNameMatch && fileNameMatch.length > 1 ? fileNameMatch[1] : undefined;
+            }
+            return response.blob().then(blob => { return { fileName: fileName, data: blob, status: status, headers: _headers }; });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<FileResponse>(null as any);
+    }
+
+    getCostEstimates(): Promise<CostEstimateMetrics> {
+        let url_ = this.baseUrl + "/api/token-usage/cost-estimates";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processGetCostEstimates(_response);
+        });
+    }
+
+    protected processGetCostEstimates(response: Response): Promise<CostEstimateMetrics> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as CostEstimateMetrics;
+            return result200;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<CostEstimateMetrics>(null as any);
+    }
 }
 
 export interface AiPromptListDto {
@@ -3162,6 +3339,49 @@ export interface TokensByType {
     inputTokens?: number;
     outputTokens?: number;
     embeddingTokens?: number;
+}
+
+export interface ModelInfo {
+    modelName?: string;
+    hasInputTokens?: boolean;
+    hasOutputTokens?: boolean;
+    hasEmbeddingTokens?: boolean;
+}
+
+export interface ModelCostParameter {
+    id?: string;
+    modelName?: string;
+    inputCostPerMillion?: number | null;
+    outputCostPerMillion?: number | null;
+    embeddingCostPerMillion?: number | null;
+}
+
+export interface SaveCostParameterRequest {
+    modelName?: string;
+    inputCostPerMillion?: number | null;
+    outputCostPerMillion?: number | null;
+    embeddingCostPerMillion?: number | null;
+}
+
+export interface CostEstimateMetrics {
+    dailyCosts?: DailyCostEstimate[];
+    totalEstimatedCost?: number;
+    missingCostParameters?: string[];
+}
+
+export interface DailyCostEstimate {
+    date?: string;
+    inputCost?: number;
+    outputCost?: number;
+    embeddingCost?: number;
+    totalCost?: number;
+}
+
+export interface FileResponse {
+    data: Blob;
+    status: number;
+    fileName?: string;
+    headers?: { [name: string]: any };
 }
 
 export class ApiException extends Error {

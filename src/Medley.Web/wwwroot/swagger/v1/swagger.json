@@ -2762,6 +2762,135 @@
           }
         }
       }
+    },
+    "/api/token-usage/models": {
+      "get": {
+        "tags": [
+          "TokenUsageApi"
+        ],
+        "operationId": "TokenUsageApi_GetModels",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ModelInfo"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/token-usage/cost-parameters": {
+      "get": {
+        "tags": [
+          "TokenUsageApi"
+        ],
+        "operationId": "TokenUsageApi_GetCostParameters",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ModelCostParameter"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "TokenUsageApi"
+        ],
+        "operationId": "TokenUsageApi_SaveCostParameter",
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveCostParameterRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelCostParameter"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/token-usage/cost-parameters/{id}": {
+      "delete": {
+        "tags": [
+          "TokenUsageApi"
+        ],
+        "operationId": "TokenUsageApi_DeleteCostParameter",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/token-usage/cost-estimates": {
+      "get": {
+        "tags": [
+          "TokenUsageApi"
+        ],
+        "operationId": "TokenUsageApi_GetCostEstimates",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CostEstimateMetrics"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -4782,6 +4911,123 @@
           "embeddingTokens": {
             "type": "integer",
             "format": "int64"
+          }
+        }
+      },
+      "ModelInfo": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "modelName": {
+            "type": "string"
+          },
+          "hasInputTokens": {
+            "type": "boolean"
+          },
+          "hasOutputTokens": {
+            "type": "boolean"
+          },
+          "hasEmbeddingTokens": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ModelCostParameter": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "modelName": {
+            "type": "string"
+          },
+          "inputCostPerMillion": {
+            "type": "number",
+            "format": "decimal",
+            "nullable": true
+          },
+          "outputCostPerMillion": {
+            "type": "number",
+            "format": "decimal",
+            "nullable": true
+          },
+          "embeddingCostPerMillion": {
+            "type": "number",
+            "format": "decimal",
+            "nullable": true
+          }
+        }
+      },
+      "SaveCostParameterRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "modelName": {
+            "type": "string"
+          },
+          "inputCostPerMillion": {
+            "type": "number",
+            "format": "decimal",
+            "nullable": true
+          },
+          "outputCostPerMillion": {
+            "type": "number",
+            "format": "decimal",
+            "nullable": true
+          },
+          "embeddingCostPerMillion": {
+            "type": "number",
+            "format": "decimal",
+            "nullable": true
+          }
+        }
+      },
+      "CostEstimateMetrics": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "dailyCosts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DailyCostEstimate"
+            }
+          },
+          "totalEstimatedCost": {
+            "type": "number",
+            "format": "decimal"
+          },
+          "missingCostParameters": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "DailyCostEstimate": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "inputCost": {
+            "type": "number",
+            "format": "decimal"
+          },
+          "outputCost": {
+            "type": "number",
+            "format": "decimal"
+          },
+          "embeddingCost": {
+            "type": "number",
+            "format": "decimal"
+          },
+          "totalCost": {
+            "type": "number",
+            "format": "decimal"
           }
         }
       }

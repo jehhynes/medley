@@ -40,6 +40,7 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     public DbSet<Plan> Plans { get; set; }
     public DbSet<PlanFragment> PlanFragments { get; set; }
     public DbSet<AiTokenUsage> AiTokenUsages { get; set; }
+    public DbSet<AiModelCostParameter> AiModelCostParameters { get; set; }
     public DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
     public DbSet<Speaker> Speakers { get; set; }
 

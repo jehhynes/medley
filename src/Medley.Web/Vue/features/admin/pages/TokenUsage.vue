@@ -7,8 +7,19 @@
   <div class="main-content">
     <div class="token-usage-container">
       <div class="token-usage-header">
-        <h1><i class="bi bi-graph-up me-2"></i>Token Usage</h1>
-        <p>AI Token Consumption Analytics</p>
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <h1><i class="bi bi-graph-up me-2"></i>Token Usage</h1>
+            <p>AI Token Consumption Analytics</p>
+          </div>
+          <button 
+            type="button" 
+            class="btn btn-outline-primary"
+            @click="showCostModal = true"
+          >
+            <i class="bi bi-currency-dollar me-2"></i>Cost Parameters
+          </button>
+        </div>
       </div>
 
       <div v-if="loading" class="loading-spinner">
@@ -22,6 +33,21 @@
       </div>
 
       <template v-else>
+        <!-- Warning Banner for Missing Cost Parameters -->
+        <div 
+          v-if="costEstimates.missingCostParameters && costEstimates.missingCostParameters.length > 0" 
+          class="alert alert-warning d-flex align-items-center mb-4"
+        >
+          <i class="bi bi-exclamation-triangle-fill me-3 fs-4"></i>
+          <div>
+            <strong>Missing Cost Parameters</strong>
+            <p class="mb-0">
+              Cost estimates are incomplete. Configure cost parameters for: 
+              <span class="fw-bold">{{ costEstimates.missingCostParameters.join(', ') }}</span>
+            </p>
+          </div>
+        </div>
+
         <!-- Summary Cards -->
         <div class="row g-3 mb-4">
           <div class="col-md-4">
@@ -75,11 +101,29 @@
           </div>
         </div>
 
+        <!-- Daily Cost Chart -->
+        <h2 class="section-title"><i class="bi bi-currency-dollar me-2"></i>Estimated Costs (Last 30 Days)</h2>
+        <div class="row g-3 mb-4">
+          <div class="col-12">
+            <div class="chart-card delay-5">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="chart-card-title mb-0">Daily Cost Breakdown</h3>
+                <div class="total-cost-badge">
+                  Total: <strong>${{ costEstimates.totalEstimatedCost?.toFixed(2) || '0.00' }}</strong>
+                </div>
+              </div>
+              <div class="chart-container large">
+                <canvas ref="dailyCostChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Tokens by Type -->
         <h2 class="section-title"><i class="bi bi-pie-chart me-2"></i>Tokens by Type</h2>
         <div class="row g-3 mb-4">
           <div class="col-lg-6">
-            <div class="chart-card delay-5">
+            <div class="chart-card delay-6">
               <h3 class="chart-card-title">All Time</h3>
               <div class="chart-container">
                 <canvas ref="allTimeByTypeChart"></canvas>
@@ -88,7 +132,7 @@
             </div>
           </div>
           <div class="col-lg-6">
-            <div class="chart-card delay-6">
+            <div class="chart-card delay-7">
               <h3 class="chart-card-title">Last 30 Days</h3>
               <div class="chart-container">
                 <canvas ref="last30DaysByTypeChart"></canvas>
@@ -102,7 +146,7 @@
         <h2 class="section-title"><i class="bi bi-gear me-2"></i>Tokens by Service</h2>
         <div class="row g-3 mb-4">
           <div class="col-lg-6">
-            <div class="chart-card delay-7">
+            <div class="chart-card delay-8">
               <h3 class="chart-card-title">All Time</h3>
               <div class="chart-container">
                 <canvas ref="allTimeByServiceChart"></canvas>
@@ -111,7 +155,7 @@
             </div>
           </div>
           <div class="col-lg-6">
-            <div class="chart-card delay-8">
+            <div class="chart-card delay-9">
               <h3 class="chart-card-title">Last 30 Days</h3>
               <div class="chart-container">
                 <canvas ref="last30DaysByServiceChart"></canvas>
@@ -122,6 +166,13 @@
         </div>
       </template>
     </div>
+
+    <!-- Cost Parameters Modal -->
+    <CostParametersModal 
+      :visible="showCostModal" 
+      @update:visible="showCostModal = $event"
+      @saved="handleCostParametersSaved"
+    />
   </div>
 </template>
 
@@ -129,7 +180,8 @@
 import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { Chart, registerables } from 'chart.js';
 import { tokenUsageClient } from '@/utils/apiClients';
-import type { TokenUsageMetrics } from '@/types/api-client';
+import type { TokenUsageMetrics, CostEstimateMetrics } from '@/types/api-client';
+import CostParametersModal from '../components/CostParametersModal.vue';
 
 // Register Chart.js components
 Chart.register(...registerables);
@@ -143,15 +195,23 @@ const metrics = ref<TokenUsageMetrics>({
   last30DaysByService: []
 });
 
+const costEstimates = ref<CostEstimateMetrics>({
+  dailyCosts: [],
+  totalEstimatedCost: 0,
+  missingCostParameters: []
+});
+
 const loading = ref<boolean>(false);
 const error = ref<string | null>(null);
 const charts = ref<Record<string, Chart>>({});
+const showCostModal = ref<boolean>(false);
 
 const userDisplayName = ref<string>(window.MedleyUser?.displayName || 'User');
 const userIsAuthenticated = ref<boolean>(window.MedleyUser?.isAuthenticated || false);
 
 // Refs for chart canvases
 const dailyUsageChart = ref<HTMLCanvasElement | null>(null);
+const dailyCostChart = ref<HTMLCanvasElement | null>(null);
 const allTimeByTypeChart = ref<HTMLCanvasElement | null>(null);
 const last30DaysByTypeChart = ref<HTMLCanvasElement | null>(null);
 const allTimeByServiceChart = ref<HTMLCanvasElement | null>(null);
@@ -166,12 +226,30 @@ const loadMetrics = async (): Promise<void> => {
   loading.value = true;
   error.value = null;
   try {
-    metrics.value = await tokenUsageClient.getMetrics();
+    const [metricsData, costData] = await Promise.all([
+      tokenUsageClient.getMetrics(),
+      tokenUsageClient.getCostEstimates()
+    ]);
+    metrics.value = metricsData;
+    costEstimates.value = costData;
   } catch (err: any) {
     error.value = 'Failed to load token usage metrics: ' + err.message;
     console.error('Error loading metrics:', err);
   } finally {
     loading.value = false;
+  }
+};
+
+const handleCostParametersSaved = async (): Promise<void> => {
+  // Reload cost estimates after saving parameters
+  try {
+    costEstimates.value = await tokenUsageClient.getCostEstimates();
+    // Reinitialize charts to show updated cost data
+    destroyCharts();
+    await nextTick();
+    initializeCharts();
+  } catch (err: any) {
+    console.error('Error reloading cost estimates:', err);
   }
 };
 
@@ -298,6 +376,72 @@ const initializeCharts = (): void => {
             ticks: {
               callback: function(value) {
                 return (value as number).toLocaleString();
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // Daily Cost Chart (Stacked Bar)
+  if (costEstimates.value.dailyCosts && costEstimates.value.dailyCosts.length > 0 && dailyCostChart.value) {
+    charts.value.dailyCost = new Chart(dailyCostChart.value, {
+      type: 'bar',
+      data: {
+        labels: costEstimates.value.dailyCosts.map(d => d.date || ''),
+        datasets: [
+          {
+            label: 'Input Cost',
+            data: costEstimates.value.dailyCosts.map(d => d.inputCost || 0),
+            backgroundColor: colors.input,
+            borderRadius: 4
+          },
+          {
+            label: 'Output Cost',
+            data: costEstimates.value.dailyCosts.map(d => d.outputCost || 0),
+            backgroundColor: colors.output,
+            borderRadius: 4
+          },
+          {
+            label: 'Embedding Cost',
+            data: costEstimates.value.dailyCosts.map(d => d.embeddingCost || 0),
+            backgroundColor: colors.embedding,
+            borderRadius: 4
+          }
+        ]
+      },
+      options: {
+        ...defaultOptions,
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top'
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const label = context.dataset.label || '';
+                const value = context.parsed.y ?? 0;
+                return label + ': $' + value.toFixed(2);
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            stacked: true,
+            ticks: {
+              maxRotation: 45,
+              minRotation: 45
+            }
+          },
+          y: {
+            stacked: true,
+            beginAtZero: true,
+            ticks: {
+              callback: function(value) {
+                return '$' + (value as number).toFixed(2);
               }
             }
           }
@@ -503,6 +647,14 @@ onBeforeUnmount(() => {
   opacity: 0.7;
 }
 
+.total-cost-badge {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 1.1rem;
+}
+
 /* Metric Cards */
 .metric-card {
   background: var(--bs-body-bg);
@@ -529,6 +681,7 @@ onBeforeUnmount(() => {
 .metric-card.delay-6 { animation-delay: 0.6s; }
 .metric-card.delay-7 { animation-delay: 0.7s; }
 .metric-card.delay-8 { animation-delay: 0.8s; }
+.metric-card.delay-9 { animation-delay: 0.9s; }
 
 @keyframes fadeInUp {
   from {
