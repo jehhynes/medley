@@ -712,21 +712,21 @@ onMounted(async () => {
 
   signalRConnection.value = createAdminHubConnection();
 
-  signalRConnection.value.on('FragmentExtractionComplete', async (sourceId: string, fragmentCount: number, success: boolean) => {
-    const sourceIndex = sources.value.findIndex(s => s.id === sourceId);
+  signalRConnection.value.on('FragmentExtractionComplete', async (payload) => {
+    const sourceIndex = sources.value.findIndex(s => s.id === payload.sourceId);
     if (sourceIndex !== -1) {
       try {
-        const updatedSource = await sourcesClient.get(sourceId);
+        const updatedSource = await sourcesClient.get(payload.sourceId);
         sources.value.splice(sourceIndex, 1, updatedSource);
       } catch (err) {
         console.error('Failed to reload source in list:', err);
       }
     }
 
-    if (selectedSource.value && selectedSource.value.id === sourceId) {
+    if (selectedSource.value && selectedSource.value.id === payload.sourceId) {
       try {
-        selectedSource.value = await sourcesClient.get(sourceId);
-        if (success) {
+        selectedSource.value = await sourcesClient.get(payload.sourceId);
+        if (payload.success) {
           await loadFragments();
         }
       } catch (err) {
