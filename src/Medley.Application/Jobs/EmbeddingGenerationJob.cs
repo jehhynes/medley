@@ -49,12 +49,17 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
         _aiCallContext = aiCallContext;
     }
 
+    [Mission]
+    public async Task GenerateFragmentEmbeddings(PerformContext context, CancellationToken cancellationToken)
+    {
+        await GenerateFragmentEmbeddings(context, cancellationToken);
+    }
+
     /// <summary>
     /// Processes fragments that don't have embeddings and generates embeddings for them
     /// </summary>
     /// <param name="sourceId">Optional source ID to filter fragments by specific source</param>
     /// <param name="fragmentId">Optional fragment ID to process a specific fragment</param>
-    [Mission]
     public async Task GenerateFragmentEmbeddings(PerformContext context, CancellationToken cancellationToken, Guid? sourceId = null, Guid? fragmentId = null)
     {
         bool shouldRequeue = false;

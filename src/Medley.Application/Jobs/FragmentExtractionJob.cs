@@ -136,15 +136,15 @@ public class FragmentExtractionJob : BaseHangfireJob<FragmentExtractionJob>
             {
                 var currentJobId = context.BackgroundJob.Id;
                     
-                var scoringJobId = _backgroundJobClient.ContinueJobWith<FragmentConfidenceScoringJob>(
-                    currentJobId,
-                    j => j.ExecuteAsync(sourceId, default!, default));
+                var scoringJobId = _backgroundJobClient.Schedule<FragmentConfidenceScoringJob>(
+                    j => j.ExecuteAsync(sourceId, default!, default),
+                    TimeSpan.FromSeconds(10));
                 LogInfo(context, $"Enqueued confidence scoring job for source {sourceId}");
 
                 // Enqueue embedding generation job after confidence scoring completes
-                _backgroundJobClient.ContinueJobWith<EmbeddingGenerationJob>(
-                    scoringJobId,
-                    j => j.GenerateFragmentEmbeddings(default!, default, sourceId, null));
+                _backgroundJobClient.Schedule<EmbeddingGenerationJob>(
+                    j => j.GenerateFragmentEmbeddings(default!, default, sourceId, null),
+                    TimeSpan.FromSeconds(10));
                 LogInfo(context, $"Enqueued embedding generation job for source {sourceId}");
             }
 
