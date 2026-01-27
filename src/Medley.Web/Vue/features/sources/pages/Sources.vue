@@ -413,24 +413,15 @@ async function loadMoreItems(): Promise<SourceDto[]> {
 }
 
 const selectSource = async (source: SourceDto, replaceState = false): Promise<void> => {
-  selectedSourceId.value = source.id!;
-
+  // Update URL first
   if (replaceState) {
     await router.replace({ query: { id: source.id } });
   } else {
     await router.push({ query: { id: source.id } });
   }
 
-  try {
-    selectedSource.value = await sourcesClient.get(source.id!);
-    const sourceIndex = sources.value.findIndex(s => s.id === source.id);
-    if (sourceIndex !== -1 && selectedSource.value.tags) {
-      sources.value[sourceIndex].tags = selectedSource.value.tags;
-    }
-  } catch (err) {
-    console.error('Error loading source:', err);
-    selectedSource.value = null;
-  }
+  // Set the selected ID - this will trigger the route watcher which loads the full record
+  selectedSourceId.value = source.id!;
 };
 
 const onSearchInput = async (): Promise<void> => {
@@ -749,11 +740,18 @@ watch(() => route.query.id, async (newId) => {
     const source = findInList(sources.value, newId);
     if (source) {
       selectedSourceId.value = source.id!;
-      try {
-        selectedSource.value = await sourcesClient.get(source.id!);
-      } catch (err) {
-        console.error('Error loading source:', err);
+    }
+    // Always load the full record from API
+    try {
+      selectedSource.value = await sourcesClient.get(newId);
+      // Update tags in the list if available
+      const sourceIndex = sources.value.findIndex(s => s.id === newId);
+      if (sourceIndex !== -1 && selectedSource.value.tags) {
+        sources.value[sourceIndex].tags = selectedSource.value.tags;
       }
+    } catch (err) {
+      console.error('Error loading source:', err);
+      selectedSource.value = null;
     }
   } else {
     selectedSourceId.value = null;

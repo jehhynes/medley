@@ -157,20 +157,15 @@ const loadFragments = async (): Promise<void> => {
 };
 
 const selectFragment = async (fragment: FragmentDto, replaceState = false): Promise<void> => {
-  selectedFragmentId.value = fragment.id!;
-
+  // Update URL first
   if (replaceState) {
     await router.replace({ query: { id: fragment.id } });
   } else {
     await router.push({ query: { id: fragment.id } });
   }
 
-  try {
-    selectedFragment.value = await fragmentsClient.get(fragment.id!);
-  } catch (err) {
-    console.error('Error loading fragment:', err);
-    selectedFragment.value = null;
-  }
+  // Set the selected ID - this will trigger the route watcher which loads the full record
+  selectedFragmentId.value = fragment.id!;
 };
 
 const handleFragmentUpdated = async (updatedFragment: FragmentDto): Promise<void> => {
@@ -274,11 +269,13 @@ watch(() => route.query.id, async (newId) => {
     const fragment = findInList(fragments.value, newId);
     if (fragment) {
       selectedFragmentId.value = fragment.id!;
-      try {
-        selectedFragment.value = await fragmentsClient.get(fragment.id!);
-      } catch (err) {
-        console.error('Error loading fragment:', err);
-      }
+    }
+    // Always load the full record from API
+    try {
+      selectedFragment.value = await fragmentsClient.get(newId);
+    } catch (err) {
+      console.error('Error loading fragment:', err);
+      selectedFragment.value = null;
     }
   } else {
     selectedFragmentId.value = null;
