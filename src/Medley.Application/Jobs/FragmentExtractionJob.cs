@@ -41,50 +41,56 @@ public class FragmentExtractionJob : BaseHangfireJob<FragmentExtractionJob>
     /// <summary>
     /// Processes all sources with ExtractionStatus.NotStarted
     /// </summary>
+    [AutomaticRetry(Attempts = 0)]
     [Mission]
     public async Task ProcessAllPendingSourcesAsync(PerformContext context, CancellationToken cancellationToken)
     {
         LogInfo(context, "Starting ProcessAllPendingSourcesAsync - processing all sources with NotStarted status");
 
         int processedCount = 0;
-        int successCount = 0;
-        int failedCount = 0;
+        Guid? currentSourceId = null;
 
-        while (!cancellationToken.IsCancellationRequested)
+        try
         {
-            // Find next source with NotStarted status
-            var nextSourceId = await _sourceRepository.Query()
-                .Where(s => s.ExtractionStatus == ExtractionStatus.NotStarted)
-                .OrderByDescending(s => s.Date)
-                .Select(s => s.Id)
-                .FirstOrDefaultAsync(cancellationToken);
-
-            if (nextSourceId == Guid.Empty)
+            while (!cancellationToken.IsCancellationRequested)
             {
-                LogInfo(context, $"No more sources with NotStarted status. Processed {processedCount} sources ({successCount} succeeded, {failedCount} failed)");
-                break;
-            }
+                // Find next source with NotStarted status
+                var nextSourceId = await _sourceRepository.Query()
+                    .Where(s => s.ExtractionStatus == ExtractionStatus.NotStarted)
+                    .OrderByDescending(s => s.Date)
+                    .Select(s => s.Id)
+                    .FirstOrDefaultAsync(cancellationToken);
 
-            processedCount++;
-            LogInfo(context, $"Processing source {nextSourceId} ({processedCount} of pending sources)");
+                if (nextSourceId == Guid.Empty)
+                {
+                    LogInfo(context, $"No more sources with NotStarted status. Successfully processed {processedCount} sources");
+                    break;
+                }
 
-            try
-            {
-                // Process this source using the existing logic
+                currentSourceId = nextSourceId;
+                processedCount++;
+                LogInfo(context, $"Processing source {nextSourceId} ({processedCount} of pending sources)");
+
+                // Process this source using the existing logic - let exceptions propagate to halt the batch
                 await ExecuteAsync(nextSourceId, context, cancellationToken);
-                successCount++;
             }
-            catch (Exception ex)
+
+            if (cancellationToken.IsCancellationRequested)
             {
-                LogError(context, ex, $"Failed to process source {nextSourceId} during batch processing");
-                failedCount++;
-                // Continue with next source
+                LogWarning(context, $"ProcessAllPendingSourcesAsync was cancelled after processing {processedCount} sources");
             }
         }
-
-        if (cancellationToken.IsCancellationRequested)
+        catch (Exception ex)
         {
-            LogWarning(context, $"ProcessAllPendingSourcesAsync was cancelled after processing {processedCount} sources ({successCount} succeeded, {failedCount} failed)");
+            // If we were processing a source when the error occurred, ensure its status is set to Failed
+            if (currentSourceId.HasValue)
+            {
+                LogError(context, ex, $"Failed to process source {currentSourceId.Value} during batch processing");
+                await SetExtractionStatusAsync(currentSourceId.Value, ExtractionStatus.Failed, cancellationToken);
+            }
+            
+            // Re-throw to fail the batch job
+            throw;
         }
     }
 
@@ -92,6 +98,7 @@ public class FragmentExtractionJob : BaseHangfireJob<FragmentExtractionJob>
     /// Executes fragment extraction for a specific source
     /// </summary>
     /// <param name="sourceId">The source ID to extract fragments from</param>
+    [AutomaticRetry(Attempts = 0)]
     [Mission]
     public async Task ExecuteAsync(Guid sourceId, PerformContext context, CancellationToken cancellationToken)
     {
@@ -138,25 +145,44 @@ public class FragmentExtractionJob : BaseHangfireJob<FragmentExtractionJob>
                     j => j.GenerateFragmentEmbeddings(default!, default, sourceId, null));
                 LogInfo(context, $"Enqueued embedding generation job for source {sourceId}");
             }
+
+            // Send success notification
+            var successMessage = $"Successfully extracted {fragmentCount} fragment{(fragmentCount != 1 ? "s" : "")}";
+            await _notificationService.SendFragmentExtractionCompleteAsync(sourceId, fragmentCount, success: true, successMessage);
         }
         catch (Exception ex)
         {
-            LogError(context, ex, $"Fragment extraction job failed for source {sourceId}");
-            errorMessage = ex.Message;
-            success = false;
-
+            // Get detailed error message including inner exceptions
+            var detailedError = GetDetailedErrorMessage(ex);
+            LogError(context, ex, $"Fragment extraction job failed for source {sourceId}: {detailedError}");
+            
             // Set status to Failed (separate transaction since main transaction was rolled back)
             await SetExtractionStatusAsync(sourceId, ExtractionStatus.Failed, cancellationToken);
+
+            // Send failure notification
+            var failureMessage = $"Fragment extraction failed: {detailedError}";
+            await _notificationService.SendFragmentExtractionCompleteAsync(sourceId, fragmentCount: 0, success: false, failureMessage);
+
+            // Re-throw to fail the job
+            throw;
         }
-        finally
+    }
+
+    /// <summary>
+    /// Gets detailed error message including all inner exceptions
+    /// </summary>
+    private string GetDetailedErrorMessage(Exception ex)
+    {
+        var messages = new List<string>();
+        var currentException = ex;
+        
+        while (currentException != null)
         {
-            // Send SignalR notification regardless of success/failure
-            var message = success 
-                ? $"Successfully extracted {fragmentCount} fragment{(fragmentCount != 1 ? "s" : "")}" 
-                : $"Fragment extraction failed: {errorMessage}";
-            
-            await _notificationService.SendFragmentExtractionCompleteAsync(sourceId, fragmentCount, success, message);
+            messages.Add(currentException.Message);
+            currentException = currentException.InnerException;
         }
+        
+        return string.Join(" --> ", messages);
     }
 
     /// <summary>
