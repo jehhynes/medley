@@ -6,6 +6,10 @@ export interface IntegrationStatusUpdatePayload {
   message: string;
 }
 
+export interface FragmentExtractionStartedPayload {
+  sourceId: string;
+}
+
 export interface FragmentExtractionCompletePayload {
   sourceId: string;
   fragmentCount: number;
@@ -15,6 +19,7 @@ export interface FragmentExtractionCompletePayload {
 
 export interface AdminHubServerMethods {
   IntegrationStatusUpdate: (payload: IntegrationStatusUpdatePayload) => void;
+  FragmentExtractionStarted: (payload: FragmentExtractionStartedPayload) => void;
   FragmentExtractionComplete: (payload: FragmentExtractionCompletePayload) => void;
 }
 

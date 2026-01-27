@@ -11,6 +11,14 @@ public record IntegrationStatusUpdatePayload
 }
 
 /// <summary>
+/// Payload for FragmentExtractionStarted event
+/// </summary>
+public record FragmentExtractionStartedPayload
+{
+    public required Guid SourceId { get; init; }
+}
+
+/// <summary>
 /// Payload for FragmentExtractionComplete event
 /// </summary>
 public record FragmentExtractionCompletePayload

@@ -703,6 +703,17 @@ onMounted(async () => {
 
   signalRConnection.value = createAdminHubConnection();
 
+  signalRConnection.value.on('FragmentExtractionStarted', async (payload) => {
+    const sourceIndex = sources.value.findIndex(s => s.id === payload.sourceId);
+    if (sourceIndex !== -1) {
+      sources.value[sourceIndex].extractionStatus = 'InProgress';
+    }
+
+    if (selectedSource.value && selectedSource.value.id === payload.sourceId) {
+      selectedSource.value.extractionStatus = 'InProgress';
+    }
+  });
+
   signalRConnection.value.on('FragmentExtractionComplete', async (payload) => {
     const sourceIndex = sources.value.findIndex(s => s.id === payload.sourceId);
     if (sourceIndex !== -1) {

@@ -48,6 +48,27 @@ public class SignalRNotificationService : INotificationService
     }
 
     /// <summary>
+    /// Send fragment extraction started notification
+    /// </summary>
+    public async Task SendFragmentExtractionStartedAsync(Guid sourceId)
+    {
+        try
+        {
+            await _hubContext.Clients.All
+                .FragmentExtractionStarted(new FragmentExtractionStartedPayload
+                {
+                    SourceId = sourceId
+                });
+            
+            _logger.LogDebug("Sent fragment extraction started notification for source {SourceId}", sourceId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send fragment extraction started notification for source {SourceId}", sourceId);
+        }
+    }
+
+    /// <summary>
     /// Send fragment extraction completion notification
     /// </summary>
     public async Task SendFragmentExtractionCompleteAsync(Guid sourceId, int fragmentCount, bool success, string? message = null)

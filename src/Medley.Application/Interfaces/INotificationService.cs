@@ -16,6 +16,12 @@ public interface INotificationService
     Task SendIntegrationStatusUpdateAsync(Guid integrationId, ConnectionStatus status, string? message = null);
 
     /// <summary>
+    /// Send fragment extraction started notification
+    /// </summary>
+    /// <param name="sourceId">The ID of the source</param>
+    Task SendFragmentExtractionStartedAsync(Guid sourceId);
+
+    /// <summary>
     /// Send fragment extraction completion notification
     /// </summary>
     /// <param name="sourceId">The ID of the source</param>

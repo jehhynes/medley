@@ -104,10 +104,12 @@ public class FragmentExtractionJob : BaseHangfireJob<FragmentExtractionJob>
     {
         int fragmentCount = 0;
         bool success = false;
-        string? errorMessage = null;
 
         // Set status to InProgress before starting extraction (separate transaction for immediate visibility)
         await SetExtractionStatusAsync(sourceId, ExtractionStatus.InProgress, cancellationToken);
+
+        // Send InProgress notification
+        await _notificationService.SendFragmentExtractionStartedAsync(sourceId);
 
         try
         {

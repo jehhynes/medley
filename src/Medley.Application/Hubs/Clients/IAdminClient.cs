@@ -11,6 +11,11 @@ public interface IAdminClient
     Task IntegrationStatusUpdate(IntegrationStatusUpdatePayload payload);
 
     /// <summary>
+    /// Notifies admin clients that fragment extraction has started
+    /// </summary>
+    Task FragmentExtractionStarted(FragmentExtractionStartedPayload payload);
+
+    /// <summary>
     /// Notifies admin clients that fragment extraction has completed
     /// </summary>
     Task FragmentExtractionComplete(FragmentExtractionCompletePayload payload);
