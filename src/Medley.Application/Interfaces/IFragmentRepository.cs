@@ -16,5 +16,5 @@ public interface IFragmentRepository : IRepository<Fragment>
     /// <param name="minSimilarity">Optional minimum similarity score threshold (0-1, where 1 is most similar)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Collection of similar fragments with similarity scores ordered by similarity</returns>
-    Task<IEnumerable<FragmentSimilarityResult>> FindSimilarAsync(float[] embedding, int limit, double? minSimilarity = null, CancellationToken cancellationToken = default);
+    Task<IEnumerable<FragmentSimilarityResult>> FindSimilarAsync(float[] embedding, int limit, double? minSimilarity = null, CancellationToken cancellationToken = default, Func<IQueryable<Fragment>, IQueryable<Fragment>>? filter = null);
 }

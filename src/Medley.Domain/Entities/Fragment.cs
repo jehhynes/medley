@@ -83,6 +83,23 @@ public class Fragment : BusinessEntity
     public DateTimeOffset? ClusteringProcessed { get; set; }
 
     /// <summary>
+    /// Message or reasoning from the clustering process
+    /// </summary>
+    [MaxLength(2000)]
+    public string? ClusteringMessage { get; set; }
+
+    /// <summary>
+    /// The ID of the representative fragment for this cluster
+    /// </summary>
+    public Guid? RepresentativeFragmentId { get; set; }
+
+    /// <summary>
+    /// Navigation to the representative fragment
+    /// </summary>
+    [ForeignKey(nameof(RepresentativeFragmentId))]
+    public virtual Fragment? RepresentativeFragment { get; set; }
+
+    /// <summary>
     /// Confidence level from the AI extraction
     /// </summary>
     public ConfidenceLevel? Confidence { get; set; }

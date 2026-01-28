@@ -4,12 +4,12 @@ using Hangfire.MissionControl;
 using Hangfire.Server;
 using Hangfire.Storage;
 using Medley.Application.Interfaces;
+using Medley.Application.Models.DTOs.Llm;
 using Medley.Application.Services;
 using Medley.Domain.Entities;
+using Medley.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 
 namespace Medley.Application.Jobs;
@@ -19,6 +19,7 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
 {
     private readonly IFragmentRepository _fragmentRepository;
     private readonly IRepository<FragmentCategory> _fragmentCategoryRepository;
+    private readonly IRepository<AiPrompt> _promptRepository;
     private readonly IAiProcessingService _aiProcessingService;
     private readonly IBackgroundJobClient _backgroundJobClient;
     private readonly AiCallContext _aiCallContext;
@@ -26,6 +27,7 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
     public FragmentClusteringJob(
         IFragmentRepository fragmentRepository,
         IRepository<FragmentCategory> fragmentCategoryRepository,
+        IRepository<AiPrompt> promptRepository,
         IAiProcessingService aiProcessingService,
         IBackgroundJobClient backgroundJobClient,
         IUnitOfWork unitOfWork,
@@ -34,6 +36,7 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
     {
         _fragmentRepository = fragmentRepository;
         _fragmentCategoryRepository = fragmentCategoryRepository;
+        _promptRepository = promptRepository;
         _aiProcessingService = aiProcessingService;
         _backgroundJobClient = backgroundJobClient;
         _aiCallContext = aiCallContext;
@@ -44,11 +47,15 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
     {
         LogInfo(context, "Starting Fragment Clustering Job");
 
-        for (int i = 0; i < 10; i++) //Process 10 records per job run to avoid long executions
+        var maxDuration = TimeSpan.FromMinutes(10);
+        var startTime = DateTimeOffset.UtcNow;
+        var processedCount = 0;
+
+        while (DateTimeOffset.UtcNow - startTime < maxDuration)
         {
             if (cancellationToken.IsCancellationRequested)
             {
-                LogInfo(context, "Cancellation requested. Exiting job loop.");
+                LogInfo(context, $"Cancellation requested after processing {processedCount} fragments. Exiting job loop.");
                 break;
             }
 
@@ -58,8 +65,8 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
                 // 1) Grab the first unprocessed fragment that is not a cluster
                 var candidate = await _fragmentRepository.Query()
                     .Where(f => !f.IsCluster && !f.ClusteringProcessed.HasValue && f.Embedding != null)
-                    .OrderBy(f => f.CreatedAt) // FIFO
-                    .FirstOrDefaultAsync(cancellationToken);
+                    .OrderByDescending(f => f.CreatedAt) 
+                    .FirstOrDefaultAsync();
 
                 if (candidate == null)
                 {
@@ -76,36 +83,70 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
                     candidate.Embedding!.ToArray(),
                     limit: 100,
                     minSimilarity: minSimilarity,
-                    cancellationToken);
+                    filter: q => q.Where(f => !f.IsCluster && f.Id != candidate.Id && !f.ClusteringProcessed.HasValue),
+                    cancellationToken: cancellationToken
+                );
 
-                var similarFragments = similarResults
-                    .Select(r => r.Fragment)
-                    .Where(f => f.Id != candidate.Id && !f.IsCluster)
-                    .ToList();
 
-                if (!similarFragments.Any())
+                if (!similarResults.Any())
                 {
                     LogInfo(context, $"No similar fragments found for {candidate.Id}. Marking as processed.");
                     candidate.ClusteringProcessed = DateTimeOffset.UtcNow;
                     return true;
                 }
 
-                var clusterParticipants = new List<Fragment> { candidate };
-                clusterParticipants.AddRange(similarFragments);
+                // Reload fragments with navigation properties for clustering
+                var fragmentIds = similarResults.Select(f => f.Fragment.Id).Append(candidate.Id).ToList();
+                var clusterParticipants = await _fragmentRepository.Query()
+                    .Where(f => fragmentIds.Contains(f.Id))
+                    .Include(f => f.FragmentCategory)
+                    .Include(f => f.Source)
+                        .ThenInclude(s => s!.PrimarySpeaker)
+                    .Include(f => f.Source)
+                        .ThenInclude(s => s!.Tags)
+                            .ThenInclude(t => t.TagType)
+                    .Include(f => f.Source)
+                        .ThenInclude(s => s!.Tags)
+                            .ThenInclude(t => t.TagOption)
+                    .ToListAsync(cancellationToken);
 
-                LogInfo(context, $"Found {similarFragments.Count} similar fragments to cluster.");
+                LogInfo(context, $"Found {fragmentIds.Count} similar fragments to cluster.");
 
                 // 5) Pass contents to LLM
-                var clusterResponse = await GenerateClusterAsync(clusterParticipants, cancellationToken);
-                if (clusterResponse == null)
+                var clusterResponse = await GenerateClusterAsync(clusterParticipants, candidate.Id, cancellationToken);
+                
+                // Validate that at least some fragments were included
+                if (!clusterResponse.IncludedFragmentIds.Any())
                 {
-                    LogWarning(context, $"Failed to generate cluster content for {candidate.Id}. Marking as processed to avoid loops.");
+                    LogWarning(context, $"LLM did not include any fragments in cluster for {candidate.Id}. Marking as processed.");
+                    candidate.ClusteringProcessed = DateTimeOffset.UtcNow;
+                    return true;
+                }
+
+                // Filter to only included fragments
+                var includedFragments = clusterParticipants
+                    .Where(f => clusterResponse.IncludedFragmentIds.Contains(f.Id))
+                    .ToList();
+
+                var excludedFragments = clusterParticipants
+                    .Where(f => !clusterResponse.IncludedFragmentIds.Contains(f.Id))
+                    .ToList();
+
+                if (excludedFragments.Any())
+                {
+                    LogInfo(context, $"LLM excluded {excludedFragments.Count} fragments as unrelated: {string.Join(", ", excludedFragments.Select(f => f.Id))}");
+                }
+
+                // Get the representative fragment to determine category
+                var representativeFragment = includedFragments.FirstOrDefault(f => f.Id == clusterResponse.RepresentativeFragmentId);
+                if (representativeFragment == null)
+                {
+                    LogWarning(context, $"Representative fragment {clusterResponse.RepresentativeFragmentId} not found. Marking as processed.");
                     candidate.ClusteringProcessed = DateTimeOffset.UtcNow;
                     return true;
                 }
 
                 var fragmentCategory = await _fragmentCategoryRepository.Query().Where(x => x.Name == clusterResponse.Category).FirstOrDefaultAsync()
-                    ?? await _fragmentCategoryRepository.Query().Where(x => x.Name == "How-To").FirstOrDefaultAsync()
                     ?? throw new InvalidDataException("Could not find fragment category");
 
                 // 6) Create new Fragment (Cluster)
@@ -116,8 +157,12 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
                     Summary = clusterResponse.Summary.Trim().Substring(0, Math.Min(500, clusterResponse.Summary.Trim().Length)),
                     FragmentCategory = fragmentCategory,
                     Content = clusterResponse.Content.Trim().Substring(0, Math.Min(10000, clusterResponse.Content.Trim().Length)),
+                    Confidence = clusterResponse.Confidence,
+                    ConfidenceComment = clusterResponse.ConfidenceComment?.Trim().Substring(0, Math.Min(500, clusterResponse.ConfidenceComment.Trim().Length)),
+                    ClusteringMessage = clusterResponse.Message?.Trim().Substring(0, Math.Min(2000, clusterResponse.Message.Trim().Length)),
                     IsCluster = true,
                     ClusteringProcessed = DateTimeOffset.UtcNow,
+                    RepresentativeFragment = representativeFragment,
                     Source = null,
                     CreatedAt = DateTimeOffset.UtcNow
                 };
@@ -125,16 +170,18 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
                 await _fragmentRepository.AddAsync(cluster);
                 createdClusterId = cluster.Id;
 
-                LogSuccess(context, $"Created cluster {cluster.Id} with {clusterParticipants.Count} fragments");
+                LogSuccess(context, $"Created cluster {cluster.Id} with {includedFragments.Count} fragments (excluded {excludedFragments.Count})");
 
-                // Update participants
-                foreach (var participant in clusterParticipants)
+                // Update only included participants
+                foreach (var participant in includedFragments)
                 {
                     participant.ClusteredInto = cluster;
                     participant.ClusteringProcessed = DateTimeOffset.UtcNow;
                 }
 
-                LogDebug($"Created cluster {cluster.Id} with {clusterParticipants.Count} fragments. Message: {clusterResponse.Message}");
+
+                LogDebug($"Created cluster {cluster.Id} with {includedFragments.Count} fragments. Message: {clusterResponse.Message}");
+                processedCount++;
                 return true;
             });
 
@@ -153,49 +200,69 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
                 break;
             }
         }
+
+        LogInfo(context, $"Fragment Clustering Job completed. Processed {processedCount} fragments in {(DateTimeOffset.UtcNow - startTime).TotalMinutes:F2} minutes.");
     }
 
-    private async Task<FragmentClusteringResponse?> GenerateClusterAsync(List<Fragment> fragments, CancellationToken cancellationToken = default)
+    private async Task<FragmentClusteringResponse> GenerateClusterAsync(List<Fragment> fragments, Guid primaryFragmentId, CancellationToken cancellationToken = default)
     {
         using (_aiCallContext.SetContext(nameof(FragmentClusteringJob), nameof(GenerateClusterAsync), nameof(Fragment), fragments.FirstOrDefault()?.Id ?? Guid.Empty))
         {
-            var serializedFragments = JsonSerializer.Serialize(fragments.Select(f => new 
-            {
-                f.Title,
-                f.Summary,
-                Category = f.FragmentCategory.Name,
-                f.Content,
-                Date = f.Source?.Date
-            }));
+            // Retrieve the fragment clustering prompt template
+            var clusteringPrompt = await _promptRepository.Query()
+                .FirstOrDefaultAsync(t => t.Type == PromptType.FragmentClustering, cancellationToken);
 
-            var systemPrompt = @"You are a knowledge clustering assistant.
-Combine the list of knowledge fragments provided by the user into a single, cohesive, consolidated knowledge fragment.
-Retain as much detail as possible from the original fragments but remove redundancy.
-If conflicts exist then prefer the details from the more recent fragments.";
+            if (clusteringPrompt == null)
+            {
+                throw new InvalidOperationException($"Fragment clustering prompt (PromptType.{nameof(PromptType.FragmentClustering)}) is not configured in the database.");
+            }
+
+            // Retrieve the fragment weighting prompt template
+            var weightingPrompt = await _promptRepository.Query()
+                .FirstOrDefaultAsync(t => t.Type == PromptType.FragmentWeighting, cancellationToken);
+
+            if (weightingPrompt == null)
+            {
+                throw new InvalidOperationException($"Fragment weighting prompt (PromptType.{nameof(PromptType.FragmentWeighting)}) is not configured in the database.");
+            }
+
+            var request = new FragmentClusteringRequest
+            {
+                PrimaryFragmentId = primaryFragmentId,
+                PrimaryGuidance = clusteringPrompt.Content,
+                FragmentWeighting = weightingPrompt.Content,
+                Fragments = fragments.Select(f => new FragmentWithContentData
+                {
+                    Id = f.Id,
+                    Title = f.Title,
+                    Summary = f.Summary,
+                    Category = f.FragmentCategory.Name,
+                    Content = f.Content,
+                    Confidence = f.Confidence,
+                    ConfidenceComment = f.ConfidenceComment,
+                    Source = f.Source != null ? new SourceData
+                    {
+                        Date = f.Source.Date,
+                        SourceType = f.Source.Type.ToString(),
+                        Scope = f.Source.IsInternal == true ? "Internal" : "External",
+                        PrimarySpeaker = f.Source.PrimarySpeaker?.Name,
+                        PrimarySpeakerTrustLevel = f.Source.PrimarySpeaker?.TrustLevel.ToString(),
+                        Tags = f.Source.Tags.Select(t => new TagData
+                        {
+                            Type = t.TagType.Name,
+                            Value = t.Value
+                        }).ToList()
+                    } : null
+                }).ToList()
+            };
+
+            var userPrompt = JsonSerializer.Serialize(request);
+            var systemPrompt = "You are a knowledge clustering assistant. Process the provided JSON request containing instructions and fragments.";
 
             return await _aiProcessingService.ProcessStructuredPromptAsync<FragmentClusteringResponse>(
-                userPrompt: serializedFragments,
+                userPrompt: userPrompt,
                 systemPrompt: systemPrompt,
                 cancellationToken: cancellationToken);
         }
     }
-}
-
-public class FragmentClusteringResponse
-{
-    [Required]
-    [Description("Clear, descriptive heading for the clustered content")]
-    public required string Title { get; set; }
-    [Required]
-    [Description("Short, human-readable condensation of the full content")]
-    public required string Summary { get; set; }
-    [Required]
-    [Description("The most appropriate category for this cluster (e.g. Decision, Action Item, Feature Request)")]
-    public required string Category { get; set; }
-    [Required]
-    [Description("The full consolidated text content")]
-    public required string Content { get; set; }
-    
-    [Description("Any auxiliary information, reasoning, or comments")]
-    public string? Message { get; set; }
 }

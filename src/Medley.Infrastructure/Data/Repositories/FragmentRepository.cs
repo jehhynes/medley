@@ -32,13 +32,18 @@ public class FragmentRepository : Repository<Fragment>, IFragmentRepository
     /// <summary>
     /// Finds fragments similar to the given embedding vector using cosine distance
     /// </summary>
-    public async Task<IEnumerable<FragmentSimilarityResult>> FindSimilarAsync(float[] embedding, int limit, double? minSimilarity = null, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<FragmentSimilarityResult>> FindSimilarAsync(float[] embedding, int limit, double? minSimilarity = null,
+        CancellationToken cancellationToken = default, Func<IQueryable<Fragment>, IQueryable<Fragment>>? filter = null)
     {
         var vector = new Vector(embedding);
 
-        var query = _context.Fragments
-            .Include(f => f.FragmentCategory)
-            .Where(f => f.Embedding != null);
+        IQueryable<Fragment> query = _context.Fragments
+            .Include(f => f.FragmentCategory);
+
+        if (filter != null)
+            query = filter(query);
+
+        query = query.Where(f => f.Embedding != null);
 
         if (minSimilarity.HasValue)
         {

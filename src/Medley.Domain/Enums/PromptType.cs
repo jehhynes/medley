@@ -77,6 +77,12 @@ public enum PromptType
     /// Template for weighting fragments based on relevance and importance
     /// </summary>
     [PromptTypeMetadata("Fragment Weighting", "Instructions for assigning relevance weights to fragments")]
-    FragmentWeighting = 12
+    FragmentWeighting = 12,
+
+    /// <summary>
+    /// Template for clustering similar fragments together
+    /// </summary>
+    [PromptTypeMetadata("Fragment Clustering", "Instructions for combining similar fragments into clusters")]
+    FragmentClustering = 13
 }
 

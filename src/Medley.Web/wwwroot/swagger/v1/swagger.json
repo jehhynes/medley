@@ -2968,7 +2968,8 @@
           "FragmentCategoryExtraction",
           "CursorReview",
           "CursorQuestion",
-          "FragmentWeighting"
+          "FragmentWeighting",
+          "FragmentClustering"
         ],
         "enum": [
           "FragmentExtraction",
@@ -2982,7 +2983,8 @@
           "FragmentCategoryExtraction",
           "CursorReview",
           "CursorQuestion",
-          "FragmentWeighting"
+          "FragmentWeighting",
+          "FragmentClustering"
         ]
       },
       "AiPromptDto": {
