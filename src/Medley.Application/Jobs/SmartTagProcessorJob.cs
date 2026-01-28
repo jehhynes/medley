@@ -53,11 +53,7 @@ public class SmartTagProcessorJob : BaseHangfireJob<SmartTagProcessorJob>
         try
         {
             // Check organization settings (no transaction needed for read-only check)
-            var organization = await _organizationRepository.Query().FirstOrDefaultAsync(cancellationToken);
-            if (organization == null)
-            {
-                throw new InvalidOperationException("No organization found; smart tagging cannot proceed.");
-            }
+            var organization = await _organizationRepository.Query().SingleAsync(cancellationToken);
 
             if (!organization.EnableSmartTagging)
             {

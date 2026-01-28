@@ -31,24 +31,7 @@ public class SettingsController : Controller
     public async Task<IActionResult> Index()
     {
         // Load organization settings
-        var organization = await _organizationRepository.Query()
-            .FirstOrDefaultAsync();
-
-        if (organization == null)
-        {
-            // Create default organization if it doesn't exist
-            organization = new Organization
-            {
-                Name = "Default Organization",
-                EmailDomain = null,
-                EnableSmartTagging = false,
-                EnableSpeakerExtraction = false,
-                TimeZone = "America/New_York"
-            };
-            await _organizationRepository.AddAsync(organization);
-            await _unitOfWork.SaveChangesAsync();
-            _logger.LogInformation("Created default organization");
-        }
+        var organization = await _organizationRepository.Query().SingleAsync();
 
         ViewBag.OrganizationId = organization.Id;
         ViewBag.EmailDomain = organization.EmailDomain ?? "";

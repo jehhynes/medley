@@ -74,11 +74,7 @@ public class SpeakerExtractionJob : BaseHangfireJob<SpeakerExtractionJob>
         try
         {
             // Check organization settings (no transaction needed for read-only check)
-            var organization = await _organizationRepository.Query().FirstOrDefaultAsync(cancellationToken);
-            if (organization == null)
-            {
-                throw new InvalidOperationException("No organization found; speaker extraction cannot proceed.");
-            }
+            var organization = await _organizationRepository.Query().SingleAsync(cancellationToken);
 
             if (!organization.EnableSpeakerExtraction)
             {
@@ -205,7 +201,7 @@ public class SpeakerExtractionJob : BaseHangfireJob<SpeakerExtractionJob>
         }
 
         // Get organization for email domain matching
-        var organization = await _organizationRepository.Query().FirstOrDefaultAsync(cancellationToken);
+        var organization = await _organizationRepository.Query().SingleAsync(cancellationToken);
 
         try
         {

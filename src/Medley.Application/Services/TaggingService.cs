@@ -139,13 +139,7 @@ public class TaggingService : ITaggingService
 
     private async Task<(string? EmailDomain, List<TagType> TagTypes)> GetOrganizationContextAsync(CancellationToken cancellationToken = default)
     {
-        var organization = await _organizationRepository.Query()
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (organization == null)
-        {
-            throw new InvalidOperationException("No organization found; tagging cannot proceed.");
-        }
+        var organization = await _organizationRepository.Query().SingleAsync(cancellationToken);
 
         var emailDomain = organization.EmailDomain?.Trim();
 

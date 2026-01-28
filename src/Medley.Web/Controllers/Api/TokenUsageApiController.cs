@@ -34,8 +34,8 @@ public class TokenUsageApiController : ControllerBase
     public async Task<ActionResult<TokenUsageMetrics>> GetMetrics()
     {
         // Get organization timezone
-        var organization = await _organizationRepository.Query().FirstOrDefaultAsync();
-        var timeZoneId = organization?.TimeZone ?? "America/New_York";
+        var organization = await _organizationRepository.Query().SingleAsync();
+        var timeZoneId = organization.TimeZone;
 
         var metrics = new TokenUsageMetrics();
         var nowUtc = DateTime.UtcNow;
@@ -292,8 +292,8 @@ public class TokenUsageApiController : ControllerBase
     public async Task<ActionResult<CostEstimateMetrics>> GetCostEstimates()
     {
         // Get organization timezone
-        var organization = await _organizationRepository.Query().FirstOrDefaultAsync();
-        var timeZoneId = organization?.TimeZone ?? "America/New_York";
+        var organization = await _organizationRepository.Query().SingleAsync();
+        var timeZoneId = organization.TimeZone;
 
         var nowUtc = DateTime.UtcNow;
         var nowLocal = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(nowUtc, timeZoneId);

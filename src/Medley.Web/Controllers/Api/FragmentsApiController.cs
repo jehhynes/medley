@@ -400,8 +400,8 @@ public class FragmentsApiController : ControllerBase
             var changeDate = DateTimeOffset.UtcNow;
 
             // Get organization timezone
-            var organization = await _organizationRepository.Query().FirstOrDefaultAsync();
-            var timeZoneId = organization?.TimeZone ?? "America/New_York";
+            var organization = await _organizationRepository.Query().SingleAsync();
+            var timeZoneId = organization.TimeZone;
             var timeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
             var localChangeDate = TimeZoneInfo.ConvertTime(changeDate, timeZoneInfo);
 
