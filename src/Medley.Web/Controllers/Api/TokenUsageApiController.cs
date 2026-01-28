@@ -44,7 +44,6 @@ public class TokenUsageApiController : ControllerBase
 
         // Daily usage (last 30 days) - grouped in database by local date
         var dailyUsageData = await _tokenUsageRepository.Query()
-            .Where(t => t.IsSuccess)
             .Select(t => new
             {
                 LocalDate = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(t.Timestamp.UtcDateTime, timeZoneId).Date,
@@ -63,11 +62,11 @@ public class TokenUsageApiController : ControllerBase
             })
             .ToListAsync();
 
-        // Convert DateTime to string after loading from database
+        // Convert DateTime to DateTime (keep as date objects)
         metrics.DailyUsage = dailyUsageData
             .Select(d => new DailyTokenUsage
             {
-                Date = d.DateKey.ToString("yyyy-MM-dd"),
+                Date = d.DateKey,
                 InputTokens = d.InputTokens,
                 OutputTokens = d.OutputTokens,
                 EmbeddingTokens = d.EmbeddingTokens
@@ -80,12 +79,11 @@ public class TokenUsageApiController : ControllerBase
         for (int i = 29; i >= 0; i--)
         {
             var date = nowLocal.AddDays(-i).Date;
-            var dateStr = date.ToString("yyyy-MM-dd");
-            var existing = metrics.DailyUsage.FirstOrDefault(d => d.Date == dateStr);
+            var existing = metrics.DailyUsage.FirstOrDefault(d => d.Date == date);
             
             filledDailyUsage.Add(existing ?? new DailyTokenUsage
             {
-                Date = dateStr,
+                Date = date,
                 InputTokens = 0,
                 OutputTokens = 0,
                 EmbeddingTokens = 0
@@ -95,7 +93,6 @@ public class TokenUsageApiController : ControllerBase
 
         // All time by type - aggregated in database
         var allTimeByType = await _tokenUsageRepository.Query()
-            .Where(t => t.IsSuccess)
             .GroupBy(t => 1) // Group all records together
             .Select(g => new TokensByType
             {
@@ -109,7 +106,6 @@ public class TokenUsageApiController : ControllerBase
 
         // Last 30 days by type - aggregated in database
         var last30DaysByType = await _tokenUsageRepository.Query()
-            .Where(t => t.IsSuccess)
             .Select(t => new
             {
                 LocalDate = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(t.Timestamp.UtcDateTime, timeZoneId).Date,
@@ -131,7 +127,6 @@ public class TokenUsageApiController : ControllerBase
 
         // All time by service - aggregated in database
         metrics.AllTimeByService = await _tokenUsageRepository.Query()
-            .Where(t => t.IsSuccess)
             .GroupBy(t => t.ServiceName)
             .Select(g => new MetricItem
             {
@@ -143,7 +138,6 @@ public class TokenUsageApiController : ControllerBase
 
         // Last 30 days by service - aggregated in database
         metrics.Last30DaysByService = await _tokenUsageRepository.Query()
-            .Where(t => t.IsSuccess)
             .Select(t => new
             {
                 LocalDate = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(t.Timestamp.UtcDateTime, timeZoneId).Date,
@@ -172,7 +166,6 @@ public class TokenUsageApiController : ControllerBase
     public async Task<ActionResult<List<ModelInfo>>> GetModels()
     {
         var models = await _tokenUsageRepository.Query()
-            .Where(t => t.IsSuccess)
             .GroupBy(t => t.ModelName)
             .Select(g => new ModelInfo
             {
@@ -305,7 +298,6 @@ public class TokenUsageApiController : ControllerBase
 
         // Get token usage for last 30 days with local date grouping - done in database
         var tokenUsageByDateAndModel = await _tokenUsageRepository.Query()
-            .Where(t => t.IsSuccess)
             .Select(t => new
             {
                 LocalDate = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(t.Timestamp.UtcDateTime, timeZoneId).Date,
@@ -349,7 +341,7 @@ public class TokenUsageApiController : ControllerBase
 
                 return new DailyCostEstimate
                 {
-                    Date = g.Key.ToString("yyyy-MM-dd"),
+                    Date = g.Key,
                     InputCost = Math.Round(inputCost, 2),
                     OutputCost = Math.Round(outputCost, 2),
                     EmbeddingCost = Math.Round(embeddingCost, 2),
@@ -364,12 +356,11 @@ public class TokenUsageApiController : ControllerBase
         for (int i = 29; i >= 0; i--)
         {
             var date = nowLocal.AddDays(-i).Date;
-            var dateStr = date.ToString("yyyy-MM-dd");
-            var existing = dailyCosts.FirstOrDefault(d => d.Date == dateStr);
+            var existing = dailyCosts.FirstOrDefault(d => d.Date == date);
 
             filledDailyCosts.Add(existing ?? new DailyCostEstimate
             {
-                Date = dateStr,
+                Date = date,
                 InputCost = 0,
                 OutputCost = 0,
                 EmbeddingCost = 0,

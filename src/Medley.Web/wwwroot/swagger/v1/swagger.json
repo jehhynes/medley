@@ -4880,7 +4880,8 @@
         "additionalProperties": false,
         "properties": {
           "date": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           },
           "inputTokens": {
             "type": "integer",
@@ -5011,7 +5012,8 @@
         "additionalProperties": false,
         "properties": {
           "date": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           },
           "inputCost": {
             "type": "number",

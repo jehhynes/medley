@@ -39,7 +39,7 @@ public class SaveCostParameterRequest
 /// </summary>
 public class DailyCostEstimate
 {
-    public string Date { get; set; } = string.Empty;
+    public DateTime Date { get; set; }
     public decimal InputCost { get; set; }
     public decimal OutputCost { get; set; }
     public decimal EmbeddingCost { get; set; }

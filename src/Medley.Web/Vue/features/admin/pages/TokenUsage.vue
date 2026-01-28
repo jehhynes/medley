@@ -180,6 +180,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { Chart, registerables } from 'chart.js';
+import 'chartjs-adapter-date-fns';
 import { tokenUsageClient } from '@/utils/apiClients';
 import type { TokenUsageMetrics, CostEstimateMetrics } from '@/types/api-client';
 import CostParametersModal from '../components/CostParametersModal.vue';
@@ -301,23 +302,22 @@ const initializeCharts = (): void => {
     charts.value.dailyUsage = new Chart(dailyUsageChart.value, {
       type: 'bar',
       data: {
-        labels: metrics.value.dailyUsage.map(d => d.date || ''),
         datasets: [
           {
             label: 'Input Tokens',
-            data: metrics.value.dailyUsage.map(d => d.inputTokens || 0),
+            data: metrics.value.dailyUsage.map(d => ({ x: d.date, y: d.inputTokens || 0 })),
             backgroundColor: colors.input,
             borderRadius: 4
           },
           {
             label: 'Output Tokens',
-            data: metrics.value.dailyUsage.map(d => d.outputTokens || 0),
+            data: metrics.value.dailyUsage.map(d => ({ x: d.date, y: d.outputTokens || 0 })),
             backgroundColor: colors.output,
             borderRadius: 4
           },
           {
             label: 'Embedding Tokens',
-            data: metrics.value.dailyUsage.map(d => d.embeddingTokens || 0),
+            data: metrics.value.dailyUsage.map(d => ({ x: d.date, y: d.embeddingTokens || 0 })),
             backgroundColor: colors.embedding,
             borderRadius: 4
           }
@@ -342,6 +342,13 @@ const initializeCharts = (): void => {
         },
         scales: {
           x: {
+            type: 'time',
+            time: {
+              unit: 'day',
+              displayFormats: {
+                day: 'MMM d'
+              }
+            },
             stacked: true,
             ticks: {
               maxRotation: 45,
@@ -367,23 +374,22 @@ const initializeCharts = (): void => {
     charts.value.dailyCost = new Chart(dailyCostChart.value, {
       type: 'bar',
       data: {
-        labels: costEstimates.value.dailyCosts.map(d => d.date || ''),
         datasets: [
           {
             label: 'Input Cost',
-            data: costEstimates.value.dailyCosts.map(d => d.inputCost || 0),
+            data: costEstimates.value.dailyCosts.map(d => ({ x: d.date, y: d.inputCost || 0 })),
             backgroundColor: colors.input,
             borderRadius: 4
           },
           {
             label: 'Output Cost',
-            data: costEstimates.value.dailyCosts.map(d => d.outputCost || 0),
+            data: costEstimates.value.dailyCosts.map(d => ({ x: d.date, y: d.outputCost || 0 })),
             backgroundColor: colors.output,
             borderRadius: 4
           },
           {
             label: 'Embedding Cost',
-            data: costEstimates.value.dailyCosts.map(d => d.embeddingCost || 0),
+            data: costEstimates.value.dailyCosts.map(d => ({ x: d.date, y: d.embeddingCost || 0 })),
             backgroundColor: colors.embedding,
             borderRadius: 4
           }
@@ -408,6 +414,13 @@ const initializeCharts = (): void => {
         },
         scales: {
           x: {
+            type: 'time',
+            time: {
+              unit: 'day',
+              displayFormats: {
+                day: 'MMM d'
+              }
+            },
             stacked: true,
             ticks: {
               maxRotation: 45,

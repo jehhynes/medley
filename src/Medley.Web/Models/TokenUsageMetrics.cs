@@ -30,7 +30,7 @@ public class TokenUsageMetrics
 
 public class DailyTokenUsage
 {
-    public string Date { get; set; } = string.Empty;
+    public DateTime Date { get; set; }
     public long InputTokens { get; set; }
     public long OutputTokens { get; set; }
     public long EmbeddingTokens { get; set; }

@@ -3329,7 +3329,7 @@ export interface TokenUsageMetrics {
 }
 
 export interface DailyTokenUsage {
-    date?: string;
+    date?: Date;
     inputTokens?: number;
     outputTokens?: number;
     embeddingTokens?: number;
@@ -3370,7 +3370,7 @@ export interface CostEstimateMetrics {
 }
 
 export interface DailyCostEstimate {
-    date?: string;
+    date?: Date;
     inputCost?: number;
     outputCost?: number;
     embeddingCost?: number;
