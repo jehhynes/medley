@@ -20,6 +20,7 @@ public class FragmentsApiController : ControllerBase
 {
     private readonly IFragmentRepository _fragmentRepository;
     private readonly IRepository<Article> _articleRepository;
+    private readonly IRepository<Organization> _organizationRepository;
     private readonly IEmbeddingGenerator<string, Embedding<float>> _embeddingGenerator;
     private readonly IEmbeddingHelper _embeddingHelper;
     private readonly EmbeddingSettings _embeddingSettings;
@@ -31,6 +32,7 @@ public class FragmentsApiController : ControllerBase
     public FragmentsApiController(
         IFragmentRepository fragmentRepository,
         IRepository<Article> articleRepository,
+        IRepository<Organization> organizationRepository,
         IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
         IEmbeddingHelper embeddingHelper,
         IOptions<EmbeddingSettings> embeddingSettings,
@@ -41,6 +43,7 @@ public class FragmentsApiController : ControllerBase
     {
         _fragmentRepository = fragmentRepository;
         _articleRepository = articleRepository;
+        _organizationRepository = organizationRepository;
         _embeddingGenerator = embeddingGenerator;
         _embeddingHelper = embeddingHelper;
         _embeddingSettings = embeddingSettings.Value;
@@ -396,8 +399,14 @@ public class FragmentsApiController : ControllerBase
             var newValue = request.Confidence?.ToString() ?? "None";
             var changeDate = DateTimeOffset.UtcNow;
 
+            // Get organization timezone
+            var organization = await _organizationRepository.Query().FirstOrDefaultAsync();
+            var timeZoneId = organization?.TimeZone ?? "America/New_York";
+            var timeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+            var localChangeDate = TimeZoneInfo.ConvertTime(changeDate, timeZoneInfo);
+
             // Build audit trail entry
-            var auditEntry = $"\r\n - {userName} changed from {oldValue} to {newValue} on {changeDate:yyyy-MM-dd HH:mm:ss} UTC";
+            var auditEntry = $"\r\n - {userName} changed from {oldValue} to {newValue} on {localChangeDate:yyyy-MM-dd HH:mm:ss}";
 
             // Update confidence level
             fragment.Confidence = request.Confidence;

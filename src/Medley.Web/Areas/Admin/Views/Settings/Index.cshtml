@@ -4,6 +4,7 @@
     var emailDomain = ViewBag.EmailDomain as string ?? "";
     var enableSmartTagging = ViewBag.EnableSmartTagging as bool? ?? false;
     var enableSpeakerExtraction = ViewBag.EnableSpeakerExtraction as bool? ?? false;
+    var timeZone = ViewBag.TimeZone as string ?? "America/New_York";
 }
 
 <div class="main-content-header">
@@ -54,6 +55,24 @@
                 The email domain used to identify internal attendees (e.g., "company.com").
                 Sources where all attendees are from this domain will be automatically tagged as internal.
             </div>
+
+            <div class="mb-3 mt-4 form-group-overlap">
+                <label for="timeZone" class="form-label">Time Zone</label>
+                <select class="form-select" 
+                        id="timeZone" 
+                        name="timeZone">
+                    <option value="America/New_York" selected="@(timeZone == "America/New_York")">EST - Eastern Time</option>
+                    <option value="America/Chicago" selected="@(timeZone == "America/Chicago")">CST - Central Time</option>
+                    <option value="America/Denver" selected="@(timeZone == "America/Denver")">MST - Mountain Time</option>
+                    <option value="America/Los_Angeles" selected="@(timeZone == "America/Los_Angeles")">PST - Pacific Time</option>
+                    <option value="America/Anchorage" selected="@(timeZone == "America/Anchorage")">AKST - Alaska Time</option>
+                    <option value="Pacific/Honolulu" selected="@(timeZone == "Pacific/Honolulu")">HST - Hawaii Time</option>
+                </select>
+            </div>
+            <div class="form-text mb-3">
+                The time zone used for displaying dates and grouping analytics data. This affects token usage reports and other time-based analytics.
+            </div>
+
             <div class="my-3">
                 <div class="form-check form-switch">
                     <input class="form-check-input" 

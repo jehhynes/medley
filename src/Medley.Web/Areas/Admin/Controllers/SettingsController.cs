@@ -42,7 +42,8 @@ public class SettingsController : Controller
                 Name = "Default Organization",
                 EmailDomain = null,
                 EnableSmartTagging = false,
-                EnableSpeakerExtraction = false
+                EnableSpeakerExtraction = false,
+                TimeZone = "America/New_York"
             };
             await _organizationRepository.AddAsync(organization);
             await _unitOfWork.SaveChangesAsync();
@@ -53,13 +54,19 @@ public class SettingsController : Controller
         ViewBag.EmailDomain = organization.EmailDomain ?? "";
         ViewBag.EnableSmartTagging = organization.EnableSmartTagging;
         ViewBag.EnableSpeakerExtraction = organization.EnableSpeakerExtraction;
+        ViewBag.TimeZone = organization.TimeZone ?? "America/New_York";
 
         return View();
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> SaveOrganizationSettings(Guid organizationId, string? emailDomain, bool enableSmartTagging, bool enableSpeakerExtraction)
+    public async Task<IActionResult> SaveOrganizationSettings(
+        Guid organizationId, 
+        string? emailDomain, 
+        bool enableSmartTagging, 
+        bool enableSpeakerExtraction,
+        string timeZone)
     {
         try
         {
@@ -78,6 +85,7 @@ public class SettingsController : Controller
             organization.EmailDomain = normalizedDomain;
             organization.EnableSmartTagging = enableSmartTagging;
             organization.EnableSpeakerExtraction = enableSpeakerExtraction;
+            organization.TimeZone = string.IsNullOrWhiteSpace(timeZone) ? "America/New_York" : timeZone;
             
             await _unitOfWork.SaveChangesAsync();
 

@@ -926,6 +926,12 @@ namespace Medley.Infrastructure.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("name");
 
+                    b.Property<string>("TimeZone")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("time_zone");
+
                     b.HasKey("Id")
                         .HasName("pk_organizations");
 
