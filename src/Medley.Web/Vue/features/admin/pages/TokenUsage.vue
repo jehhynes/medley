@@ -63,7 +63,7 @@
                   <div class="metric-card-value">{{ formatNumber(metrics.allTimeByType?.inputTokens) }}</div>
                   <small style="opacity: 0.9;">All Time</small>
                 </div>
-                <i class="bi bi-arrow-right-circle metric-card-icon"></i>
+                <i class="bi bi-box-arrow-in-right metric-card-icon"></i>
               </div>
             </div>
           </div>
@@ -75,7 +75,7 @@
                   <div class="metric-card-value">{{ formatNumber(metrics.allTimeByType?.outputTokens) }}</div>
                   <small style="opacity: 0.9;">All Time</small>
                 </div>
-                <i class="bi bi-arrow-left-circle metric-card-icon"></i>
+                <i class="bi bi-box-arrow-right metric-card-icon"></i>
               </div>
             </div>
           </div>
@@ -87,7 +87,7 @@
                   <div class="metric-card-value">{{ formatNumber(metrics.allTimeByType?.embeddingTokens) }}</div>
                   <small style="opacity: 0.9;">All Time</small>
                 </div>
-                <i class="bi bi-vector-pen metric-card-icon"></i>
+                <i class="bi bi-bounding-box-circles metric-card-icon"></i>
               </div>
             </div>
           </div>
@@ -107,7 +107,7 @@
         </div>
 
         <!-- Daily Cost Chart -->
-        <h2 class="section-title"><i class="bi bi-currency-dollar me-2"></i>Estimated Costs (Last 30 Days)</h2>
+        <h2 class="section-title"><i class="bi bi-coin me-2"></i>Estimated Costs (Last 30 Days)</h2>
         <div class="row g-3 mb-4">
           <div class="col-12">
             <div class="chart-card delay-5">
@@ -285,7 +285,7 @@ const initializeCharts = (): void => {
     plugins: {
       legend: {
         display: true,
-        position: 'bottom',
+        position: 'right',
         labels: {
           padding: 15,
           usePointStyle: true,
@@ -450,7 +450,7 @@ const initializeCharts = (): void => {
   
   if (allTimeTypeData.some(v => v > 0) && allTimeByTypeChart.value) {
     charts.value.allTimeByType = new Chart(allTimeByTypeChart.value, {
-      type: 'pie',
+      type: 'doughnut',
       data: {
         labels: ['Input Tokens', 'Output Tokens', 'Embedding Tokens'],
         datasets: [{
@@ -489,7 +489,7 @@ const initializeCharts = (): void => {
   
   if (last30DaysTypeData.some(v => v > 0) && last30DaysByTypeChart.value) {
     charts.value.last30DaysByType = new Chart(last30DaysByTypeChart.value, {
-      type: 'pie',
+      type: 'doughnut',
       data: {
         labels: ['Input Tokens', 'Output Tokens', 'Embedding Tokens'],
         datasets: [{
@@ -522,7 +522,7 @@ const initializeCharts = (): void => {
   // All Time by Service Chart
   if (metrics.value.allTimeByService && metrics.value.allTimeByService.length > 0 && allTimeByServiceChart.value) {
     charts.value.allTimeByService = new Chart(allTimeByServiceChart.value, {
-      type: 'pie',
+      type: 'doughnut',
       data: {
         labels: metrics.value.allTimeByService.map(s => s.label || ''),
         datasets: [{
@@ -555,7 +555,7 @@ const initializeCharts = (): void => {
   // Last 30 Days by Service Chart
   if (metrics.value.last30DaysByService && metrics.value.last30DaysByService.length > 0 && last30DaysByServiceChart.value) {
     charts.value.last30DaysByService = new Chart(last30DaysByServiceChart.value, {
-      type: 'pie',
+      type: 'doughnut',
       data: {
         labels: metrics.value.last30DaysByService.map(s => s.label || ''),
         datasets: [{

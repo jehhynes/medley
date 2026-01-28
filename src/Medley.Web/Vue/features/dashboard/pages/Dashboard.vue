@@ -483,7 +483,7 @@ const initializeCharts = (): void => {
   // Fragments by Category Chart
   if (metrics.value.fragmentsByCategory.length > 0 && fragmentsByCategoryChart.value) {
     charts.value.fragmentsByCategory = new Chart(fragmentsByCategoryChart.value, {
-      type: 'pie',
+      type: 'doughnut',
       data: {
         labels: metrics.value.fragmentsByCategory.map(x => x.label),
         datasets: [{
@@ -500,7 +500,7 @@ const initializeCharts = (): void => {
   // Articles by Type Chart
   if (metrics.value.articlesByType.length > 0 && articlesByTypeChart.value) {
     charts.value.articlesByType = new Chart(articlesByTypeChart.value, {
-      type: 'pie',
+      type: 'doughnut',
       data: {
         labels: metrics.value.articlesByType.map(x => x.label),
         datasets: [{
@@ -523,7 +523,7 @@ const initializeCharts = (): void => {
     
     if (canvasElement && metric.tagCounts.length > 0) {
       charts.value['tag_' + safeId] = new Chart(canvasElement, {
-        type: 'pie',
+        type: 'doughnut',
         data: {
           labels: metric.tagCounts.map(x => x.label),
           datasets: [{
