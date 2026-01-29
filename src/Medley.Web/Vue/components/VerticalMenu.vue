@@ -13,6 +13,12 @@
         <i class="bi bi-file-text"></i>
         <span class="vertical-menu-item-label">Articles</span>
       </router-link>
+      <router-link to="/KnowledgeUnits" 
+         :class="['vertical-menu-item', { active: currentPage === 'KnowledgeUnits' }]" 
+         title="Knowledge">
+        <i class="fal fa-atom"></i>
+        <span class="vertical-menu-item-label">Knowledge</span>
+      </router-link>
       <router-link to="/Sources" 
          :class="['vertical-menu-item', { active: currentPage === 'Sources' }]" 
          title="Sources">
@@ -101,6 +107,7 @@ const currentPage = computed<string | null>(() => {
   
   switch(firstSegment) {
     case 'articles': return 'Articles';
+    case 'knowledgeunits': return 'KnowledgeUnits';
     case 'sources': return 'Sources';
     case 'fragments': return 'Fragments';
     case 'auth': return 'Auth';

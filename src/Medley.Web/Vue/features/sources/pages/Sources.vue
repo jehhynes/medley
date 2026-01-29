@@ -211,7 +211,7 @@
             </div>
           </div>
           <div class="tab-pane" id="fragments-pane" role="tabpanel" aria-labelledby="fragments-tab">
-            <fragment-list
+            <fragment-table
               :fragments="fragments"
               :loading="loadingFragments"
               :error="fragmentsError"
@@ -270,7 +270,7 @@ import { useDropDown } from '@/composables/useDropDown';
 import { createAdminHubConnection } from '@/utils/signalr';
 import type { SourceDto, FragmentDto, TagDto } from '@/types/api-client';
 import type { AdminHubConnection } from '@/types/admin-hub';
-import FragmentList from '@/components/FragmentList.vue';
+import FragmentTable from '@/components/FragmentTable.vue';
 
 // Interfaces
 interface PaginationState {
@@ -684,22 +684,27 @@ onMounted(async () => {
   setupInfiniteScroll('.sidebar-content');
 
   const sourceIdFromUrl = route.query.id as string | undefined;
-  if (sourceIdFromUrl) {
-    const source = findInList(sources.value, sourceIdFromUrl);
-    if (source) {
-      await selectSource(source, true);
-    } else {
-      try {
-        const loadedSource = await sourcesClient.get(sourceIdFromUrl);
-        sources.value.unshift(loadedSource);
-        selectedSource.value = loadedSource;
-        selectedSourceId.value = sourceIdFromUrl;
-      } catch (err) {
-        console.error('Error loading source from URL:', err);
-        await router.replace({ query: {} });
-      }
+    if (sourceIdFromUrl) {
+        try {
+            // Always load the full record from API
+            const loadedSource = await sourcesClient.get(sourceIdFromUrl);
+
+            // Add to list if not already present
+            const existingIndex = sources.value.findIndex(s => s.id === sourceIdFromUrl);
+            if (existingIndex === -1) {
+                sources.value.unshift(loadedSource);
+            } else {
+                sources.value[existingIndex] = loadedSource;
+            }
+
+            // Set the selected source
+            selectedSource.value = loadedSource;
+            selectedSourceId.value = sourceIdFromUrl;
+        } catch (err) {
+            console.error('Error loading source from URL:', err);
+            await router.replace({ query: {} });
+        }
     }
-  }
 
   signalRConnection.value = createAdminHubConnection();
 

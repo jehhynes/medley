@@ -68,6 +68,11 @@ public class KnowledgeUnit : BusinessEntity
     public DateTimeOffset UpdatedAt { get; set; }
 
     /// <summary>
+    /// Indicates if this knowledge unit has been deleted (soft delete)
+    /// </summary>
+    public bool IsDeleted { get; set; } = false;
+
+    /// <summary>
     /// Fragments that belong to this knowledge unit
     /// </summary>
     public virtual ICollection<Fragment> Fragments { get; set; } = new List<Fragment>();

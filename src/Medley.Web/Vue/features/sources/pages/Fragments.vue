@@ -245,22 +245,27 @@ onMounted(async () => {
   setupInfiniteScroll('.sidebar-content');
 
   const fragmentIdFromUrl = route.query.id as string | undefined;
-  if (fragmentIdFromUrl) {
-    const fragment = findInList(fragments.value, fragmentIdFromUrl);
-    if (fragment) {
-      await selectFragment(fragment, true);
-    } else {
-      try {
-        const loadedFragment = await fragmentsClient.get(fragmentIdFromUrl);
-        fragments.value.unshift(loadedFragment);
-        selectedFragment.value = loadedFragment;
-        selectedFragmentId.value = fragmentIdFromUrl;
-      } catch (err) {
-        console.error('Error loading fragment from URL:', err);
-        await router.replace({ query: {} });
-      }
+    if (fragmentIdFromUrl) {
+        try {
+            // Always load the full record from API
+            const loadedFragment = await fragmentsClient.get(fragmentIdFromUrl);
+
+            // Add to list if not already present
+            const existingIndex = fragments.value.findIndex(f => f.id === fragmentIdFromUrl);
+            if (existingIndex === -1) {
+                fragments.value.unshift(loadedFragment);
+            } else {
+                fragments.value[existingIndex] = loadedFragment;
+            }
+
+            // Set the selected fragment
+            selectedFragment.value = loadedFragment;
+            selectedFragmentId.value = fragmentIdFromUrl;
+        } catch (err) {
+            console.error('Error loading fragment from URL:', err);
+            await router.replace({ query: {} });
+        }
     }
-  }
 });
 
 // Watch for route changes (browser back/forward)

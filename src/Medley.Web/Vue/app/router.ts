@@ -11,6 +11,7 @@ interface RouteMeta {
 const Dashboard = () => import('../features/dashboard/pages/Dashboard.vue');
 const Sources = () => import('../features/sources/pages/Sources.vue');
 const Fragments = () => import('../features/sources/pages/Fragments.vue');
+const KnowledgeUnits = () => import('../features/sources/pages/KnowledgeUnits.vue');
 const Articles = () => import('../features/articles/pages/Articles.vue');
 const AiPrompts = () => import('../features/admin/pages/AiPrompts.vue');
 const Speakers = () => import('../features/admin/pages/Speakers.vue');
@@ -41,6 +42,15 @@ const routes: RouteRecordRaw[] = [
     component: Fragments,
     meta: { 
       title: 'Fragments'
+    } as RouteMeta,
+    props: route => ({ id: route.query.id })
+  },
+  {
+    path: '/KnowledgeUnits',
+    name: 'knowledge-units',
+    component: KnowledgeUnits,
+    meta: { 
+      title: 'Knowledge Units'
     } as RouteMeta,
     props: route => ({ id: route.query.id })
   },

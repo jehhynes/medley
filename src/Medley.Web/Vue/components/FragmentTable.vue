@@ -54,6 +54,21 @@
                   {{ fragment.summary }}
                 </div>
               </td>
+              <td v-if="showSourceDate" class="align-middle text-muted small" style="max-width: 120px;">
+                <i class="bi bi-calendar3 me-1"></i>
+                {{ formatDate(fragment.sourceDate) }}
+              </td>
+              <td v-if="showSourceSpeaker" class="align-middle text-muted small text-nowrap" style="max-width: 150px;">
+                <template v-if="fragment.primarySpeaker">
+                  <i class="bi bi-person me-1"></i>
+                  {{ fragment.primarySpeaker.name }}
+                  <i 
+                    v-if="fragment.primarySpeaker.trustLevel" 
+                    class="bi bi-shield-check ms-1" 
+                    :class="getTrustLevelClass(fragment.primarySpeaker.trustLevel)"
+                  ></i>
+                </template>
+              </td>
               <td class="align-middle text-end" style="width: 100px;" 
                   v-if="fragment.confidence !== null && fragment.confidence !== undefined">
                 <i 
@@ -72,7 +87,7 @@
 </template>
 
 <script setup lang="ts">
-import { getIconClass, getConfidenceIcon, getConfidenceColor } from '@/utils/helpers';
+import { getIconClass, getConfidenceIcon, getConfidenceColor, formatDate, getTrustLevelClass } from '@/utils/helpers';
 import type { FragmentDto } from '@/types/api-client';
 
 // Props
@@ -83,6 +98,8 @@ interface Props {
   emptyMessage?: string;
   showExtractionMessage?: boolean;
   extractionMessage?: string | null;
+  showSourceDate?: boolean;
+  showSourceSpeaker?: boolean;
 }
 
 withDefaults(defineProps<Props>(), {
@@ -90,7 +107,9 @@ withDefaults(defineProps<Props>(), {
   error: null,
   emptyMessage: 'No fragments available',
   showExtractionMessage: false,
-  extractionMessage: null
+  extractionMessage: null,
+  showSourceDate: false,
+  showSourceSpeaker: false
 });
 
 // Events

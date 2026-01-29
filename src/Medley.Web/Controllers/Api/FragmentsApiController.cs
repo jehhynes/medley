@@ -197,6 +197,28 @@ public class FragmentsApiController : ControllerBase
     }
 
     /// <summary>
+    /// Get all fragments for a specific knowledge unit
+    /// </summary>
+    /// <param name="knowledgeUnitId">Knowledge unit ID</param>
+    /// <returns>List of fragments linked to the knowledge unit</returns>
+    [HttpGet("by-knowledge-unit/{knowledgeUnitId}")]
+    [ProducesResponseType(typeof(List<FragmentDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<List<FragmentDto>>> GetByKnowledgeUnitId(Guid knowledgeUnitId)
+    {
+        var fragments = await _fragmentRepository.Query()
+            .Include(f => f.Source)
+                .ThenInclude(s => s!.PrimarySpeaker)
+            .Include(f => f.FragmentCategory)
+            .Where(f => f.KnowledgeUnitId == knowledgeUnitId)
+            .OrderBy(f => f.Title)
+            .ThenBy(f => f.Id) // Deterministic tiebreaker
+            .Select(f => MapToFragmentDto(f))
+            .ToListAsync();
+
+        return Ok(fragments);
+    }
+
+    /// <summary>
     /// Helper method to map Fragment entity to FragmentDto
     /// </summary>
     private static FragmentDto MapToFragmentDto(Fragment f)

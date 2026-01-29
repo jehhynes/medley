@@ -58,6 +58,12 @@
             <i class="bi bi-file-text"></i>
             <span class="vertical-menu-item-label">Articles</span>
         </a>
+        <a asp-area="" asp-controller="KnowledgeUnits" asp-action="Index" 
+           class="vertical-menu-item @(currentController == "KnowledgeUnits" ? "active" : "")" 
+           title="Knowledge">
+            <i class="fa-light fa-atom"></i>
+            <span class="vertical-menu-item-label">Knowledge</span>
+        </a>
         <a asp-area="" asp-controller="Sources" asp-action="Index" 
            class="vertical-menu-item @(currentController == "Sources" ? "active" : "")" 
            title="Sources">

@@ -110,6 +110,10 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
         builder.Entity<Source>()
             .HasQueryFilter(s => !s.IsDeleted);
 
+        // Global query filter to exclude deleted knowledge units
+        builder.Entity<KnowledgeUnit>()
+            .HasQueryFilter(ku => !ku.IsDeleted);
+
         // Configure many-to-many relationship between Article and KnowledgeUnit
         builder.Entity<Article>()
             .HasMany(a => a.KnowledgeUnits)
