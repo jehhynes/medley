@@ -48,7 +48,7 @@ public class SourceData
     public required string SourceType { get; set; }
     public required string Scope { get; set; }
     public string? PrimarySpeaker { get; set; }
-    public string? PrimarySpeakerTrustLevel { get; set; }
+    public TrustLevel? PrimarySpeakerTrustLevel { get; set; }
     public List<TagData> Tags { get; set; } = new();
 }
 

@@ -226,7 +226,7 @@ public class SystemContextManager
                                     SourceType = pf.Fragment.Source.Type.ToString(),
                                     Scope = pf.Fragment.Source.IsInternal == true ? "Internal" : "External",
                                     PrimarySpeaker = pf.Fragment.Source.PrimarySpeaker?.Name,
-                                    PrimarySpeakerTrustLevel = pf.Fragment.Source.PrimarySpeaker?.TrustLevel?.ToString(),
+                                    PrimarySpeakerTrustLevel = pf.Fragment.Source.PrimarySpeaker?.TrustLevel,
                                     Tags = pf.Fragment.Source.Tags.Select(t => new TagData
                                     {
                                         Type = t.TagType.Name,

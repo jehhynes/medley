@@ -436,6 +436,7 @@ public class FragmentExtractionService
 public class FragmentExtractionResponse
 {
     public List<ExtractedFragmentDto> Fragments { get; set; } = new();
+    [MaxLength(2000)]
     [Description("Any comments or information besides fragments goes here.")]
     public string? Message { get; set; }
 }
@@ -446,10 +447,12 @@ public class FragmentExtractionResponse
 public class ExtractedFragmentDto
 {
     [Required]
+    [MaxLength(200)]
     [Description("Clear, descriptive heading")]
     public required string Title { get; set; }
     
     [Required]
+    [MaxLength(500)]
     [Description("Short, human-readable condensation of the full content")]
     public required string Summary { get; set; }
     

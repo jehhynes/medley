@@ -43,6 +43,7 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
     }
 
     [Mission]
+    [DisableConcurrentExecution(timeoutInSeconds: 1)]
     public async Task ExecuteAsync(PerformContext context, CancellationToken cancellationToken)
     {
         LogInfo(context, "Starting Fragment Clustering Job");
@@ -137,6 +138,14 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
                     LogInfo(context, $"LLM excluded {excludedFragments.Count} fragments as unrelated: {string.Join(", ", excludedFragments.Select(f => f.Id))}");
                 }
 
+                // If only one fragment is included, don't create a cluster
+                if (includedFragments.Count == 1)
+                {
+                    LogInfo(context, $"Only one fragment included in cluster for {candidate.Id}. Marking as processed without creating cluster.");
+                    candidate.ClusteringProcessed = DateTimeOffset.UtcNow;
+                    return true;
+                }
+
                 // Get the representative fragment to determine category
                 var representativeFragment = includedFragments.FirstOrDefault(f => f.Id == clusterResponse.RepresentativeFragmentId);
                 if (representativeFragment == null)
@@ -158,7 +167,7 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
                     FragmentCategory = fragmentCategory,
                     Content = clusterResponse.Content.Trim().Substring(0, Math.Min(10000, clusterResponse.Content.Trim().Length)),
                     Confidence = clusterResponse.Confidence,
-                    ConfidenceComment = clusterResponse.ConfidenceComment?.Trim().Substring(0, Math.Min(500, clusterResponse.ConfidenceComment.Trim().Length)),
+                    ConfidenceComment = clusterResponse.ConfidenceComment?.Trim().Substring(0, Math.Min(1000, clusterResponse.ConfidenceComment.Trim().Length)),
                     ClusteringMessage = clusterResponse.Message?.Trim().Substring(0, Math.Min(2000, clusterResponse.Message.Trim().Length)),
                     IsCluster = true,
                     ClusteringProcessed = DateTimeOffset.UtcNow,
@@ -226,11 +235,36 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
                 throw new InvalidOperationException($"Fragment weighting prompt (PromptType.{nameof(PromptType.FragmentWeighting)}) is not configured in the database.");
             }
 
+            // Get distinct categories from the fragments
+            var distinctCategoryIds = fragments
+                .Select(f => f.FragmentCategory.Id)
+                .Distinct()
+                .ToList();
+
+            // Load category-specific prompts for the categories present in the fragments
+            var categoryPrompts = await _promptRepository.Query()
+                .Where(t => t.Type == PromptType.FragmentCategoryExtraction && 
+                           t.FragmentCategoryId != null && 
+                           distinctCategoryIds.Contains(t.FragmentCategoryId.Value))
+                .Include(t => t.FragmentCategory)
+                .ToListAsync(cancellationToken);
+
+            // Build category guidance list
+            var categoryDefinitions = categoryPrompts
+                .Where(p => p.FragmentCategory != null)
+                .Select(p => new CategoryDefinition
+                {
+                    Name = p.FragmentCategory!.Name,
+                    Guidance = p.Content
+                })
+                .ToList();
+
             var request = new FragmentClusteringRequest
             {
                 PrimaryFragmentId = primaryFragmentId,
                 PrimaryGuidance = clusteringPrompt.Content,
                 FragmentWeighting = weightingPrompt.Content,
+                CategoryDefinitions = categoryDefinitions,
                 Fragments = fragments.Select(f => new FragmentWithContentData
                 {
                     Id = f.Id,
@@ -246,7 +280,7 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
                         SourceType = f.Source.Type.ToString(),
                         Scope = f.Source.IsInternal == true ? "Internal" : "External",
                         PrimarySpeaker = f.Source.PrimarySpeaker?.Name,
-                        PrimarySpeakerTrustLevel = f.Source.PrimarySpeaker?.TrustLevel.ToString(),
+                        PrimarySpeakerTrustLevel = f.Source.PrimarySpeaker?.TrustLevel,
                         Tags = f.Source.Tags.Select(t => new TagData
                         {
                             Type = t.TagType.Name,

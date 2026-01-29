@@ -3,6 +3,7 @@ using Medley.Domain.Entities;
 using Medley.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.ComponentModel.DataAnnotations;
 using System.Text;
 
 namespace Medley.Application.Services;
@@ -348,6 +349,7 @@ public class SmartTagResponse
 public class SmartTag
 {
     public string TagType { get; set; } = string.Empty;
+    [MaxLength(200)]
     public string? Value { get; set; }
 }
 

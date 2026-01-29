@@ -232,7 +232,9 @@ public class FragmentToScore
 public class ConfidenceScoringResponse
 {
     public List<FragmentConfidenceScore> Scores { get; set; } = new();
-    
+
+    //Throw-away field so the LLM has somewhere to put random commentary as an outlet to prevent invalid JSON
+    [MaxLength(200)]
     [Description("Any comments or caveats about the scoring process")]
     public string? Message { get; set; }
 }

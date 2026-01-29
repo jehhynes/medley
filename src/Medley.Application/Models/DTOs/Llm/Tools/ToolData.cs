@@ -46,11 +46,11 @@ public class PlanFragmentRecommendation
     public bool Include { get; set; }
 
     [Description("Explanation of why this fragment should not be included in the article. Omit if Include=true")]
-    [MaxLength(200)]
+    [MaxLength(200)] //Intentionally shorter to encourage brevity
     public string? Reasoning { get; set; }
 
     [Description("Optional instructions on how to incorporate this fragment into the article")]
-    [MaxLength(200)]
+    [MaxLength(200)] //Intentionally shorter to encourage brevity
     public string? Instructions { get; set; }
 }
 
@@ -68,7 +68,7 @@ public class CreateArticleVersionRequest
     /// </summary>
     [Description("Description of changes made in this version")]
     [Required]
-    [MaxLength(200)]
+    [MaxLength(200)] //Intentionally shorter to encourage brevity
     public required string ChangeMessage { get; set; }
 }
 

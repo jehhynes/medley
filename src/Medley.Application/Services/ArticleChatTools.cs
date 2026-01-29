@@ -186,7 +186,7 @@ public class ArticleChatTools
                             SourceType = source.Type.ToString(),
                             Scope = source.IsInternal == true ? "Internal" : "External",
                             PrimarySpeaker = source.PrimarySpeakerName,
-                            PrimarySpeakerTrustLevel = source.TrustLevel?.ToString(),
+                            PrimarySpeakerTrustLevel = source.TrustLevel,
                             Tags = source.Tags.Select(t => new TagData
                             {
                                 Type = t.Name,
@@ -340,7 +340,7 @@ public class ArticleChatTools
                             SourceType = source.Type.ToString(),
                             Scope = source.IsInternal == true ? "Internal" : "External",
                             PrimarySpeaker = source.PrimarySpeakerName,
-                            PrimarySpeakerTrustLevel = source.TrustLevel?.ToString(),
+                            PrimarySpeakerTrustLevel = source.TrustLevel,
                             Tags = source.Tags.Select(t => new TagData
                             {
                                 Type = t.Name,
@@ -457,7 +457,7 @@ public class ArticleChatTools
                     SourceType = fragment.Source.Type.ToString(),
                     Scope = fragment.Source.IsInternal == true ? "Internal" : "External",
                     PrimarySpeaker = fragment.Source.PrimarySpeaker?.Name,
-                    PrimarySpeakerTrustLevel = fragment.Source.PrimarySpeaker?.TrustLevel?.ToString(),
+                    PrimarySpeakerTrustLevel = fragment.Source.PrimarySpeaker?.TrustLevel,
                     Tags = fragment.Source.Tags.Select(t => new TagData
                     {
                         Type = t.TagType.Name,
