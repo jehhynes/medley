@@ -35,9 +35,8 @@ public class EmbeddingHelper : IEmbeddingHelper
     /// Conditionally normalizes an embedding vector based on the current model configuration
     /// </summary>
     /// <param name="vector">The embedding vector to potentially normalize</param>
-    /// <param name="fragmentId">Optional fragment ID for logging purposes</param>
     /// <returns>The normalized or original vector depending on model configuration</returns>
-    public float[] ProcessEmbedding(float[] vector, Guid? fragmentId = null)
+    public float[] ProcessEmbedding(float[] vector)
     {
         if (!ShouldNormalizeEmbeddings())
         {
@@ -46,14 +45,7 @@ public class EmbeddingHelper : IEmbeddingHelper
 
         var normalized = NormalizeVector(vector);
         
-        if (fragmentId.HasValue)
-        {
-            _logger.LogDebug("Normalized embedding for qwen3 model for fragment {FragmentId}", fragmentId.Value);
-        }
-        else
-        {
-            _logger.LogDebug("Normalized embedding for qwen3 model");
-        }
+         _logger.LogDebug("Normalized embedding for qwen3 model");
 
         return normalized;
     }

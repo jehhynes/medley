@@ -153,7 +153,7 @@ public class ArticleChatTools
                 embedding.Vector.ToArray(),
                 limit,
                 minSimilarity,
-                cancellationToken);
+                cancellationToken: cancellationToken);
 
             var fragments = new List<ToolFragmentSearchResult>();
             foreach (var result in results)
@@ -307,7 +307,7 @@ public class ArticleChatTools
                 embedding.Vector.ToArray(),
                 limit,
                 minSimilarity,
-                cancellationToken);
+                cancellationToken: cancellationToken);
 
             var fragments = new List<ToolFragmentSearchResult>();
             foreach (var result in results)

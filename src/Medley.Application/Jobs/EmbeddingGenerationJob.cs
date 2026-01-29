@@ -23,6 +23,7 @@ namespace Medley.Application.Jobs;
 public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
 {
     private readonly IFragmentRepository _fragmentRepository;
+    private readonly IKnowledgeUnitRepository _knowledgeUnitRepository;
     private readonly IEmbeddingGenerator<string, Embedding<float>> _embeddingGenerator;
     private readonly IBackgroundJobClient _backgroundJobClient;
     private readonly IEmbeddingHelper _embeddingHelper;
@@ -33,6 +34,7 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
 
     public EmbeddingGenerationJob(
         IFragmentRepository fragmentRepository,
+        IKnowledgeUnitRepository knowledgeUnitRepository,
         IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
         IBackgroundJobClient backgroundJobClient,
         IEmbeddingHelper embeddingHelper,
@@ -42,6 +44,7 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
         AiCallContext aiCallContext) : base(unitOfWork, logger)
     {
         _fragmentRepository = fragmentRepository;
+        _knowledgeUnitRepository = knowledgeUnitRepository;
         _embeddingGenerator = embeddingGenerator;
         _backgroundJobClient = backgroundJobClient;
         _embeddingHelper = embeddingHelper;
@@ -131,7 +134,7 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
                         var embedding = embeddingList[j];
 
                         // Process embedding (conditionally normalize based on model)
-                        var processedVector = _embeddingHelper.ProcessEmbedding(embedding.Vector.ToArray(), fragment.Id);
+                        var processedVector = _embeddingHelper.ProcessEmbedding(embedding.Vector.ToArray());
 
                         fragment.Embedding = new Vector(processedVector);
 
@@ -189,6 +192,142 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
         if (!string.IsNullOrWhiteSpace(fragment.Content))
         {
             parts.Add(fragment.Content);
+        }
+
+        return string.Join("\n\n", parts);
+    }
+
+    [Mission]
+    public async Task GenerateKnowledgeUnitEmbeddings(PerformContext context, CancellationToken cancellationToken)
+    {
+        await GenerateKnowledgeUnitEmbeddings(context, cancellationToken, null);
+    }
+
+    /// <summary>
+    /// Processes knowledge units that don't have embeddings and generates embeddings for them
+    /// </summary>
+    /// <param name="context">Hangfire perform context</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <param name="knowledgeUnitId">Optional knowledge unit ID to process a specific knowledge unit</param>
+    public async Task GenerateKnowledgeUnitEmbeddings(PerformContext context, CancellationToken cancellationToken, Guid? knowledgeUnitId = null)
+    {
+        bool shouldRequeue = false;
+
+        await ExecuteWithTransactionAsync(async () =>
+        {
+            var logMessage = knowledgeUnitId.HasValue
+                ? $"Starting embedding generation job for knowledge unit {knowledgeUnitId.Value}"
+                : "Starting embedding generation job for knowledge units without embeddings";
+            LogInfo(context, logMessage);
+
+            // Query knowledge units that don't have embeddings
+            var query = _knowledgeUnitRepository.Query()
+                .Where(ku => ku.Embedding == null);
+
+            // Filter by knowledge unit ID if specified
+            if (knowledgeUnitId.HasValue)
+            {
+                query = query.Where(ku => ku.Id == knowledgeUnitId.Value);
+            }
+
+            var knowledgeUnitsWithoutEmbeddings = await query
+                .OrderBy(ku => ku.CreatedAt) // Process oldest first
+                .Take(BatchSize) // Limit to BatchSize knowledge units per run to avoid long-running jobs
+                .ToListAsync(cancellationToken);
+
+            shouldRequeue = knowledgeUnitsWithoutEmbeddings.Count == BatchSize;
+
+            if (knowledgeUnitsWithoutEmbeddings.Count == 0)
+            {
+                LogInfo(context, "No knowledge units found without embeddings");
+                return;
+            }
+
+            LogInfo(context, $"Found {knowledgeUnitsWithoutEmbeddings.Count} knowledge units without embeddings. Processing all in a single batch");
+
+            int processedCount = 0;
+            int errorCount = 0;
+
+            try
+            {
+                // Generate embeddings for all knowledge units at once
+                var textsToEmbed = knowledgeUnitsWithoutEmbeddings.Select(ku => BuildTextForEmbedding(ku)).ToList();
+                var options = new EmbeddingGenerationOptions
+                {
+                    Dimensions = _embeddingSettings.Dimensions
+                };
+
+                // Set AI call context for token tracking - use first knowledge unit as representative
+                using (_aiCallContext.SetContext(nameof(EmbeddingGenerationJob), nameof(GenerateKnowledgeUnitEmbeddings), nameof(KnowledgeUnit), knowledgeUnitsWithoutEmbeddings.First().Id))
+                {
+                    var embeddings = await _embeddingGenerator.GenerateAsync(textsToEmbed, options, cancellationToken: cancellationToken);
+
+                    // Update knowledge units with their embeddings (normalized for cosine similarity)
+                    var embeddingList = embeddings.ToList();
+                    for (int j = 0; j < knowledgeUnitsWithoutEmbeddings.Count && j < embeddingList.Count; j++)
+                    {
+                        if (cancellationToken.IsCancellationRequested)
+                            break;
+
+                        var knowledgeUnit = knowledgeUnitsWithoutEmbeddings[j];
+                        var embedding = embeddingList[j];
+
+                        // Process embedding (conditionally normalize based on model)
+                        var processedVector = _embeddingHelper.ProcessEmbedding(embedding.Vector.ToArray());
+
+                        knowledgeUnit.Embedding = new Vector(processedVector);
+                        knowledgeUnit.UpdatedAt = DateTimeOffset.UtcNow;
+
+                        processedCount++;
+
+                        LogDebug($"Generated embedding for knowledge unit {knowledgeUnit.Id} (Title: {knowledgeUnit.Title}) with {embedding.Vector.Length} dimensions");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                errorCount = knowledgeUnitsWithoutEmbeddings.Count;
+                LogError(context, ex, "Failed to generate embeddings for knowledge units");
+                throw;
+            }
+
+            LogInfo(context, $"Embedding generation job completed. Processed: {processedCount}, Errors: {errorCount}");
+        });
+
+        // If we processed exactly BatchSize knowledge units, there might be more - requeue the job
+        // This happens outside the transaction to ensure it only runs after successful commit
+        // Don't requeue if processing a specific knowledge unit
+        if (shouldRequeue && !knowledgeUnitId.HasValue)
+        {
+            LogInfo(context, $"Processed exactly {BatchSize} knowledge units. Continuing with next batch");
+
+            var currentJobId = context.BackgroundJob.Id;
+            _backgroundJobClient.ContinueJobWith<EmbeddingGenerationJob>(
+                currentJobId,
+                j => j.GenerateKnowledgeUnitEmbeddings(default!, default, null));
+        }
+    }
+
+    /// <summary>
+    /// Builds the text to embed from knowledge unit properties
+    /// </summary>
+    private static string BuildTextForEmbedding(KnowledgeUnit knowledgeUnit)
+    {
+        var parts = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(knowledgeUnit.Title))
+        {
+            parts.Add(knowledgeUnit.Title);
+        }
+
+        if (!string.IsNullOrWhiteSpace(knowledgeUnit.Summary))
+        {
+            parts.Add(knowledgeUnit.Summary);
+        }
+
+        if (!string.IsNullOrWhiteSpace(knowledgeUnit.Content))
+        {
+            parts.Add(knowledgeUnit.Content);
         }
 
         return string.Join("\n\n", parts);

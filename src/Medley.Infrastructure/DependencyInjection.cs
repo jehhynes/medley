@@ -67,6 +67,8 @@ public static class DependencyInjection
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<IFragmentRepository, FragmentRepository>();
         services.AddScoped<IRepository<Fragment>>(sp => sp.GetRequiredService<IFragmentRepository>());
+        services.AddScoped<IKnowledgeUnitRepository, KnowledgeUnitRepository>();
+        services.AddScoped<IRepository<KnowledgeUnit>>(sp => sp.GetRequiredService<IKnowledgeUnitRepository>());
         services.AddScoped<ISourceRepository, SourceRepository>();
         services.AddScoped<IRepository<Source>>(sp => sp.GetRequiredService<ISourceRepository>());
         services.AddScoped<IObservationRepository, ObservationRepository>();
@@ -92,7 +94,7 @@ public static class DependencyInjection
         services.AddScoped<AiCallContext>();
         
         //services.AddScoped<IntegrationHealthCheckJob>();
-        services.AddTransient<FragmentClusteringJob>();
+        services.AddTransient<KnowledgeUnitClusteringJob>();
         services.AddTransient<ArticleChatJob>();
         services.AddSingleton<RecurringJobCleanUpManager>();
         services.AddSingleton<IJobRegistry, JobRegistry>();

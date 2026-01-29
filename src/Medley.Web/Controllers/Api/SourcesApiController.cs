@@ -274,7 +274,7 @@ public class SourcesApiController : ControllerBase
             var source = await _sourceRepository.Query()
                 .IgnoreQueryFilters()
                 .Include(s => s.Fragments)
-                    .ThenInclude(f => f.ClusteredInto)
+                    .ThenInclude(f => f.KnowledgeUnit)
                 .FirstOrDefaultAsync(s => s.Id == id);
 
             if (source == null)
@@ -295,9 +295,9 @@ public class SourcesApiController : ControllerBase
                 });
             }
 
-            // Check if any fragments have been merged/clustered into another fragment
+            // Check if any fragments have been merged/clustered into a KnowledgeUnit
             var clusteredFragments = source.Fragments
-                .Where(f => !f.IsDeleted && f.ClusteredIntoId.HasValue)
+                .Where(f => !f.IsDeleted && f.KnowledgeUnitId.HasValue)
                 .ToList();
 
             if (clusteredFragments.Any())
@@ -305,8 +305,8 @@ public class SourcesApiController : ControllerBase
                 var fragmentTitles = string.Join(", ", clusteredFragments.Take(3).Select(f => $"'{f.Title}'"));
                 var moreCount = clusteredFragments.Count - 3;
                 var message = clusteredFragments.Count == 1
-                    ? $"Cannot delete source because fragment {fragmentTitles} has been clustered into another fragment."
-                    : $"Cannot delete source because {clusteredFragments.Count} fragments ({fragmentTitles}{(moreCount > 0 ? $" and {moreCount} more" : "")}) have been clustered into other fragments.";
+                    ? $"Cannot delete source because fragment {fragmentTitles} has been clustered into a knowledge unit."
+                    : $"Cannot delete source because {clusteredFragments.Count} fragments ({fragmentTitles}{(moreCount > 0 ? $" and {moreCount} more" : "")}) have been clustered into knowledge units.";
 
                 return BadRequest(new DeleteSourceResponse
                 {

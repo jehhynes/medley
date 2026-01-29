@@ -32,8 +32,13 @@ public class FragmentRepository : Repository<Fragment>, IFragmentRepository
     /// <summary>
     /// Finds fragments similar to the given embedding vector using cosine distance
     /// </summary>
-    public async Task<IEnumerable<FragmentSimilarityResult>> FindSimilarAsync(float[] embedding, int limit, double? minSimilarity = null,
-        CancellationToken cancellationToken = default, Func<IQueryable<Fragment>, IQueryable<Fragment>>? filter = null)
+    public async Task<IEnumerable<FragmentSimilarityResult>> FindSimilarAsync(
+        float[] embedding, 
+        int limit, 
+        double? minSimilarity = null,
+        bool excludeClustered = false,
+        CancellationToken cancellationToken = default, 
+        Func<IQueryable<Fragment>, IQueryable<Fragment>>? filter = null)
     {
         var vector = new Vector(embedding);
 
@@ -44,6 +49,12 @@ public class FragmentRepository : Repository<Fragment>, IFragmentRepository
             query = filter(query);
 
         query = query.Where(f => f.Embedding != null);
+
+        // Exclude fragments that are already assigned to a KnowledgeUnit if requested
+        if (excludeClustered)
+        {
+            query = query.Where(f => f.KnowledgeUnitId == null);
+        }
 
         if (minSimilarity.HasValue)
         {
@@ -64,5 +75,18 @@ public class FragmentRepository : Repository<Fragment>, IFragmentRepository
             RelatedEntity = r.Fragment,
             Distance = r.Distance
         });
+    }
+
+    /// <summary>
+    /// Gets fragments that belong to a specific KnowledgeUnit
+    /// </summary>
+    public async Task<IEnumerable<Fragment>> GetByKnowledgeUnitIdAsync(
+        Guid knowledgeUnitId, 
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.Fragments
+            .Include(f => f.FragmentCategory)
+            .Where(f => f.KnowledgeUnitId == knowledgeUnitId)
+            .ToListAsync(cancellationToken);
     }
 }

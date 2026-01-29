@@ -49,10 +49,6 @@ public class FragmentClusteringResponse
     public required string Category { get; set; }
 
     [Required]
-    [Description("The ID of the fragment that best represents this cluster")]
-    public required Guid RepresentativeFragmentId { get; set; }
-
-    [Required]
     [Description("The full consolidated text content")]
     public required string Content { get; set; }
 

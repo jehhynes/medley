@@ -88,7 +88,7 @@ public class FragmentExtractionService
         if (existingFragments.Any())
         {
             // Check if any fragments have been clustered
-            var clusteredFragments = existingFragments.Where(f => f.ClusteredIntoId != null).ToList();
+            var clusteredFragments = existingFragments.Where(f => f.KnowledgeUnitId != null).ToList();
             
             if (clusteredFragments.Any())
             {

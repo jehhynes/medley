@@ -28,7 +28,7 @@ public class JobRegistry : IJobRegistry
             RecurringJobDescriptor.Create<SmartTagProcessorJob>(j => j.ExecuteAsync(default!, default, null), Daily(3, 0)), // Run nightly at 3 AM to pickup missed sources
             RecurringJobDescriptor.Create<SpeakerExtractionJob>(j => j.ExecuteAsync(default!, default, null), Daily(4, 0)), // Run nightly at 4 AM to extract speakers
             
-            //RecurringJobDescriptor.Create<FragmentClusteringJob>(j => j.ExecuteAsync(default!, default), MinuteInterval(1))
+            //RecurringJobDescriptor.Create<KnowledgeUnitClusteringJob>(j => j.ExecuteAsync(default!, default), MinuteInterval(1))
         };
 
         return jobs;

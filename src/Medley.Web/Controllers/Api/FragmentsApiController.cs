@@ -483,7 +483,7 @@ public class FragmentsApiController : ControllerBase
             // Use IgnoreQueryFilters to bypass the IsDeleted filter so we can find already deleted fragments
             var fragment = await _fragmentRepository.Query()
                 .IgnoreQueryFilters()
-                .Include(f => f.ClusteredInto)
+                .Include(f => f.KnowledgeUnit)
                 .FirstOrDefaultAsync(f => f.Id == id);
 
             if (fragment == null)
@@ -504,14 +504,14 @@ public class FragmentsApiController : ControllerBase
                 });
             }
 
-            // Check if fragment has been merged/clustered into another fragment
-            if (fragment.ClusteredIntoId.HasValue)
+            // Check if fragment has been merged/clustered into a KnowledgeUnit
+            if (fragment.KnowledgeUnitId.HasValue)
             {
-                var clusterTitle = fragment.ClusteredInto?.Title ?? "another fragment";
+                var knowledgeUnitTitle = fragment.KnowledgeUnit?.Title ?? "a knowledge unit";
                 return BadRequest(new DeleteFragmentResponse
                 {
                     Success = false,
-                    Message = $"Cannot delete fragment because it has been clustered into '{clusterTitle}'."
+                    Message = $"Cannot delete fragment because it has been clustered into '{knowledgeUnitTitle}'."
                 });
             }
 

@@ -697,18 +697,17 @@ public class FragmentDeleteTests : DatabaseTestBase
     [Fact]
     public async Task ClusteredFragments_ShouldNotBeDeleteable()
     {
-        // Arrange - Create a cluster fragment and a fragment clustered into it
-        var clusterFragment = new Fragment
+        // Arrange - Create a KnowledgeUnit and a fragment clustered into it
+        var knowledgeUnit = new KnowledgeUnit
         {
             Id = Guid.NewGuid(),
-            Title = "Cluster Fragment",
-            Summary = "Cluster Summary",
-            FragmentCategory = _defaultCategory,
-            Content = "Cluster content",
-            IsCluster = true,
-            IsDeleted = false,
+            Title = "Test Knowledge Unit",
+            Summary = "Test Summary",
+            Content = "Test Content",
+            Confidence = Domain.Enums.ConfidenceLevel.High,
+            Category = _defaultCategory,
             CreatedAt = DateTimeOffset.UtcNow,
-            Source = _testSource
+            UpdatedAt = DateTimeOffset.UtcNow
         };
 
         var clusteredFragment = new Fragment
@@ -719,13 +718,14 @@ public class FragmentDeleteTests : DatabaseTestBase
             FragmentCategory = _defaultCategory,
             Content = "Clustered content",
             IsDeleted = false,
-            ClusteredIntoId = clusterFragment.Id,
-            ClusteredInto = clusterFragment,
+            KnowledgeUnitId = knowledgeUnit.Id,
+            KnowledgeUnit = knowledgeUnit,
             CreatedAt = DateTimeOffset.UtcNow,
             Source = _testSource
         };
 
-        await _dbContext.Fragments.AddRangeAsync(clusterFragment, clusteredFragment);
+        await _dbContext.KnowledgeUnits.AddAsync(knowledgeUnit);
+        await _dbContext.Fragments.AddAsync(clusteredFragment);
         await _dbContext.SaveChangesAsync();
 
         // Clear change tracker
@@ -734,13 +734,13 @@ public class FragmentDeleteTests : DatabaseTestBase
         // Act - Try to delete the clustered fragment (should fail)
         var fragmentToDelete = await _repository.Query()
             .IgnoreQueryFilters()
-            .Include(f => f.ClusteredInto)
+            .Include(f => f.KnowledgeUnit)
             .FirstOrDefaultAsync(f => f.Id == clusteredFragment.Id);
 
-        // Assert - Fragment should have ClusteredIntoId set
+        // Assert - Fragment should have KnowledgeUnitId set
         Assert.NotNull(fragmentToDelete);
-        Assert.NotNull(fragmentToDelete.ClusteredIntoId);
-        Assert.Equal(clusterFragment.Id, fragmentToDelete.ClusteredIntoId);
+        Assert.NotNull(fragmentToDelete.KnowledgeUnitId);
+        Assert.Equal(knowledgeUnit.Id, fragmentToDelete.KnowledgeUnitId);
         
         // In a real scenario, the controller would check this and return an error
         // This test verifies the data structure is correct for that validation

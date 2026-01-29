@@ -21,6 +21,7 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     public DbSet<UserAuditLog> UserAuditLogs { get; set; }
     public DbSet<Fragment> Fragments { get; set; }
     public DbSet<FragmentCategory> FragmentCategories { get; set; }
+    public DbSet<KnowledgeUnit> KnowledgeUnits { get; set; }
     public DbSet<Organization> Organizations { get; set; }
     public DbSet<Integration> Integrations { get; set; }
     public DbSet<Source> Sources { get; set; }
@@ -109,10 +110,14 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
         builder.Entity<Source>()
             .HasQueryFilter(s => !s.IsDeleted);
 
-        // Configure many-to-many relationship between Article and Fragment
+        // Configure many-to-many relationship between Article and KnowledgeUnit
         builder.Entity<Article>()
-            .HasMany(a => a.Fragments)
-            .WithMany()
-            .UsingEntity(j => j.ToTable("article_fragments"));
+            .HasMany(a => a.KnowledgeUnits)
+            .WithMany(ku => ku.Articles)
+            .UsingEntity(j => j.ToTable("article_knowledge_units"));
+
+        // Ignore the Fragments navigation property on Article (legacy property, not mapped to database)
+        builder.Entity<Article>()
+            .Ignore(a => a.Fragments);
     }
 }

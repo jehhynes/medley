@@ -3,6 +3,7 @@ using System;
 using Medley.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -12,9 +13,11 @@ using Pgvector;
 namespace Medley.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260129164733_AddKnowledgeUnitSchema")]
+    partial class AddKnowledgeUnitSchema
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -287,6 +290,10 @@ namespace Medley.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("current_version_id");
 
+                    b.Property<Guid?>("KnowledgeUnitId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("knowledge_unit_id");
+
                     b.Property<string>("Metadata")
                         .HasColumnType("text")
                         .HasColumnName("metadata");
@@ -336,6 +343,9 @@ namespace Medley.Infrastructure.Migrations
 
                     b.HasIndex("CurrentVersionId")
                         .HasDatabaseName("ix_articles_current_version_id");
+
+                    b.HasIndex("KnowledgeUnitId")
+                        .HasDatabaseName("ix_articles_knowledge_unit_id");
 
                     b.HasIndex("ParentArticleId")
                         .HasDatabaseName("ix_articles_parent_article_id");
@@ -1816,6 +1826,11 @@ namespace Medley.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("fk_articles_article_versions_current_version_id");
 
+                    b.HasOne("Medley.Domain.Entities.KnowledgeUnit", null)
+                        .WithMany("Articles")
+                        .HasForeignKey("KnowledgeUnitId")
+                        .HasConstraintName("fk_articles_knowledge_units_knowledge_unit_id");
+
                     b.HasOne("Medley.Domain.Entities.Article", "ParentArticle")
                         .WithMany("ChildArticles")
                         .HasForeignKey("ParentArticleId")
@@ -2207,6 +2222,8 @@ namespace Medley.Infrastructure.Migrations
 
             modelBuilder.Entity("Medley.Domain.Entities.KnowledgeUnit", b =>
                 {
+                    b.Navigation("Articles");
+
                     b.Navigation("Fragments");
                 });
 

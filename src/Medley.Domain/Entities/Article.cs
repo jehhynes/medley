@@ -116,6 +116,11 @@ public class Article : BusinessEntity
     public virtual ICollection<Fragment> Fragments { get; set; } = new List<Fragment>();
     
     /// <summary>
+    /// Knowledge units referenced by this article
+    /// </summary>
+    public virtual ICollection<KnowledgeUnit> KnowledgeUnits { get; set; } = new List<KnowledgeUnit>();
+    
+    /// <summary>
     /// Chat conversations about this article
     /// </summary>
     public virtual ICollection<ChatConversation> ChatConversations { get; set; } = new List<ChatConversation>();

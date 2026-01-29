@@ -62,42 +62,20 @@ public class Fragment : BusinessEntity
     public DateTimeOffset? LastModifiedAt { get; set; }
 
     /// <summary>
-    /// Indicates if this fragment is a cluster of other fragments
+    /// The ID of the knowledge unit this fragment belongs to
     /// </summary>
-    public bool IsCluster { get; set; }
+    public Guid? KnowledgeUnitId { get; set; }
 
     /// <summary>
-    /// The ID of the cluster fragment this fragment belongs to
+    /// Navigation to the knowledge unit
     /// </summary>
-    public Guid? ClusteredIntoId { get; set; }
-
-    /// <summary>
-    /// Navigation to the cluster fragment
-    /// </summary>
-    [ForeignKey(nameof(ClusteredIntoId))]
-    public virtual Fragment? ClusteredInto { get; set; }
+    [ForeignKey(nameof(KnowledgeUnitId))]
+    public virtual KnowledgeUnit? KnowledgeUnit { get; set; }
 
     /// <summary>
     /// Date when the fragment was processed for clustering
     /// </summary>
     public DateTimeOffset? ClusteringProcessed { get; set; }
-
-    /// <summary>
-    /// Message or reasoning from the clustering process
-    /// </summary>
-    [MaxLength(2000)]
-    public string? ClusteringMessage { get; set; }
-
-    /// <summary>
-    /// The ID of the representative fragment for this cluster
-    /// </summary>
-    public Guid? RepresentativeFragmentId { get; set; }
-
-    /// <summary>
-    /// Navigation to the representative fragment
-    /// </summary>
-    [ForeignKey(nameof(RepresentativeFragmentId))]
-    public virtual Fragment? RepresentativeFragment { get; set; }
 
     /// <summary>
     /// Confidence level from the AI extraction
