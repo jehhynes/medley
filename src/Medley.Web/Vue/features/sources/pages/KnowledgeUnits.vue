@@ -63,12 +63,23 @@
       <div class="empty-state-title">No Knowledge Unit Selected</div>
       <div class="empty-state-text">Select a knowledge unit from the sidebar to view its details</div>
     </div>
-    <knowledge-unit-body 
-      v-else
-      :knowledge-unit="selectedKnowledgeUnit" 
-      @updated="handleKnowledgeUnitUpdated"
-      @deleted="handleKnowledgeUnitDeleted"
-    />
+    <div v-else class="d-flex flex-column h-100">
+      <div class="main-content-header">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <h1 class="main-content-title">{{ selectedKnowledgeUnit.title || 'Untitled Knowledge Unit' }}</h1>
+          </div>
+        </div>
+      </div>
+
+        <div class="fragment-content-area">
+        <knowledge-unit-body 
+          :knowledge-unit="selectedKnowledgeUnit" 
+          @updated="handleKnowledgeUnitUpdated"
+          @deleted="handleKnowledgeUnitDeleted"
+        />
+      </div>
+    </div>
   </div>
 </template>
 
@@ -272,4 +283,7 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+    .main-content-header {
+        margin-bottom: 0;
+    }
 </style>

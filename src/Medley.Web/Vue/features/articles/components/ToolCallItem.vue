@@ -9,7 +9,7 @@
              :title="formatToolName(tool.name)" 
              alt="Cursor AI" />
       </template>
-      <i v-else class="bi me-2" :class="getToolIcon(tool.name)" :title="formatToolName(tool.name)"></i>
+      <i v-else class="me-2" :class="getToolIcon(tool.name)" :title="formatToolName(tool.name)"></i>
       
       <!-- CreatePlan tool with link -->
       <template v-if="tool.name && tool.name.toLowerCase().includes('createplan') && tool.completed && getIdFromResult(tool.result)">

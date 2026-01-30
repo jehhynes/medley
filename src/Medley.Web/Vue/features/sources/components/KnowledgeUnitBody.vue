@@ -1,136 +1,141 @@
 <template>
   <div v-if="knowledgeUnit" class="d-flex flex-column h-100">
-    <!-- Header -->
-    <div class="main-content-header">
-      <div class="d-flex justify-content-between align-items-start mb-3">
-        <div>
-          <h1 class="main-content-title">{{ knowledgeUnit.title || 'Untitled Knowledge Unit' }}</h1>
-          <div class="text-muted">
-            <span v-if="knowledgeUnit.category" class="badge bg-secondary me-2">
-              <i :class="getIconClass(knowledgeUnit.categoryIcon, 'fal fa-atom')" class="me-1"></i>{{ knowledgeUnit.category }}
-            </span>
-            <span 
-              v-if="knowledgeUnit.confidence"
-              class="badge bg-light text-dark me-2"
-              @click="toggleConfidenceComment"
-              style="cursor: pointer;"
-              :title="showConfidenceComment ? 'Hide confidence note' : 'Show confidence note'">
+    <!-- Knowledge Unit Metadata (Category, Confidence, Date, Fragment Count, Actions) -->
+    <div class="mb-3 d-flex align-items-center justify-content-between">
+      <div>
+        <span v-if="knowledgeUnit.category" class="badge bg-secondary me-2">
+          <i :class="getIconClass(knowledgeUnit.categoryIcon, 'fal fa-atom')" class="me-1"></i>{{ knowledgeUnit.category }}
+        </span>
+        <span 
+          v-if="knowledgeUnit.confidence"
+          class="badge bg-light text-dark me-2"
+          @click="toggleConfidenceComment"
+          style="cursor: pointer;"
+          :title="showConfidenceComment ? 'Hide confidence note' : 'Show confidence note'">
+          <i 
+            :class="'fa-duotone ' + getConfidenceIcon(knowledgeUnit.confidence)" 
+            :style="{ color: getConfidenceColor(knowledgeUnit.confidence) }"
+            class="me-1"
+          ></i>
+          Confidence: {{ knowledgeUnit.confidence }}
+          <i v-if="knowledgeUnit.confidenceComment" :class="showConfidenceComment ? 'bi bi-chevron-up ms-1' : 'bi bi-chevron-down ms-1'"></i>
+        </span>
+        <span class="text-muted me-2">
+          <i class="bi bi-calendar3"></i>
+          {{ formatDate(knowledgeUnit.updatedAt?.toString()) }}
+        </span>
+        <span class="text-muted me-2">
+          <i class="bi bi-puzzle"></i>
+          {{ knowledgeUnit.fragmentCount }} fragment{{ knowledgeUnit.fragmentCount !== 1 ? 's' : '' }}
+        </span>
+      </div>
+      
+      <!-- Actions Dropdown -->
+      <div class="dropdown-container">
+        <button 
+          class="btn btn-sm btn-outline-secondary"
+          @click.stop="toggleDropdown($event, 'knowledge-unit-actions')"
+          title="Actions">
+          <i class="bi bi-three-dots"></i>
+        </button>
+        <ul v-if="dropdownOpen" class="dropdown-menu dropdown-menu-end show">
+          <li>
+            <button 
+              class="dropdown-item text-danger" 
+              @click.stop="confirmDelete(); closeDropdown()"
+              :disabled="isDeleting">
+              <i class="bi bi-trash me-2"></i>
+              {{ isDeleting ? 'Deleting...' : 'Delete Knowledge Unit' }}
+            </button>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Confidence Alert with Comment (only show when expanded or editing) -->
+    <div v-if="knowledgeUnit.confidence && (showConfidenceComment || isEditingConfidence)" class="alert alert-info mb-3">
+      <div class="d-flex align-items-start justify-content-between">
+        <div class="flex-grow-1">
+          <!-- Display Mode -->
+          <template v-if="!isEditingConfidence">
+            <div class="d-flex align-items-center mb-2">
               <i 
                 :class="'fa-duotone ' + getConfidenceIcon(knowledgeUnit.confidence)" 
                 :style="{ color: getConfidenceColor(knowledgeUnit.confidence) }"
-                class="me-1"
+                class="me-2"
               ></i>
-              Confidence: {{ knowledgeUnit.confidence }}
-              <i v-if="knowledgeUnit.confidenceComment" :class="showConfidenceComment ? 'bi bi-chevron-up ms-1' : 'bi bi-chevron-down ms-1'"></i>
-            </span>
-            <span class="me-2">
-              <i class="bi bi-calendar3"></i>
-              {{ formatDate(knowledgeUnit.updatedAt?.toString()) }}
-            </span>
-            <span class="me-2">
-              <i class="bi bi-puzzle"></i>
-              {{ knowledgeUnit.fragmentCount }} fragment{{ knowledgeUnit.fragmentCount !== 1 ? 's' : '' }}
-            </span>
-          </div>
+              <strong>Confidence: {{ knowledgeUnit.confidence }}</strong>
+            </div>
+            <div style="white-space: pre-wrap;">{{ knowledgeUnit.confidenceComment }}</div>
+          </template>
+
+          <!-- Edit Mode -->
+          <template v-else>
+            <div class="mb-2">
+              <select 
+                id="confidenceLevel"
+                v-model="editedConfidence" 
+                class="form-select form-select-sm"
+                :disabled="isSaving">
+                <option value="Unclear">Unclear</option>
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+                <option value="Certain">Certain</option>
+              </select>
+            </div>
+            <div>
+              <textarea 
+                id="confidenceComment"
+                v-model="editedComment" 
+                class="form-control form-control-sm" 
+                rows="4"
+                placeholder="Add a note explaining your confidence assessment..."
+                :disabled="isSaving"
+              ></textarea>
+            </div>
+          </template>
         </div>
-        
-        <!-- Actions Dropdown -->
-        <div class="dropdown-container">
-          <button 
-            class="btn btn-primary"
-            @click.stop="toggleDropdown($event, 'knowledge-unit-actions')"
-            title="Actions">
-            <i class="bi bi-three-dots"></i>
-          </button>
-          <ul v-if="dropdownOpen" class="dropdown-menu dropdown-menu-end show">
-            <li>
-              <button 
-                class="dropdown-item text-danger" 
-                @click.stop="confirmDelete(); closeDropdown()"
-                :disabled="isDeleting">
-                <i class="bi bi-trash me-2"></i>
-                {{ isDeleting ? 'Deleting...' : 'Delete Knowledge Unit' }}
-              </button>
-            </li>
-          </ul>
+
+        <!-- Action Buttons -->
+        <div class="ms-3 d-flex gap-1 flex-shrink-0">
+          <template v-if="!isEditingConfidence">
+            <button 
+              class="btn btn-sm btn-outline-secondary" 
+              @click="startEditingConfidence"
+              title="Edit confidence">
+              <i class="bi bi-pencil"></i>
+            </button>
+          </template>
+          <template v-else>
+            <button 
+              class="btn btn-sm btn-success" 
+              @click="saveConfidence"
+              :disabled="isSaving"
+              title="Save">
+              <span v-if="isSaving" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+              <i v-else class="bi bi-check-lg"></i>
+            </button>
+            <button 
+              class="btn btn-sm btn-outline-secondary" 
+              @click="cancelEditingConfidence"
+              :disabled="isSaving"
+              title="Cancel">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </template>
         </div>
       </div>
+    </div>
 
-      <!-- Confidence Alert with Comment (only show when expanded or editing) -->
-      <div v-if="knowledgeUnit.confidence && (showConfidenceComment || isEditingConfidence)" class="alert alert-info mb-3">
-        <div class="d-flex align-items-start justify-content-between">
-          <div class="flex-grow-1">
-            <!-- Display Mode -->
-            <template v-if="!isEditingConfidence">
-              <div class="d-flex align-items-center mb-2">
-                <i 
-                  :class="'fa-duotone ' + getConfidenceIcon(knowledgeUnit.confidence)" 
-                  :style="{ color: getConfidenceColor(knowledgeUnit.confidence) }"
-                  class="me-2"
-                ></i>
-                <strong>Confidence: {{ knowledgeUnit.confidence }}</strong>
-              </div>
-              <div style="white-space: pre-wrap;">{{ knowledgeUnit.confidenceComment }}</div>
-            </template>
-
-            <!-- Edit Mode -->
-            <template v-else>
-              <div class="mb-2">
-                <select 
-                  id="confidenceLevel"
-                  v-model="editedConfidence" 
-                  class="form-select form-select-sm"
-                  :disabled="isSaving">
-                  <option value="Unclear">Unclear</option>
-                  <option value="Low">Low</option>
-                  <option value="Medium">Medium</option>
-                  <option value="High">High</option>
-                  <option value="Certain">Certain</option>
-                </select>
-              </div>
-              <div>
-                <textarea 
-                  id="confidenceComment"
-                  v-model="editedComment" 
-                  class="form-control form-control-sm" 
-                  rows="4"
-                  placeholder="Add a note explaining your confidence assessment..."
-                  :disabled="isSaving"
-                ></textarea>
-              </div>
-            </template>
-          </div>
-
-          <!-- Action Buttons -->
-          <div class="ms-3 d-flex gap-1 flex-shrink-0">
-            <template v-if="!isEditingConfidence">
-              <button 
-                class="btn btn-sm btn-outline-secondary" 
-                @click="startEditingConfidence"
-                title="Edit confidence">
-                <i class="bi bi-pencil"></i>
-              </button>
-            </template>
-            <template v-else>
-              <button 
-                class="btn btn-sm btn-success" 
-                @click="saveConfidence"
-                :disabled="isSaving"
-                title="Save">
-                <span v-if="isSaving" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                <i v-else class="bi bi-check-lg"></i>
-              </button>
-              <button 
-                class="btn btn-sm btn-outline-secondary" 
-                @click="cancelEditingConfidence"
-                :disabled="isSaving"
-                title="Cancel">
-                <i class="bi bi-x-lg"></i>
-              </button>
-            </template>
-          </div>
-        </div>
-      </div>
+    <!-- Add Confidence Button (when no confidence set) -->
+    <div v-if="!knowledgeUnit.confidence && !isEditingConfidence" class="mb-3">
+      <button 
+        class="btn btn-sm btn-outline-secondary" 
+        @click="startEditingConfidence"
+        title="Add confidence level">
+        <i class="bi bi-plus-circle me-1"></i> Add Confidence Level
+      </button>
     </div>
 
     <!-- Tabs -->
@@ -245,10 +250,12 @@ declare const marked: {
 // Props
 interface Props {
   knowledgeUnit: KnowledgeUnitDto | null;
+  showTitle?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  knowledgeUnit: null
+  knowledgeUnit: null,
+  showTitle: true
 });
 
 // Emits

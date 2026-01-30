@@ -114,7 +114,7 @@
             <div class="dropdown-container">
               <button 
                 type="button" 
-                class="btn btn-primary" 
+                class="btn btn-sm btn-outline-secondary" 
                 @click="(e) => toggleDropdown(e, 'source-actions')"
                 title="Actions">
                 <i class="bi bi-three-dots"></i>
