@@ -62,20 +62,14 @@ public class Fragment : BusinessEntity
     public DateTimeOffset? LastModifiedAt { get; set; }
 
     /// <summary>
-    /// The ID of the knowledge unit this fragment belongs to
-    /// </summary>
-    public Guid? KnowledgeUnitId { get; set; }
-
-    /// <summary>
-    /// Navigation to the knowledge unit
-    /// </summary>
-    [ForeignKey(nameof(KnowledgeUnitId))]
-    public virtual KnowledgeUnit? KnowledgeUnit { get; set; }
-
-    /// <summary>
     /// Date when the fragment was processed for clustering
     /// </summary>
     public DateTimeOffset? ClusteringProcessed { get; set; }
+
+    /// <summary>
+    /// Many-to-many relationships with knowledge units
+    /// </summary>
+    public virtual ICollection<FragmentKnowledgeUnit> FragmentKnowledgeUnits { get; set; } = new List<FragmentKnowledgeUnit>();
 
     /// <summary>
     /// Confidence level from the AI extraction

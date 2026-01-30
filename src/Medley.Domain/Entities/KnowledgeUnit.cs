@@ -73,9 +73,9 @@ public class KnowledgeUnit : BusinessEntity
     public bool IsDeleted { get; set; } = false;
 
     /// <summary>
-    /// Fragments that belong to this knowledge unit
+    /// Many-to-many relationships with fragments
     /// </summary>
-    public virtual ICollection<Fragment> Fragments { get; set; } = new List<Fragment>();
+    public virtual ICollection<FragmentKnowledgeUnit> FragmentKnowledgeUnits { get; set; } = new List<FragmentKnowledgeUnit>();
 
     /// <summary>
     /// Articles that reference this knowledge unit

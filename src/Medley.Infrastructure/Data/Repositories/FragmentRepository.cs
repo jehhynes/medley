@@ -50,10 +50,10 @@ public class FragmentRepository : Repository<Fragment>, IFragmentRepository
 
         query = query.Where(f => f.Embedding != null);
 
-        // Exclude fragments that are already assigned to a KnowledgeUnit if requested
+        // Exclude fragments that are already clustered (have ClusteringProcessed timestamp) if requested
         if (excludeClustered)
         {
-            query = query.Where(f => f.KnowledgeUnitId == null);
+            query = query.Where(f => !f.ClusteringProcessed.HasValue);
         }
 
         if (minSimilarity.HasValue)
@@ -84,9 +84,11 @@ public class FragmentRepository : Repository<Fragment>, IFragmentRepository
         Guid knowledgeUnitId, 
         CancellationToken cancellationToken = default)
     {
-        return await _context.Fragments
-            .Include(f => f.KnowledgeCategory)
-            .Where(f => f.KnowledgeUnitId == knowledgeUnitId)
+        return await _context.FragmentKnowledgeUnits
+            .Include(fku => fku.Fragment)
+                .ThenInclude(f => f.KnowledgeCategory)
+            .Where(fku => fku.KnowledgeUnitId == knowledgeUnitId)
+            .Select(fku => fku.Fragment)
             .ToListAsync(cancellationToken);
     }
 }

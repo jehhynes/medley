@@ -274,7 +274,7 @@ public class SourcesApiController : ControllerBase
             var source = await _sourceRepository.Query()
                 .IgnoreQueryFilters()
                 .Include(s => s.Fragments)
-                    .ThenInclude(f => f.KnowledgeUnit)
+                    .ThenInclude(f => f.FragmentKnowledgeUnits)
                 .FirstOrDefaultAsync(s => s.Id == id);
 
             if (source == null)
@@ -297,7 +297,7 @@ public class SourcesApiController : ControllerBase
 
             // Check if any fragments have been merged/clustered into a KnowledgeUnit
             var clusteredFragments = source.Fragments
-                .Where(f => !f.IsDeleted && f.KnowledgeUnitId.HasValue)
+                .Where(f => !f.IsDeleted && f.FragmentKnowledgeUnits.Any())
                 .ToList();
 
             if (clusteredFragments.Any())

@@ -43,6 +43,7 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     public DbSet<AiModelCostParameter> AiModelCostParameters { get; set; }
     public DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
     public DbSet<Speaker> Speakers { get; set; }
+    public DbSet<FragmentKnowledgeUnit> FragmentKnowledgeUnits { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -118,5 +119,22 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
             .HasMany(a => a.KnowledgeUnits)
             .WithMany(ku => ku.Articles)
             .UsingEntity(j => j.ToTable("article_knowledge_units"));
+
+        // Configure many-to-many relationship between Fragment and KnowledgeUnit
+        builder.Entity<FragmentKnowledgeUnit>(entity =>
+        {
+            entity.HasOne(fku => fku.Fragment)
+                .WithMany(f => f.FragmentKnowledgeUnits)
+                .HasForeignKey(fku => fku.FragmentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(fku => fku.KnowledgeUnit)
+                .WithMany(ku => ku.FragmentKnowledgeUnits)
+                .HasForeignKey(fku => fku.KnowledgeUnitId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(fku => new { fku.FragmentId, fku.KnowledgeUnitId })
+                .IsUnique();
+        });
     }
 }

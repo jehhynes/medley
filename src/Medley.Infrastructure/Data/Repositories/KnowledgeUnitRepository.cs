@@ -68,7 +68,8 @@ public class KnowledgeUnitRepository : Repository<KnowledgeUnit>, IKnowledgeUnit
         CancellationToken cancellationToken = default)
     {
         return await _context.KnowledgeUnits
-            .Include(ku => ku.Fragments)
+            .Include(ku => ku.FragmentKnowledgeUnits)
+                .ThenInclude(fku => fku.Fragment)
             .Include(ku => ku.Category)
             .FirstOrDefaultAsync(ku => ku.Id == id, cancellationToken);
     }

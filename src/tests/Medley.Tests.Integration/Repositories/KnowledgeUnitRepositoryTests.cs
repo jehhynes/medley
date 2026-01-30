@@ -388,10 +388,21 @@ public class KnowledgeUnitRepositoryTests : DatabaseTestBase
             }
         };
 
-        // Note: We can't set KnowledgeUnit navigation property yet because Fragment entity
-        // doesn't have KnowledgeUnit property yet (that's in task 3)
-        // This test will need to be updated after task 3 is complete
         await _dbContext.Fragments.AddRangeAsync(fragments);
+        await _dbContext.SaveChangesAsync();
+
+        // Create many-to-many relationships
+        var joinEntities = fragments.Select(f => new FragmentKnowledgeUnit
+        {
+            Id = Guid.NewGuid(),
+            FragmentId = f.Id,
+            Fragment = f,
+            KnowledgeUnitId = knowledgeUnit.Id,
+            KnowledgeUnit = knowledgeUnit,
+            CreatedAt = DateTimeOffset.UtcNow
+        }).ToArray();
+
+        await _dbContext.FragmentKnowledgeUnits.AddRangeAsync(joinEntities);
         await _dbContext.SaveChangesAsync();
 
         // Act
@@ -400,7 +411,8 @@ public class KnowledgeUnitRepositoryTests : DatabaseTestBase
         // Assert
         Assert.NotNull(result);
         Assert.Equal(knowledgeUnit.Id, result.Id);
-        Assert.NotNull(result.Fragments);
+        Assert.NotNull(result.FragmentKnowledgeUnits);
+        Assert.Equal(2, result.FragmentKnowledgeUnits.Count);
         Assert.NotNull(result.Category);
     }
 

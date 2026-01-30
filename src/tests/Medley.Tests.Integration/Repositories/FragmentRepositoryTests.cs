@@ -331,9 +331,9 @@ public class FragmentRepositoryTests : DatabaseTestBase
     }
 
     [Fact]
-    public async Task FindSimilarAsync_WithExcludeClustered_ShouldExcludeFragmentsWithKnowledgeUnitId()
+    public async Task FindSimilarAsync_WithExcludeClustered_ShouldExcludeFragmentsWithClusteringProcessed()
     {
-        // Arrange - Create fragments with and without KnowledgeUnit assignment
+        // Arrange - Create fragments with and without clustering processed timestamp
         var queryEmbedding = CreateTestEmbedding(1.0f, 0.0f);
         var similarEmbedding = CreateTestEmbedding(0.95f, 0.05f);
 
@@ -341,21 +341,6 @@ public class FragmentRepositoryTests : DatabaseTestBase
         await _dbContext.Integrations.AddAsync(integration);
         var source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, MetadataType = Domain.Enums.SourceMetadataType.Collector_Fellow, Name = "Meeting", Content = "Test content", MetadataJson = "{}", Date = DateTimeOffset.UtcNow, Integration = integration };
         await _dbContext.Sources.AddAsync(source);
-
-        // Create a KnowledgeUnit to assign to one fragment
-        var knowledgeUnit = new KnowledgeUnit
-        {
-            Id = Guid.NewGuid(),
-            Title = "Test Knowledge Unit",
-            Summary = "Test Summary",
-            Content = "Test Content",
-            Confidence = Domain.Enums.ConfidenceLevel.High,
-            Category = _defaultCategory,
-            CreatedAt = DateTimeOffset.UtcNow,
-            UpdatedAt = DateTimeOffset.UtcNow
-        };
-        await _dbContext.KnowledgeUnits.AddAsync(knowledgeUnit);
-        await _dbContext.SaveChangesAsync();
 
         var fragments = new[]
         {
@@ -367,7 +352,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
                 KnowledgeCategory = _defaultCategory,
                 Content = "Unclustered fragment",
                 Embedding = new Vector(queryEmbedding),
-                KnowledgeUnitId = null, // Not assigned to any KnowledgeUnit
+                ClusteringProcessed = null, // Not yet processed for clustering
                 CreatedAt = DateTimeOffset.UtcNow,
                 Source = source
             },
@@ -379,7 +364,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
                 KnowledgeCategory = _defaultCategory,
                 Content = "Clustered fragment",
                 Embedding = new Vector(similarEmbedding),
-                KnowledgeUnitId = knowledgeUnit.Id, // Assigned to KnowledgeUnit
+                ClusteringProcessed = DateTimeOffset.UtcNow, // Already processed for clustering
                 CreatedAt = DateTimeOffset.UtcNow,
                 Source = source
             }
@@ -395,13 +380,13 @@ public class FragmentRepositoryTests : DatabaseTestBase
         // Assert - Should only return the unclustered fragment
         Assert.Single(resultList);
         Assert.Equal("Unclustered fragment", resultList[0].Fragment.Content);
-        Assert.Null(resultList[0].Fragment.KnowledgeUnitId);
+        Assert.Null(resultList[0].Fragment.ClusteringProcessed);
     }
 
     [Fact]
     public async Task FindSimilarAsync_WithoutExcludeClustered_ShouldIncludeAllFragments()
     {
-        // Arrange - Create fragments with and without KnowledgeUnit assignment
+        // Arrange - Create fragments with and without clustering processed timestamp
         var queryEmbedding = CreateTestEmbedding(1.0f, 0.0f);
         var similarEmbedding = CreateTestEmbedding(0.95f, 0.05f);
 
@@ -409,21 +394,6 @@ public class FragmentRepositoryTests : DatabaseTestBase
         await _dbContext.Integrations.AddAsync(integration);
         var source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, MetadataType = Domain.Enums.SourceMetadataType.Collector_Fellow, Name = "Meeting", Content = "Test content", MetadataJson = "{}", Date = DateTimeOffset.UtcNow, Integration = integration };
         await _dbContext.Sources.AddAsync(source);
-
-        // Create a KnowledgeUnit to assign to one fragment
-        var knowledgeUnit = new KnowledgeUnit
-        {
-            Id = Guid.NewGuid(),
-            Title = "Test Knowledge Unit",
-            Summary = "Test Summary",
-            Content = "Test Content",
-            Confidence = Domain.Enums.ConfidenceLevel.High,
-            Category = _defaultCategory,
-            CreatedAt = DateTimeOffset.UtcNow,
-            UpdatedAt = DateTimeOffset.UtcNow
-        };
-        await _dbContext.KnowledgeUnits.AddAsync(knowledgeUnit);
-        await _dbContext.SaveChangesAsync();
 
         var fragments = new[]
         {
@@ -435,7 +405,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
                 KnowledgeCategory = _defaultCategory,
                 Content = "Unclustered fragment",
                 Embedding = new Vector(queryEmbedding),
-                KnowledgeUnitId = null,
+                ClusteringProcessed = null,
                 CreatedAt = DateTimeOffset.UtcNow,
                 Source = source
             },
@@ -447,7 +417,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
                 KnowledgeCategory = _defaultCategory,
                 Content = "Clustered fragment",
                 Embedding = new Vector(similarEmbedding),
-                KnowledgeUnitId = knowledgeUnit.Id,
+                ClusteringProcessed = DateTimeOffset.UtcNow,
                 CreatedAt = DateTimeOffset.UtcNow,
                 Source = source
             }
@@ -503,56 +473,87 @@ public class FragmentRepositoryTests : DatabaseTestBase
         await _dbContext.KnowledgeUnits.AddRangeAsync(new[] { knowledgeUnit1, knowledgeUnit2 });
         await _dbContext.SaveChangesAsync();
 
-        // Create fragments assigned to different KnowledgeUnits
-        var fragments = new[]
+        // Create fragments
+        var fragment1 = new Fragment
         {
-            new Fragment
+            Id = Guid.NewGuid(),
+            Title = "Fragment 1 for KU1",
+            Summary = "Summary 1",
+            KnowledgeCategory = _defaultCategory,
+            Content = "Fragment 1 content",
+            CreatedAt = DateTimeOffset.UtcNow,
+            Source = source
+        };
+
+        var fragment2 = new Fragment
+        {
+            Id = Guid.NewGuid(),
+            Title = "Fragment 2 for KU1",
+            Summary = "Summary 2",
+            KnowledgeCategory = _defaultCategory,
+            Content = "Fragment 2 content",
+            CreatedAt = DateTimeOffset.UtcNow,
+            Source = source
+        };
+
+        var fragment3 = new Fragment
+        {
+            Id = Guid.NewGuid(),
+            Title = "Fragment for KU2",
+            Summary = "Summary 3",
+            KnowledgeCategory = _defaultCategory,
+            Content = "Fragment 3 content",
+            CreatedAt = DateTimeOffset.UtcNow,
+            Source = source
+        };
+
+        var fragment4 = new Fragment
+        {
+            Id = Guid.NewGuid(),
+            Title = "Unassigned Fragment",
+            Summary = "Summary 4",
+            KnowledgeCategory = _defaultCategory,
+            Content = "Fragment 4 content",
+            CreatedAt = DateTimeOffset.UtcNow,
+            Source = source
+        };
+
+        await _dbContext.Fragments.AddRangeAsync(new[] { fragment1, fragment2, fragment3, fragment4 });
+        await _dbContext.SaveChangesAsync();
+
+        // Create many-to-many relationships
+        var joinEntities = new[]
+        {
+            new FragmentKnowledgeUnit
             {
                 Id = Guid.NewGuid(),
-                Title = "Fragment 1 for KU1",
-                Summary = "Summary 1",
-                KnowledgeCategory = _defaultCategory,
-                Content = "Fragment 1 content",
+                FragmentId = fragment1.Id,
+                Fragment = fragment1,
                 KnowledgeUnitId = knowledgeUnit1.Id,
-                CreatedAt = DateTimeOffset.UtcNow,
-                Source = source
+                KnowledgeUnit = knowledgeUnit1,
+                CreatedAt = DateTimeOffset.UtcNow
             },
-            new Fragment
+            new FragmentKnowledgeUnit
             {
                 Id = Guid.NewGuid(),
-                Title = "Fragment 2 for KU1",
-                Summary = "Summary 2",
-                KnowledgeCategory = _defaultCategory,
-                Content = "Fragment 2 content",
+                FragmentId = fragment2.Id,
+                Fragment = fragment2,
                 KnowledgeUnitId = knowledgeUnit1.Id,
-                CreatedAt = DateTimeOffset.UtcNow,
-                Source = source
+                KnowledgeUnit = knowledgeUnit1,
+                CreatedAt = DateTimeOffset.UtcNow
             },
-            new Fragment
+            new FragmentKnowledgeUnit
             {
                 Id = Guid.NewGuid(),
-                Title = "Fragment for KU2",
-                Summary = "Summary 3",
-                KnowledgeCategory = _defaultCategory,
-                Content = "Fragment 3 content",
+                FragmentId = fragment3.Id,
+                Fragment = fragment3,
                 KnowledgeUnitId = knowledgeUnit2.Id,
-                CreatedAt = DateTimeOffset.UtcNow,
-                Source = source
-            },
-            new Fragment
-            {
-                Id = Guid.NewGuid(),
-                Title = "Unassigned Fragment",
-                Summary = "Summary 4",
-                KnowledgeCategory = _defaultCategory,
-                Content = "Fragment 4 content",
-                KnowledgeUnitId = null,
-                CreatedAt = DateTimeOffset.UtcNow,
-                Source = source
+                KnowledgeUnit = knowledgeUnit2,
+                CreatedAt = DateTimeOffset.UtcNow
             }
         };
 
-        await _dbContext.Fragments.AddRangeAsync(fragments);
+        await _dbContext.FragmentKnowledgeUnits.AddRangeAsync(joinEntities);
         await _dbContext.SaveChangesAsync();
 
         // Act - Get fragments for knowledgeUnit1
@@ -561,7 +562,6 @@ public class FragmentRepositoryTests : DatabaseTestBase
 
         // Assert - Should only return fragments assigned to knowledgeUnit1
         Assert.Equal(2, resultList.Count);
-        Assert.All(resultList, f => Assert.Equal(knowledgeUnit1.Id, f.KnowledgeUnitId));
         Assert.Contains(resultList, f => f.Content == "Fragment 1 content");
         Assert.Contains(resultList, f => f.Content == "Fragment 2 content");
     }
@@ -609,11 +609,23 @@ public class FragmentRepositoryTests : DatabaseTestBase
             Summary = "Test Summary",
             KnowledgeCategory = _defaultCategory,
             Content = "Test content",
-            KnowledgeUnitId = knowledgeUnit.Id,
             CreatedAt = DateTimeOffset.UtcNow,
             Source = source
         };
         await _dbContext.Fragments.AddAsync(fragment);
+        await _dbContext.SaveChangesAsync();
+
+        // Create many-to-many relationship
+        var joinEntity = new FragmentKnowledgeUnit
+        {
+            Id = Guid.NewGuid(),
+            FragmentId = fragment.Id,
+            Fragment = fragment,
+            KnowledgeUnitId = knowledgeUnit.Id,
+            KnowledgeUnit = knowledgeUnit,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        await _dbContext.FragmentKnowledgeUnits.AddAsync(joinEntity);
         await _dbContext.SaveChangesAsync();
 
         // Act

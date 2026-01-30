@@ -21,6 +21,7 @@ public class FragmentsApiController : ControllerBase
     private readonly IFragmentRepository _fragmentRepository;
     private readonly IRepository<Article> _articleRepository;
     private readonly IRepository<Organization> _organizationRepository;
+    private readonly IRepository<FragmentKnowledgeUnit> _fragmentKnowledgeUnitRepository;
     private readonly IEmbeddingGenerator<string, Embedding<float>> _embeddingGenerator;
     private readonly IEmbeddingHelper _embeddingHelper;
     private readonly EmbeddingSettings _embeddingSettings;
@@ -33,6 +34,7 @@ public class FragmentsApiController : ControllerBase
         IFragmentRepository fragmentRepository,
         IRepository<Article> articleRepository,
         IRepository<Organization> organizationRepository,
+        IRepository<FragmentKnowledgeUnit> fragmentKnowledgeUnitRepository,
         IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
         IEmbeddingHelper embeddingHelper,
         IOptions<EmbeddingSettings> embeddingSettings,
@@ -44,6 +46,7 @@ public class FragmentsApiController : ControllerBase
         _fragmentRepository = fragmentRepository;
         _articleRepository = articleRepository;
         _organizationRepository = organizationRepository;
+        _fragmentKnowledgeUnitRepository = fragmentKnowledgeUnitRepository;
         _embeddingGenerator = embeddingGenerator;
         _embeddingHelper = embeddingHelper;
         _embeddingSettings = embeddingSettings.Value;
@@ -189,12 +192,15 @@ public class FragmentsApiController : ControllerBase
         // Get all knowledge unit IDs from the article
         var knowledgeUnitIds = article.KnowledgeUnits.Select(ku => ku.Id).ToList();
 
-        // Get all fragments that belong to these knowledge units
-        var fragments = await _fragmentRepository.Query()
-            .Include(f => f.Source)
-                .ThenInclude(s => s!.PrimarySpeaker)
-            .Include(f => f.KnowledgeCategory)
-            .Where(f => f.KnowledgeUnitId.HasValue && knowledgeUnitIds.Contains(f.KnowledgeUnitId.Value))
+        // Get all fragments that belong to these knowledge units via the join table
+        var fragments = await _fragmentKnowledgeUnitRepository.Query()
+            .Include(fku => fku.Fragment)
+                .ThenInclude(f => f.Source)
+                    .ThenInclude(s => s!.PrimarySpeaker)
+            .Include(fku => fku.Fragment)
+                .ThenInclude(f => f.KnowledgeCategory)
+            .Where(fku => knowledgeUnitIds.Contains(fku.KnowledgeUnitId))
+            .Select(fku => fku.Fragment)
             .OrderBy(f => f.Title)
             .ThenBy(f => f.Id) // Deterministic tiebreaker
             .Select(f => MapToFragmentDto(f))
@@ -212,11 +218,14 @@ public class FragmentsApiController : ControllerBase
     [ProducesResponseType(typeof(List<FragmentDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<List<FragmentDto>>> GetFragmentsByKnowledgeUnitId(Guid knowledgeUnitId)
     {
-        var fragments = await _fragmentRepository.Query()
-            .Include(f => f.Source)
-                .ThenInclude(s => s!.PrimarySpeaker)
-            .Include(f => f.KnowledgeCategory)
-            .Where(f => f.KnowledgeUnitId == knowledgeUnitId)
+        var fragments = await _fragmentKnowledgeUnitRepository.Query()
+            .Include(fku => fku.Fragment)
+                .ThenInclude(f => f.Source)
+                    .ThenInclude(s => s!.PrimarySpeaker)
+            .Include(fku => fku.Fragment)
+                .ThenInclude(f => f.KnowledgeCategory)
+            .Where(fku => fku.KnowledgeUnitId == knowledgeUnitId)
+            .Select(fku => fku.Fragment)
             .OrderBy(f => f.Title)
             .ThenBy(f => f.Id) // Deterministic tiebreaker
             .Select(f => MapToFragmentDto(f))
@@ -469,7 +478,8 @@ public class FragmentsApiController : ControllerBase
             // Use IgnoreQueryFilters to bypass the IsDeleted filter so we can find already deleted fragments
             var fragment = await _fragmentRepository.Query()
                 .IgnoreQueryFilters()
-                .Include(f => f.KnowledgeUnit)
+                .Include(f => f.FragmentKnowledgeUnits)
+                    .ThenInclude(fku => fku.KnowledgeUnit)
                 .FirstOrDefaultAsync(f => f.Id == id);
 
             if (fragment == null)
@@ -490,14 +500,20 @@ public class FragmentsApiController : ControllerBase
                 });
             }
 
-            // Check if fragment has been merged/clustered into a KnowledgeUnit
-            if (fragment.KnowledgeUnitId.HasValue)
+            // Check if fragment has been merged/clustered into any KnowledgeUnits
+            if (fragment.FragmentKnowledgeUnits.Any())
             {
-                var knowledgeUnitTitle = fragment.KnowledgeUnit?.Title ?? "a knowledge unit";
+                var knowledgeUnitTitles = fragment.FragmentKnowledgeUnits
+                    .Select(fku => fku.KnowledgeUnit?.Title ?? "Unknown")
+                    .Take(3)
+                    .ToList();
+                var titleList = string.Join(", ", knowledgeUnitTitles);
+                var moreText = fragment.FragmentKnowledgeUnits.Count > 3 ? $" and {fragment.FragmentKnowledgeUnits.Count - 3} more" : "";
+                
                 return BadRequest(new DeleteFragmentResponse
                 {
                     Success = false,
-                    Message = $"Cannot delete fragment because it has been clustered into '{knowledgeUnitTitle}'."
+                    Message = $"Cannot delete fragment because it has been clustered into: {titleList}{moreText}."
                 });
             }
 

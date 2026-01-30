@@ -62,7 +62,8 @@ public class KnowledgeUnitsApiController : ControllerBase
     {
         var knowledgeUnits = await _knowledgeUnitRepository.Query()
             .Include(ku => ku.Category)
-            .Include(ku => ku.Fragments)
+            .Include(ku => ku.FragmentKnowledgeUnits)
+                .ThenInclude(fku => fku.Fragment)
             .OrderByDescending(ku => ku.UpdatedAt)
             .ThenBy(ku => ku.Id) // Deterministic tiebreaker for pagination
             .Skip(skip)
@@ -85,7 +86,8 @@ public class KnowledgeUnitsApiController : ControllerBase
     {
         var knowledgeUnit = await _knowledgeUnitRepository.Query()
             .Include(ku => ku.Category)
-            .Include(ku => ku.Fragments)
+            .Include(ku => ku.FragmentKnowledgeUnits)
+                .ThenInclude(fku => fku.Fragment)
             .FirstOrDefaultAsync(ku => ku.Id == id);
 
         if (knowledgeUnit == null)
@@ -128,7 +130,8 @@ public class KnowledgeUnitsApiController : ControllerBase
     {
         var knowledgeUnits = await _knowledgeUnitRepository.Query()
             .Include(ku => ku.Category)
-            .Include(ku => ku.Fragments)
+            .Include(ku => ku.FragmentKnowledgeUnits)
+                .ThenInclude(fku => fku.Fragment)
             .Where(ku => ku.Articles.Any(a => a.Id == articleId))
             .OrderBy(ku => ku.Title)
             .ThenBy(ku => ku.Id) // Deterministic tiebreaker
@@ -190,7 +193,8 @@ public class KnowledgeUnitsApiController : ControllerBase
             
             var knowledgeUnitsWithCategory = await _knowledgeUnitRepository.Query()
                 .Include(ku => ku.Category)
-                .Include(ku => ku.Fragments)
+                .Include(ku => ku.FragmentKnowledgeUnits)
+                    .ThenInclude(fku => fku.Fragment)
                 .Where(ku => knowledgeUnitIds.Contains(ku.Id))
                 .ToListAsync();
 
@@ -210,7 +214,7 @@ public class KnowledgeUnitsApiController : ControllerBase
                         CategoryIcon = knowledgeUnit.Category.Icon,
                         Confidence = knowledgeUnit.Confidence,
                         ConfidenceComment = knowledgeUnit.ConfidenceComment,
-                        FragmentCount = knowledgeUnit.Fragments.Count,
+                        FragmentCount = knowledgeUnit.FragmentKnowledgeUnits.Count,
                         UpdatedAt = knowledgeUnit.UpdatedAt,
                         Similarity = 1 - (result.Distance / 2) // Convert L2 distance to similarity score (0-1)
                     };
@@ -242,7 +246,8 @@ public class KnowledgeUnitsApiController : ControllerBase
         {
             var knowledgeUnit = await _knowledgeUnitRepository.Query()
                 .Include(ku => ku.Category)
-                .Include(ku => ku.Fragments)
+                .Include(ku => ku.FragmentKnowledgeUnits)
+                    .ThenInclude(fku => fku.Fragment)
                 .FirstOrDefaultAsync(ku => ku.Id == id);
 
             if (knowledgeUnit == null)
@@ -391,7 +396,7 @@ public class KnowledgeUnitsApiController : ControllerBase
             Confidence = ku.Confidence,
             ConfidenceComment = ku.ConfidenceComment,
             ClusteringComment = ku.ClusteringComment,
-            FragmentCount = ku.Fragments.Count,
+            FragmentCount = ku.FragmentKnowledgeUnits.Count,
             CreatedAt = ku.CreatedAt,
             UpdatedAt = ku.UpdatedAt
         };

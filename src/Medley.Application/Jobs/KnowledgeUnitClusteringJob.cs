@@ -21,6 +21,7 @@ public class KnowledgeUnitClusteringJob : BaseHangfireJob<KnowledgeUnitClusterin
     private readonly IKnowledgeUnitRepository _knowledgeUnitRepository;
     private readonly IRepository<KnowledgeCategory> _knowledgeCategoryRepository;
     private readonly IRepository<AiPrompt> _promptRepository;
+    private readonly IRepository<FragmentKnowledgeUnit> _fragmentKnowledgeUnitRepository;
     private readonly IAiProcessingService _aiProcessingService;
     private readonly IBackgroundJobClient _backgroundJobClient;
     private readonly AiCallContext _aiCallContext;
@@ -30,6 +31,7 @@ public class KnowledgeUnitClusteringJob : BaseHangfireJob<KnowledgeUnitClusterin
         IKnowledgeUnitRepository knowledgeUnitRepository,
         IRepository<KnowledgeCategory> knowledgeCategoryRepository,
         IRepository<AiPrompt> promptRepository,
+        IRepository<FragmentKnowledgeUnit> fragmentKnowledgeUnitRepository,
         IAiProcessingService aiProcessingService,
         IBackgroundJobClient backgroundJobClient,
         IUnitOfWork unitOfWork,
@@ -40,6 +42,7 @@ public class KnowledgeUnitClusteringJob : BaseHangfireJob<KnowledgeUnitClusterin
         _knowledgeUnitRepository = knowledgeUnitRepository;
         _knowledgeCategoryRepository = knowledgeCategoryRepository;
         _promptRepository = promptRepository;
+        _fragmentKnowledgeUnitRepository = fragmentKnowledgeUnitRepository;
         _aiProcessingService = aiProcessingService;
         _backgroundJobClient = backgroundJobClient;
         _aiCallContext = aiCallContext;
@@ -63,7 +66,7 @@ public class KnowledgeUnitClusteringJob : BaseHangfireJob<KnowledgeUnitClusterin
                 break;
             }
 
-            Guid? createdKnowledgeUnitId = null;
+            var createdKnowledgeUnitIds = new List<Guid>();
             var shouldContinue = await ExecuteWithTransactionAsync(async () =>
             {
                 // 1) Grab the first unprocessed fragment
@@ -118,83 +121,121 @@ public class KnowledgeUnitClusteringJob : BaseHangfireJob<KnowledgeUnitClusterin
                 LogInfo(context, $"Found {fragmentIds.Count} similar fragments to cluster.");
 
                 // 3) Pass contents to LLM
-                var clusterResponse = await GenerateClusterAsync(clusterParticipants, candidate.Id, cancellationToken);
+                var clusterResponse = await GenerateClusterAsync(clusterParticipants, cancellationToken);
                 
-                // Validate that at least some fragments were included
-                if (!clusterResponse.IncludedFragmentIds.Any())
+                // Check if LLM created any knowledge units
+                if (!clusterResponse.KnowledgeUnits.Any())
                 {
-                    LogWarning(context, $"LLM did not include any fragments in cluster for {candidate.Id}. Marking as processed.");
-                    candidate.ClusteringProcessed = DateTimeOffset.UtcNow;
+                    LogWarning(context, $"LLM did not create any knowledge units. Marking all {clusterParticipants.Count} fragments as processed.");
+                    foreach (var fragment in clusterParticipants)
+                    {
+                        fragment.ClusteringProcessed = DateTimeOffset.UtcNow;
+                    }
                     return true;
                 }
 
-                // Filter to only included fragments
-                var includedFragments = clusterParticipants
-                    .Where(f => clusterResponse.IncludedFragmentIds.Contains(f.Id))
-                    .ToList();
+                // Track which fragments were included in any cluster
+                var allIncludedFragmentIds = new HashSet<Guid>();
 
-                var excludedFragments = clusterParticipants
-                    .Where(f => !clusterResponse.IncludedFragmentIds.Contains(f.Id))
-                    .ToList();
-
-                if (excludedFragments.Any())
+                // 4) Create each knowledge unit
+                foreach (var kuCluster in clusterResponse.KnowledgeUnits)
                 {
-                    LogInfo(context, $"LLM excluded {excludedFragments.Count} fragments as unrelated: {string.Join(", ", excludedFragments.Select(f => f.Id))}");
+                    // Validate minimum fragments
+                    if (kuCluster.FragmentIds.Count < 2)
+                    {
+                        LogWarning(context, $"Skipping knowledge unit '{kuCluster.Title}' - only {kuCluster.FragmentIds.Count} fragment(s)");
+                        continue;
+                    }
+
+                    // Get fragments for this cluster
+                    var clusterFragments = clusterParticipants
+                        .Where(f => kuCluster.FragmentIds.Contains(f.Id))
+                        .ToList();
+
+                    if (clusterFragments.Count < 2)
+                    {
+                        LogWarning(context, $"Skipping knowledge unit '{kuCluster.Title}' - invalid fragment IDs");
+                        continue;
+                    }
+
+                    // Find category
+                    var knowledgeCategory = await _knowledgeCategoryRepository.Query()
+                        .FirstOrDefaultAsync(x => x.Name == kuCluster.Category, cancellationToken);
+                    
+                    if (knowledgeCategory == null)
+                    {
+                        LogWarning(context, $"Skipping knowledge unit '{kuCluster.Title}' - invalid category '{kuCluster.Category}'");
+                        continue;
+                    }
+
+                    // Create knowledge unit
+                    var knowledgeUnit = new KnowledgeUnit
+                    {
+                        Id = Guid.NewGuid(),
+                        Title = kuCluster.Title.Trim().Substring(0, Math.Min(200, kuCluster.Title.Trim().Length)),
+                        Summary = kuCluster.Summary.Trim().Substring(0, Math.Min(500, kuCluster.Summary.Trim().Length)),
+                        Content = kuCluster.Content.Trim().Substring(0, Math.Min(10000, kuCluster.Content.Trim().Length)),
+                        Confidence = kuCluster.Confidence,
+                        ConfidenceComment = kuCluster.ConfidenceComment?.Trim().Substring(0, Math.Min(1000, kuCluster.ConfidenceComment.Trim().Length)),
+                        ClusteringComment = kuCluster.ClusteringRationale?.Trim().Substring(0, Math.Min(2000, kuCluster.ClusteringRationale.Trim().Length)),
+                        Category = knowledgeCategory,
+                        KnowledgeCategoryId = knowledgeCategory.Id,
+                        CreatedAt = DateTimeOffset.UtcNow,
+                        UpdatedAt = DateTimeOffset.UtcNow
+                    };
+
+                    await _knowledgeUnitRepository.AddAsync(knowledgeUnit);
+                    createdKnowledgeUnitIds.Add(knowledgeUnit.Id);
+
+                    // Create many-to-many relationships
+                    foreach (var fragment in clusterFragments)
+                    {
+                        var joinEntity = new FragmentKnowledgeUnit
+                        {
+                            Id = Guid.NewGuid(),
+                            FragmentId = fragment.Id,
+                            Fragment = fragment,
+                            KnowledgeUnitId = knowledgeUnit.Id,
+                            KnowledgeUnit = knowledgeUnit,
+                            CreatedAt = DateTimeOffset.UtcNow
+                        };
+                        
+                        await _fragmentKnowledgeUnitRepository.AddAsync(joinEntity);
+                        allIncludedFragmentIds.Add(fragment.Id);
+                    }
+
+                    LogSuccess(context, $"Created KnowledgeUnit '{knowledgeUnit.Title}' ({knowledgeUnit.Id}) with {clusterFragments.Count} fragments");
                 }
 
-                // If only one fragment is included, don't create a cluster
-                if (includedFragments.Count == 1)
+                // 5) Mark ALL processed fragments as ClusteringProcessed
+                foreach (var fragment in clusterParticipants)
                 {
-                    LogInfo(context, $"Only one fragment included in cluster for {candidate.Id}. Marking as processed without creating cluster.");
-                    candidate.ClusteringProcessed = DateTimeOffset.UtcNow;
-                    return true;
+                    fragment.ClusteringProcessed = DateTimeOffset.UtcNow;
                 }
 
-                var knowledgeCategory = await _knowledgeCategoryRepository.Query().Where(x => x.Name == clusterResponse.Category).FirstOrDefaultAsync()
-                    ?? throw new InvalidDataException("Could not find knowledge category");
-
-                // 4) Create new KnowledgeUnit entity
-                var knowledgeUnit = new KnowledgeUnit
+                var excludedCount = clusterParticipants.Count - allIncludedFragmentIds.Count;
+                LogInfo(context, $"Created {createdKnowledgeUnitIds.Count} knowledge units. Included {allIncludedFragmentIds.Count} fragments, excluded {excludedCount}");
+                
+                if (!string.IsNullOrWhiteSpace(clusterResponse.Message))
                 {
-                    Id = Guid.NewGuid(),
-                    Title = clusterResponse.Title.Trim().Substring(0, Math.Min(200, clusterResponse.Title.Trim().Length)),
-                    Summary = clusterResponse.Summary.Trim().Substring(0, Math.Min(500, clusterResponse.Summary.Trim().Length)),
-                    Content = clusterResponse.Content.Trim().Substring(0, Math.Min(10000, clusterResponse.Content.Trim().Length)),
-                    Confidence = clusterResponse.Confidence,
-                    ConfidenceComment = clusterResponse.ConfidenceComment?.Trim().Substring(0, Math.Min(1000, clusterResponse.ConfidenceComment.Trim().Length)),
-                    ClusteringComment = clusterResponse.Message?.Trim().Substring(0, Math.Min(2000, clusterResponse.Message.Trim().Length)),
-                    Category = knowledgeCategory,
-                    KnowledgeCategoryId = knowledgeCategory.Id,
-                    CreatedAt = DateTimeOffset.UtcNow,
-                    UpdatedAt = DateTimeOffset.UtcNow
-                };
-
-                await _knowledgeUnitRepository.AddAsync(knowledgeUnit);
-                createdKnowledgeUnitId = knowledgeUnit.Id;
-
-                LogSuccess(context, $"Created KnowledgeUnit {knowledgeUnit.Id} with {includedFragments.Count} fragments (excluded {excludedFragments.Count})");
-
-                // 5) Link fragments to KnowledgeUnit and set ClusteringProcessed timestamp
-                foreach (var participant in includedFragments)
-                {
-                    participant.KnowledgeUnit = knowledgeUnit;
-                    participant.KnowledgeUnitId = knowledgeUnit.Id;
-                    participant.ClusteringProcessed = DateTimeOffset.UtcNow;
+                    LogDebug($"LLM clustering message: {clusterResponse.Message}");
                 }
 
-                LogDebug($"Created KnowledgeUnit {knowledgeUnit.Id} with {includedFragments.Count} fragments. Message: {clusterResponse.Message}");
                 processedCount++;
                 return true;
             });
 
-            // Trigger embedding generation for the newly created KnowledgeUnit (outside transaction)
-            if (createdKnowledgeUnitId.HasValue)
+            // Trigger embedding generation for the newly created KnowledgeUnits (outside transaction)
+            if (createdKnowledgeUnitIds.Any())
             {
                 var currentJobId = context.BackgroundJob.Id;
-                _backgroundJobClient.ContinueJobWith<EmbeddingGenerationJob>(
-                    currentJobId,
-                    j => j.GenerateKnowledgeUnitEmbeddings(default!, default, createdKnowledgeUnitId.Value));
-                LogInfo(context, $"Enqueued embedding generation job for KnowledgeUnit {createdKnowledgeUnitId.Value}");
+                foreach (var knowledgeUnitId in createdKnowledgeUnitIds)
+                {
+                    _backgroundJobClient.ContinueJobWith<EmbeddingGenerationJob>(
+                        currentJobId,
+                        j => j.GenerateKnowledgeUnitEmbeddings(default!, default, knowledgeUnitId));
+                }
+                LogInfo(context, $"Enqueued embedding generation jobs for {createdKnowledgeUnitIds.Count} knowledge units");
             }
 
             if (!shouldContinue)
@@ -206,7 +247,7 @@ public class KnowledgeUnitClusteringJob : BaseHangfireJob<KnowledgeUnitClusterin
         LogInfo(context, $"Knowledge Unit Clustering Job completed. Processed {processedCount} fragments in {(DateTimeOffset.UtcNow - startTime).TotalMinutes:F2} minutes.");
     }
 
-    private async Task<FragmentClusteringResponse> GenerateClusterAsync(List<Fragment> fragments, Guid primaryFragmentId, CancellationToken cancellationToken = default)
+    private async Task<FragmentClusteringResponse> GenerateClusterAsync(List<Fragment> fragments, CancellationToken cancellationToken = default)
     {
         using (_aiCallContext.SetContext(nameof(KnowledgeUnitClusteringJob), nameof(GenerateClusterAsync), nameof(Fragment), fragments.FirstOrDefault()?.Id ?? Guid.Empty))
         {
@@ -254,7 +295,6 @@ public class KnowledgeUnitClusteringJob : BaseHangfireJob<KnowledgeUnitClusterin
 
             var request = new FragmentClusteringRequest
             {
-                PrimaryFragmentId = primaryFragmentId,
                 PrimaryGuidance = clusteringPrompt.Content,
                 FragmentWeighting = weightingPrompt.Content,
                 CategoryDefinitions = categoryDefinitions,
@@ -284,7 +324,7 @@ public class KnowledgeUnitClusteringJob : BaseHangfireJob<KnowledgeUnitClusterin
             };
 
             var userPrompt = JsonSerializer.Serialize(request);
-            var systemPrompt = "You are a knowledge clustering assistant. Process the provided JSON request containing instructions and fragments.";
+            var systemPrompt = "You are a knowledge clustering assistant. Process the provided JSON request containing instructions and fragments. Create multiple knowledge units when appropriate to maintain focused, granular clusters.";
 
             return await _aiProcessingService.ProcessStructuredPromptAsync<FragmentClusteringResponse>(
                 userPrompt: userPrompt,

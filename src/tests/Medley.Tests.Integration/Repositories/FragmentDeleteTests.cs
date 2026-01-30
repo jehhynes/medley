@@ -720,8 +720,6 @@ public class FragmentDeleteTests : DatabaseTestBase
             KnowledgeCategory = _defaultCategory,
             Content = "Clustered content",
             IsDeleted = false,
-            KnowledgeUnitId = knowledgeUnit.Id,
-            KnowledgeUnit = knowledgeUnit,
             CreatedAt = DateTimeOffset.UtcNow,
             Source = _testSource
         };
@@ -730,19 +728,33 @@ public class FragmentDeleteTests : DatabaseTestBase
         await _dbContext.Fragments.AddAsync(clusteredFragment);
         await _dbContext.SaveChangesAsync();
 
+        // Create many-to-many relationship
+        var joinEntity = new FragmentKnowledgeUnit
+        {
+            Id = Guid.NewGuid(),
+            FragmentId = clusteredFragment.Id,
+            Fragment = clusteredFragment,
+            KnowledgeUnitId = knowledgeUnit.Id,
+            KnowledgeUnit = knowledgeUnit,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        await _dbContext.FragmentKnowledgeUnits.AddAsync(joinEntity);
+        await _dbContext.SaveChangesAsync();
+
         // Clear change tracker
         _dbContext.ChangeTracker.Clear();
 
         // Act - Try to delete the clustered fragment (should fail)
         var fragmentToDelete = await _repository.Query()
             .IgnoreQueryFilters()
-            .Include(f => f.KnowledgeUnit)
+            .Include(f => f.FragmentKnowledgeUnits)
+                .ThenInclude(fku => fku.KnowledgeUnit)
             .FirstOrDefaultAsync(f => f.Id == clusteredFragment.Id);
 
-        // Assert - Fragment should have KnowledgeUnitId set
+        // Assert - Fragment should have relationship with KnowledgeUnit
         Assert.NotNull(fragmentToDelete);
-        Assert.NotNull(fragmentToDelete.KnowledgeUnitId);
-        Assert.Equal(knowledgeUnit.Id, fragmentToDelete.KnowledgeUnitId);
+        Assert.NotEmpty(fragmentToDelete.FragmentKnowledgeUnits);
+        Assert.Equal(knowledgeUnit.Id, fragmentToDelete.FragmentKnowledgeUnits.First().KnowledgeUnitId);
         
         // In a real scenario, the controller would check this and return an error
         // This test verifies the data structure is correct for that validation
