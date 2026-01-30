@@ -1,16 +1,16 @@
-@model IEnumerable<Medley.Domain.Entities.FragmentCategory>
+@model IEnumerable<Medley.Domain.Entities.KnowledgeCategory>
 @{
-    ViewData["Title"] = "Fragment Categories";
+    ViewData["Title"] = "Knowledge Categories";
     Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
 }
 
 <div class="main-content-header d-flex justify-content-between align-items-start mb-4">
     <div>
-        <h1 class="main-content-title">Fragment Categories</h1>
-        <p class="text-muted">Manage fragment categories and their icons.</p>
+        <h1 class="main-content-title">Knowledge Categories</h1>
+        <p class="text-muted">Manage knowledge categories and their icons.</p>
     </div>
     <a asp-action="Create" class="btn btn-primary">
-        <i class="bi bi-plus-circle"></i> New Fragment Category
+        <i class="bi bi-plus-circle"></i> New Knowledge Category
     </a>
 </div>
 
@@ -29,7 +29,7 @@
 
 <div class="card">
     <div class="card-header">
-        <h5 class="card-title mb-0">All Fragment Categories</h5>
+        <h5 class="card-title mb-0">All Knowledge Categories</h5>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
@@ -89,10 +89,10 @@
             {
                 <div class="text-center py-5">
                     <i class="bi bi-tag text-muted" style="font-size: 3rem;"></i>
-                    <h4 class="text-muted mt-3">No fragment categories found</h4>
-                    <p class="text-muted">Get started by creating your first fragment category.</p>
+                    <h4 class="text-muted mt-3">No knowledge categories found</h4>
+                    <p class="text-muted">Get started by creating your first knowledge category.</p>
                     <a asp-action="Create" class="btn btn-primary">
-                        <i class="bi bi-plus-circle"></i> New Fragment Category
+                        <i class="bi bi-plus-circle"></i> New Knowledge Category
                     </a>
                 </div>
             }
@@ -109,8 +109,8 @@
                 const categoryName = this.dataset.name;
                 
                 bootbox.confirm({
-                    title: 'Delete Fragment Category',
-                    message: `Are you sure you want to delete the fragment category <strong>${categoryName}</strong>?<br><br>This action cannot be undone if fragments are using this category.`,
+                    title: 'Delete Knowledge Category',
+                    message: `Are you sure you want to delete the knowledge category <strong>${categoryName}</strong>?<br><br>This action cannot be undone if fragments are using this category.`,
                     buttons: {
                         cancel: {
                             label: 'Cancel',
@@ -125,7 +125,7 @@
                         if (result) {
                             const form = document.createElement('form');
                             form.method = 'POST';
-                            form.action = '@Url.Action("Delete", "FragmentCategories")/' + categoryId;
+                            form.action = '@Url.Action("Delete", "KnowledgeCategories")/' + categoryId;
                             
                             const token = document.querySelector('input[name="__RequestVerificationToken"]');
                             if (token) {

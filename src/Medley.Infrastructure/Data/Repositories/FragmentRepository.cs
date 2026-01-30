@@ -43,7 +43,7 @@ public class FragmentRepository : Repository<Fragment>, IFragmentRepository
         var vector = new Vector(embedding);
 
         IQueryable<Fragment> query = _context.Fragments
-            .Include(f => f.FragmentCategory);
+            .Include(f => f.KnowledgeCategory);
 
         if (filter != null)
             query = filter(query);
@@ -85,7 +85,7 @@ public class FragmentRepository : Repository<Fragment>, IFragmentRepository
         CancellationToken cancellationToken = default)
     {
         return await _context.Fragments
-            .Include(f => f.FragmentCategory)
+            .Include(f => f.KnowledgeCategory)
             .Where(f => f.KnowledgeUnitId == knowledgeUnitId)
             .ToListAsync(cancellationToken);
     }

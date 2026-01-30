@@ -50,15 +50,15 @@ export class AiPromptApiClient {
         return Promise.resolve<AiPromptListDto[]>(null as any);
     }
 
-    get(type: PromptType, articleTypeId?: string | null | undefined, fragmentCategoryId?: string | null | undefined): Promise<AiPromptDto> {
+    get(type: PromptType, articleTypeId?: string | null | undefined, knowledgeCategoryId?: string | null | undefined): Promise<AiPromptDto> {
         let url_ = this.baseUrl + "/api/prompts/{type}?";
         if (type === undefined || type === null)
             throw new globalThis.Error("The parameter 'type' must be defined.");
         url_ = url_.replace("{type}", encodeURIComponent("" + type));
         if (articleTypeId !== undefined && articleTypeId !== null)
             url_ += "articleTypeId=" + encodeURIComponent("" + articleTypeId) + "&";
-        if (fragmentCategoryId !== undefined && fragmentCategoryId !== null)
-            url_ += "fragmentCategoryId=" + encodeURIComponent("" + fragmentCategoryId) + "&";
+        if (knowledgeCategoryId !== undefined && knowledgeCategoryId !== null)
+            url_ += "knowledgeCategoryId=" + encodeURIComponent("" + knowledgeCategoryId) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: RequestInit = {
@@ -96,15 +96,15 @@ export class AiPromptApiClient {
         return Promise.resolve<AiPromptDto>(null as any);
     }
 
-    createOrUpdate(type: PromptType, request: CreateOrUpdateAiPromptRequest, articleTypeId?: string | null | undefined, fragmentCategoryId?: string | null | undefined): Promise<AiPromptDto> {
+    createOrUpdate(type: PromptType, request: CreateOrUpdateAiPromptRequest, articleTypeId?: string | null | undefined, knowledgeCategoryId?: string | null | undefined): Promise<AiPromptDto> {
         let url_ = this.baseUrl + "/api/prompts/{type}?";
         if (type === undefined || type === null)
             throw new globalThis.Error("The parameter 'type' must be defined.");
         url_ = url_.replace("{type}", encodeURIComponent("" + type));
         if (articleTypeId !== undefined && articleTypeId !== null)
             url_ += "articleTypeId=" + encodeURIComponent("" + articleTypeId) + "&";
-        if (fragmentCategoryId !== undefined && fragmentCategoryId !== null)
-            url_ += "fragmentCategoryId=" + encodeURIComponent("" + fragmentCategoryId) + "&";
+        if (knowledgeCategoryId !== undefined && knowledgeCategoryId !== null)
+            url_ += "knowledgeCategoryId=" + encodeURIComponent("" + knowledgeCategoryId) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         const content_ = JSON.stringify(request);
@@ -183,8 +183,8 @@ export class AiPromptApiClient {
         return Promise.resolve<ArticleTypeDto[]>(null as any);
     }
 
-    getFragmentCategories(): Promise<FragmentCategoryDto[]> {
-        let url_ = this.baseUrl + "/api/prompts/fragment-categories";
+    getKnowledgeCategories(): Promise<KnowledgeCategoryDto[]> {
+        let url_ = this.baseUrl + "/api/prompts/knowledge-categories";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_: RequestInit = {
@@ -195,17 +195,17 @@ export class AiPromptApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetFragmentCategories(_response);
+            return this.processGetKnowledgeCategories(_response);
         });
     }
 
-    protected processGetFragmentCategories(response: Response): Promise<FragmentCategoryDto[]> {
+    protected processGetKnowledgeCategories(response: Response): Promise<KnowledgeCategoryDto[]> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
             return response.text().then((_responseText) => {
             let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as FragmentCategoryDto[];
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as KnowledgeCategoryDto[];
             return result200;
             });
         } else if (status !== 200 && status !== 204) {
@@ -213,7 +213,7 @@ export class AiPromptApiClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             });
         }
-        return Promise.resolve<FragmentCategoryDto[]>(null as any);
+        return Promise.resolve<KnowledgeCategoryDto[]>(null as any);
     }
 }
 
@@ -1459,7 +1459,7 @@ export class FragmentsApiClient {
         return Promise.resolve<FragmentDto[]>(null as any);
     }
 
-    getByKnowledgeUnitId(articleId: string): Promise<FragmentDto[]> {
+    getFragmentsByArticleId(articleId: string): Promise<FragmentDto[]> {
         let url_ = this.baseUrl + "/api/fragments/by-article/{articleId}";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -1474,11 +1474,11 @@ export class FragmentsApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetByKnowledgeUnitId(_response);
+            return this.processGetFragmentsByArticleId(_response);
         });
     }
 
-    protected processGetByKnowledgeUnitId(response: Response): Promise<FragmentDto[]> {
+    protected processGetFragmentsByArticleId(response: Response): Promise<FragmentDto[]> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -1495,7 +1495,7 @@ export class FragmentsApiClient {
         return Promise.resolve<FragmentDto[]>(null as any);
     }
 
-    getByKnowledgeUnitId2(knowledgeUnitId: string): Promise<FragmentDto[]> {
+    getFragmentsByKnowledgeUnitId(knowledgeUnitId: string): Promise<FragmentDto[]> {
         let url_ = this.baseUrl + "/api/fragments/by-knowledge-unit/{knowledgeUnitId}";
         if (knowledgeUnitId === undefined || knowledgeUnitId === null)
             throw new globalThis.Error("The parameter 'knowledgeUnitId' must be defined.");
@@ -1510,11 +1510,11 @@ export class FragmentsApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetByKnowledgeUnitId2(_response);
+            return this.processGetFragmentsByKnowledgeUnitId(_response);
         });
     }
 
-    protected processGetByKnowledgeUnitId2(response: Response): Promise<FragmentDto[]> {
+    protected processGetFragmentsByKnowledgeUnitId(response: Response): Promise<FragmentDto[]> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -3028,9 +3028,9 @@ export interface AiPromptListDto {
     isPerArticleType?: boolean;
     articleTypeId?: string | null;
     articleTypeName?: string | null;
-    isPerFragmentCategory?: boolean;
-    fragmentCategoryId?: string | null;
-    fragmentCategoryName?: string | null;
+    isPerKnowledgeCategory?: boolean;
+    knowledgeCategoryId?: string | null;
+    knowledgeCategoryName?: string | null;
     exists?: boolean;
     createdAt?: Date | null;
     lastModifiedAt?: Date | null;
@@ -3045,7 +3045,7 @@ export enum PromptType {
     ArticlePlanImplementation = "ArticlePlanImplementation",
     ArticleTypePlanMode = "ArticleTypePlanMode",
     ArticleTypeAgentMode = "ArticleTypeAgentMode",
-    FragmentCategoryExtraction = "FragmentCategoryExtraction",
+    KnowledgeCategoryExtraction = "KnowledgeCategoryExtraction",
     CursorReview = "CursorReview",
     CursorQuestion = "CursorQuestion",
     FragmentWeighting = "FragmentWeighting",
@@ -3060,9 +3060,9 @@ export interface AiPromptDto {
     isPerArticleType?: boolean;
     articleTypeId?: string | null;
     articleTypeName?: string | null;
-    isPerFragmentCategory?: boolean;
-    fragmentCategoryId?: string | null;
-    fragmentCategoryName?: string | null;
+    isPerKnowledgeCategory?: boolean;
+    knowledgeCategoryId?: string | null;
+    knowledgeCategoryName?: string | null;
     content?: string;
     exists?: boolean;
     createdAt?: Date | null;
@@ -3089,7 +3089,7 @@ export interface ArticleTypeDto {
     icon?: string | null;
 }
 
-export interface FragmentCategoryDto {
+export interface KnowledgeCategoryDto {
     id?: string;
     name?: string;
     icon?: string | null;

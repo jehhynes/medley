@@ -17,20 +17,20 @@ public class AiPromptApiController : ControllerBase
 {
     private readonly IRepository<AiPrompt> _promptRepository;
     private readonly IRepository<ArticleType> _articleTypeRepository;
-    private readonly IRepository<FragmentCategory> _fragmentCategoryRepository;
+    private readonly IRepository<KnowledgeCategory> _knowledgeCategoryRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<AiPromptApiController> _logger;
 
     public AiPromptApiController(
         IRepository<AiPrompt> promptRepository,
         IRepository<ArticleType> articleTypeRepository,
-        IRepository<FragmentCategory> fragmentCategoryRepository,
+        IRepository<KnowledgeCategory> knowledgeCategoryRepository,
         IUnitOfWork unitOfWork,
         ILogger<AiPromptApiController> logger)
     {
         _promptRepository = promptRepository;
         _articleTypeRepository = articleTypeRepository;
-        _fragmentCategoryRepository = fragmentCategoryRepository;
+        _knowledgeCategoryRepository = knowledgeCategoryRepository;
         _unitOfWork = unitOfWork;
         _logger = logger;
     }
@@ -45,7 +45,7 @@ public class AiPromptApiController : ControllerBase
         // Get all existing templates from database
         var existingTemplates = await _promptRepository.Query()
             .Include(t => t.ArticleType)
-            .Include(t => t.FragmentCategory)
+            .Include(t => t.KnowledgeCategory)
             .ToListAsync();
 
         // Get all article types
@@ -53,8 +53,8 @@ public class AiPromptApiController : ControllerBase
             .OrderBy(at => at.Name)
             .ToListAsync();
 
-        // Get all fragment categories
-        var fragmentCategories = await _fragmentCategoryRepository.Query()
+        // Get all knowledge categories
+        var knowledgeCategories = await _knowledgeCategoryRepository.Query()
             .OrderBy(fc => fc.Name)
             .ToListAsync();
 
@@ -64,7 +64,7 @@ public class AiPromptApiController : ControllerBase
         foreach (PromptType promptType in Enum.GetValues(typeof(PromptType)))
         {
             var isPerArticleType = promptType.GetIsPerArticleType();
-            var isPerFragmentCategory = promptType.GetIsPerFragmentCategory();
+            var isPerKnowledgeCategory = promptType.GetIsPerKnowledgeCategory();
 
             if (isPerArticleType)
             {
@@ -83,22 +83,22 @@ public class AiPromptApiController : ControllerBase
                         IsPerArticleType = true,
                         ArticleTypeId = articleType.Id,
                         ArticleTypeName = articleType.Name,
-                        IsPerFragmentCategory = false,
-                        FragmentCategoryId = null,
-                        FragmentCategoryName = null,
+                        IsPerKnowledgeCategory = false,
+                        KnowledgeCategoryId = null,
+                        KnowledgeCategoryName = null,
                         Exists = existingTemplate != null,
                         CreatedAt = existingTemplate?.CreatedAt,
                         LastModifiedAt = existingTemplate?.LastModifiedAt
                     });
                 }
             }
-            else if (isPerFragmentCategory)
+            else if (isPerKnowledgeCategory)
             {
-                // Create one entry per fragment category
-                foreach (var fragmentCategory in fragmentCategories)
+                // Create one entry per knowledge category
+                foreach (var knowledgeCategory in knowledgeCategories)
                 {
                     var existingTemplate = existingTemplates.FirstOrDefault(t =>
-                        t.Type == promptType && t.FragmentCategoryId == fragmentCategory.Id);
+                        t.Type == promptType && t.KnowledgeCategoryId == knowledgeCategory.Id);
 
                     result.Add(new AiPromptListDto
                     {
@@ -109,9 +109,9 @@ public class AiPromptApiController : ControllerBase
                         IsPerArticleType = false,
                         ArticleTypeId = null,
                         ArticleTypeName = null,
-                        IsPerFragmentCategory = true,
-                        FragmentCategoryId = fragmentCategory.Id,
-                        FragmentCategoryName = fragmentCategory.Name,
+                        IsPerKnowledgeCategory = true,
+                        KnowledgeCategoryId = knowledgeCategory.Id,
+                        KnowledgeCategoryName = knowledgeCategory.Name,
                         Exists = existingTemplate != null,
                         CreatedAt = existingTemplate?.CreatedAt,
                         LastModifiedAt = existingTemplate?.LastModifiedAt
@@ -120,9 +120,9 @@ public class AiPromptApiController : ControllerBase
             }
             else
             {
-                // Create one entry for non-per-article-type and non-per-fragment-category templates
+                // Create one entry for non-per-article-type and non-per-knowledge-category templates
                 var existingTemplate = existingTemplates.FirstOrDefault(t =>
-                    t.Type == promptType && t.ArticleTypeId == null && t.FragmentCategoryId == null);
+                    t.Type == promptType && t.ArticleTypeId == null && t.KnowledgeCategoryId == null);
 
                 result.Add(new AiPromptListDto
                 {
@@ -133,9 +133,9 @@ public class AiPromptApiController : ControllerBase
                     IsPerArticleType = false,
                     ArticleTypeId = null,
                     ArticleTypeName = null,
-                    IsPerFragmentCategory = false,
-                    FragmentCategoryId = null,
-                    FragmentCategoryName = null,
+                    IsPerKnowledgeCategory = false,
+                    KnowledgeCategoryId = null,
+                    KnowledgeCategoryName = null,
                     Exists = existingTemplate != null,
                     CreatedAt = existingTemplate?.CreatedAt,
                     LastModifiedAt = existingTemplate?.LastModifiedAt
@@ -143,10 +143,10 @@ public class AiPromptApiController : ControllerBase
             }
         }
 
-        // Sort: non-per-type first (alphabetically), then per-article-type, then per-fragment-category (alphabetically)
+        // Sort: non-per-type first (alphabetically), then per-article-type, then per-knowledge-category (alphabetically)
         result = result
-            .OrderBy(t => t.IsPerArticleType || t.IsPerFragmentCategory)
-            .ThenBy(t => t.IsPerFragmentCategory)
+            .OrderBy(t => t.IsPerArticleType || t.IsPerKnowledgeCategory)
+            .ThenBy(t => t.IsPerKnowledgeCategory)
             .ThenBy(t => t.Name)
             .ToList();
 
@@ -154,7 +154,7 @@ public class AiPromptApiController : ControllerBase
     }
 
     /// <summary>
-    /// Get a specific template by type and optional article type or fragment category
+    /// Get a specific template by type and optional article type or knowledge category
     /// </summary>
     [HttpGet("{type}")]
     [ProducesResponseType(typeof(AiPromptDto), StatusCodes.Status200OK)]
@@ -162,10 +162,10 @@ public class AiPromptApiController : ControllerBase
     public async Task<ActionResult<AiPromptDto>> Get(
         PromptType type,
         [FromQuery] Guid? articleTypeId = null,
-        [FromQuery] Guid? fragmentCategoryId = null)
+        [FromQuery] Guid? knowledgeCategoryId = null)
     {
         var isPerArticleType = type.GetIsPerArticleType();
-        var isPerFragmentCategory = type.GetIsPerFragmentCategory();
+        var isPerKnowledgeCategory = type.GetIsPerKnowledgeCategory();
 
         // Validate that articleTypeId is provided for per-article-type templates
         if (isPerArticleType && !articleTypeId.HasValue)
@@ -173,10 +173,10 @@ public class AiPromptApiController : ControllerBase
             return BadRequest(new { message = "articleTypeId is required for per-article-type templates" });
         }
 
-        // Validate that fragmentCategoryId is provided for per-fragment-category templates
-        if (isPerFragmentCategory && !fragmentCategoryId.HasValue)
+        // Validate that knowledgeCategoryId is provided for per-knowledge-category templates
+        if (isPerKnowledgeCategory && !knowledgeCategoryId.HasValue)
         {
-            return BadRequest(new { message = "fragmentCategoryId is required for per-fragment-category templates" });
+            return BadRequest(new { message = "knowledgeCategoryId is required for per-knowledge-category templates" });
         }
 
         // Validate that articleTypeId is NOT provided for non-per-article-type templates
@@ -185,20 +185,20 @@ public class AiPromptApiController : ControllerBase
             return BadRequest(new { message = "articleTypeId should not be provided for this template type" });
         }
 
-        // Validate that fragmentCategoryId is NOT provided for non-per-fragment-category templates
-        if (!isPerFragmentCategory && fragmentCategoryId.HasValue)
+        // Validate that knowledgeCategoryId is NOT provided for non-per-knowledge-category templates
+        if (!isPerKnowledgeCategory && knowledgeCategoryId.HasValue)
         {
-            return BadRequest(new { message = "fragmentCategoryId should not be provided for this template type" });
+            return BadRequest(new { message = "knowledgeCategoryId should not be provided for this template type" });
         }
 
         // Look up the template
         var template = await _promptRepository.Query()
             .Include(t => t.ArticleType)
-            .Include(t => t.FragmentCategory)
+            .Include(t => t.KnowledgeCategory)
             .FirstOrDefaultAsync(t =>
                 t.Type == type &&
                 t.ArticleTypeId == articleTypeId &&
-                t.FragmentCategoryId == fragmentCategoryId);
+                t.KnowledgeCategoryId == knowledgeCategoryId);
 
         string? articleTypeName = null;
         if (articleTypeId.HasValue)
@@ -207,11 +207,11 @@ public class AiPromptApiController : ControllerBase
             articleTypeName = articleType?.Name;
         }
 
-        string? fragmentCategoryName = null;
-        if (fragmentCategoryId.HasValue)
+        string? knowledgeCategoryName = null;
+        if (knowledgeCategoryId.HasValue)
         {
-            var fragmentCategory = await _fragmentCategoryRepository.GetByIdAsync(fragmentCategoryId.Value);
-            fragmentCategoryName = fragmentCategory?.Name;
+            var knowledgeCategory = await _knowledgeCategoryRepository.GetByIdAsync(knowledgeCategoryId.Value);
+            knowledgeCategoryName = knowledgeCategory?.Name;
         }
 
         if (template != null)
@@ -226,9 +226,9 @@ public class AiPromptApiController : ControllerBase
                 IsPerArticleType = isPerArticleType,
                 ArticleTypeId = articleTypeId,
                 ArticleTypeName = articleTypeName,
-                IsPerFragmentCategory = isPerFragmentCategory,
-                FragmentCategoryId = fragmentCategoryId,
-                FragmentCategoryName = fragmentCategoryName,
+                IsPerKnowledgeCategory = isPerKnowledgeCategory,
+                KnowledgeCategoryId = knowledgeCategoryId,
+                KnowledgeCategoryName = knowledgeCategoryName,
                 Content = template.Content,
                 Exists = true,
                 CreatedAt = template.CreatedAt,
@@ -247,9 +247,9 @@ public class AiPromptApiController : ControllerBase
                 IsPerArticleType = isPerArticleType,
                 ArticleTypeId = articleTypeId,
                 ArticleTypeName = articleTypeName,
-                IsPerFragmentCategory = isPerFragmentCategory,
-                FragmentCategoryId = fragmentCategoryId,
-                FragmentCategoryName = fragmentCategoryName,
+                IsPerKnowledgeCategory = isPerKnowledgeCategory,
+                KnowledgeCategoryId = knowledgeCategoryId,
+                KnowledgeCategoryName = knowledgeCategoryName,
                 Content = string.Empty,
                 Exists = false,
                 CreatedAt = null,
@@ -268,13 +268,13 @@ public class AiPromptApiController : ControllerBase
     public async Task<ActionResult<AiPromptDto>> CreateOrUpdate(
         PromptType type,
         [FromQuery] Guid? articleTypeId,
-        [FromQuery] Guid? fragmentCategoryId,
+        [FromQuery] Guid? knowledgeCategoryId,
         [FromBody] CreateOrUpdateAiPromptRequest request)
     {
         try
         {
             var isPerArticleType = type.GetIsPerArticleType();
-            var isPerFragmentCategory = type.GetIsPerFragmentCategory();
+            var isPerKnowledgeCategory = type.GetIsPerKnowledgeCategory();
 
             // Validate that articleTypeId is provided for per-article-type templates
             if (isPerArticleType && !articleTypeId.HasValue)
@@ -282,10 +282,10 @@ public class AiPromptApiController : ControllerBase
                 return BadRequest(new { message = "articleTypeId is required for per-article-type templates" });
             }
 
-            // Validate that fragmentCategoryId is provided for per-fragment-category templates
-            if (isPerFragmentCategory && !fragmentCategoryId.HasValue)
+            // Validate that knowledgeCategoryId is provided for per-knowledge-category templates
+            if (isPerKnowledgeCategory && !knowledgeCategoryId.HasValue)
             {
-                return BadRequest(new { message = "fragmentCategoryId is required for per-fragment-category templates" });
+                return BadRequest(new { message = "knowledgeCategoryId is required for per-knowledge-category templates" });
             }
 
             // Validate that articleTypeId is NOT provided for non-per-article-type templates
@@ -294,20 +294,20 @@ public class AiPromptApiController : ControllerBase
                 return BadRequest(new { message = "articleTypeId should not be provided for this template type" });
             }
 
-            // Validate that fragmentCategoryId is NOT provided for non-per-fragment-category templates
-            if (!isPerFragmentCategory && fragmentCategoryId.HasValue)
+            // Validate that knowledgeCategoryId is NOT provided for non-per-knowledge-category templates
+            if (!isPerKnowledgeCategory && knowledgeCategoryId.HasValue)
             {
-                return BadRequest(new { message = "fragmentCategoryId should not be provided for this template type" });
+                return BadRequest(new { message = "knowledgeCategoryId should not be provided for this template type" });
             }
 
             // Look up existing template
             var template = await _promptRepository.Query()
                 .Include(t => t.ArticleType)
-                .Include(t => t.FragmentCategory)
+                .Include(t => t.KnowledgeCategory)
                 .FirstOrDefaultAsync(t =>
                     t.Type == type &&
                     t.ArticleTypeId == articleTypeId &&
-                    t.FragmentCategoryId == fragmentCategoryId);
+                    t.KnowledgeCategoryId == knowledgeCategoryId);
 
             string? articleTypeName = null;
             if (articleTypeId.HasValue)
@@ -320,15 +320,15 @@ public class AiPromptApiController : ControllerBase
                 articleTypeName = articleType.Name;
             }
 
-            string? fragmentCategoryName = null;
-            if (fragmentCategoryId.HasValue)
+            string? knowledgeCategoryName = null;
+            if (knowledgeCategoryId.HasValue)
             {
-                var fragmentCategory = await _fragmentCategoryRepository.GetByIdAsync(fragmentCategoryId.Value);
-                if (fragmentCategory == null)
+                var knowledgeCategory = await _knowledgeCategoryRepository.GetByIdAsync(knowledgeCategoryId.Value);
+                if (knowledgeCategory == null)
                 {
-                    return BadRequest(new { message = "Invalid fragmentCategoryId" });
+                    return BadRequest(new { message = "Invalid knowledgeCategoryId" });
                 }
-                fragmentCategoryName = fragmentCategory.Name;
+                knowledgeCategoryName = knowledgeCategory.Name;
             }
 
             if (template != null)
@@ -342,8 +342,8 @@ public class AiPromptApiController : ControllerBase
                 _logger.LogInformation(
                     "Updated template {PromptType}" +
                     (articleTypeId.HasValue ? " for article type {ArticleTypeId}" : "") +
-                    (fragmentCategoryId.HasValue ? " for fragment category {FragmentCategoryId}" : ""),
-                    type, articleTypeId, fragmentCategoryId);
+                    (knowledgeCategoryId.HasValue ? " for knowledge category {KnowledgeCategoryId}" : ""),
+                    type, articleTypeId, knowledgeCategoryId);
 
                 return Ok(new AiPromptDto
                 {
@@ -354,9 +354,9 @@ public class AiPromptApiController : ControllerBase
                     IsPerArticleType = isPerArticleType,
                     ArticleTypeId = articleTypeId,
                     ArticleTypeName = articleTypeName,
-                    IsPerFragmentCategory = isPerFragmentCategory,
-                    FragmentCategoryId = fragmentCategoryId,
-                    FragmentCategoryName = fragmentCategoryName,
+                    IsPerKnowledgeCategory = isPerKnowledgeCategory,
+                    KnowledgeCategoryId = knowledgeCategoryId,
+                    KnowledgeCategoryName = knowledgeCategoryName,
                     Content = template.Content,
                     Exists = true,
                     CreatedAt = template.CreatedAt,
@@ -371,7 +371,7 @@ public class AiPromptApiController : ControllerBase
                     Type = type,
                     Content = request.Content,
                     ArticleTypeId = articleTypeId,
-                    FragmentCategoryId = fragmentCategoryId,
+                    KnowledgeCategoryId = knowledgeCategoryId,
                     CreatedAt = DateTimeOffset.UtcNow,
                     LastModifiedAt = DateTimeOffset.UtcNow
                 };
@@ -382,8 +382,8 @@ public class AiPromptApiController : ControllerBase
                 _logger.LogInformation(
                     "Created template {PromptType}" +
                     (articleTypeId.HasValue ? " for article type {ArticleTypeId}" : "") +
-                    (fragmentCategoryId.HasValue ? " for fragment category {FragmentCategoryId}" : ""),
-                    type, articleTypeId, fragmentCategoryId);
+                    (knowledgeCategoryId.HasValue ? " for knowledge category {KnowledgeCategoryId}" : ""),
+                    type, articleTypeId, knowledgeCategoryId);
 
                 return Ok(new AiPromptDto
                 {
@@ -394,9 +394,9 @@ public class AiPromptApiController : ControllerBase
                     IsPerArticleType = isPerArticleType,
                     ArticleTypeId = articleTypeId,
                     ArticleTypeName = articleTypeName,
-                    IsPerFragmentCategory = isPerFragmentCategory,
-                    FragmentCategoryId = fragmentCategoryId,
-                    FragmentCategoryName = fragmentCategoryName,
+                    IsPerKnowledgeCategory = isPerKnowledgeCategory,
+                    KnowledgeCategoryId = knowledgeCategoryId,
+                    KnowledgeCategoryName = knowledgeCategoryName,
                     Content = newTemplate.Content,
                     Exists = true,
                     CreatedAt = newTemplate.CreatedAt,
@@ -432,15 +432,15 @@ public class AiPromptApiController : ControllerBase
     }
 
     /// <summary>
-    /// Get all fragment categories
+    /// Get all knowledge categories
     /// </summary>
-    [HttpGet("fragment-categories")]
-    [ProducesResponseType(typeof(List<FragmentCategoryDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<FragmentCategoryDto>>> GetFragmentCategories()
+    [HttpGet("knowledge-categories")]
+    [ProducesResponseType(typeof(List<KnowledgeCategoryDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<List<KnowledgeCategoryDto>>> GetKnowledgeCategories()
     {
-        var fragmentCategories = await _fragmentCategoryRepository.Query()
+        var knowledgeCategories = await _knowledgeCategoryRepository.Query()
             .OrderBy(fc => fc.Name)
-            .Select(fc => new FragmentCategoryDto
+            .Select(fc => new KnowledgeCategoryDto
             {
                 Id = fc.Id,
                 Name = fc.Name,
@@ -448,7 +448,7 @@ public class AiPromptApiController : ControllerBase
             })
             .ToListAsync();
 
-        return Ok(fragmentCategories);
+        return Ok(knowledgeCategories);
     }
 }
 

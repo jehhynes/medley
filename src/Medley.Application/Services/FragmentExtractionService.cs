@@ -19,7 +19,7 @@ public class FragmentExtractionService
     private readonly IContentChunkingService _chunkingService;
     private readonly IRepository<Source> _sourceRepository;
     private readonly IRepository<Fragment> _fragmentRepository;
-    private readonly IRepository<FragmentCategory> _fragmentCategoryRepository;
+    private readonly IRepository<KnowledgeCategory> _knowledgeCategoryRepository;
     private readonly IRepository<AiPrompt> _promptRepository;
     private readonly ILogger<FragmentExtractionService> _logger;
     private readonly AiCallContext _aiCallContext;
@@ -32,7 +32,7 @@ public class FragmentExtractionService
         IContentChunkingService chunkingService,
         IRepository<Source> sourceRepository,
         IRepository<Fragment> fragmentRepository,
-        IRepository<FragmentCategory> fragmentCategoryRepository,
+        IRepository<KnowledgeCategory> knowledgeCategoryRepository,
         IRepository<AiPrompt> promptRepository,
         ILogger<FragmentExtractionService> logger,
         AiCallContext aiCallContext)
@@ -41,7 +41,7 @@ public class FragmentExtractionService
         _chunkingService = chunkingService;
         _sourceRepository = sourceRepository;
         _fragmentRepository = fragmentRepository;
-        _fragmentCategoryRepository = fragmentCategoryRepository;
+        _knowledgeCategoryRepository = knowledgeCategoryRepository;
         _promptRepository = promptRepository;
         _logger = logger;
         _aiCallContext = aiCallContext;
@@ -279,7 +279,7 @@ public class FragmentExtractionService
         }
 
         // Load fragment categories for mapping
-        var categories = await _fragmentCategoryRepository.Query().ToListAsync(cancellationToken);
+        var categories = await _knowledgeCategoryRepository.Query().ToListAsync(cancellationToken);
         var categoryMap = categories.ToDictionary(c => c.Name, c => c.Id, StringComparer.OrdinalIgnoreCase);
         
         // Get fallback category (How-To)
@@ -292,8 +292,8 @@ public class FragmentExtractionService
         {
             try
             {
-                // Map category name to FragmentCategory entity
-                FragmentCategory category;
+                // Map category name to KnowledgeCategory entity
+                KnowledgeCategory category;
                 if (!categoryMap.TryGetValue(fragmentDto.Category.Trim(), out var categoryId))
                 {
                     category = fallbackCategory ?? categories.First();
@@ -309,7 +309,7 @@ public class FragmentExtractionService
                 {
                     Title = fragmentDto.Title.Trim().Substring(0, Math.Min(200, fragmentDto.Title.Trim().Length)),
                     Summary = fragmentDto.Summary.Trim().Substring(0, Math.Min(500, fragmentDto.Summary.Trim().Length)),
-                    FragmentCategory = category,
+                    KnowledgeCategory = category,
                     Content = fragmentDto.Content.Trim().Substring(0, Math.Min(10000, fragmentDto.Content.Trim().Length)),
                     Source = source,
                     LastModifiedAt = DateTimeOffset.UtcNow,
@@ -367,7 +367,7 @@ public class FragmentExtractionService
             .FirstOrDefaultAsync(t => t.Type == PromptType.OrganizationContext, cancellationToken);
 
         // Load all fragment categories
-        var categories = await _fragmentCategoryRepository.Query()
+        var categories = await _knowledgeCategoryRepository.Query()
             .OrderBy(c => c.Name)
             .ToListAsync(cancellationToken);
 
@@ -379,8 +379,8 @@ public class FragmentExtractionService
 
         // Load per-category prompts
         var categoryPrompts = await _promptRepository.Query()
-            .Where(t => t.Type == PromptType.FragmentCategoryExtraction && t.FragmentCategoryId != null)
-            .Include(t => t.FragmentCategory)
+            .Where(t => t.Type == PromptType.KnowledgeCategoryExtraction && t.KnowledgeCategoryId != null)
+            .Include(t => t.KnowledgeCategory)
             .ToListAsync(cancellationToken);
 
         _logger.LogInformation("Loaded {CategoryCount} categories and {PromptCount} category-specific prompts", 
@@ -388,9 +388,9 @@ public class FragmentExtractionService
 
         // Build category map with guidance by ID
         var categoryGuidanceMap = categoryPrompts
-            .Where(p => p.FragmentCategoryId != null)
+            .Where(p => p.KnowledgeCategoryId != null)
             .ToDictionary(
-                p => p.FragmentCategoryId!.Value,
+                p => p.KnowledgeCategoryId!.Value,
                 p => p.Content
             );
 
@@ -415,7 +415,7 @@ public class FragmentExtractionService
                 speakers.Count == 0 ? null :
                 source.MetadataType == SourceMetadataType.Collector_Fellow ? "Any speaker not included in the list should be considered to be a customer" :
                 source.MetadataType == SourceMetadataType.Collector_GoogleDrive ? "Only the primary employee is known. The source content does not identify speech segments by speakers." : null,
-            FragmentCategories = categories.Select(c => new CategoryDefinition
+            Categories = categories.Select(c => new CategoryDefinition
             {
                 Name = c.Name,
                 Guidance = categoryGuidanceMap.TryGetValue(c.Id, out var guidance) ? guidance : null
@@ -487,7 +487,7 @@ public class FragmentExtractionSystemPrompt
 
     public string? SpeakersGuidance { get; internal set; }
 
-    public required List<CategoryDefinition> FragmentCategories { get; set; }
+    public required List<CategoryDefinition> Categories { get; set; }
     
 }
 
@@ -504,7 +504,7 @@ public class SpeakerInfo
 }
 
 /// <summary>
-/// Definition of a fragment category with extraction guidance
+/// Definition of a knowledge category with extraction guidance
 /// </summary>
 public class CategoryDefinition
 {
@@ -512,4 +512,5 @@ public class CategoryDefinition
     
     public string? Guidance { get; set; }
 }
+
 

@@ -46,15 +46,15 @@ public class KnowledgeUnit : BusinessEntity
     public string? ClusteringComment { get; set; }
 
     /// <summary>
-    /// The ID of the fragment category
+    /// The ID of the knowledge category
     /// </summary>
-    public Guid FragmentCategoryId { get; set; }
+    public Guid KnowledgeCategoryId { get; set; }
 
     /// <summary>
-    /// Navigation to the fragment category
+    /// Navigation to the knowledge category
     /// </summary>
-    [ForeignKey(nameof(FragmentCategoryId))]
-    public required virtual FragmentCategory Category { get; set; }
+    [ForeignKey(nameof(KnowledgeCategoryId))]
+    public required virtual KnowledgeCategory Category { get; set; }
 
     /// <summary>
     /// Vector embedding for semantic similarity operations

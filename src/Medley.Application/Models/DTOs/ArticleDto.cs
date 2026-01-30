@@ -196,22 +196,22 @@ public class ArticleTypeDto
 }
 
 /// <summary>
-/// Fragment category information
+/// Knowledge category information
 /// </summary>
-public class FragmentCategoryDto
+public class KnowledgeCategoryDto
 {
     /// <summary>
-    /// Unique identifier for the fragment category
+    /// Unique identifier for the knowledge category
     /// </summary>
     public required Guid Id { get; set; }
 
     /// <summary>
-    /// Fragment category name
+    /// Knowledge category name
     /// </summary>
     public required string Name { get; set; }
 
     /// <summary>
-    /// Icon for the fragment category
+    /// Icon for the knowledge category
     /// </summary>
     public string? Icon { get; set; }
 }

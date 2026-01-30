@@ -12,7 +12,7 @@ namespace Medley.Tests.Integration.Repositories;
 public class FragmentDeleteTests : DatabaseTestBase
 {
     private IFragmentRepository _repository = null!;
-    private FragmentCategory _defaultCategory = null!;
+    private KnowledgeCategory _defaultCategory = null!;
     private Domain.Entities.Integration _testIntegration = null!;
     private Source _testSource = null!;
 
@@ -27,14 +27,14 @@ public class FragmentDeleteTests : DatabaseTestBase
         _repository = new FragmentRepository(_dbContext);
 
         // Create test data
-        _defaultCategory = new FragmentCategory
+        _defaultCategory = new KnowledgeCategory
         {
             Id = Guid.NewGuid(),
             Name = "Test Category",
             Icon = "bi-test",
             CreatedAt = DateTimeOffset.UtcNow
         };
-        await _dbContext.Set<FragmentCategory>().AddAsync(_defaultCategory);
+        await _dbContext.Set<KnowledgeCategory>().AddAsync(_defaultCategory);
 
         _testIntegration = new Domain.Entities.Integration
         {
@@ -69,7 +69,7 @@ public class FragmentDeleteTests : DatabaseTestBase
             Id = Guid.NewGuid(),
             Title = "Active Fragment",
             Summary = "Active Summary",
-            FragmentCategory = _defaultCategory,
+            KnowledgeCategory = _defaultCategory,
             Content = "Active content",
             IsDeleted = false,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -81,7 +81,7 @@ public class FragmentDeleteTests : DatabaseTestBase
             Id = Guid.NewGuid(),
             Title = "Deleted Fragment",
             Summary = "Deleted Summary",
-            FragmentCategory = _defaultCategory,
+            KnowledgeCategory = _defaultCategory,
             Content = "Deleted content",
             IsDeleted = true,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -110,7 +110,7 @@ public class FragmentDeleteTests : DatabaseTestBase
             Id = Guid.NewGuid(),
             Title = "Active Fragment",
             Summary = "Active Summary",
-            FragmentCategory = _defaultCategory,
+            KnowledgeCategory = _defaultCategory,
             Content = "Active content",
             IsDeleted = false,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -122,7 +122,7 @@ public class FragmentDeleteTests : DatabaseTestBase
             Id = Guid.NewGuid(),
             Title = "Deleted Fragment",
             Summary = "Deleted Summary",
-            FragmentCategory = _defaultCategory,
+            KnowledgeCategory = _defaultCategory,
             Content = "Deleted content",
             IsDeleted = true,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -152,7 +152,7 @@ public class FragmentDeleteTests : DatabaseTestBase
             Id = Guid.NewGuid(),
             Title = "Deleted Fragment",
             Summary = "Deleted Summary",
-            FragmentCategory = _defaultCategory,
+            KnowledgeCategory = _defaultCategory,
             Content = "Deleted content",
             IsDeleted = true,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -178,7 +178,7 @@ public class FragmentDeleteTests : DatabaseTestBase
             Id = Guid.NewGuid(),
             Title = "Active Fragment",
             Summary = "Active Summary",
-            FragmentCategory = _defaultCategory,
+            KnowledgeCategory = _defaultCategory,
             Content = "Active content",
             IsDeleted = false,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -208,7 +208,7 @@ public class FragmentDeleteTests : DatabaseTestBase
             Id = Guid.NewGuid(),
             Title = "Active Fragment",
             Summary = "Active Summary",
-            FragmentCategory = _defaultCategory,
+            KnowledgeCategory = _defaultCategory,
             Content = "Active content",
             IsDeleted = false,
             Embedding = new Pgvector.Vector(testEmbedding),
@@ -221,7 +221,7 @@ public class FragmentDeleteTests : DatabaseTestBase
             Id = Guid.NewGuid(),
             Title = "Deleted Fragment",
             Summary = "Deleted Summary",
-            FragmentCategory = _defaultCategory,
+            KnowledgeCategory = _defaultCategory,
             Content = "Deleted content",
             IsDeleted = true,
             Embedding = new Pgvector.Vector(testEmbedding),
@@ -251,7 +251,7 @@ public class FragmentDeleteTests : DatabaseTestBase
             Id = Guid.NewGuid(),
             Title = "Active Fragment",
             Summary = "Active Summary",
-            FragmentCategory = _defaultCategory,
+            KnowledgeCategory = _defaultCategory,
             Content = "Active content",
             IsDeleted = false,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -263,7 +263,7 @@ public class FragmentDeleteTests : DatabaseTestBase
             Id = Guid.NewGuid(),
             Title = "Deleted Fragment",
             Summary = "Deleted Summary",
-            FragmentCategory = _defaultCategory,
+            KnowledgeCategory = _defaultCategory,
             Content = "Deleted content",
             IsDeleted = true,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -300,7 +300,7 @@ public class FragmentDeleteTests : DatabaseTestBase
                 Id = Guid.NewGuid(),
                 Title = $"Active Fragment {i}",
                 Summary = $"Active Summary {i}",
-                FragmentCategory = _defaultCategory,
+                KnowledgeCategory = _defaultCategory,
                 Content = $"Active content {i}",
                 IsDeleted = false,
                 CreatedAt = DateTimeOffset.UtcNow,
@@ -315,7 +315,7 @@ public class FragmentDeleteTests : DatabaseTestBase
                 Id = Guid.NewGuid(),
                 Title = $"Deleted Fragment {i}",
                 Summary = $"Deleted Summary {i}",
-                FragmentCategory = _defaultCategory,
+                KnowledgeCategory = _defaultCategory,
                 Content = $"Deleted content {i}",
                 IsDeleted = true,
                 CreatedAt = DateTimeOffset.UtcNow,
@@ -365,7 +365,7 @@ public class FragmentDeleteTests : DatabaseTestBase
             Id = Guid.NewGuid(),
             Title = "Alpha Fragment",
             Summary = "Summary A",
-            FragmentCategory = _defaultCategory,
+            KnowledgeCategory = _defaultCategory,
             Content = "Content A",
             IsDeleted = false,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -377,7 +377,7 @@ public class FragmentDeleteTests : DatabaseTestBase
             Id = Guid.NewGuid(),
             Title = "Beta Fragment",
             Summary = "Summary B",
-            FragmentCategory = _defaultCategory,
+            KnowledgeCategory = _defaultCategory,
             Content = "Content B",
             IsDeleted = false,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -389,7 +389,7 @@ public class FragmentDeleteTests : DatabaseTestBase
             Id = Guid.NewGuid(),
             Title = "Alpha Deleted",
             Summary = "Summary A",
-            FragmentCategory = _defaultCategory,
+            KnowledgeCategory = _defaultCategory,
             Content = "Content A",
             IsDeleted = true,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -422,7 +422,7 @@ public class FragmentDeleteTests : DatabaseTestBase
             Id = Guid.NewGuid(),
             Title = "Fragment to Delete",
             Summary = "Summary",
-            FragmentCategory = _defaultCategory,
+            KnowledgeCategory = _defaultCategory,
             Content = "Content",
             IsDeleted = false,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -651,7 +651,7 @@ public class FragmentDeleteTests : DatabaseTestBase
                 Id = Guid.NewGuid(),
                 Title = $"Active Fragment {i}",
                 Summary = $"Active Summary {i}",
-                FragmentCategory = _defaultCategory,
+                KnowledgeCategory = _defaultCategory,
                 Content = $"Active content {i}",
                 IsDeleted = false,
                 CreatedAt = DateTimeOffset.UtcNow,
@@ -666,7 +666,7 @@ public class FragmentDeleteTests : DatabaseTestBase
                 Id = Guid.NewGuid(),
                 Title = $"Deleted Fragment {i}",
                 Summary = $"Deleted Summary {i}",
-                FragmentCategory = _defaultCategory,
+                KnowledgeCategory = _defaultCategory,
                 Content = $"Deleted content {i}",
                 IsDeleted = true,
                 CreatedAt = DateTimeOffset.UtcNow,
@@ -717,7 +717,7 @@ public class FragmentDeleteTests : DatabaseTestBase
             Id = Guid.NewGuid(),
             Title = "Clustered Fragment",
             Summary = "Clustered Summary",
-            FragmentCategory = _defaultCategory,
+            KnowledgeCategory = _defaultCategory,
             Content = "Clustered content",
             IsDeleted = false,
             KnowledgeUnitId = knowledgeUnit.Id,

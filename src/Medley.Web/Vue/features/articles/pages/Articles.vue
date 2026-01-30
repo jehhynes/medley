@@ -408,14 +408,6 @@
       </div>
     </div>
 
-    <!-- Fragment Modal -->
-    <fragment-modal
-      :fragment="selectedFragment"
-      :visible="!!selectedFragment"
-      @close="closeFragmentModal"
-      @updated="handleFragmentUpdated"
-      @deleted="handleFragmentDeleted" />
-
     <!-- Knowledge Unit Modal -->
     <knowledge-unit-modal
       :knowledge-unit="selectedKnowledgeUnit"
@@ -440,7 +432,6 @@ import type {
   ArticleDto,
   ArticleSummaryDto,
   ArticleVersionDto,
-  FragmentDto,
   KnowledgeUnitDto,
   ArticleUpdateContentRequest,
   ArticleStatus
@@ -467,7 +458,6 @@ import { useDropDown } from '@/composables/useDropDown';
 import { createArticleVersionsStore } from '../stores/versionStore';
 
 // Components
-import FragmentModal from '../../sources/components/FragmentModal.vue';
 import KnowledgeUnitModal from '../../knowledge-units/components/KnowledgeUnitModal.vue';
 import VersionViewer from '../components/VersionViewer.vue';
 import MyWorkList from '../components/MyWorkList.vue';
@@ -654,9 +644,6 @@ const userDisplayName = window.MedleyUser?.displayName ?? 'User';
 const userIsAuthenticated = window.MedleyUser?.isAuthenticated ?? false;
 const currentUserId = window.MedleyUser?.id ?? null;
 
-// Fragment modal state
-const selectedFragment = ref<FragmentDto | null>(null);
-
 // Knowledge unit modal state
 const selectedKnowledgeUnit = ref<KnowledgeUnitDto | null>(null);
 
@@ -803,7 +790,7 @@ const availableTabs = computed<ContentTab[]>(() => {
 const availableTabsToOpen = computed(() => {
   const openTabIds = new Set(availableTabs.value.map(t => t.id));
   const allTabs = [
-    { id: 'knowledge-units', label: 'Knowledge Units', icon: 'bi-puzzle' },
+    { id: 'knowledge-units', label: 'Knowledge Units', icon: 'fa-light fa-atom' },
     { id: 'plan', label: 'Plan', icon: 'bi-list-check' },
     { id: 'version', label: 'Versions', icon: 'bi-clock-history' }
   ];
@@ -1194,20 +1181,8 @@ const handlePlanConversationCreated = async (conversationId: string): Promise<vo
 };
 
 // ============================================================================
-// METHODS - Fragment and Knowledge Unit Modals
+// METHODS - Knowledge Unit Modals
 // ============================================================================
-
-const handleOpenFragment = async (fragmentId: string): Promise<void> => {
-  if (!fragmentId) return;
-
-  try {
-    const fragment = await apiClients.fragments.get(fragmentId);
-    selectedFragment.value = fragment;
-  } catch (err: any) {
-    console.error('Error loading fragment:', err);
-    showToast('error', 'Failed to load fragment');
-  }
-};
 
 const handleOpenKnowledgeUnit = async (knowledgeUnitId: string): Promise<void> => {
   if (!knowledgeUnitId) return;
@@ -1230,21 +1205,6 @@ const handleOpenVersion = async (versionId: string): Promise<void> => {
     console.error('Error loading version:', err);
     showToast('error', 'Failed to load version');
   }
-};
-
-const closeFragmentModal = (): void => {
-  selectedFragment.value = null;
-};
-
-const handleFragmentUpdated = (updatedFragment: FragmentDto): void => {
-  // Update the selected fragment to show the new data
-  selectedFragment.value = updatedFragment;
-};
-
-const handleFragmentDeleted = (fragmentId: string): void => {
-  // Close the modal - fragment is now deleted
-  selectedFragment.value = null;
-  // Note: The fragment will no longer appear in searches since it's archived
 };
 
 const closeKnowledgeUnitModal = (): void => {

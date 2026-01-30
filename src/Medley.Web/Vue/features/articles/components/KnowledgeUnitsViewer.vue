@@ -13,7 +13,7 @@
       
       <div v-else-if="knowledgeUnits.length === 0" class="empty-state">
         <div class="empty-state-icon">
-          <i class="bi bi-puzzle"></i>
+          <i class="fa-light fa-atom"></i>
         </div>
         <div class="empty-state-title">No Knowledge Units</div>
         <div class="empty-state-text">No knowledge units are linked to this article yet</div>

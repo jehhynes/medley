@@ -4,10 +4,10 @@ using Microsoft.EntityFrameworkCore;
 namespace Medley.Domain.Entities;
 
 /// <summary>
-/// Represents a category of fragment (e.g., Tutorial, How-To, Concept, Best Practice)
+/// Represents a category of knowledge (e.g., Tutorial, How-To, Concept, Best Practice)
 /// </summary>
 [Index(nameof(Name), IsUnique = true)]
-public class FragmentCategory : BusinessEntity
+public class KnowledgeCategory : BusinessEntity
 {
     [MaxLength(100)]
     public required string Name { get; set; }

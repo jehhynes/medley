@@ -15,7 +15,7 @@ public class FragmentTests
         {
             Title = "Test Title",
             Summary = "Test Summary",
-            FragmentCategory = new FragmentCategory { Id = Guid.NewGuid(), Name = "Test", CreatedAt = DateTimeOffset.UtcNow },
+            KnowledgeCategory = new KnowledgeCategory { Id = Guid.NewGuid(), Name = "Test", CreatedAt = DateTimeOffset.UtcNow },
             Content = string.Empty,
             Source = new Source 
             { 
@@ -70,7 +70,7 @@ public class FragmentTests
             Id = id,
             Title = "Test Title",
             Summary = "Test Summary",
-            FragmentCategory = new FragmentCategory { Id = Guid.NewGuid(), Name = "Test", CreatedAt = DateTimeOffset.UtcNow },
+            KnowledgeCategory = new KnowledgeCategory { Id = Guid.NewGuid(), Name = "Test", CreatedAt = DateTimeOffset.UtcNow },
             Content = content,
             Embedding = embedding,
             Source = source,
@@ -100,7 +100,7 @@ public class FragmentTests
             Id = Guid.NewGuid(),
             Title = "Test Title",
             Summary = "Test Summary",
-            FragmentCategory = new FragmentCategory { Id = Guid.NewGuid(), Name = "Test", CreatedAt = DateTimeOffset.UtcNow },
+            KnowledgeCategory = new KnowledgeCategory { Id = Guid.NewGuid(), Name = "Test", CreatedAt = DateTimeOffset.UtcNow },
             Content = "Test content without embedding",
             Embedding = null,
             Source = new Source 
@@ -135,7 +135,7 @@ public class FragmentTests
             Id = Guid.NewGuid(),
             Title = "Test Title",
             Summary = "Test Summary",
-            FragmentCategory = new FragmentCategory { Id = Guid.NewGuid(), Name = "Test", CreatedAt = DateTimeOffset.UtcNow },
+            KnowledgeCategory = new KnowledgeCategory { Id = Guid.NewGuid(), Name = "Test", CreatedAt = DateTimeOffset.UtcNow },
             Content = "Test content",
             Embedding = embedding,
             Source = new Source 

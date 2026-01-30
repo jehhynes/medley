@@ -56,10 +56,10 @@ public enum PromptType
     ArticleTypeAgentMode = 8,
 
     /// <summary>
-    /// Template for extracting fragments specific to fragment categories
+    /// Template for extracting fragments specific to knowledge categories
     /// </summary>
-    [PromptTypeMetadata("Fragment Categories", "Category-specific extraction instructions", IsPerFragmentCategory = true)]
-    FragmentCategoryExtraction = 9,
+    [PromptTypeMetadata("Knowledge Categories", "Category-specific extraction instructions", IsPerKnowledgeCategory = true)]
+    KnowledgeCategoryExtraction = 9,
 
     /// <summary>
     /// Template for Cursor AI review instructions

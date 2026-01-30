@@ -169,9 +169,9 @@ public class DashboardApiController : ControllerBase
         // Fragment metrics
         metrics.TotalFragments = await _fragmentRepository.Query().CountAsync();
         metrics.FragmentsByCategory = await _fragmentRepository.Query()
-            .Include(f => f.FragmentCategory)
-            .GroupBy(f => f.FragmentCategory.Name)
-            .Select(g => new MetricItem { Label = g.Key, Count = g.Count(), Icon = g.First().FragmentCategory.Icon })
+            .Include(f => f.KnowledgeCategory)
+            .GroupBy(f => f.KnowledgeCategory.Name)
+            .Select(g => new MetricItem { Label = g.Key, Count = g.Count(), Icon = g.First().KnowledgeCategory.Icon })
             .ToListAsync();
         
         metrics.FragmentsPendingEmbedding = await _fragmentRepository.Query()

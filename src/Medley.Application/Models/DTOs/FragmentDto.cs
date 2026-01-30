@@ -28,7 +28,7 @@ public class FragmentDto
     public required string Category { get; set; }
 
     /// <summary>
-    /// Icon for the fragment category
+    /// Icon for the knowledge category
     /// </summary>
     public string? CategoryIcon { get; set; }
 
@@ -109,7 +109,7 @@ public class FragmentSearchResult
     public required string Category { get; set; }
 
     /// <summary>
-    /// Icon for the fragment category
+    /// Icon for the knowledge category
     /// </summary>
     public string? CategoryIcon { get; set; }
 

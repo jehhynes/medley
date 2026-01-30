@@ -12,7 +12,7 @@ namespace Medley.Tests.Integration.Repositories;
 public class FragmentRepositoryTests : DatabaseTestBase
 {
     protected IFragmentRepository _repository = null!;
-    protected FragmentCategory _defaultCategory = null!;
+    protected KnowledgeCategory _defaultCategory = null!;
 
     public FragmentRepositoryTests(DatabaseFixture fixture) : base(fixture)
     {
@@ -24,15 +24,15 @@ public class FragmentRepositoryTests : DatabaseTestBase
 
         _repository = new FragmentRepository(_dbContext);
 
-        // Create default fragment category for tests
-        _defaultCategory = new FragmentCategory
+        // Create default knowledge category for tests
+        _defaultCategory = new KnowledgeCategory
         {
             Id = Guid.NewGuid(),
             Name = "Test Category",
             Icon = "bi-test",
             CreatedAt = DateTimeOffset.UtcNow
         };
-        await _dbContext.Set<FragmentCategory>().AddAsync(_defaultCategory);
+        await _dbContext.Set<KnowledgeCategory>().AddAsync(_defaultCategory);
         await _dbContext.SaveChangesAsync();
     }
 
@@ -51,7 +51,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
             Id = Guid.NewGuid(),
             Title = "Test Title",
             Summary = "Test Summary",
-            FragmentCategory = _defaultCategory,
+            KnowledgeCategory = _defaultCategory,
             Content = "Test content",
             CreatedAt = DateTimeOffset.UtcNow,
             Source = source
@@ -92,7 +92,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
             Id = Guid.NewGuid(),
             Title = "New Fragment Title",
             Summary = "New Fragment Summary",
-            FragmentCategory = _defaultCategory,
+            KnowledgeCategory = _defaultCategory,
             Content = "New fragment",
             CreatedAt = DateTimeOffset.UtcNow,
             Source = new Source { Id = Guid.NewGuid(), Type = Domain.Enums.SourceType.Meeting, MetadataType = Domain.Enums.SourceMetadataType.Collector_Fellow, Name = "Meeting", Content = "Test content", MetadataJson = "{}", Date = DateTimeOffset.UtcNow, Integration = integration }
@@ -119,9 +119,9 @@ public class FragmentRepositoryTests : DatabaseTestBase
 
         var fragments = new[]
         {
-            new Fragment { Id = Guid.NewGuid(), Title = "Title 1", Summary = "Summary 1", FragmentCategory = _defaultCategory, Content = "Fragment 1", CreatedAt = DateTimeOffset.UtcNow, Source = source },
-            new Fragment { Id = Guid.NewGuid(), Title = "Title 2", Summary = "Summary 2", FragmentCategory = _defaultCategory, Content = "Fragment 2", CreatedAt = DateTimeOffset.UtcNow, Source = source },
-            new Fragment { Id = Guid.NewGuid(), Title = "Title 3", Summary = "Summary 3", FragmentCategory = _defaultCategory, Content = "Fragment 3", CreatedAt = DateTimeOffset.UtcNow, Source = source }
+            new Fragment { Id = Guid.NewGuid(), Title = "Title 1", Summary = "Summary 1", KnowledgeCategory = _defaultCategory, Content = "Fragment 1", CreatedAt = DateTimeOffset.UtcNow, Source = source },
+            new Fragment { Id = Guid.NewGuid(), Title = "Title 2", Summary = "Summary 2", KnowledgeCategory = _defaultCategory, Content = "Fragment 2", CreatedAt = DateTimeOffset.UtcNow, Source = source },
+            new Fragment { Id = Guid.NewGuid(), Title = "Title 3", Summary = "Summary 3", KnowledgeCategory = _defaultCategory, Content = "Fragment 3", CreatedAt = DateTimeOffset.UtcNow, Source = source }
         };
         await _dbContext.Fragments.AddRangeAsync(fragments);
         await _dbContext.SaveChangesAsync();
@@ -157,7 +157,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
                 Id = Guid.NewGuid(),
                 Title = "Base Fragment",
                 Summary = "Base Summary",
-                FragmentCategory = _defaultCategory,
+                KnowledgeCategory = _defaultCategory,
                 Content = "Base fragment",
                 Embedding = new Vector(baseEmbedding),
                 CreatedAt = DateTimeOffset.UtcNow,
@@ -168,7 +168,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
                 Id = Guid.NewGuid(),
                 Title = "Similar Fragment",
                 Summary = "Similar Summary",
-                FragmentCategory = _defaultCategory,
+                KnowledgeCategory = _defaultCategory,
                 Content = "Similar fragment",
                 Embedding = new Vector(similarEmbedding),
                 CreatedAt = DateTimeOffset.UtcNow,
@@ -179,7 +179,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
                 Id = Guid.NewGuid(),
                 Title = "Different Fragment",
                 Summary = "Different Summary",
-                FragmentCategory = _defaultCategory,
+                KnowledgeCategory = _defaultCategory,
                 Content = "Different fragment",
                 Embedding = new Vector(differentEmbedding),
                 CreatedAt = DateTimeOffset.UtcNow,
@@ -222,7 +222,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
                 Id = Guid.NewGuid(),
                 Title = "Similar Fragment",
                 Summary = "Similar Summary",
-                FragmentCategory = _defaultCategory,
+                KnowledgeCategory = _defaultCategory,
                 Content = "Similar fragment",
                 Embedding = new Vector(similarEmbedding),
                 CreatedAt = DateTimeOffset.UtcNow,
@@ -233,7 +233,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
                 Id = Guid.NewGuid(),
                 Title = "Different Fragment",
                 Summary = "Different Summary",
-                FragmentCategory = _defaultCategory,
+                KnowledgeCategory = _defaultCategory,
                 Content = "Different fragment",
                 Embedding = new Vector(differentEmbedding),
                 CreatedAt = DateTimeOffset.UtcNow,
@@ -286,7 +286,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
                 Id = Guid.NewGuid(),
                 Title = "Fragment With Embedding",
                 Summary = "Fragment Summary",
-                FragmentCategory = _defaultCategory,
+                KnowledgeCategory = _defaultCategory,
                 Content = "Fragment with embedding",
                 Embedding = new Vector(queryEmbedding),
                 CreatedAt = DateTimeOffset.UtcNow,
@@ -297,7 +297,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
                 Id = Guid.NewGuid(),
                 Title = "Fragment Without Embedding",
                 Summary = "Fragment Summary",
-                FragmentCategory = _defaultCategory,
+                KnowledgeCategory = _defaultCategory,
                 Content = "Fragment without embedding",
                 Embedding = null,
                 CreatedAt = DateTimeOffset.UtcNow,
@@ -364,7 +364,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
                 Id = Guid.NewGuid(),
                 Title = "Unclustered Fragment",
                 Summary = "Unclustered Summary",
-                FragmentCategory = _defaultCategory,
+                KnowledgeCategory = _defaultCategory,
                 Content = "Unclustered fragment",
                 Embedding = new Vector(queryEmbedding),
                 KnowledgeUnitId = null, // Not assigned to any KnowledgeUnit
@@ -376,7 +376,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
                 Id = Guid.NewGuid(),
                 Title = "Clustered Fragment",
                 Summary = "Clustered Summary",
-                FragmentCategory = _defaultCategory,
+                KnowledgeCategory = _defaultCategory,
                 Content = "Clustered fragment",
                 Embedding = new Vector(similarEmbedding),
                 KnowledgeUnitId = knowledgeUnit.Id, // Assigned to KnowledgeUnit
@@ -432,7 +432,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
                 Id = Guid.NewGuid(),
                 Title = "Unclustered Fragment",
                 Summary = "Unclustered Summary",
-                FragmentCategory = _defaultCategory,
+                KnowledgeCategory = _defaultCategory,
                 Content = "Unclustered fragment",
                 Embedding = new Vector(queryEmbedding),
                 KnowledgeUnitId = null,
@@ -444,7 +444,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
                 Id = Guid.NewGuid(),
                 Title = "Clustered Fragment",
                 Summary = "Clustered Summary",
-                FragmentCategory = _defaultCategory,
+                KnowledgeCategory = _defaultCategory,
                 Content = "Clustered fragment",
                 Embedding = new Vector(similarEmbedding),
                 KnowledgeUnitId = knowledgeUnit.Id,
@@ -511,7 +511,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
                 Id = Guid.NewGuid(),
                 Title = "Fragment 1 for KU1",
                 Summary = "Summary 1",
-                FragmentCategory = _defaultCategory,
+                KnowledgeCategory = _defaultCategory,
                 Content = "Fragment 1 content",
                 KnowledgeUnitId = knowledgeUnit1.Id,
                 CreatedAt = DateTimeOffset.UtcNow,
@@ -522,7 +522,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
                 Id = Guid.NewGuid(),
                 Title = "Fragment 2 for KU1",
                 Summary = "Summary 2",
-                FragmentCategory = _defaultCategory,
+                KnowledgeCategory = _defaultCategory,
                 Content = "Fragment 2 content",
                 KnowledgeUnitId = knowledgeUnit1.Id,
                 CreatedAt = DateTimeOffset.UtcNow,
@@ -533,7 +533,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
                 Id = Guid.NewGuid(),
                 Title = "Fragment for KU2",
                 Summary = "Summary 3",
-                FragmentCategory = _defaultCategory,
+                KnowledgeCategory = _defaultCategory,
                 Content = "Fragment 3 content",
                 KnowledgeUnitId = knowledgeUnit2.Id,
                 CreatedAt = DateTimeOffset.UtcNow,
@@ -544,7 +544,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
                 Id = Guid.NewGuid(),
                 Title = "Unassigned Fragment",
                 Summary = "Summary 4",
-                FragmentCategory = _defaultCategory,
+                KnowledgeCategory = _defaultCategory,
                 Content = "Fragment 4 content",
                 KnowledgeUnitId = null,
                 CreatedAt = DateTimeOffset.UtcNow,
@@ -581,7 +581,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
     }
 
     [Fact]
-    public async Task GetByKnowledgeUnitIdAsync_ShouldIncludeFragmentCategory()
+    public async Task GetByKnowledgeUnitIdAsync_ShouldIncludeKnowledgeCategory()
     {
         // Arrange
         var integration = new Domain.Entities.Integration { Id = Guid.NewGuid(), Name = "Test Integration", Type = Domain.Enums.IntegrationType.Fellow };
@@ -607,7 +607,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
             Id = Guid.NewGuid(),
             Title = "Test Fragment",
             Summary = "Test Summary",
-            FragmentCategory = _defaultCategory,
+            KnowledgeCategory = _defaultCategory,
             Content = "Test content",
             KnowledgeUnitId = knowledgeUnit.Id,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -622,7 +622,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
 
         // Assert
         Assert.Single(resultList);
-        Assert.NotNull(resultList[0].FragmentCategory);
-        Assert.Equal(_defaultCategory.Name, resultList[0].FragmentCategory.Name);
+        Assert.NotNull(resultList[0].KnowledgeCategory);
+        Assert.Equal(_defaultCategory.Name, resultList[0].KnowledgeCategory.Name);
     }
 }

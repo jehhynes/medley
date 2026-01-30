@@ -10,7 +10,7 @@
     var isSourceImport = currentArea == "Admin" && currentController == "SourceImport";
     var isTagTypes = currentArea == "Admin" && currentController == "TagTypes";
     var isArticleTypes = currentArea == "Admin" && currentController == "ArticleTypes";
-    var isFragmentCategories = currentArea == "Admin" && currentController == "FragmentCategories";
+    var isKnowledgeCategories = currentArea == "Admin" && currentController == "KnowledgeCategories";
     var isTokenUsage = currentArea == "Admin" && currentController == "TokenUsage";
 }
 
@@ -52,10 +52,10 @@
             </a>
         </li>
         <li class="list-item">
-            <a asp-area="Admin" asp-controller="FragmentCategories" asp-action="Index" class="list-item-content @(isFragmentCategories ? "active" : "")">
-                <i class="list-item-icon bi bi-puzzle"></i>
+            <a asp-area="Admin" asp-controller="KnowledgeCategories" asp-action="Index" class="list-item-content @(isKnowledgeCategories ? "active" : "")">
+                <i class="list-item-icon fa-light fa-atom"></i>
                 <div class="list-item-body">
-                    <div class="list-item-title">Fragment Categories</div>
+                    <div class="list-item-title">Knowledge Categories</div>
                 </div>
             </a>
         </li>

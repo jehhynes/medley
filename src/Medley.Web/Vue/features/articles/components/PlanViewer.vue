@@ -136,7 +136,7 @@
               <!-- Header Row: Icon, Title, Badges -->
               <div class="row g-2">
                 <div class="col-auto" style="width: 60px; text-align: center;">
-                  <i class="list-item-icon" :class="getIconClass(pku.knowledgeUnit.categoryIcon, 'bi-puzzle')" style="font-size: 1.5rem;position:relative;top:-0.33rem;"></i>
+                  <i class="list-item-icon" :class="getIconClass(pku.knowledgeUnit.categoryIcon, 'fa-light fa-atom')" style="font-size: 1.5rem;position:relative;top:-0.33rem;"></i>
                 </div>
                 <div class="col">
                   <div class="fw-semibold knowledge-unit-title" @click="selectKnowledgeUnit(pku)">{{ pku.knowledgeUnit.title || 'Untitled Knowledge Unit' }}</div>
@@ -214,7 +214,7 @@
               <!-- Header Row: Icon, Title, Badges -->
               <div class="row g-2">
                 <div class="col-auto" style="width: 60px; text-align: center;">
-                  <i class="list-item-icon" :class="getIconClass(pku.knowledgeUnit.categoryIcon, 'bi-puzzle')" style="font-size: 1.5rem;position:relative;top:-0.33rem;"></i>
+                  <i class="list-item-icon" :class="getIconClass(pku.knowledgeUnit.categoryIcon, 'fa-light fa-atom')" style="font-size: 1.5rem;position:relative;top:-0.33rem;"></i>
                 </div>
                 <div class="col">
                   <div class="fw-semibold knowledge-unit-title" @click="selectKnowledgeUnit(pku)">{{ pku.knowledgeUnit.title || 'Untitled Knowledge Unit' }}</div>

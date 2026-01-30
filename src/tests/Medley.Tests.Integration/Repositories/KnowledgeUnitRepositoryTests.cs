@@ -11,7 +11,7 @@ namespace Medley.Tests.Integration.Repositories;
 public class KnowledgeUnitRepositoryTests : DatabaseTestBase
 {
     protected IKnowledgeUnitRepository _repository = null!;
-    protected FragmentCategory _defaultCategory = null!;
+    protected KnowledgeCategory _defaultCategory = null!;
 
     public KnowledgeUnitRepositoryTests(DatabaseFixture fixture) : base(fixture)
     {
@@ -24,14 +24,14 @@ public class KnowledgeUnitRepositoryTests : DatabaseTestBase
         _repository = new KnowledgeUnitRepository(_dbContext);
 
         // Create default fragment category for tests
-        _defaultCategory = new FragmentCategory
+        _defaultCategory = new KnowledgeCategory
         {
             Id = Guid.NewGuid(),
             Name = "Test Category",
             Icon = "bi-test",
             CreatedAt = DateTimeOffset.UtcNow
         };
-        await _dbContext.Set<FragmentCategory>().AddAsync(_defaultCategory);
+        await _dbContext.Set<KnowledgeCategory>().AddAsync(_defaultCategory);
         await _dbContext.SaveChangesAsync();
     }
 
@@ -372,7 +372,7 @@ public class KnowledgeUnitRepositoryTests : DatabaseTestBase
                 Title = "Fragment 1",
                 Summary = "Summary 1",
                 Content = "Content 1",
-                FragmentCategory = _defaultCategory,
+                KnowledgeCategory = _defaultCategory,
                 Source = source,
                 CreatedAt = DateTimeOffset.UtcNow
             },
@@ -382,7 +382,7 @@ public class KnowledgeUnitRepositoryTests : DatabaseTestBase
                 Title = "Fragment 2",
                 Summary = "Summary 2",
                 Content = "Content 2",
-                FragmentCategory = _defaultCategory,
+                KnowledgeCategory = _defaultCategory,
                 Source = source,
                 CreatedAt = DateTimeOffset.UtcNow
             }
@@ -430,3 +430,4 @@ public class KnowledgeUnitRepositoryTests : DatabaseTestBase
         return embedding;
     }
 }
+

@@ -54,7 +54,7 @@
                   {{ fragment.summary }}
                 </div>
               </td>
-              <td v-if="showSourceDate" class="align-middle text-muted small" style="max-width: 120px;">
+              <td v-if="showSourceDate" class="align-middle text-muted small text-nowrap" style="max-width: 120px;">
                 <i class="bi bi-calendar3 me-1"></i>
                 {{ formatDate(fragment.sourceDate) }}
               </td>

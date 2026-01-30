@@ -20,7 +20,7 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
 
     public DbSet<UserAuditLog> UserAuditLogs { get; set; }
     public DbSet<Fragment> Fragments { get; set; }
-    public DbSet<FragmentCategory> FragmentCategories { get; set; }
+    public DbSet<KnowledgeCategory> KnowledgeCategories { get; set; }
     public DbSet<KnowledgeUnit> KnowledgeUnits { get; set; }
     public DbSet<Organization> Organizations { get; set; }
     public DbSet<Integration> Integrations { get; set; }

@@ -70,7 +70,7 @@ public class FragmentConfidenceScoringJob : BaseHangfireJob<FragmentConfidenceSc
             }
 
             var source = await _sourceRepository.Query()
-                .Include(s => s.Fragments).ThenInclude(x => x.FragmentCategory)
+                .Include(s => s.Fragments).ThenInclude(x => x.KnowledgeCategory)
                 .FirstOrDefaultAsync(s => s.Id == sourceId, cancellationToken);
 
             if (source == null)
@@ -183,7 +183,7 @@ public class FragmentConfidenceScoringJob : BaseHangfireJob<FragmentConfidenceSc
             Fragments = fragmentsList.Select((f, index) => new FragmentToScore
             {
                 Id = index + 1,
-                Category = f.FragmentCategory.Name,
+                Category = f.KnowledgeCategory.Name,
                 Content = f.Content
             }).ToList()
         };

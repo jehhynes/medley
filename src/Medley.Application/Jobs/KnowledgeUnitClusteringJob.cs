@@ -19,7 +19,7 @@ public class KnowledgeUnitClusteringJob : BaseHangfireJob<KnowledgeUnitClusterin
 {
     private readonly IFragmentRepository _fragmentRepository;
     private readonly IKnowledgeUnitRepository _knowledgeUnitRepository;
-    private readonly IRepository<FragmentCategory> _fragmentCategoryRepository;
+    private readonly IRepository<KnowledgeCategory> _knowledgeCategoryRepository;
     private readonly IRepository<AiPrompt> _promptRepository;
     private readonly IAiProcessingService _aiProcessingService;
     private readonly IBackgroundJobClient _backgroundJobClient;
@@ -28,7 +28,7 @@ public class KnowledgeUnitClusteringJob : BaseHangfireJob<KnowledgeUnitClusterin
     public KnowledgeUnitClusteringJob(
         IFragmentRepository fragmentRepository,
         IKnowledgeUnitRepository knowledgeUnitRepository,
-        IRepository<FragmentCategory> fragmentCategoryRepository,
+        IRepository<KnowledgeCategory> knowledgeCategoryRepository,
         IRepository<AiPrompt> promptRepository,
         IAiProcessingService aiProcessingService,
         IBackgroundJobClient backgroundJobClient,
@@ -38,7 +38,7 @@ public class KnowledgeUnitClusteringJob : BaseHangfireJob<KnowledgeUnitClusterin
     {
         _fragmentRepository = fragmentRepository;
         _knowledgeUnitRepository = knowledgeUnitRepository;
-        _fragmentCategoryRepository = fragmentCategoryRepository;
+        _knowledgeCategoryRepository = knowledgeCategoryRepository;
         _promptRepository = promptRepository;
         _aiProcessingService = aiProcessingService;
         _backgroundJobClient = backgroundJobClient;
@@ -104,7 +104,7 @@ public class KnowledgeUnitClusteringJob : BaseHangfireJob<KnowledgeUnitClusterin
                 var fragmentIds = similarResults.Select(f => f.Fragment.Id).Append(candidate.Id).ToList();
                 var clusterParticipants = await _fragmentRepository.Query()
                     .Where(f => fragmentIds.Contains(f.Id))
-                    .Include(f => f.FragmentCategory)
+                    .Include(f => f.KnowledgeCategory)
                     .Include(f => f.Source)
                         .ThenInclude(s => s!.PrimarySpeaker)
                     .Include(f => f.Source)
@@ -150,8 +150,8 @@ public class KnowledgeUnitClusteringJob : BaseHangfireJob<KnowledgeUnitClusterin
                     return true;
                 }
 
-                var fragmentCategory = await _fragmentCategoryRepository.Query().Where(x => x.Name == clusterResponse.Category).FirstOrDefaultAsync()
-                    ?? throw new InvalidDataException("Could not find fragment category");
+                var knowledgeCategory = await _knowledgeCategoryRepository.Query().Where(x => x.Name == clusterResponse.Category).FirstOrDefaultAsync()
+                    ?? throw new InvalidDataException("Could not find knowledge category");
 
                 // 4) Create new KnowledgeUnit entity
                 var knowledgeUnit = new KnowledgeUnit
@@ -163,8 +163,8 @@ public class KnowledgeUnitClusteringJob : BaseHangfireJob<KnowledgeUnitClusterin
                     Confidence = clusterResponse.Confidence,
                     ConfidenceComment = clusterResponse.ConfidenceComment?.Trim().Substring(0, Math.Min(1000, clusterResponse.ConfidenceComment.Trim().Length)),
                     ClusteringComment = clusterResponse.Message?.Trim().Substring(0, Math.Min(2000, clusterResponse.Message.Trim().Length)),
-                    Category = fragmentCategory,
-                    FragmentCategoryId = fragmentCategory.Id,
+                    Category = knowledgeCategory,
+                    KnowledgeCategoryId = knowledgeCategory.Id,
                     CreatedAt = DateTimeOffset.UtcNow,
                     UpdatedAt = DateTimeOffset.UtcNow
                 };
@@ -230,24 +230,24 @@ public class KnowledgeUnitClusteringJob : BaseHangfireJob<KnowledgeUnitClusterin
 
             // Get distinct categories from the fragments
             var distinctCategoryIds = fragments
-                .Select(f => f.FragmentCategory.Id)
+                .Select(f => f.KnowledgeCategory.Id)
                 .Distinct()
                 .ToList();
 
             // Load category-specific prompts for the categories present in the fragments
             var categoryPrompts = await _promptRepository.Query()
-                .Where(t => t.Type == PromptType.FragmentCategoryExtraction && 
-                           t.FragmentCategoryId != null && 
-                           distinctCategoryIds.Contains(t.FragmentCategoryId.Value))
-                .Include(t => t.FragmentCategory)
+                .Where(t => t.Type == PromptType.KnowledgeCategoryExtraction && 
+                           t.KnowledgeCategoryId != null && 
+                           distinctCategoryIds.Contains(t.KnowledgeCategoryId.Value))
+                .Include(t => t.KnowledgeCategory)
                 .ToListAsync(cancellationToken);
 
             // Build category guidance list
             var categoryDefinitions = categoryPrompts
-                .Where(p => p.FragmentCategory != null)
+                .Where(p => p.KnowledgeCategory != null)
                 .Select(p => new CategoryDefinition
                 {
-                    Name = p.FragmentCategory!.Name,
+                    Name = p.KnowledgeCategory!.Name,
                     Guidance = p.Content
                 })
                 .ToList();
@@ -263,7 +263,7 @@ public class KnowledgeUnitClusteringJob : BaseHangfireJob<KnowledgeUnitClusterin
                     Id = f.Id,
                     Title = f.Title,
                     Summary = f.Summary,
-                    Category = f.FragmentCategory.Name,
+                    Category = f.KnowledgeCategory.Name,
                     Content = f.Content,
                     Confidence = f.Confidence,
                     ConfidenceComment = f.ConfidenceComment,

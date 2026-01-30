@@ -8,20 +8,20 @@ namespace Medley.Web.Areas.Admin.Controllers;
 
 [Area("Admin")]
 [Authorize]
-public class FragmentCategoriesController : Controller
+public class KnowledgeCategoriesController : Controller
 {
-    private readonly IRepository<FragmentCategory> _fragmentCategoryRepository;
+    private readonly IRepository<KnowledgeCategory> _knowledgeCategoryRepository;
     private readonly IRepository<Fragment> _fragmentRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<FragmentCategoriesController> _logger;
+    private readonly ILogger<KnowledgeCategoriesController> _logger;
 
-    public FragmentCategoriesController(
-        IRepository<FragmentCategory> fragmentCategoryRepository,
+    public KnowledgeCategoriesController(
+        IRepository<KnowledgeCategory> knowledgeCategoryRepository,
         IRepository<Fragment> fragmentRepository,
         IUnitOfWork unitOfWork,
-        ILogger<FragmentCategoriesController> logger)
+        ILogger<KnowledgeCategoriesController> logger)
     {
-        _fragmentCategoryRepository = fragmentCategoryRepository;
+        _knowledgeCategoryRepository = knowledgeCategoryRepository;
         _fragmentRepository = fragmentRepository;
         _unitOfWork = unitOfWork;
         _logger = logger;
@@ -29,21 +29,21 @@ public class FragmentCategoriesController : Controller
 
     public async Task<IActionResult> Index()
     {
-        var fragmentCategories = await _fragmentCategoryRepository.Query()
+        var knowledgeCategories = await _knowledgeCategoryRepository.Query()
             .OrderBy(t => t.Name)
             .ToListAsync();
 
-        return View(fragmentCategories);
+        return View(knowledgeCategories);
     }
 
     public IActionResult Create()
     {
-        return View(new FragmentCategory { Name = string.Empty });
+        return View(new KnowledgeCategory { Name = string.Empty });
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(FragmentCategory model)
+    public async Task<IActionResult> Create(KnowledgeCategory model)
     {
         if (!ModelState.IsValid)
         {
@@ -52,36 +52,36 @@ public class FragmentCategoriesController : Controller
 
         try
         {
-            await _fragmentCategoryRepository.AddAsync(model);
+            await _knowledgeCategoryRepository.AddAsync(model);
             await _unitOfWork.SaveChangesAsync();
             
-            TempData["SuccessMessage"] = "Fragment category created";
+            TempData["SuccessMessage"] = "Knowledge category created";
             return RedirectToAction(nameof(Index));
         }
-        catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("ix_fragment_categories_name") == true)
+        catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("ix_knowledge_categories_name") == true)
         {
-            ModelState.AddModelError(nameof(model.Name), "A fragment category with this name already exists.");
+            ModelState.AddModelError(nameof(model.Name), "A knowledge category with this name already exists.");
             return View(model);
         }
     }
 
     public async Task<IActionResult> Edit(Guid id)
     {
-        var fragmentCategory = await _fragmentCategoryRepository.GetByIdAsync(id);
+        var knowledgeCategory = await _knowledgeCategoryRepository.GetByIdAsync(id);
 
-        if (fragmentCategory == null)
+        if (knowledgeCategory == null)
         {
             return NotFound();
         }
 
-        return View(fragmentCategory);
+        return View(knowledgeCategory);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(Guid id, FragmentCategory model)
+    public async Task<IActionResult> Edit(Guid id, KnowledgeCategory model)
     {
-        var existing = await _fragmentCategoryRepository.GetByIdAsync(id);
+        var existing = await _knowledgeCategoryRepository.GetByIdAsync(id);
 
         if (existing == null)
         {
@@ -100,12 +100,12 @@ public class FragmentCategoriesController : Controller
         {
             await _unitOfWork.SaveChangesAsync();
 
-            TempData["SuccessMessage"] = "Fragment category updated";
+            TempData["SuccessMessage"] = "Knowledge category updated";
             return RedirectToAction(nameof(Index));
         }
-        catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("ix_fragment_categories_name") == true)
+        catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("ix_knowledge_categories_name") == true)
         {
-            ModelState.AddModelError(nameof(model.Name), "A fragment category with this name already exists.");
+            ModelState.AddModelError(nameof(model.Name), "A knowledge category with this name already exists.");
             return View(model);
         }
     }
@@ -114,15 +114,15 @@ public class FragmentCategoriesController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(Guid id)
     {
-        var fragmentCategory = await _fragmentCategoryRepository.GetByIdAsync(id);
-        if (fragmentCategory == null)
+        var knowledgeCategory = await _knowledgeCategoryRepository.GetByIdAsync(id);
+        if (knowledgeCategory == null)
         {
             return NotFound();
         }
 
         // Check if any fragments use this category
         var fragmentCount = await _fragmentRepository.Query()
-            .CountAsync(f => f.FragmentCategoryId == id);
+            .CountAsync(f => f.KnowledgeCategoryId == id);
 
         if (fragmentCount > 0)
         {
@@ -130,10 +130,10 @@ public class FragmentCategoriesController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        await _fragmentCategoryRepository.DeleteAsync(fragmentCategory);
+        await _knowledgeCategoryRepository.DeleteAsync(knowledgeCategory);
         await _unitOfWork.SaveChangesAsync();
 
-        TempData["SuccessMessage"] = "Fragment category deleted";
+        TempData["SuccessMessage"] = "Knowledge category deleted";
         return RedirectToAction(nameof(Index));
     }
 }

@@ -80,7 +80,7 @@
            href="#"
            @click.prevent="$emit('open-knowledge-unit', knowledgeUnit.id)"
            class="d-block text-decoration-none text-muted small mb-1 knowledge-unit-link">
-          <i class="bi bi-puzzle me-1"></i>{{ knowledgeUnit.title || 'Untitled Knowledge Unit' }}
+          <i class="fa-light fa-atom me-1"></i>{{ knowledgeUnit.title || 'Untitled Knowledge Unit' }}
         </a>
       </div>
     </div>
@@ -161,7 +161,7 @@ function getToolIcon(toolName: string): string {
     return 'bi-search';
   }
   if (lowerName.includes('knowledgeunit') || lowerName.includes('content')) {
-    return 'bi-puzzle';
+    return 'fa-light fa-atom';
   }
   if (lowerName.includes('createplan')) {
     return 'bi-list-check';

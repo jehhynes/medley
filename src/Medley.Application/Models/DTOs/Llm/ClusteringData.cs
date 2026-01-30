@@ -45,7 +45,7 @@ public class FragmentClusteringResponse
     public required string Summary { get; set; }
 
     [Required]
-    [Description("The fragment category which is most appropriate for the consolidated content")]
+    [Description("The knowledge category which is most appropriate for the consolidated content")]
     public required string Category { get; set; }
 
     [Required]

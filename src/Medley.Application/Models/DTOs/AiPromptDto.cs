@@ -44,19 +44,19 @@ public class AiPromptListDto
     public string? ArticleTypeName { get; set; }
 
     /// <summary>
-    /// Whether this template type is per-fragment-category
+    /// Whether this template type is per-knowledge-category
     /// </summary>
-    public required bool IsPerFragmentCategory { get; set; }
+    public required bool IsPerKnowledgeCategory { get; set; }
 
     /// <summary>
-    /// Fragment category ID (for per-fragment-category templates)
+    /// Knowledge category ID (for per-knowledge-category templates)
     /// </summary>
-    public Guid? FragmentCategoryId { get; set; }
+    public Guid? KnowledgeCategoryId { get; set; }
 
     /// <summary>
-    /// Fragment category name (for per-fragment-category templates)
+    /// Knowledge category name (for per-knowledge-category templates)
     /// </summary>
-    public string? FragmentCategoryName { get; set; }
+    public string? KnowledgeCategoryName { get; set; }
 
     /// <summary>
     /// Whether this template exists in the database
@@ -115,19 +115,19 @@ public class AiPromptDto
     public string? ArticleTypeName { get; set; }
 
     /// <summary>
-    /// Whether this template type is per-fragment-category
+    /// Whether this template type is per-knowledge-category
     /// </summary>
-    public required bool IsPerFragmentCategory { get; set; }
+    public required bool IsPerKnowledgeCategory { get; set; }
 
     /// <summary>
-    /// Fragment category ID (for per-fragment-category templates)
+    /// Knowledge category ID (for per-knowledge-category templates)
     /// </summary>
-    public Guid? FragmentCategoryId { get; set; }
+    public Guid? KnowledgeCategoryId { get; set; }
 
     /// <summary>
-    /// Fragment category name (for per-fragment-category templates)
+    /// Knowledge category name (for per-knowledge-category templates)
     /// </summary>
-    public string? FragmentCategoryName { get; set; }
+    public string? KnowledgeCategoryName { get; set; }
 
     /// <summary>
     /// Template content

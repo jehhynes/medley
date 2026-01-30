@@ -44,10 +44,10 @@
           </a>
         </li>
         <li class="list-item">
-          <a href="/Admin/FragmentCategories" class="list-item-content" :class="{ active: currentPage === 'FragmentCategories' }">
-            <i class="list-item-icon bi bi-puzzle"></i>
+          <a href="/Admin/KnowledgeCategories" class="list-item-content" :class="{ active: currentPage === 'KnowledgeCategories' }">
+            <i class="list-item-icon fa-light fa-atom"></i>
             <div class="list-item-body">
-              <div class="list-item-title">Fragment Categories</div>
+              <div class="list-item-title">Knowledge Categories</div>
             </div>
           </a>
         </li>
@@ -140,7 +140,7 @@ const currentPage = computed<string>(() => {
   if (path.includes('/Admin/AiPrompts')) return 'AiPrompts';
   if (path.includes('/Admin/TagTypes')) return 'TagTypes';
   if (path.includes('/Admin/ArticleTypes')) return 'ArticleTypes';
-  if (path.includes('/Admin/FragmentCategories')) return 'FragmentCategories';
+  if (path.includes('/Admin/KnowledgeCategories')) return 'KnowledgeCategories';
   if (path.includes('/Admin/Speakers')) return 'Speakers';
   if (path.includes('/Integrations')) return 'Integrations';
   if (path.includes('/Admin/Users')) return 'Users';

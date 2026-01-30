@@ -1,11 +1,11 @@
-@model Medley.Domain.Entities.FragmentCategory
+@model Medley.Domain.Entities.KnowledgeCategory
 @{
-    ViewData["Title"] = "New Fragment Category";
+    ViewData["Title"] = "Edit Knowledge Category";
     Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
 }
 
 <div class="main-content-header d-flex justify-content-between align-items-center">
-    <h1 class="main-content-title">New Fragment Category</h1>
+    <h1 class="main-content-title">Edit Knowledge Category</h1>
     <a asp-action="Index" class="btn btn-outline-secondary">
         <i class="bi bi-arrow-left"></i> Back
     </a>
@@ -13,10 +13,11 @@
 
 <div class="card">
     <div class="card-header">
-        <h5 class="card-title mb-0">Fragment Category Details</h5>
+        <h5 class="card-title mb-0">Knowledge Category Details</h5>
     </div>
     <div class="card-body">
-        <form asp-action="Create" method="post" class="form-layout">
+        <form asp-action="Edit" method="post" class="form-layout">
+            <input type="hidden" asp-for="Id" />
             <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
             <div class="mb-3 form-group-overlap">
@@ -35,7 +36,7 @@
             </div>
 
             <div>
-                <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save Fragment Category</button>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save Knowledge Category</button>
             </div>
         </form>
     </div>

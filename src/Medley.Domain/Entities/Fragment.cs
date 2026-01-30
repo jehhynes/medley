@@ -23,15 +23,15 @@ public class Fragment : BusinessEntity
     public required string Summary { get; set; }
 
     /// <summary>
-    /// The ID of the fragment category
+    /// The ID of the knowledge category
     /// </summary>
-    public Guid FragmentCategoryId { get; set; }
+    public Guid KnowledgeCategoryId { get; set; }
 
     /// <summary>
-    /// Navigation to the fragment category
+    /// Navigation to the knowledge category
     /// </summary>
-    [ForeignKey(nameof(FragmentCategoryId))]
-    public required virtual FragmentCategory FragmentCategory { get; set; }
+    [ForeignKey(nameof(KnowledgeCategoryId))]
+    public required virtual KnowledgeCategory KnowledgeCategory { get; set; }
 
     /// <summary>
     /// The text content of the fragment

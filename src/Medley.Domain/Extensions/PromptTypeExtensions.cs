@@ -40,12 +40,12 @@ public static class PromptTypeExtensions
     }
 
     /// <summary>
-    /// Gets whether this prompt type is per-fragment-category
+    /// Gets whether this prompt type is per-knowledge-category
     /// </summary>
-    public static bool GetIsPerFragmentCategory(this PromptType promptType)
+    public static bool GetIsPerKnowledgeCategory(this PromptType promptType)
     {
         var field = promptType.GetType().GetField(promptType.ToString());
         var attribute = field?.GetCustomAttribute<PromptTypeMetadataAttribute>();
-        return attribute?.IsPerFragmentCategory ?? false;
+        return attribute?.IsPerKnowledgeCategory ?? false;
     }
 }

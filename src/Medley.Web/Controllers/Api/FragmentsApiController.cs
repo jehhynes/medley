@@ -66,7 +66,7 @@ public class FragmentsApiController : ControllerBase
         var fragments = await _fragmentRepository.Query()
             .Include(f => f.Source)
                 .ThenInclude(s => s!.PrimarySpeaker)
-            .Include(f => f.FragmentCategory)
+            .Include(f => f.KnowledgeCategory)
             .OrderByDescending(f => f.Source!.Date)
             .ThenByDescending(f => f.CreatedAt)
             .ThenBy(f => f.Id) // Deterministic tiebreaker for pagination
@@ -77,8 +77,8 @@ public class FragmentsApiController : ControllerBase
                 Id = f.Id,
                 Title = f.Title,
                 Summary = f.Summary,
-                Category = f.FragmentCategory.Name,
-                CategoryIcon = f.FragmentCategory.Icon,
+                Category = f.KnowledgeCategory.Name,
+                CategoryIcon = f.KnowledgeCategory.Icon,
                 Content = f.Content,
                 SourceId = f.Source == null ? null : (Guid?)f.Source.Id,
                 SourceName = f.Source == null ? null : (string?)f.Source.Name,
@@ -112,7 +112,7 @@ public class FragmentsApiController : ControllerBase
         var fragment = await _fragmentRepository.Query()
             .Include(f => f.Source)
                 .ThenInclude(s => s!.PrimarySpeaker)
-            .Include(f => f.FragmentCategory)
+            .Include(f => f.KnowledgeCategory)
             .FirstOrDefaultAsync(f => f.Id == id);
 
         if (fragment == null)
@@ -125,8 +125,8 @@ public class FragmentsApiController : ControllerBase
             Id = fragment.Id,
             Title = fragment.Title,
             Summary = fragment.Summary,
-            Category = fragment.FragmentCategory.Name,
-            CategoryIcon = fragment.FragmentCategory.Icon,
+            Category = fragment.KnowledgeCategory.Name,
+            CategoryIcon = fragment.KnowledgeCategory.Icon,
             Content = fragment.Content,
             SourceId = fragment.Source == null ? null : (Guid?)fragment.Source.Id,
             SourceName = fragment.Source == null ? null : (string?)fragment.Source.Name,
@@ -157,7 +157,7 @@ public class FragmentsApiController : ControllerBase
         var fragments = await _fragmentRepository.Query()
             .Include(f => f.Source)
                 .ThenInclude(s => s!.PrimarySpeaker)
-            .Include(f => f.FragmentCategory)
+            .Include(f => f.KnowledgeCategory)
             .Where(f => f.Source!.Id == sourceId)
             .OrderByDescending(f => f.CreatedAt)
             .ThenBy(f => f.Id) // Deterministic tiebreaker
@@ -173,6 +173,36 @@ public class FragmentsApiController : ControllerBase
     /// <param name="articleId">Article ID</param>
     /// <returns>List of fragments linked to the article</returns>
     [HttpGet("by-article/{articleId}")]
+    [ProducesResponseType(typeof(List<FragmentDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<List<FragmentDto>>> GetFragmentsByArticleId(Guid articleId)
+    {
+        // Get the article with its knowledge units
+        var article = await _articleRepository.Query()
+            .Include(a => a.KnowledgeUnits)
+            .FirstOrDefaultAsync(a => a.Id == articleId);
+
+        if (article == null)
+        {
+            return Ok(new List<FragmentDto>());
+        }
+
+        // Get all knowledge unit IDs from the article
+        var knowledgeUnitIds = article.KnowledgeUnits.Select(ku => ku.Id).ToList();
+
+        // Get all fragments that belong to these knowledge units
+        var fragments = await _fragmentRepository.Query()
+            .Include(f => f.Source)
+                .ThenInclude(s => s!.PrimarySpeaker)
+            .Include(f => f.KnowledgeCategory)
+            .Where(f => f.KnowledgeUnitId.HasValue && knowledgeUnitIds.Contains(f.KnowledgeUnitId.Value))
+            .OrderBy(f => f.Title)
+            .ThenBy(f => f.Id) // Deterministic tiebreaker
+            .Select(f => MapToFragmentDto(f))
+            .ToListAsync();
+
+        return Ok(fragments);
+    }
+
     /// <summary>
     /// Get all fragments for a specific knowledge unit
     /// </summary>
@@ -180,12 +210,12 @@ public class FragmentsApiController : ControllerBase
     /// <returns>List of fragments linked to the knowledge unit</returns>
     [HttpGet("by-knowledge-unit/{knowledgeUnitId}")]
     [ProducesResponseType(typeof(List<FragmentDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<FragmentDto>>> GetByKnowledgeUnitId(Guid knowledgeUnitId)
+    public async Task<ActionResult<List<FragmentDto>>> GetFragmentsByKnowledgeUnitId(Guid knowledgeUnitId)
     {
         var fragments = await _fragmentRepository.Query()
             .Include(f => f.Source)
                 .ThenInclude(s => s!.PrimarySpeaker)
-            .Include(f => f.FragmentCategory)
+            .Include(f => f.KnowledgeCategory)
             .Where(f => f.KnowledgeUnitId == knowledgeUnitId)
             .OrderBy(f => f.Title)
             .ThenBy(f => f.Id) // Deterministic tiebreaker
@@ -205,8 +235,8 @@ public class FragmentsApiController : ControllerBase
             Id = f.Id,
             Title = f.Title,
             Summary = f.Summary,
-            Category = f.FragmentCategory.Name,
-            CategoryIcon = f.FragmentCategory.Icon,
+            Category = f.KnowledgeCategory.Name,
+            CategoryIcon = f.KnowledgeCategory.Icon,
             Content = f.Content,
             SourceId = f.Source == null ? null : (Guid?)f.Source.Id,
             SourceName = f.Source == null ? null : (string?)f.Source.Name,
@@ -278,7 +308,7 @@ public class FragmentsApiController : ControllerBase
             var fragmentsWithSource = await _fragmentRepository.Query()
                 .Include(f => f.Source)
                     .ThenInclude(s => s!.PrimarySpeaker)
-                .Include(f => f.FragmentCategory)
+                .Include(f => f.KnowledgeCategory)
                 .Where(f => fragmentIds.Contains(f.Id))
                 .ToListAsync();
 
@@ -294,8 +324,8 @@ public class FragmentsApiController : ControllerBase
                         Id = fragment.Id,
                         Title = fragment.Title,
                         Summary = fragment.Summary,
-                        Category = fragment.FragmentCategory.Name,
-                        CategoryIcon = fragment.FragmentCategory.Icon,
+                        Category = fragment.KnowledgeCategory.Name,
+                        CategoryIcon = fragment.KnowledgeCategory.Icon,
                         SourceId = fragment.Source == null ? null : (Guid?)fragment.Source.Id,
                         SourceName = fragment.Source == null ? null : (string?)fragment.Source.Name,
                         SourceType = fragment.Source == null ? null : (SourceType?)fragment.Source.Type,
@@ -340,7 +370,7 @@ public class FragmentsApiController : ControllerBase
             var fragment = await _fragmentRepository.Query()
                 .Include(f => f.Source)
                     .ThenInclude(s => s!.PrimarySpeaker)
-                .Include(f => f.FragmentCategory)
+                .Include(f => f.KnowledgeCategory)
                 .FirstOrDefaultAsync(f => f.Id == id);
 
             if (fragment == null)
@@ -397,8 +427,8 @@ public class FragmentsApiController : ControllerBase
                 Id = fragment.Id,
                 Title = fragment.Title,
                 Summary = fragment.Summary,
-                Category = fragment.FragmentCategory.Name,
-                CategoryIcon = fragment.FragmentCategory.Icon,
+                Category = fragment.KnowledgeCategory.Name,
+                CategoryIcon = fragment.KnowledgeCategory.Icon,
                 Content = fragment.Content,
                 SourceId = fragment.Source == null ? null : (Guid?)fragment.Source.Id,
                 SourceName = fragment.Source == null ? null : (string?)fragment.Source.Name,

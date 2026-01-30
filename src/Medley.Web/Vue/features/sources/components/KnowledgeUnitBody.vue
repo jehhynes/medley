@@ -496,7 +496,7 @@ const loadFragments = async (): Promise<void> => {
   loadingFragments.value = true;
   fragmentsError.value = null;
   try {
-    fragments.value = await fragmentsClient.getByKnowledgeUnitId(props.knowledgeUnit.id!);
+    fragments.value = await fragmentsClient.getFragmentsByKnowledgeUnitId(props.knowledgeUnit.id!);
   } catch (err: any) {
     fragmentsError.value = 'Failed to load fragments: ' + err.message;
     console.error('Error loading fragments:', err);

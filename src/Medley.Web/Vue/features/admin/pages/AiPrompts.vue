@@ -71,8 +71,8 @@
             </template>
           </template>
 
-          <!-- Per-fragment-category templates (grouped) -->
-          <template v-for="group in perFragmentCategoryGroups" :key="group.promptType">
+          <!-- Per-knowledge-category templates (grouped) -->
+          <template v-for="group in perKnowledgeCategoryGroups" :key="group.promptType">
             <li class="list-item list-item-group">
               <a href="#" 
                  class="list-item-content"
@@ -85,15 +85,15 @@
               </a>
             </li>
             <template v-if="group.expanded">
-              <li v-for="template in group.templates" :key="`${template.type}-${template.fragmentCategoryId}`" class="list-item list-item-child">
+              <li v-for="template in group.templates" :key="`${template.type}-${template.knowledgeCategoryId}`" class="list-item list-item-child">
                 <a href="#" 
                    class="list-item-content"
                    :class="{ active: isTemplateSelected(template) }"
                    @click.prevent="selectTemplate(template)">
-                  <i class="list-item-icon" :class="getIconClass(getFragmentCategoryIcon(template.fragmentCategoryId))"></i>
+                  <i class="list-item-icon" :class="getIconClass(getKnowledgeCategoryIcon(template.knowledgeCategoryId))"></i>
                   <div class="list-item-body">
                     <div class="list-item-title">
-                      {{ template.fragmentCategoryName }}
+                      {{ template.knowledgeCategoryName }}
                       <span v-if="!template.exists" class="badge bg-secondary ms-2" style="font-size: 0.65rem;">Not customized</span>
                     </div>
                   </div>
@@ -140,7 +140,7 @@ import { useRouter } from 'vue-router';
 import { aiPromptsClient } from '@/utils/apiClients';
 import { useSidebarState } from '@/composables/useSidebarState';
 import { useArticleTypes } from '@/features/articles/composables/useArticleTypes';
-import { useFragmentCategories } from '@/features/admin/composables/useFragmentCategories';
+import { useKnowledgeCategories } from '@/features/admin/composables/useKnowledgeCategories';
 import { getIconClass } from '@/utils/helpers';
 import type { AiPromptListDto, AiPromptDto, AiPromptType } from '@/types/api-client';
 
@@ -148,7 +148,7 @@ import type { AiPromptListDto, AiPromptDto, AiPromptType } from '@/types/api-cli
 const { leftSidebarVisible } = useSidebarState();
 const router = useRouter();
 const { typeIconMap, loadArticleTypes } = useArticleTypes();
-const { categoryIconMap, loadFragmentCategories } = useFragmentCategories();
+const { categoryIconMap, loadKnowledgeCategories } = useKnowledgeCategories();
 
 // Reactive state
 const templates = ref<AiPromptListDto[]>([]);
@@ -164,7 +164,7 @@ const expandedGroups = ref<Set<number>>(new Set());
 
 // Computed properties
 const nonPerArticleTypeTemplates = computed(() => 
-  templates.value.filter(t => !t.isPerArticleType && !t.isPerFragmentCategory)
+  templates.value.filter(t => !t.isPerArticleType && !t.isPerKnowledgeCategory)
 );
 
 interface PerArticleTypeGroup {
@@ -195,7 +195,7 @@ const perArticleTypeGroups = computed<PerArticleTypeGroup[]>(() => {
   return Array.from(groupMap.values());
 });
 
-interface PerFragmentCategoryGroup {
+interface PerKnowledgeCategoryGroup {
   promptType: number;
   name: string;
   description: string;
@@ -203,11 +203,11 @@ interface PerFragmentCategoryGroup {
   templates: AiPromptListDto[];
 }
 
-const perFragmentCategoryGroups = computed<PerFragmentCategoryGroup[]>(() => {
-  const perFragmentTemplates = templates.value.filter(t => t.isPerFragmentCategory);
-  const groupMap = new Map<number, PerFragmentCategoryGroup>();
+const perKnowledgeCategoryGroups = computed<PerKnowledgeCategoryGroup[]>(() => {
+  const perKnowledgeTemplates = templates.value.filter(t => t.isPerKnowledgeCategory);
+  const groupMap = new Map<number, PerKnowledgeCategoryGroup>();
 
-  for (const template of perFragmentTemplates) {
+  for (const template of perKnowledgeTemplates) {
     if (!groupMap.has(template.type)) {
       groupMap.set(template.type, {
         promptType: template.type,
@@ -229,9 +229,9 @@ const getArticleTypeIcon = (articleTypeId: string | null | undefined): string =>
   return typeIconMap.value[articleTypeId] || 'bi-file-text';
 };
 
-const getFragmentCategoryIcon = (fragmentCategoryId: string | null | undefined): string => {
-  if (!fragmentCategoryId) return 'bi-puzzle';
-  return categoryIconMap.value[fragmentCategoryId] || 'bi-puzzle';
+const getKnowledgeCategoryIcon = (knowledgeCategoryId: string | null | undefined): string => {
+  if (!knowledgeCategoryId) return 'fa-light fa-atom';
+  return categoryIconMap.value[knowledgeCategoryId] || 'fa-light fa-atom';
 };
 const loadTemplates = async (): Promise<void> => {
   loading.value = true;
@@ -258,7 +258,7 @@ const isTemplateSelected = (template: AiPromptListDto): boolean => {
   if (!selectedTemplate.value) return false;
   return selectedTemplate.value.type === template.type && 
          selectedTemplate.value.articleTypeId === template.articleTypeId &&
-         selectedTemplate.value.fragmentCategoryId === template.fragmentCategoryId;
+         selectedTemplate.value.knowledgeCategoryId === template.knowledgeCategoryId;
 };
 
 const selectTemplate = async (template: AiPromptListDto): Promise<void> => {
@@ -266,7 +266,7 @@ const selectTemplate = async (template: AiPromptListDto): Promise<void> => {
     const fullTemplate = await aiPromptsClient.get(
       template.type as AiPromptType,
       template.articleTypeId || undefined,
-      template.fragmentCategoryId || undefined
+      template.knowledgeCategoryId || undefined
     );
     
     selectedTemplate.value = fullTemplate;
@@ -278,13 +278,13 @@ const selectTemplate = async (template: AiPromptListDto): Promise<void> => {
     if (template.articleTypeId) {
       query.articleTypeId = template.articleTypeId;
     }
-    if (template.fragmentCategoryId) {
-      query.fragmentCategoryId = template.fragmentCategoryId;
+    if (template.knowledgeCategoryId) {
+      query.knowledgeCategoryId = template.knowledgeCategoryId;
     }
     await router.push({ query });
 
-    // Expand the group if it's a per-article-type or per-fragment-category template
-    if (template.isPerArticleType || template.isPerFragmentCategory) {
+    // Expand the group if it's a per-article-type or per-knowledge-category template
+    if (template.isPerArticleType || template.isPerKnowledgeCategory) {
       expandedGroups.value.add(template.type);
     }
   } catch (err: any) {
@@ -302,7 +302,7 @@ const saveTemplate = async (): Promise<void> => {
       selectedTemplate.value.type,
       { content: editingContent.value },
       selectedTemplate.value.articleTypeId || undefined,
-      selectedTemplate.value.fragmentCategoryId || undefined
+      selectedTemplate.value.knowledgeCategoryId || undefined
     );
 
     selectedTemplate.value = updated;
@@ -312,7 +312,7 @@ const saveTemplate = async (): Promise<void> => {
     const templateInList = templates.value.find(t => 
       t.type === updated.type && 
       t.articleTypeId === updated.articleTypeId &&
-      t.fragmentCategoryId === updated.fragmentCategoryId
+      t.knowledgeCategoryId === updated.knowledgeCategoryId
     );
     if (templateInList) {
       templateInList.exists = true;
@@ -335,20 +335,20 @@ const formatTime = (date: Date | null): string => {
 // Lifecycle hooks
 onMounted(async () => {
   await loadArticleTypes();
-  await loadFragmentCategories();
+  await loadKnowledgeCategories();
   await loadTemplates();
 
   const urlParams = new URLSearchParams(window.location.search);
   const typeParam = urlParams.get('type');
   const articleTypeIdParam = urlParams.get('articleTypeId');
-  const fragmentCategoryIdParam = urlParams.get('fragmentCategoryId');
+  const knowledgeCategoryIdParam = urlParams.get('knowledgeCategoryId');
   
   if (typeParam) {
     const type = parseInt(typeParam);
     const template = templates.value.find(t => 
       t.type === type && 
       (articleTypeIdParam ? t.articleTypeId === articleTypeIdParam : !t.articleTypeId) &&
-      (fragmentCategoryIdParam ? t.fragmentCategoryId === fragmentCategoryIdParam : !t.fragmentCategoryId)
+      (knowledgeCategoryIdParam ? t.knowledgeCategoryId === knowledgeCategoryIdParam : !t.knowledgeCategoryId)
     );
     if (template) {
       await selectTemplate(template);
@@ -365,14 +365,14 @@ onMounted(async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const typeParam = urlParams.get('type');
     const articleTypeIdParam = urlParams.get('articleTypeId');
-    const fragmentCategoryIdParam = urlParams.get('fragmentCategoryId');
+    const knowledgeCategoryIdParam = urlParams.get('knowledgeCategoryId');
     
     if (typeParam) {
       const type = parseInt(typeParam);
       const template = templates.value.find(t => 
         t.type === type && 
         (articleTypeIdParam ? t.articleTypeId === articleTypeIdParam : !t.articleTypeId) &&
-        (fragmentCategoryIdParam ? t.fragmentCategoryId === fragmentCategoryIdParam : !t.fragmentCategoryId)
+        (knowledgeCategoryIdParam ? t.knowledgeCategoryId === knowledgeCategoryIdParam : !t.knowledgeCategoryId)
       );
       if (template && !isTemplateSelected(template)) {
         await selectTemplate(template);

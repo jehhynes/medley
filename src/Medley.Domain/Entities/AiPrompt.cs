@@ -29,14 +29,14 @@ public class AiPrompt : BusinessEntity
     public virtual ArticleType? ArticleType { get; set; }
 
     /// <summary>
-    /// Optional fragment category ID for per-fragment-category templates
+    /// Optional knowledge category ID for per-knowledge-category templates
     /// </summary>
-    public Guid? FragmentCategoryId { get; set; }
+    public Guid? KnowledgeCategoryId { get; set; }
 
     /// <summary>
-    /// Navigation property to the fragment category
+    /// Navigation property to the knowledge category
     /// </summary>
-    public virtual FragmentCategory? FragmentCategory { get; set; }
+    public virtual KnowledgeCategory? KnowledgeCategory { get; set; }
 
     /// <summary>
     /// Date when the template was last modified
