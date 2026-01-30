@@ -16,12 +16,12 @@ namespace Medley.Application.Services;
 /// </summary>
 public class ArticleChatToolsFactory
 {
-    private readonly IFragmentRepository _fragmentRepository;
+    private readonly IKnowledgeUnitRepository _knowledgeUnitRepository;
     private readonly IEmbeddingGenerator<string, Embedding<float>> _embeddingGenerator;
     private readonly IRepository<Article> _articleRepository;
     private readonly IRepository<ChatConversation> _conversationRepository;
     private readonly IRepository<Plan> _planRepository;
-    private readonly IRepository<PlanFragment> _planFragmentRepository;
+    private readonly IRepository<PlanKnowledgeUnit> _planKnowledgeUnitRepository;
     private readonly IRepository<User> _userRepository;
     private readonly IArticleVersionService _articleVersionService;
     private readonly IUnitOfWork _unitOfWork;
@@ -33,12 +33,12 @@ public class ArticleChatToolsFactory
     private readonly IOptions<CursorSettings>? _cursorSettings;
 
     public ArticleChatToolsFactory(
-        IFragmentRepository fragmentRepository,
+        IKnowledgeUnitRepository knowledgeUnitRepository,
         IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
         IRepository<Article> articleRepository,
         IRepository<ChatConversation> conversationRepository,
         IRepository<Plan> planRepository,
-        IRepository<PlanFragment> planFragmentRepository,
+        IRepository<PlanKnowledgeUnit> planKnowledgeUnitRepository,
         IRepository<User> userRepository,
         IArticleVersionService articleVersionService,
         IUnitOfWork unitOfWork,
@@ -49,12 +49,12 @@ public class ArticleChatToolsFactory
         ICursorService? cursorService = null,
         IOptions<CursorSettings>? cursorSettings = null)
     {
-        _fragmentRepository = fragmentRepository;
+        _knowledgeUnitRepository = knowledgeUnitRepository;
         _embeddingGenerator = embeddingGenerator;
         _articleRepository = articleRepository;
         _conversationRepository = conversationRepository;
         _planRepository = planRepository;
-        _planFragmentRepository = planFragmentRepository;
+        _planKnowledgeUnitRepository = planKnowledgeUnitRepository;
         _userRepository = userRepository;
         _articleVersionService = articleVersionService;
         _unitOfWork = unitOfWork;
@@ -83,12 +83,12 @@ public class ArticleChatToolsFactory
             userId,
             implementingPlanId,
             conversationId,
-            _fragmentRepository,
+            _knowledgeUnitRepository,
             _embeddingGenerator,
             _articleRepository,
             _conversationRepository,
             _planRepository,
-            _planFragmentRepository,
+            _planKnowledgeUnitRepository,
             _userRepository,
             _articleVersionService,
             _unitOfWork,

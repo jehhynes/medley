@@ -11,14 +11,14 @@ namespace Medley.Application.Helpers;
 /// </summary>
 public class ToolDisplayExtractor
 {
-    private readonly IRepository<Fragment> _fragmentRepository;
+    private readonly IRepository<KnowledgeUnit> _knowledgeUnitRepository;
     private readonly ILogger<ToolDisplayExtractor> _logger;
 
     public ToolDisplayExtractor(
-        IRepository<Fragment> fragmentRepository,
+        IRepository<KnowledgeUnit> knowledgeUnitRepository,
         ILogger<ToolDisplayExtractor> logger)
     {
-        _fragmentRepository = fragmentRepository;
+        _knowledgeUnitRepository = knowledgeUnitRepository;
         _logger = logger;
     }
 
@@ -40,9 +40,9 @@ public class ToolDisplayExtractor
             // Extract specific properties based on tool name
             return toolName switch
             {
-                "SearchFragments" when arguments.TryGetValue("query", out var query) => query?.ToString(),
-                "GetFragmentContent" when arguments.TryGetValue("fragmentId", out var fragmentIdObj) 
-                    => await ExtractFragmentDisplayAsync(fragmentIdObj),
+                "SearchKnowledgeUnits" when arguments.TryGetValue("query", out var query) => query?.ToString(),
+                "GetKnowledgeUnitContent" when arguments.TryGetValue("knowledgeUnitId", out var knowledgeUnitIdObj) 
+                    => await ExtractKnowledgeUnitDisplayAsync(knowledgeUnitIdObj),
                 "AskQuestionWithCursor" when arguments.TryGetValue("question", out var question) =>
                 question?.ToString(),
                 _ => null
@@ -115,33 +115,33 @@ public class ToolDisplayExtractor
                     ids.Add(versionId);
                 }
             }
-            else if (string.Equals(toolName, "SearchFragments", StringComparison.OrdinalIgnoreCase) || 
-                     string.Equals(toolName, "FindSimilarFragments", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(toolName, "SearchKnowledgeUnits", StringComparison.OrdinalIgnoreCase) || 
+                     string.Equals(toolName, "FindSimilarKnowledgeUnits", StringComparison.OrdinalIgnoreCase))
             {
-                // Extract fragment IDs from search results
-                if (root.TryGetProperty("fragments", out var fragmentsProp) && 
-                    fragmentsProp.ValueKind == JsonValueKind.Array)
+                // Extract knowledge unit IDs from search results
+                if (root.TryGetProperty("knowledgeUnits", out var knowledgeUnitsProp) && 
+                    knowledgeUnitsProp.ValueKind == JsonValueKind.Array)
                 {
-                    foreach (var fragment in fragmentsProp.EnumerateArray())
+                    foreach (var knowledgeUnit in knowledgeUnitsProp.EnumerateArray())
                     {
-                        if (fragment.TryGetProperty("id", out var idProp) && 
+                        if (knowledgeUnit.TryGetProperty("id", out var idProp) && 
                             idProp.ValueKind == JsonValueKind.String &&
-                            Guid.TryParse(idProp.GetString(), out var fragmentId))
+                            Guid.TryParse(idProp.GetString(), out var knowledgeUnitId))
                         {
-                            ids.Add(fragmentId);
+                            ids.Add(knowledgeUnitId);
                         }
                     }
                 }
             }
-            else if (string.Equals(toolName, "GetFragmentContent", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(toolName, "GetKnowledgeUnitContent", StringComparison.OrdinalIgnoreCase))
             {
-                // Extract fragment ID from GetFragmentContent result
-                if (root.TryGetProperty("fragment", out var fragmentProp) &&
-                    fragmentProp.TryGetProperty("id", out var idProp) &&
+                // Extract knowledge unit ID from GetKnowledgeUnitContent result
+                if (root.TryGetProperty("knowledgeUnit", out var knowledgeUnitProp) &&
+                    knowledgeUnitProp.TryGetProperty("id", out var idProp) &&
                     idProp.ValueKind == JsonValueKind.String &&
-                    Guid.TryParse(idProp.GetString(), out var fragmentId))
+                    Guid.TryParse(idProp.GetString(), out var knowledgeUnitId))
                 {
-                    ids.Add(fragmentId);
+                    ids.Add(knowledgeUnitId);
                 }
             }
             else if (string.Equals(toolName, "AskQuestionWithCursor", StringComparison.OrdinalIgnoreCase))
@@ -225,42 +225,42 @@ public class ToolDisplayExtractor
         return false;
     }
 
-    private async Task<string?> ExtractFragmentDisplayAsync(object? fragmentIdObj)
+    private async Task<string?> ExtractKnowledgeUnitDisplayAsync(object? knowledgeUnitIdObj)
     {
-        if (fragmentIdObj == null)
+        if (knowledgeUnitIdObj == null)
         {
             return null;
         }
 
-        // Try to parse the fragment ID
-        Guid fragmentId;
-        if (fragmentIdObj is Guid guid)
+        // Try to parse the knowledge unit ID
+        Guid knowledgeUnitId;
+        if (knowledgeUnitIdObj is Guid guid)
         {
-            fragmentId = guid;
+            knowledgeUnitId = guid;
         }
-        else if (Guid.TryParse(fragmentIdObj.ToString(), out var parsedGuid))
+        else if (Guid.TryParse(knowledgeUnitIdObj.ToString(), out var parsedGuid))
         {
-            fragmentId = parsedGuid;
+            knowledgeUnitId = parsedGuid;
         }
         else
         {
             return null;
         }
 
-        // Look up the fragment title
+        // Look up the knowledge unit title
         try
         {
-            var title = await _fragmentRepository.Query()
-                .Where(f => f.Id == fragmentId)
-                .Select(f => f.Title)
+            var title = await _knowledgeUnitRepository.Query()
+                .Where(ku => ku.Id == knowledgeUnitId)
+                .Select(ku => ku.Title)
                 .FirstOrDefaultAsync();
 
-            return title ?? fragmentId.ToString();
+            return title ?? knowledgeUnitId.ToString();
         }
         catch
         {
             // Fallback to showing the ID
-            return fragmentId.ToString();
+            return knowledgeUnitId.ToString();
         }
     }
 }

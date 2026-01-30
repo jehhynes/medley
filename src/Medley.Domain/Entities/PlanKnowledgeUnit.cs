@@ -5,10 +5,10 @@ using Microsoft.EntityFrameworkCore;
 namespace Medley.Domain.Entities;
 
 /// <summary>
-/// Join table linking Plans to Fragments with AI recommendations
+/// Join table linking Plans to KnowledgeUnits with AI recommendations
 /// </summary>
-[Index(nameof(PlanId), nameof(FragmentId), IsUnique = true, Name = "IX_PlanFragments_PlanId_FragmentId")]
-public class PlanFragment : BaseEntity
+[Index(nameof(PlanId), nameof(KnowledgeUnitId), IsUnique = true, Name = "IX_PlanKnowledgeUnits_PlanId_KnowledgeUnitId")]
+public class PlanKnowledgeUnit : BaseEntity
 {
     /// <summary>
     /// The plan this recommendation belongs to
@@ -23,35 +23,35 @@ public class PlanFragment : BaseEntity
     public required virtual Plan Plan { get; set; }
 
     /// <summary>
-    /// The fragment being recommended
+    /// The knowledge unit being recommended
     /// </summary>
-    public Guid FragmentId { get; set; }
+    public Guid KnowledgeUnitId { get; set; }
 
     /// <summary>
-    /// Navigation property to the fragment
+    /// Navigation property to the knowledge unit
     /// </summary>
-    [ForeignKey(nameof(FragmentId))]
+    [ForeignKey(nameof(KnowledgeUnitId))]
     [DeleteBehavior(DeleteBehavior.Restrict)]
-    public required virtual Fragment Fragment { get; set; }
+    public required virtual KnowledgeUnit KnowledgeUnit { get; set; }
 
     /// <summary>
-    /// Semantic similarity score between fragment and article
+    /// Semantic similarity score between knowledge unit and article
     /// </summary>
     public required double SimilarityScore { get; set; }
 
     /// <summary>
-    /// Whether to include this fragment in the article (true) or just reference it (false)
+    /// Whether to include this knowledge unit in the article (true) or just reference it (false)
     /// </summary>
     public required bool Include { get; set; }
 
     /// <summary>
-    /// AI agent's reasoning for why this fragment is recommended or not recommended
+    /// AI agent's reasoning for why this knowledge unit is recommended or not recommended
     /// </summary>
     [MaxLength(2000)]
     public string? Reasoning { get; set; }
 
     /// <summary>
-    /// Instructions for how to use this fragment
+    /// Instructions for how to use this knowledge unit
     /// </summary>
     [MaxLength(2000)]
     public string? Instructions { get; set; }

@@ -63,6 +63,7 @@ function formatRouteName(name: string | undefined): string {
   const titleMap: Record<string, string> = {
     'dashboard': 'Dashboard',
     'articles': 'Articles',
+    'knowledge-units': 'Knowledge Units',
     'sources': 'Sources',
     'fragments': 'Fragments',
     'ai-prompts': 'AI Prompts',

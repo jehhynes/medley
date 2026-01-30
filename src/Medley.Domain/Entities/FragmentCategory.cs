@@ -14,6 +14,4 @@ public class FragmentCategory : BusinessEntity
 
     [MaxLength(50)]
     public string? Icon { get; set; }
-
-    public virtual ICollection<Fragment> Fragments { get; set; } = new List<Fragment>();
 }

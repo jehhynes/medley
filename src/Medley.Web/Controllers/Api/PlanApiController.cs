@@ -21,7 +21,7 @@ public class PlanApiController : ControllerBase
 {
     private readonly IRepository<Plan> _planRepository;
     private readonly IRepository<Article> _articleRepository;
-    private readonly IRepository<PlanFragment> _planFragmentRepository;
+    private readonly IRepository<PlanKnowledgeUnit> _planKnowledgeUnitRepository;
     private readonly IRepository<ChatConversation> _conversationRepository;
     private readonly IRepository<Domain.Entities.ChatMessage> _messageRepository;
     private readonly IArticleChatService _articleChatService;
@@ -32,7 +32,7 @@ public class PlanApiController : ControllerBase
     public PlanApiController(
         IRepository<Plan> planRepository,
         IRepository<Article> articleRepository,
-        IRepository<PlanFragment> planFragmentRepository,
+        IRepository<PlanKnowledgeUnit> planKnowledgeUnitRepository,
         IRepository<ChatConversation> conversationRepository,
         IRepository<Domain.Entities.ChatMessage> messageRepository,
         IArticleChatService articleChatService,
@@ -42,7 +42,7 @@ public class PlanApiController : ControllerBase
     {
         _planRepository = planRepository;
         _articleRepository = articleRepository;
-        _planFragmentRepository = planFragmentRepository;
+        _planKnowledgeUnitRepository = planKnowledgeUnitRepository;
         _conversationRepository = conversationRepository;
         _messageRepository = messageRepository;
         _articleChatService = articleChatService;
@@ -97,12 +97,9 @@ public class PlanApiController : ControllerBase
     {
         var plan = await _planRepository.Query()
             .Where(p => p.Id == planId && p.ArticleId == articleId)
-            .Include(p => p.PlanFragments)
-                .ThenInclude(pf => pf.Fragment)
-                    .ThenInclude(f => f.Source)
-            .Include(p => p.PlanFragments)
-                .ThenInclude(pf => pf.Fragment)
-                    .ThenInclude(f => f.FragmentCategory)
+            .Include(p => p.PlanKnowledgeUnits)
+                .ThenInclude(pku => pku.KnowledgeUnit)
+                    .ThenInclude(ku => ku.Category)
             .Include(p => p.CreatedBy)
             .FirstOrDefaultAsync();
 
@@ -188,17 +185,17 @@ public class PlanApiController : ControllerBase
     }
 
     /// <summary>
-    /// Update a plan fragment's include flag
+    /// Update a plan knowledge unit's include flag
     /// </summary>
-    [HttpPut("{planId}/fragments/{fragmentId}/include")]
+    [HttpPut("{planId}/knowledge-units/{knowledgeUnitId}/include")]
     [ProducesResponseType(typeof(PlanActionResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<PlanActionResponse>> UpdatePlanFragmentInclude(
+    public async Task<ActionResult<PlanActionResponse>> UpdatePlanKnowledgeUnitInclude(
         Guid articleId, 
         Guid planId, 
-        Guid fragmentId, 
-        [FromBody] UpdatePlanFragmentIncludeRequest request)
+        Guid knowledgeUnitId, 
+        [FromBody] UpdatePlanKnowledgeUnitIncludeRequest request)
     {
         var plan = await _planRepository.Query()
             .Where(p => p.Id == planId && p.ArticleId == articleId)
@@ -214,32 +211,32 @@ public class PlanApiController : ControllerBase
             return BadRequest(new { message = "Only draft plans can be updated" });
         }
 
-        var planFragment = await _planFragmentRepository.Query()
-            .Where(pf => pf.PlanId == planId && pf.FragmentId == fragmentId)
+        var planKnowledgeUnit = await _planKnowledgeUnitRepository.Query()
+            .Where(pku => pku.PlanId == planId && pku.KnowledgeUnitId == knowledgeUnitId)
             .FirstOrDefaultAsync();
 
-        if (planFragment == null)
+        if (planKnowledgeUnit == null)
         {
-            return NotFound(new { message = "Plan fragment not found" });
+            return NotFound(new { message = "Plan knowledge unit not found" });
         }
 
-        planFragment.Include = request.Include;
+        planKnowledgeUnit.Include = request.Include;
 
         return Ok(new PlanActionResponse { Success = true, Message = null });
     }
 
     /// <summary>
-    /// Update a plan fragment's instructions
+    /// Update a plan knowledge unit's instructions
     /// </summary>
-    [HttpPut("{planId}/fragments/{fragmentId}/instructions")]
+    [HttpPut("{planId}/knowledge-units/{knowledgeUnitId}/instructions")]
     [ProducesResponseType(typeof(PlanActionResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<PlanActionResponse>> UpdatePlanFragmentInstructions(
+    public async Task<ActionResult<PlanActionResponse>> UpdatePlanKnowledgeUnitInstructions(
         Guid articleId, 
         Guid planId, 
-        Guid fragmentId, 
-        [FromBody] UpdatePlanFragmentInstructionsRequest request)
+        Guid knowledgeUnitId, 
+        [FromBody] UpdatePlanKnowledgeUnitInstructionsRequest request)
     {
         var plan = await _planRepository.Query()
             .Where(p => p.Id == planId && p.ArticleId == articleId)
@@ -255,16 +252,16 @@ public class PlanApiController : ControllerBase
             return BadRequest(new { message = "Only draft plans can be updated" });
         }
 
-        var planFragment = await _planFragmentRepository.Query()
-            .Where(pf => pf.PlanId == planId && pf.FragmentId == fragmentId)
+        var planKnowledgeUnit = await _planKnowledgeUnitRepository.Query()
+            .Where(pku => pku.PlanId == planId && pku.KnowledgeUnitId == knowledgeUnitId)
             .FirstOrDefaultAsync();
 
-        if (planFragment == null)
+        if (planKnowledgeUnit == null)
         {
-            return NotFound(new { message = "Plan fragment not found" });
+            return NotFound(new { message = "Plan knowledge unit not found" });
         }
 
-        planFragment.Instructions = request.Instructions;
+        planKnowledgeUnit.Instructions = request.Instructions;
 
         return Ok(new PlanActionResponse { Success = true, Message = null });
     }
@@ -403,35 +400,27 @@ public class PlanApiController : ControllerBase
                 Id = plan.CreatedBy.Id,
                 FullName = plan.CreatedBy.FullName ?? plan.CreatedBy.Email ?? "Unknown"
             },
-            Fragments = plan.PlanFragments
+            KnowledgeUnits = plan.PlanKnowledgeUnits
                 .OrderByDescending(x => x.SimilarityScore)
-                .ThenBy(x => x.Fragment.Source?.CreatedAt)
-                .ThenBy(x => x.Fragment.CreatedAt)
-                .Select(pf => new PlanFragmentDto
+                .ThenBy(x => x.KnowledgeUnit.UpdatedAt)
+                .Select(pku => new PlanKnowledgeUnitDto
                 {
-                    Id = pf.Id,
-                    FragmentId = pf.FragmentId,
-                    SimilarityScore = pf.SimilarityScore,
-                    Include = pf.Include,
-                    Reasoning = pf.Reasoning,
-                    Instructions = pf.Instructions,
-                    Fragment = new FragmentInPlanDto
+                    Id = pku.Id,
+                    KnowledgeUnitId = pku.KnowledgeUnitId,
+                    SimilarityScore = pku.SimilarityScore,
+                    Include = pku.Include,
+                    Reasoning = pku.Reasoning,
+                    Instructions = pku.Instructions,
+                    KnowledgeUnit = new KnowledgeUnitInPlanDto
                     {
-                        Id = pf.Fragment.Id,
-                        Title = pf.Fragment.Title,
-                        Summary = pf.Fragment.Summary,
-                        Category = pf.Fragment.FragmentCategory.Name,
-                        CategoryIcon = pf.Fragment.FragmentCategory.Icon,
-                        Content = pf.Fragment.Content,
-                        Confidence = pf.Fragment.Confidence,
-                        ConfidenceComment = pf.Fragment.ConfidenceComment,
-                        Source = pf.Fragment.Source != null ? new SourceInPlanDto
-                        {
-                            Id = pf.Fragment.Source.Id,
-                            Name = pf.Fragment.Source.Name,
-                            Type = pf.Fragment.Source.Type.ToString(),
-                            Date = pf.Fragment.Source.Date
-                        } : null
+                        Id = pku.KnowledgeUnit.Id,
+                        Title = pku.KnowledgeUnit.Title,
+                        Summary = pku.KnowledgeUnit.Summary,
+                        Category = pku.KnowledgeUnit.Category.Name,
+                        CategoryIcon = pku.KnowledgeUnit.Category.Icon,
+                        Content = pku.KnowledgeUnit.Content,
+                        Confidence = pku.KnowledgeUnit.Confidence,
+                        ConfidenceComment = pku.KnowledgeUnit.ConfidenceComment
                     }
                 }).ToList()
         };
@@ -440,6 +429,6 @@ public class PlanApiController : ControllerBase
 
 public record UpdatePlanRequest(string Instructions);
 
-public record UpdatePlanFragmentIncludeRequest(bool Include);
+public record UpdatePlanKnowledgeUnitIncludeRequest(bool Include);
 
-public record UpdatePlanFragmentInstructionsRequest(string Instructions);
+public record UpdatePlanKnowledgeUnitInstructionsRequest(string Instructions);

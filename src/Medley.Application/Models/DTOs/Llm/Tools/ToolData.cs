@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using Medley.Domain.Enums;
 
 namespace Medley.Application.Models.DTOs.Llm.Tools;
 
@@ -9,19 +10,19 @@ namespace Medley.Application.Models.DTOs.Llm.Tools;
 public class CreatePlanRequest
 {
     /// <summary>
-    /// Overall instructions for how to improve the article using the recommended fragments
+    /// Overall instructions for how to improve the article using the recommended knowledge units
     /// </summary>
-    [Description("Overall instructions for how to improve the article using the recommended fragments in markdown format")]
+    [Description("Overall instructions for how to improve the article using the recommended knowledge units in markdown format")]
     [Required]
     public required string Instructions { get; set; }
 
     /// <summary>
-    /// Array of fragment recommendations
+    /// Array of knowledge unit recommendations
     /// </summary>
-    [Description("Array of fragment recommendations")]
+    [Description("Array of knowledge unit recommendations")]
     [Required]
     [MinLength(1)]
-    public required PlanFragmentRecommendation[] Recommendations { get; set; }
+    public required PlanKnowledgeUnitRecommendation[] Recommendations { get; set; }
 
     /// <summary>
     /// Optional summary of changes if this is a modification of an existing plan
@@ -32,24 +33,24 @@ public class CreatePlanRequest
 }
 
 /// <summary>
-/// Represents a fragment recommendation for a plan
+/// Represents a knowledge unit recommendation for a plan
 /// </summary>
-public class PlanFragmentRecommendation
+public class PlanKnowledgeUnitRecommendation
 {
-    [Description("The unique identifier of the fragment being recommended")]
-    public Guid FragmentId { get; set; }
+    [Description("The unique identifier of the knowledge unit being recommended")]
+    public Guid KnowledgeUnitId { get; set; }
 
-    [Description("The similarity score between the fragment and the article (0.0 to 1.0)")]
+    [Description("The similarity score between the knowledge unit and the article (0.0 to 1.0)")]
     public double SimilarityScore { get; set; }
 
-    [Description("Whether to include this fragment in the article improvement (true) or exclude it (false)")]
+    [Description("Whether to include this knowledge unit in the article improvement (true) or exclude it (false)")]
     public bool Include { get; set; }
 
-    [Description("Explanation of why this fragment should not be included in the article. Omit if Include=true")]
+    [Description("Explanation of why this knowledge unit should not be included in the article. Omit if Include=true")]
     [MaxLength(200)] //Intentionally shorter to encourage brevity
     public string? Reasoning { get; set; }
 
-    [Description("Optional instructions on how to incorporate this fragment into the article")]
+    [Description("Optional instructions on how to incorporate this knowledge unit into the article")]
     [MaxLength(200)] //Intentionally shorter to encourage brevity
     public string? Instructions { get; set; }
 }
@@ -73,41 +74,62 @@ public class CreateArticleVersionRequest
 }
 
 /// <summary>
-/// Fragment search result with similarity score (no content)
+/// Knowledge unit search result with similarity score (no content)
 /// </summary>
-public class ToolFragmentSearchResult : FragmentData
+public class ToolKnowledgeUnitSearchResult
 {
+    public required Guid Id { get; set; }
+    public required string Title { get; set; }
+    public string? Summary { get; set; }
+    public string? Category { get; set; }
     public double SimilarityScore { get; set; }
+    public ConfidenceLevel? Confidence { get; set; }
+    public string? ConfidenceComment { get; set; }
 }
 
 /// <summary>
-/// Response for SearchFragmentsAsync
+/// Knowledge unit data with content included
 /// </summary>
-public class SearchFragmentsResponse
+public class KnowledgeUnitWithContentData
 {
-    public required bool Success { get; set; }
-    public string? Error { get; set; }
-    public List<ToolFragmentSearchResult> Fragments { get; set; } = new();
+    public required Guid Id { get; set; }
+    public required string Title { get; set; }
+    public string? Summary { get; set; }
+    public string? Category { get; set; }
+    public required string Content { get; set; }
+    public ConfidenceLevel? Confidence { get; set; }
+    public string? ConfidenceComment { get; set; }
+    public SourceData? Source { get; set; }
 }
 
 /// <summary>
-/// Response for FindSimilarFragmentsAsync
+/// Response for SearchKnowledgeUnitsAsync
 /// </summary>
-public class FindSimilarFragmentsResponse
+public class SearchKnowledgeUnitsResponse
 {
     public required bool Success { get; set; }
     public string? Error { get; set; }
-    public List<ToolFragmentSearchResult> Fragments { get; set; } = new();
+    public List<ToolKnowledgeUnitSearchResult> KnowledgeUnits { get; set; } = new();
 }
 
 /// <summary>
-/// Response for GetFragmentContentAsync
+/// Response for FindSimilarKnowledgeUnitsAsync
 /// </summary>
-public class GetFragmentResponse
+public class FindSimilarKnowledgeUnitsResponse
 {
     public required bool Success { get; set; }
     public string? Error { get; set; }
-    public FragmentWithContentData? Fragment { get; set; }
+    public List<ToolKnowledgeUnitSearchResult> KnowledgeUnits { get; set; } = new();
+}
+
+/// <summary>
+/// Response for GetKnowledgeUnitContentAsync
+/// </summary>
+public class GetKnowledgeUnitResponse
+{
+    public required bool Success { get; set; }
+    public string? Error { get; set; }
+    public KnowledgeUnitWithContentData? KnowledgeUnit { get; set; }
 }
 
 /// <summary>
@@ -158,30 +180,30 @@ public class AskQuestionWithCursorResponse
 }
 
 /// <summary>
-/// Request for adding fragments to an existing plan
+/// Request for adding knowledge units to an existing plan
 /// </summary>
-public class AddFragmentsToPlanRequest
+public class AddKnowledgeUnitsToPlanRequest
 {
     /// <summary>
-    /// The unique identifier of the plan to add fragments to
+    /// The unique identifier of the plan to add knowledge units to
     /// </summary>
-    [Description("The unique identifier of the plan to add fragments to")]
+    [Description("The unique identifier of the plan to add knowledge units to")]
     [Required]
     public Guid PlanId { get; set; }
 
     /// <summary>
-    /// Array of fragment recommendations to add
+    /// Array of knowledge unit recommendations to add
     /// </summary>
-    [Description("Array of fragment recommendations to add")]
+    [Description("Array of knowledge unit recommendations to add")]
     [Required]
     [MinLength(1)]
-    public required PlanFragmentRecommendation[] Recommendations { get; set; }
+    public required PlanKnowledgeUnitRecommendation[] Recommendations { get; set; }
 }
 
 /// <summary>
-/// Response for AddFragmentsToPlanAsync
+/// Response for AddKnowledgeUnitsToPlanAsync
 /// </summary>
-public class AddFragmentsToPlanResponse
+public class AddKnowledgeUnitsToPlanResponse
 {
     public required bool Success { get; set; }
     public string? Error { get; set; }

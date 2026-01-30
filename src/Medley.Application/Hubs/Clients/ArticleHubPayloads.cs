@@ -87,7 +87,7 @@ public record PlanUpdatedPayload
 {
     public required Guid ArticleId { get; init; }
     public required Guid PlanId { get; init; }
-    public required int FragmentsAdded { get; init; }
+    public required int KnowledgeUnitsAdded { get; init; }
     public required DateTimeOffset Timestamp { get; init; }
 }
 

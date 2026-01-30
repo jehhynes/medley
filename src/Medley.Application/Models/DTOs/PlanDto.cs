@@ -19,7 +19,7 @@ public class PlanRef
 }
 
 /// <summary>
-/// Detailed plan information with fragments and source details
+/// Detailed plan information with knowledge units
 /// </summary>
 public class PlanDto
 {
@@ -64,25 +64,25 @@ public class PlanDto
     public required UserRef CreatedBy { get; set; }
 
     /// <summary>
-    /// Fragment recommendations for this plan
+    /// Knowledge unit recommendations for this plan
     /// </summary>
-    public required List<PlanFragmentDto> Fragments { get; set; } = new();
+    public required List<PlanKnowledgeUnitDto> KnowledgeUnits { get; set; } = new();
 }
 
 /// <summary>
-/// Detailed fragment information in a plan
+/// Detailed knowledge unit information in a plan
 /// </summary>
-public class PlanFragmentDto
+public class PlanKnowledgeUnitDto
 {
     /// <summary>
-    /// Plan fragment ID
+    /// Plan knowledge unit ID
     /// </summary>
     public required Guid Id { get; set; }
 
     /// <summary>
-    /// Fragment ID
+    /// Knowledge unit ID
     /// </summary>
-    public required Guid FragmentId { get; set; }
+    public required Guid KnowledgeUnitId { get; set; }
 
     /// <summary>
     /// Similarity score (0-1)
@@ -90,58 +90,58 @@ public class PlanFragmentDto
     public required double SimilarityScore { get; set; }
 
     /// <summary>
-    /// Whether to include this fragment in the implementation
+    /// Whether to include this knowledge unit in the implementation
     /// </summary>
     public required bool Include { get; set; }
 
     /// <summary>
-    /// AI reasoning for including this fragment
+    /// AI reasoning for including this knowledge unit
     /// </summary>
     public string? Reasoning { get; set; }
 
     /// <summary>
-    /// Specific instructions for using this fragment
+    /// Specific instructions for using this knowledge unit
     /// </summary>
     public string? Instructions { get; set; }
 
     /// <summary>
-    /// Fragment details
+    /// Knowledge unit details
     /// </summary>
-    public required FragmentInPlanDto Fragment { get; set; }
+    public required KnowledgeUnitInPlanDto KnowledgeUnit { get; set; }
 }
 
 /// <summary>
-/// Fragment information within a plan
+/// Knowledge unit information within a plan
 /// </summary>
-public class FragmentInPlanDto
+public class KnowledgeUnitInPlanDto
 {
     /// <summary>
-    /// Fragment ID
+    /// Knowledge unit ID
     /// </summary>
     public required Guid Id { get; set; }
 
     /// <summary>
-    /// Fragment title
+    /// Knowledge unit title
     /// </summary>
     public required string Title { get; set; }
 
     /// <summary>
-    /// Fragment summary
+    /// Knowledge unit summary
     /// </summary>
     public required string Summary { get; set; }
 
     /// <summary>
-    /// Fragment category
+    /// Knowledge unit category
     /// </summary>
     public required string Category { get; set; }
 
     /// <summary>
-    /// Icon for the fragment category
+    /// Icon for the knowledge unit category
     /// </summary>
     public string? CategoryIcon { get; set; }
 
     /// <summary>
-    /// Fragment content
+    /// Knowledge unit content
     /// </summary>
     public required string Content { get; set; }
 
@@ -154,37 +154,6 @@ public class FragmentInPlanDto
     /// Confidence comment
     /// </summary>
     public string? ConfidenceComment { get; set; }
-
-    /// <summary>
-    /// Source information
-    /// </summary>
-    public SourceInPlanDto? Source { get; set; }
-}
-
-/// <summary>
-/// Source information within a plan fragment
-/// </summary>
-public class SourceInPlanDto
-{
-    /// <summary>
-    /// Source ID
-    /// </summary>
-    public required Guid Id { get; set; }
-
-    /// <summary>
-    /// Source name
-    /// </summary>
-    public required string Name { get; set; }
-
-    /// <summary>
-    /// Source type
-    /// </summary>
-    public required string Type { get; set; }
-
-    /// <summary>
-    /// Source date
-    /// </summary>
-    public required DateTimeOffset Date { get; set; }
 }
 
 /// <summary>

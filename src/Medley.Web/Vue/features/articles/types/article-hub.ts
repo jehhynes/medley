@@ -53,7 +53,7 @@ export interface PlanGeneratedPayload {
 export interface PlanUpdatedPayload {
   articleId: string;
   planId: string;
-  fragmentsAdded: number;
+  knowledgeUnitsAdded: number;
   timestamp: string;
 }
 

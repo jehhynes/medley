@@ -81,4 +81,9 @@ public class KnowledgeUnit : BusinessEntity
     /// Articles that reference this knowledge unit
     /// </summary>
     public virtual ICollection<Article> Articles { get; set; } = new List<Article>();
+
+    /// <summary>
+    /// Plan knowledge units that reference this knowledge unit
+    /// </summary>
+    public virtual ICollection<PlanKnowledgeUnit> PlanKnowledgeUnits { get; set; } = new List<PlanKnowledgeUnit>();
 }

@@ -1594,15 +1594,14 @@
         "tags": [
           "FragmentsApi"
         ],
-        "operationId": "FragmentsApi_GetByArticleId",
+        "operationId": "FragmentsApi_GetByKnowledgeUnitId",
         "parameters": [
           {
             "name": "articleId",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "guid"
+              "type": "string"
             },
             "x-position": 1
           }
@@ -1629,7 +1628,7 @@
         "tags": [
           "FragmentsApi"
         ],
-        "operationId": "FragmentsApi_GetByKnowledgeUnitId",
+        "operationId": "FragmentsApi_GetByKnowledgeUnitId2",
         "parameters": [
           {
             "name": "knowledgeUnitId",
@@ -1694,58 +1693,6 @@
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/FragmentSearchResult"
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/api/fragments/titles": {
-      "post": {
-        "tags": [
-          "FragmentsApi"
-        ],
-        "operationId": "FragmentsApi_GetTitles",
-        "requestBody": {
-          "x-name": "ids",
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "format": "guid"
-                }
-              }
-            }
-          },
-          "required": true,
-          "x-position": 1
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/FragmentTitleDto"
                   }
                 }
               }
@@ -1961,6 +1908,80 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/knowledge-units/titles": {
+      "post": {
+        "tags": [
+          "KnowledgeUnitsApi"
+        ],
+        "operationId": "KnowledgeUnitsApi_GetTitles",
+        "requestBody": {
+          "x-name": "ids",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "guid"
+                }
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/KnowledgeUnitTitleDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/knowledge-units/by-article/{articleId}": {
+      "get": {
+        "tags": [
+          "KnowledgeUnitsApi"
+        ],
+        "operationId": "KnowledgeUnitsApi_GetByArticleId",
+        "parameters": [
+          {
+            "name": "articleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/KnowledgeUnitDto"
+                  }
                 }
               }
             }
@@ -2319,12 +2340,12 @@
         }
       }
     },
-    "/api/articles/{articleId}/plans/{planId}/fragments/{fragmentId}/include": {
+    "/api/articles/{articleId}/plans/{planId}/knowledge-units/{knowledgeUnitId}/include": {
       "put": {
         "tags": [
           "PlanApi"
         ],
-        "operationId": "PlanApi_UpdatePlanFragmentInclude",
+        "operationId": "PlanApi_UpdatePlanKnowledgeUnitInclude",
         "parameters": [
           {
             "name": "articleId",
@@ -2347,7 +2368,7 @@
             "x-position": 2
           },
           {
-            "name": "fragmentId",
+            "name": "knowledgeUnitId",
             "in": "path",
             "required": true,
             "schema": {
@@ -2362,7 +2383,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdatePlanFragmentIncludeRequest"
+                "$ref": "#/components/schemas/UpdatePlanKnowledgeUnitIncludeRequest"
               }
             }
           },
@@ -2403,12 +2424,12 @@
         }
       }
     },
-    "/api/articles/{articleId}/plans/{planId}/fragments/{fragmentId}/instructions": {
+    "/api/articles/{articleId}/plans/{planId}/knowledge-units/{knowledgeUnitId}/instructions": {
       "put": {
         "tags": [
           "PlanApi"
         ],
-        "operationId": "PlanApi_UpdatePlanFragmentInstructions",
+        "operationId": "PlanApi_UpdatePlanKnowledgeUnitInstructions",
         "parameters": [
           {
             "name": "articleId",
@@ -2431,7 +2452,7 @@
             "x-position": 2
           },
           {
-            "name": "fragmentId",
+            "name": "knowledgeUnitId",
             "in": "path",
             "required": true,
             "schema": {
@@ -2446,7 +2467,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdatePlanFragmentInstructionsRequest"
+                "$ref": "#/components/schemas/UpdatePlanKnowledgeUnitInstructionsRequest"
               }
             }
           },
@@ -4478,19 +4499,6 @@
           }
         }
       },
-      "FragmentTitleDto": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "guid"
-          },
-          "title": {
-            "type": "string"
-          }
-        }
-      },
       "UpdateFragmentConfidenceRequest": {
         "type": "object",
         "additionalProperties": false,
@@ -4568,6 +4576,19 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "KnowledgeUnitTitleDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "title": {
+            "type": "string"
           }
         }
       },
@@ -4700,15 +4721,15 @@
           "createdBy": {
             "$ref": "#/components/schemas/UserRef"
           },
-          "fragments": {
+          "knowledgeUnits": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/PlanFragmentDto"
+              "$ref": "#/components/schemas/PlanKnowledgeUnitDto"
             }
           }
         }
       },
-      "PlanFragmentDto": {
+      "PlanKnowledgeUnitDto": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
@@ -4716,7 +4737,7 @@
             "type": "string",
             "format": "guid"
           },
-          "fragmentId": {
+          "knowledgeUnitId": {
             "type": "string",
             "format": "guid"
           },
@@ -4735,12 +4756,12 @@
             "type": "string",
             "nullable": true
           },
-          "fragment": {
-            "$ref": "#/components/schemas/FragmentInPlanDto"
+          "knowledgeUnit": {
+            "$ref": "#/components/schemas/KnowledgeUnitInPlanDto"
           }
         }
       },
-      "FragmentInPlanDto": {
+      "KnowledgeUnitInPlanDto": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
@@ -4775,34 +4796,6 @@
           "confidenceComment": {
             "type": "string",
             "nullable": true
-          },
-          "source": {
-            "nullable": true,
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/SourceInPlanDto"
-              }
-            ]
-          }
-        }
-      },
-      "SourceInPlanDto": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "guid"
-          },
-          "name": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string"
-          },
-          "date": {
-            "type": "string",
-            "format": "date-time"
           }
         }
       },
@@ -4832,7 +4825,7 @@
           }
         }
       },
-      "UpdatePlanFragmentIncludeRequest": {
+      "UpdatePlanKnowledgeUnitIncludeRequest": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
@@ -4841,7 +4834,7 @@
           }
         }
       },
-      "UpdatePlanFragmentInstructionsRequest": {
+      "UpdatePlanKnowledgeUnitInstructionsRequest": {
         "type": "object",
         "additionalProperties": false,
         "properties": {

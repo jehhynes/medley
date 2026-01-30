@@ -584,15 +584,15 @@ public class ArticleChatService : IArticleChatService
     {
         var tools = new List<AIFunction>
         {
-            AIFunctionFactory.Create(plugins.SearchFragmentsAsync),
-            AIFunctionFactory.Create(plugins.FindSimilarFragmentsAsync),
-            AIFunctionFactory.Create(plugins.GetFragmentContentAsync)
+            AIFunctionFactory.Create(plugins.SearchKnowledgeUnitsAsync),
+            AIFunctionFactory.Create(plugins.FindSimilarKnowledgeUnitsAsync),
+            AIFunctionFactory.Create(plugins.GetKnowledgeUnitContentAsync)
         };
 
         if (mode == ConversationMode.Plan)
         {
             tools.Add(AIFunctionFactory.Create(plugins.CreatePlanAsync));
-            tools.Add(AIFunctionFactory.Create(plugins.AddFragmentsToPlanAsync));
+            tools.Add(AIFunctionFactory.Create(plugins.AddKnowledgeUnitsToPlanAsync));
         }
 
         if (mode == ConversationMode.Agent)

@@ -92,9 +92,4 @@ public class Fragment : BusinessEntity
     /// Indicates if this fragment has been deleted (soft delete)
     /// </summary>
     public bool IsDeleted { get; set; } = false;
-    
-    /// <summary>
-    /// Plan fragments that reference this fragment
-    /// </summary>
-    public virtual ICollection<PlanFragment> PlanFragments { get; set; } = new List<PlanFragment>();
 }

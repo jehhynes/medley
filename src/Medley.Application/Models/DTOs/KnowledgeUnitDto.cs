@@ -69,6 +69,22 @@ public class KnowledgeUnitDto
 }
 
 /// <summary>
+/// Minimal knowledge unit information with just ID and title
+/// </summary>
+public class KnowledgeUnitTitleDto
+{
+    /// <summary>
+    /// Unique identifier for the knowledge unit
+    /// </summary>
+    public required Guid Id { get; set; }
+
+    /// <summary>
+    /// Title of the knowledge unit
+    /// </summary>
+    public required string Title { get; set; }
+}
+
+/// <summary>
 /// Knowledge unit search result with similarity score
 /// </summary>
 public class KnowledgeUnitSearchResult

@@ -455,7 +455,7 @@ public class FragmentDeleteTests : DatabaseTestBase
     }
 
     [Fact]
-    public async Task PlanFragments_ShouldNotLoadDeletedFragments()
+    public async Task PlanKnowledgeUnits_ShouldNotLoadDeletedKnowledgeUnits()
     {
         // Arrange - Create dedicated test data
         var testIntegration = new Domain.Entities.Integration
@@ -537,68 +537,70 @@ public class FragmentDeleteTests : DatabaseTestBase
         };
         await _dbContext.Plans.AddAsync(plan);
 
-        // Create active and deleted fragments
-        var activeFragment = new Fragment
+        // Create active and deleted knowledge units
+        var activeKnowledgeUnit = new KnowledgeUnit
         {
             Id = Guid.NewGuid(),
-            Title = "Active Fragment",
+            Title = "Active Knowledge Unit",
             Summary = "Active Summary",
-            FragmentCategory = _defaultCategory,
             Content = "Active content",
+            Category = _defaultCategory,
+            Confidence = Domain.Enums.ConfidenceLevel.High,
             IsDeleted = false,
             CreatedAt = DateTimeOffset.UtcNow,
-            Source = testSource
+            UpdatedAt = DateTimeOffset.UtcNow
         };
 
-        var deletedFragment = new Fragment
+        var deletedKnowledgeUnit = new KnowledgeUnit
         {
             Id = Guid.NewGuid(),
-            Title = "Deleted Fragment",
+            Title = "Deleted Knowledge Unit",
             Summary = "Deleted Summary",
-            FragmentCategory = _defaultCategory,
             Content = "Deleted content",
+            Category = _defaultCategory,
+            Confidence = Domain.Enums.ConfidenceLevel.High,
             IsDeleted = true,
             CreatedAt = DateTimeOffset.UtcNow,
-            Source = testSource
+            UpdatedAt = DateTimeOffset.UtcNow
         };
 
-        await _dbContext.Fragments.AddRangeAsync(activeFragment, deletedFragment);
+        await _dbContext.KnowledgeUnits.AddRangeAsync(activeKnowledgeUnit, deletedKnowledgeUnit);
 
-        // Create plan fragments for both
-        var activePlanFragment = new PlanFragment
+        // Create plan knowledge units for both
+        var activePlanKnowledgeUnit = new PlanKnowledgeUnit
         {
             Id = Guid.NewGuid(),
             Plan = plan,
-            Fragment = activeFragment,
+            KnowledgeUnit = activeKnowledgeUnit,
             SimilarityScore = 0.9,
             Include = true
         };
 
-        var deletedPlanFragment = new PlanFragment
+        var deletedPlanKnowledgeUnit = new PlanKnowledgeUnit
         {
             Id = Guid.NewGuid(),
             Plan = plan,
-            Fragment = deletedFragment,
+            KnowledgeUnit = deletedKnowledgeUnit,
             SimilarityScore = 0.8,
             Include = true
         };
 
-        await _dbContext.PlanFragments.AddRangeAsync(activePlanFragment, deletedPlanFragment);
+        await _dbContext.PlanKnowledgeUnits.AddRangeAsync(activePlanKnowledgeUnit, deletedPlanKnowledgeUnit);
         await _dbContext.SaveChangesAsync();
 
         // Clear change tracker
         _dbContext.ChangeTracker.Clear();
 
-        // Act - Load plan with fragments
+        // Act - Load plan with knowledge units
         var loadedPlan = await _dbContext.Plans
-            .Include(p => p.PlanFragments)
-                .ThenInclude(pf => pf.Fragment)
+            .Include(p => p.PlanKnowledgeUnits)
+                .ThenInclude(pku => pku.KnowledgeUnit)
             .FirstOrDefaultAsync(p => p.Id == plan.Id);
 
-        // Assert - Only PlanFragments with non-deleted fragments are loaded
+        // Assert - Only PlanKnowledgeUnits with non-deleted knowledge units are loaded
         Assert.NotNull(loadedPlan);
-        Assert.Single(loadedPlan.PlanFragments);
-        Assert.Equal(activeFragment.Id, loadedPlan.PlanFragments.First().Fragment.Id);
+        Assert.Single(loadedPlan.PlanKnowledgeUnits);
+        Assert.Equal(activeKnowledgeUnit.Id, loadedPlan.PlanKnowledgeUnits.First().KnowledgeUnit.Id);
     }
 
     /// <summary>

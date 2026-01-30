@@ -22,19 +22,19 @@ using Microsoft.Extensions.Options;
 namespace Medley.Application.Services;
 
 /// <summary>
-/// Tools providing fragment search capabilities for the article assistant
+/// Tools providing knowledge unit search capabilities for the article assistant
 /// </summary>
 public class ArticleChatTools
 {
     private readonly Guid _articleId;
     private readonly Guid? _implementingPlanId;
     private readonly Guid _conversationId;
-    private readonly IFragmentRepository _fragmentRepository;
+    private readonly IKnowledgeUnitRepository _knowledgeUnitRepository;
     private readonly IEmbeddingGenerator<string, Embedding<float>> _embeddingGenerator;
     private readonly IRepository<Article> _articleRepository;
     private readonly IRepository<ChatConversation> _conversationRepository;
     private readonly IRepository<Plan> _planRepository;
-    private readonly IRepository<PlanFragment> _planFragmentRepository;
+    private readonly IRepository<PlanKnowledgeUnit> _planKnowledgeUnitRepository;
     private readonly IRepository<User> _userRepository;
     private readonly IArticleVersionService _articleVersionService;
     private readonly IUnitOfWork _unitOfWork;
@@ -58,12 +58,12 @@ public class ArticleChatTools
         Guid userId,
         Guid? implementingPlanId,
         Guid conversationId,
-        IFragmentRepository fragmentRepository,
+        IKnowledgeUnitRepository knowledgeUnitRepository,
         IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
         IRepository<Article> articleRepository,
         IRepository<ChatConversation> conversationRepository,
         IRepository<Plan> planRepository,
-        IRepository<PlanFragment> planFragmentRepository,
+        IRepository<PlanKnowledgeUnit> planKnowledgeUnitRepository,
         IRepository<User> userRepository,
         IArticleVersionService articleVersionService,
         IUnitOfWork unitOfWork,
@@ -78,12 +78,12 @@ public class ArticleChatTools
         _currentUserId = userId;
         _implementingPlanId = implementingPlanId;
         _conversationId = conversationId;
-        _fragmentRepository = fragmentRepository;
+        _knowledgeUnitRepository = knowledgeUnitRepository;
         _embeddingGenerator = embeddingGenerator;
         _articleRepository = articleRepository;
         _conversationRepository = conversationRepository;
         _planRepository = planRepository;
-        _planFragmentRepository = planFragmentRepository;
+        _planKnowledgeUnitRepository = planKnowledgeUnitRepository;
         _userRepository = userRepository;
         _articleVersionService = articleVersionService;
         _unitOfWork = unitOfWork;
@@ -98,23 +98,23 @@ public class ArticleChatTools
 
 
     /// <summary>
-    /// Search for fragments semantically similar to a query string
+    /// Search for knowledge units semantically similar to a query string
     /// </summary>
-    [Description("Search for fragments semantically similar to a query string. Returns fragments with similarity scores.")]
-    public virtual async Task<string> SearchFragmentsAsync(
-        [Description("The search query text to find similar fragments")] string query,
+    [Description("Search for knowledge units semantically similar to a query string. Returns knowledge units with similarity scores.")]
+    public virtual async Task<string> SearchKnowledgeUnitsAsync(
+        [Description("The search query text to find similar knowledge units")] string query,
         [Description("Maximum number of results to return (default: 10)")] int limit = 10,
         [Description("Minimum similarity threshold from 0.0 to 1.0 (default: 0.7)")] double? minSimilarity = 0.7,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            _logger.LogInformation("Searching fragments with query: {Query}, limit: {Limit}, minSimilarity: {MinSimilarity}", 
+            _logger.LogInformation("Searching knowledge units with query: {Query}, limit: {Limit}, minSimilarity: {MinSimilarity}", 
                 query, limit, minSimilarity);
 
             if (string.IsNullOrWhiteSpace(query))
             {
-                var errorResponse = new SearchFragmentsResponse
+                var errorResponse = new SearchKnowledgeUnitsResponse
                 {
                     Success = false,
                     Error = "Query cannot be empty",
@@ -128,7 +128,7 @@ public class ArticleChatTools
                 Dimensions = _embeddingSettings.Dimensions
             };
             GeneratedEmbeddings<Embedding<float>> embeddingResult;
-            using (_aiCallContext.SetContext(nameof(ArticleChatTools), nameof(SearchFragmentsAsync), nameof(Article), _articleId))
+            using (_aiCallContext.SetContext(nameof(ArticleChatTools), nameof(SearchKnowledgeUnitsAsync), nameof(Article), _articleId))
             {
                 embeddingResult = await _embeddingGenerator.GenerateAsync(
                     new[] { query }, 
@@ -140,7 +140,7 @@ public class ArticleChatTools
             if (embedding == null)
             {
                 _logger.LogWarning("Failed to generate embedding for query: {Query}", query);
-                var errorResponse = new SearchFragmentsResponse
+                var errorResponse = new SearchKnowledgeUnitsResponse
                 {
                     Success = false,
                     Error = "Failed to generate embedding for query",
@@ -148,102 +148,65 @@ public class ArticleChatTools
                 return JsonSerializer.Serialize(errorResponse, _jsonOptions);
             }
 
-            // Search for similar fragments
-            var results = await _fragmentRepository.FindSimilarAsync(
+            // Search for similar knowledge units
+            var results = await _knowledgeUnitRepository.FindSimilarAsync(
                 embedding.Vector.ToArray(),
                 limit,
                 minSimilarity,
                 cancellationToken: cancellationToken);
 
-            var fragments = new List<ToolFragmentSearchResult>();
+            var knowledgeUnits = new List<ToolKnowledgeUnitSearchResult>();
             foreach (var result in results)
             {
-                var fragment = result.RelatedEntity;
-                
-                // Load source information if available
-                SourceData? sourceData = null;
+                var knowledgeUnit = result.KnowledgeUnit;
 
-                if (fragment.SourceId.HasValue)
+                knowledgeUnits.Add(new ToolKnowledgeUnitSearchResult
                 {
-                    var source = await _fragmentRepository.Query()
-                        .Where(f => f.Id == fragment.Id)
-                        .Select(f => new 
-                        { 
-                            f.Source!.Type,
-                            f.Source.Date,
-                            f.Source.IsInternal,
-                            PrimarySpeakerName = f.Source.PrimarySpeaker != null ? f.Source.PrimarySpeaker.Name : null,
-                            TrustLevel = f.Source.PrimarySpeaker != null ? f.Source.PrimarySpeaker.TrustLevel : null,
-                            Tags = f.Source.Tags.Select(t => new { t.TagType.Name, t.Value }).ToList()
-                        })
-                        .FirstOrDefaultAsync(cancellationToken);
-                    
-                    if (source != null)
-                    {
-                        sourceData = new SourceData
-                        {
-                            Date = source.Date.Date,
-                            SourceType = source.Type.ToString(),
-                            Scope = source.IsInternal == true ? "Internal" : "External",
-                            PrimarySpeaker = source.PrimarySpeakerName,
-                            PrimarySpeakerTrustLevel = source.TrustLevel,
-                            Tags = source.Tags.Select(t => new TagData
-                            {
-                                Type = t.Name,
-                                Value = t.Value
-                            }).ToList()
-                        };
-                    }
-                }
-
-                fragments.Add(new ToolFragmentSearchResult
-                {
-                    Id = fragment.Id,
-                    Title = fragment.Title,
-                    Summary = fragment.Summary,
-                    Category = fragment.FragmentCategory.Name,
+                    Id = knowledgeUnit.Id,
+                    Title = knowledgeUnit.Title,
+                    Summary = knowledgeUnit.Summary,
+                    Category = knowledgeUnit.Category.Name,
                     SimilarityScore = result.Similarity,
-                    Confidence = fragment.Confidence,
-                    ConfidenceComment = fragment.ConfidenceComment,
-                    Source = sourceData
+                    Confidence = knowledgeUnit.Confidence,
+                    ConfidenceComment = knowledgeUnit.ConfidenceComment
                 });
             }
 
-            var response = new SearchFragmentsResponse
+            var response = new SearchKnowledgeUnitsResponse
             {
                 Success = true,
-                Fragments = fragments
+                KnowledgeUnits = knowledgeUnits
             };
 
-            _logger.LogInformation("Found {Count} fragments for query: {Query}", fragments.Count, query);
+            _logger.LogInformation("Found {Count} knowledge units for query: {Query}", knowledgeUnits.Count, query);
 
             return JsonSerializer.Serialize(response, _jsonOptions);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error searching fragments with query: {Query}", query);
-            var errorResponse = new SearchFragmentsResponse
+            _logger.LogError(ex, "Error searching knowledge units with query: {Query}", query);
+            var errorResponse = new SearchKnowledgeUnitsResponse
             {
                 Success = false,
-                Error = $"Error searching fragments: {ex.Message}",
+                Error = $"Error searching knowledge units: {ex.Message}",
             };
             return JsonSerializer.Serialize(errorResponse, _jsonOptions);
         }
     }
 
     /// <summary>
-    /// Find fragments semantically similar to the current article content
+    /// Find knowledge units semantically similar to the current article content
     /// </summary>
-    [Description("Find fragments semantically similar to the current article content. " +
+    [Description("Find knowledge units semantically similar to the current article content. " +
         "Useful for finding related content to enhance or expand the article.")]
-    public virtual async Task<string> FindSimilarFragmentsAsync(
+    public virtual async Task<string> FindSimilarKnowledgeUnitsAsync(
         [Description("Maximum number of results to return (default: 10)")] int limit = 10,
         [Description("Minimum similarity threshold from 0.0 to 1.0 (default: 0.7)")] double? minSimilarity = 0.7,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            _logger.LogInformation("Finding similar fragments for article: {ArticleId}, limit: {Limit}, minSimilarity: {MinSimilarity}", 
+            _logger.LogInformation("Finding similar knowledge units for article: {ArticleId}, limit: {Limit}, minSimilarity: {MinSimilarity}", 
                 _articleId, limit, minSimilarity);
 
             // Load the article
@@ -254,7 +217,7 @@ public class ArticleChatTools
             if (article == null)
             {
                 _logger.LogWarning("Article not found: {ArticleId}", _articleId);
-                var errorResponse = new FindSimilarFragmentsResponse
+                var errorResponse = new FindSimilarKnowledgeUnitsResponse
                 {
                     Success = false,
                     Error = "Article not found",
@@ -268,7 +231,7 @@ public class ArticleChatTools
             if (string.IsNullOrWhiteSpace(textForEmbedding))
             {
                 _logger.LogWarning("Article has no content to search with: {ArticleId}", _articleId);
-                var errorResponse = new FindSimilarFragmentsResponse
+                var errorResponse = new FindSimilarKnowledgeUnitsResponse
                 {
                     Success = false,
                     Error = "Article has no content to search with"
@@ -282,7 +245,7 @@ public class ArticleChatTools
                 Dimensions = _embeddingSettings.Dimensions
             };
             GeneratedEmbeddings<Embedding<float>> embeddingResult;
-            using (_aiCallContext.SetContext(nameof(ArticleChatTools), nameof(FindSimilarFragmentsAsync), nameof(Article), _articleId))
+            using (_aiCallContext.SetContext(nameof(ArticleChatTools), nameof(FindSimilarKnowledgeUnitsAsync), nameof(Article), _articleId))
             {
                 embeddingResult = await _embeddingGenerator.GenerateAsync(
                     new[] { textForEmbedding }, 
@@ -294,7 +257,7 @@ public class ArticleChatTools
             if (embedding == null)
             {
                 _logger.LogWarning("Failed to generate embedding for article: {ArticleId}", _articleId);
-                var errorResponse = new FindSimilarFragmentsResponse
+                var errorResponse = new FindSimilarKnowledgeUnitsResponse
                 {
                     Success = false,
                     Error = "Failed to generate embedding for article content",
@@ -302,84 +265,47 @@ public class ArticleChatTools
                 return JsonSerializer.Serialize(errorResponse, _jsonOptions);
             }
 
-            // Search for similar fragments
-            var results = await _fragmentRepository.FindSimilarAsync(
+            // Search for similar knowledge units
+            var results = await _knowledgeUnitRepository.FindSimilarAsync(
                 embedding.Vector.ToArray(),
                 limit,
                 minSimilarity,
                 cancellationToken: cancellationToken);
 
-            var fragments = new List<ToolFragmentSearchResult>();
+            var knowledgeUnits = new List<ToolKnowledgeUnitSearchResult>();
             foreach (var result in results)
             {
-                var fragment = result.RelatedEntity;
-                
-                // Load source information if available
-                SourceData? sourceData = null;
+                var knowledgeUnit = result.KnowledgeUnit;
 
-                if (fragment.SourceId.HasValue)
+                knowledgeUnits.Add(new ToolKnowledgeUnitSearchResult
                 {
-                    var source = await _fragmentRepository.Query()
-                        .Where(f => f.Id == fragment.Id)
-                        .Select(f => new 
-                        { 
-                            f.Source!.Type,
-                            f.Source.Date,
-                            f.Source.IsInternal,
-                            PrimarySpeakerName = f.Source.PrimarySpeaker != null ? f.Source.PrimarySpeaker.Name : null,
-                            TrustLevel = f.Source.PrimarySpeaker != null ? f.Source.PrimarySpeaker.TrustLevel : null,
-                            Tags = f.Source.Tags.Select(t => new { t.TagType.Name, t.Value }).ToList()
-                        })
-                        .FirstOrDefaultAsync(cancellationToken);
-                    
-                    if (source != null)
-                    {
-                        sourceData = new SourceData
-                        {
-                            Date = source.Date.Date,
-                            SourceType = source.Type.ToString(),
-                            Scope = source.IsInternal == true ? "Internal" : "External",
-                            PrimarySpeaker = source.PrimarySpeakerName,
-                            PrimarySpeakerTrustLevel = source.TrustLevel,
-                            Tags = source.Tags.Select(t => new TagData
-                            {
-                                Type = t.Name,
-                                Value = t.Value
-                            }).ToList()
-                        };
-                    }
-                }
-
-                fragments.Add(new ToolFragmentSearchResult
-                {
-                    Id = fragment.Id,
-                    Title = fragment.Title,
-                    Summary = fragment.Summary,
-                    Category = fragment.FragmentCategory.Name,
+                    Id = knowledgeUnit.Id,
+                    Title = knowledgeUnit.Title,
+                    Summary = knowledgeUnit.Summary,
+                    Category = knowledgeUnit.Category.Name,
                     SimilarityScore = result.Similarity,
-                    Confidence = fragment.Confidence,
-                    ConfidenceComment = fragment.ConfidenceComment,
-                    Source = sourceData
+                    Confidence = knowledgeUnit.Confidence,
+                    ConfidenceComment = knowledgeUnit.ConfidenceComment
                 });
             }
 
-            var response = new FindSimilarFragmentsResponse
+            var response = new FindSimilarKnowledgeUnitsResponse
             {
                 Success = true,
-                Fragments = fragments
+                KnowledgeUnits = knowledgeUnits
             };
 
-            _logger.LogInformation("Found {Count} similar fragments for article: {ArticleId}", fragments.Count, _articleId);
+            _logger.LogInformation("Found {Count} similar knowledge units for article: {ArticleId}", knowledgeUnits.Count, _articleId);
 
             return JsonSerializer.Serialize(response, _jsonOptions);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error finding similar fragments for article: {ArticleId}", _articleId);
-            var errorResponse = new FindSimilarFragmentsResponse
+            _logger.LogError(ex, "Error finding similar knowledge units for article: {ArticleId}", _articleId);
+            var errorResponse = new FindSimilarKnowledgeUnitsResponse
             {
                 Success = false,
-                Error = $"Error finding similar fragments: {ex.Message}",
+                Error = $"Error finding similar knowledge units: {ex.Message}",
             };
             return JsonSerializer.Serialize(errorResponse, _jsonOptions);
         }
@@ -417,68 +343,45 @@ public class ArticleChatTools
     }
 
     /// <summary>
-    /// Get full content and details for a specific fragment
+    /// Get full content and details for a specific knowledge unit
     /// </summary>
-    [Description("Get the full content and details of a specific fragment by its ID. " +
-        "Use this to review fragments in detail before recommending them.")]
-    public virtual async Task<string> GetFragmentContentAsync(
-        [Description("The unique identifier of the fragment to retrieve")] Guid fragmentId,
+    [Description("Get the full content and details of a specific knowledge unit by its ID. " +
+        "Use this to review knowledge units in detail before recommending them.")]
+    public virtual async Task<string> GetKnowledgeUnitContentAsync(
+        [Description("The unique identifier of the knowledge unit to retrieve")] Guid knowledgeUnitId,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            _logger.LogInformation("Getting fragment content for fragment: {FragmentId}", fragmentId);
+            _logger.LogInformation("Getting knowledge unit content for knowledge unit: {KnowledgeUnitId}", knowledgeUnitId);
 
-            var fragment = await _fragmentRepository.Query()
-                .Include(f => f.FragmentCategory)
-                .Include(f => f.Source)
-                    .ThenInclude(s => s!.Tags)
-                        .ThenInclude(t => t.TagType)
-                .Include(f => f.Source)
-                    .ThenInclude(s => s!.PrimarySpeaker)
-                .FirstOrDefaultAsync(f => f.Id == fragmentId, cancellationToken);
+            var knowledgeUnit = await _knowledgeUnitRepository.Query()
+                .Include(ku => ku.Category)
+                .FirstOrDefaultAsync(ku => ku.Id == knowledgeUnitId, cancellationToken);
 
-            if (fragment == null)
+            if (knowledgeUnit == null)
             {
-                var errorResponse = new GetFragmentResponse
+                var errorResponse = new GetKnowledgeUnitResponse
                 {
                     Success = false,
-                    Error = "Fragment not found"
+                    Error = "Knowledge unit not found"
                 };
                 return JsonSerializer.Serialize(errorResponse, _jsonOptions);
             }
 
-            SourceData? sourceData = null;
-            if (fragment.Source != null)
-            {
-                sourceData = new SourceData
-                {
-                    Date = fragment.Source.Date.Date,
-                    SourceType = fragment.Source.Type.ToString(),
-                    Scope = fragment.Source.IsInternal == true ? "Internal" : "External",
-                    PrimarySpeaker = fragment.Source.PrimarySpeaker?.Name,
-                    PrimarySpeakerTrustLevel = fragment.Source.PrimarySpeaker?.TrustLevel,
-                    Tags = fragment.Source.Tags.Select(t => new TagData
-                    {
-                        Type = t.TagType.Name,
-                        Value = t.Value
-                    }).ToList()
-                };
-            }
-
-            var response = new GetFragmentResponse
+            var response = new GetKnowledgeUnitResponse
             {
                 Success = true,
-                Fragment = new FragmentWithContentData
+                KnowledgeUnit = new KnowledgeUnitWithContentData
                 {
-                    Id = fragment.Id,
-                    Title = fragment.Title,
-                    Summary = fragment.Summary,
-                    Category = fragment.FragmentCategory.Name,
-                    Content = fragment.Content,
-                    Confidence = fragment.Confidence,
-                    ConfidenceComment = fragment.ConfidenceComment,
-                    Source = sourceData
+                    Id = knowledgeUnit.Id,
+                    Title = knowledgeUnit.Title,
+                    Summary = knowledgeUnit.Summary,
+                    Category = knowledgeUnit.Category.Name,
+                    Content = knowledgeUnit.Content,
+                    Confidence = knowledgeUnit.Confidence,
+                    ConfidenceComment = knowledgeUnit.ConfidenceComment,
+                    Source = null // Knowledge units don't expose source data
                 }
             };
 
@@ -486,22 +389,22 @@ public class ArticleChatTools
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting fragment content: {FragmentId}", fragmentId);
-            var errorResponse = new GetFragmentResponse
+            _logger.LogError(ex, "Error getting knowledge unit content: {KnowledgeUnitId}", knowledgeUnitId);
+            var errorResponse = new GetKnowledgeUnitResponse
             {
                 Success = false,
-                Error = $"Error getting fragment: {ex.Message}"
+                Error = $"Error getting knowledge unit: {ex.Message}"
             };
             return JsonSerializer.Serialize(errorResponse, _jsonOptions);
         }
     }
 
     /// <summary>
-    /// Create an article improvement plan with fragment recommendations
+    /// Create an article improvement plan with knowledge unit recommendations
     /// </summary>
-    [Description("Create/update a structured improvement plan for the article with fragment recommendations.")]
+    [Description("Create/update a structured improvement plan for the article with knowledge unit recommendations.")]
     public virtual async Task<string> CreatePlanAsync(
-        [Description("Request containing plan instructions, fragment recommendations, and optional change summary")] CreatePlanRequest request,
+        [Description("Request containing plan instructions, knowledge unit recommendations, and optional change summary")] CreatePlanRequest request,
         CancellationToken cancellationToken = default)
     {
         try
@@ -525,7 +428,7 @@ public class ArticleChatTools
                 var errorResponse = new CreatePlanResponse
                 {
                     Success = false,
-                    Error = "At least one fragment recommendation is required"
+                    Error = "At least one knowledge unit recommendation is required"
                 };
                 return JsonSerializer.Serialize(errorResponse, _jsonOptions);
             }
@@ -600,28 +503,28 @@ public class ArticleChatTools
             article.CurrentPlanId = plan.Id;
             article.CurrentPlan = plan;
 
-            // Create plan fragments
+            // Create plan knowledge units
             foreach (var rec in request.Recommendations)
             {
-                // Load fragment for required navigation property
-                var fragment = await _fragmentRepository.GetByIdAsync(rec.FragmentId);
-                if (fragment == null)
+                // Load knowledge unit for required navigation property
+                var knowledgeUnit = await _knowledgeUnitRepository.GetByIdAsync(rec.KnowledgeUnitId);
+                if (knowledgeUnit == null)
                 {
-                    _logger.LogWarning("Fragment {FragmentId} not found, skipping plan fragment", rec.FragmentId);
+                    _logger.LogWarning("Knowledge unit {KnowledgeUnitId} not found, skipping plan knowledge unit", rec.KnowledgeUnitId);
                     continue;
                 }
 
-                var planFragment = new PlanFragment
+                var planKnowledgeUnit = new PlanKnowledgeUnit
                 {
                     Plan = plan,
-                    Fragment = fragment,
+                    KnowledgeUnit = knowledgeUnit,
                     SimilarityScore = rec.SimilarityScore,
                     Include = rec.Include,
                     Reasoning = rec.Reasoning,
                     Instructions = rec.Instructions
                 };
 
-                await _planFragmentRepository.AddAsync(planFragment);
+                await _planKnowledgeUnitRepository.AddAsync(planKnowledgeUnit);
             }
 
             // Register post-commit action to send SignalR notification
@@ -645,7 +548,7 @@ public class ArticleChatTools
             {
                 Success = true,
                 PlanId = plan.Id,
-                Message = $"Created plan with {request.Recommendations.Length} fragment recommendations"
+                Message = $"Created plan with {request.Recommendations.Length} knowledge unit recommendations"
             };
             return JsonSerializer.Serialize(response, _jsonOptions);
         }
@@ -954,40 +857,40 @@ public class ArticleChatTools
     }
 
     /// <summary>
-    /// Add fragments to an existing plan
+    /// Add knowledge units to an existing plan
     /// </summary>
-    [Description("Add additional fragment recommendations to an existing draft plan. " +
-        "Use this to incrementally build a plan by adding more fragments without creating a new plan version.")]
-    public virtual async Task<string> AddFragmentsToPlanAsync(
-        [Description("Request containing the plan ID and fragment recommendations to add")] AddFragmentsToPlanRequest request,
+    [Description("Add additional knowledge unit recommendations to an existing draft plan. " +
+        "Use this to incrementally build a plan by adding more knowledge units without creating a new plan version.")]
+    public virtual async Task<string> AddKnowledgeUnitsToPlanAsync(
+        [Description("Request containing the plan ID and knowledge unit recommendations to add")] AddKnowledgeUnitsToPlanRequest request,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            _logger.LogInformation("Adding fragments to plan: {PlanId} for article: {ArticleId}", 
+            _logger.LogInformation("Adding knowledge units to plan: {PlanId} for article: {ArticleId}", 
                 request.PlanId, _articleId);
 
             // Validate request
             if (request.Recommendations == null || request.Recommendations.Length == 0)
             {
-                var errorResponse = new AddFragmentsToPlanResponse
+                var errorResponse = new AddKnowledgeUnitsToPlanResponse
                 {
                     Success = false,
-                    Error = "At least one fragment recommendation is required"
+                    Error = "At least one knowledge unit recommendation is required"
                 };
                 return JsonSerializer.Serialize(errorResponse, _jsonOptions);
             }
 
-            // Load the plan with existing fragments
+            // Load the plan with existing knowledge units
             var plan = await _planRepository.Query()
-                .Include(p => p.PlanFragments)
+                .Include(p => p.PlanKnowledgeUnits)
                 .Where(p => p.Id == request.PlanId)
                 .FirstOrDefaultAsync(cancellationToken);
 
             if (plan == null)
             {
                 _logger.LogWarning("Plan not found: {PlanId}", request.PlanId);
-                var errorResponse = new AddFragmentsToPlanResponse
+                var errorResponse = new AddKnowledgeUnitsToPlanResponse
                 {
                     Success = false,
                     Error = "Plan not found"
@@ -1000,7 +903,7 @@ public class ArticleChatTools
             {
                 _logger.LogWarning("Plan {PlanId} does not belong to article {ArticleId}", 
                     request.PlanId, _articleId);
-                var errorResponse = new AddFragmentsToPlanResponse
+                var errorResponse = new AddKnowledgeUnitsToPlanResponse
                 {
                     Success = false,
                     Error = "Plan does not belong to this article"
@@ -1013,17 +916,17 @@ public class ArticleChatTools
             {
                 _logger.LogWarning("Plan {PlanId} is not in Draft status (current: {Status})", 
                     request.PlanId, plan.Status);
-                var errorResponse = new AddFragmentsToPlanResponse
+                var errorResponse = new AddKnowledgeUnitsToPlanResponse
                 {
                     Success = false,
-                    Error = $"Cannot add fragments to a plan with status: {plan.Status}. Only Draft plans can be modified."
+                    Error = $"Cannot add knowledge units to a plan with status: {plan.Status}. Only Draft plans can be modified."
                 };
                 return JsonSerializer.Serialize(errorResponse, _jsonOptions);
             }
 
-            // Get existing fragment IDs to prevent duplicates
-            var existingFragmentIds = plan.PlanFragments
-                .Select(pf => pf.FragmentId)
+            // Get existing knowledge unit IDs to prevent duplicates
+            var existingKnowledgeUnitIds = plan.PlanKnowledgeUnits
+                .Select(pku => pku.KnowledgeUnitId)
                 .ToHashSet();
 
             int addedCount = 0;
@@ -1032,40 +935,40 @@ public class ArticleChatTools
             // Process each recommendation
             foreach (var rec in request.Recommendations)
             {
-                // Check if fragment already exists in plan
-                if (existingFragmentIds.Contains(rec.FragmentId))
+                // Check if knowledge unit already exists in plan
+                if (existingKnowledgeUnitIds.Contains(rec.KnowledgeUnitId))
                 {
-                    _logger.LogDebug("Fragment {FragmentId} already exists in plan {PlanId}, skipping", 
-                        rec.FragmentId, request.PlanId);
+                    _logger.LogDebug("Knowledge unit {KnowledgeUnitId} already exists in plan {PlanId}, skipping", 
+                        rec.KnowledgeUnitId, request.PlanId);
                     skippedCount++;
                     continue;
                 }
 
-                // Load fragment to validate it exists
-                var fragment = await _fragmentRepository.GetByIdAsync(rec.FragmentId, cancellationToken);
-                if (fragment == null)
+                // Load knowledge unit to validate it exists
+                var knowledgeUnit = await _knowledgeUnitRepository.GetByIdAsync(rec.KnowledgeUnitId, cancellationToken);
+                if (knowledgeUnit == null)
                 {
-                    _logger.LogWarning("Fragment {FragmentId} not found, skipping", rec.FragmentId);
+                    _logger.LogWarning("Knowledge unit {KnowledgeUnitId} not found, skipping", rec.KnowledgeUnitId);
                     skippedCount++;
                     continue;
                 }
 
-                // Create plan fragment
-                var planFragment = new PlanFragment
+                // Create plan knowledge unit
+                var planKnowledgeUnit = new PlanKnowledgeUnit
                 {
                     Plan = plan,
-                    Fragment = fragment,
+                    KnowledgeUnit = knowledgeUnit,
                     SimilarityScore = rec.SimilarityScore,
                     Include = rec.Include,
                     Reasoning = rec.Reasoning,
                     Instructions = rec.Instructions
                 };
 
-                await _planFragmentRepository.AddAsync(planFragment);
+                await _planKnowledgeUnitRepository.AddAsync(planKnowledgeUnit);
                 addedCount++;
                 
-                _logger.LogDebug("Added fragment {FragmentId} to plan {PlanId}", 
-                    rec.FragmentId, request.PlanId);
+                _logger.LogDebug("Added knowledge unit {KnowledgeUnitId} to plan {PlanId}", 
+                    rec.KnowledgeUnitId, request.PlanId);
             }
 
             // Register post-commit action to send SignalR notification
@@ -1075,7 +978,7 @@ public class ArticleChatTools
                 {
                     ArticleId = _articleId,
                     PlanId = request.PlanId,
-                    FragmentsAdded = addedCount,
+                    KnowledgeUnitsAdded = addedCount,
                     Timestamp = DateTimeOffset.UtcNow
                 };
                 _unitOfWork.RegisterPostCommitAction(async () =>
@@ -1087,25 +990,25 @@ public class ArticleChatTools
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("Added {AddedCount} fragments to plan {PlanId}, skipped {SkippedCount}", 
+            _logger.LogInformation("Added {AddedCount} knowledge units to plan {PlanId}, skipped {SkippedCount}", 
                 addedCount, request.PlanId, skippedCount);
 
-            var response = new AddFragmentsToPlanResponse
+            var response = new AddKnowledgeUnitsToPlanResponse
             {
                 Success = true,
                 AddedCount = addedCount,
                 SkippedCount = skippedCount,
-                Message = $"Added {addedCount} fragment(s) to plan. {skippedCount} fragment(s) skipped (duplicates or not found)."
+                Message = $"Added {addedCount} knowledge unit(s) to plan. {skippedCount} knowledge unit(s) skipped (duplicates or not found)."
             };
             return JsonSerializer.Serialize(response, _jsonOptions);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error adding fragments to plan: {PlanId}", request.PlanId);
-            var errorResponse = new AddFragmentsToPlanResponse
+            _logger.LogError(ex, "Error adding knowledge units to plan: {PlanId}", request.PlanId);
+            var errorResponse = new AddKnowledgeUnitsToPlanResponse
             {
                 Success = false,
-                Error = $"Error adding fragments to plan: {ex.Message}"
+                Error = $"Error adding knowledge units to plan: {ex.Message}"
             };
             return JsonSerializer.Serialize(errorResponse, _jsonOptions);
         }

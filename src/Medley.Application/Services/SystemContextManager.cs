@@ -95,18 +95,7 @@ public class SystemContextManager
             _logger.LogDebug("Organization context prompt not found");
         }
 
-        // 1b. Always append fragment weighting guidance if available
-        var fragmentWeightingPrompt = await _promptRepository.Query()
-            .FirstOrDefaultAsync(t => t.Type == PromptType.FragmentWeighting, cancellationToken);
 
-        if (fragmentWeightingPrompt != null)
-        {
-            promptData.FragmentWeightingGuidance = fragmentWeightingPrompt.Content;
-        }
-        else
-        {
-            _logger.LogDebug("Fragment weighting guidance not found");
-        }
 
         // 2. Always append article context (required)
         var article = await _articleRepository.Query()
@@ -186,54 +175,30 @@ public class SystemContextManager
         if (planId.HasValue)
         {
             var plan = await _planRepository.Query()
-                .Include(p => p.PlanFragments.Where(pf => pf.Include))
-                    .ThenInclude(pf => pf.Fragment)
-                        .ThenInclude(f => f.Source)
-                            .ThenInclude(s => s!.Tags)
-                                .ThenInclude(t => t.TagType)
-                .Include(p => p.PlanFragments.Where(pf => pf.Include))
-                    .ThenInclude(pf => pf.Fragment)
-                        .ThenInclude(f => f.Source)
-                            .ThenInclude(s => s!.PrimarySpeaker)
-                .Include(p => p.PlanFragments.Where(pf => pf.Include))
-                    .ThenInclude(pf => pf.Fragment)
-                        .ThenInclude(f => f.FragmentCategory)
+                .Include(p => p.PlanKnowledgeUnits.Where(pku => pku.Include))
+                    .ThenInclude(pku => pku.KnowledgeUnit)
+                        .ThenInclude(ku => ku.Category)
                 .FirstOrDefaultAsync(p => p.Id == planId.Value, cancellationToken);
 
             if (plan != null)
             {
-                var includedFragments = plan.PlanFragments.Where(pf => pf.Include).ToList();
+                var includedKnowledgeUnits = plan.PlanKnowledgeUnits.Where(pku => pku.Include).ToList();
 
                 promptData.Plan = new PlanData
                 {
                     Id = plan.Id,
                     Instructions = plan.Instructions,
-                    Fragments = includedFragments
+                    KnowledgeUnits = includedKnowledgeUnits
                         .OrderByDescending(x => x.SimilarityScore)
-                        .Select(pf => new PlanFragmentData
+                        .Select(pku => new PlanKnowledgeUnitData
                         {
-                            Id = pf.Fragment.Id,
-                            Title = pf.Fragment.Title,
-                            Summary = pf.Fragment.Summary,
-                            Category = pf.Fragment.FragmentCategory.Name,
-                            Content = pf.Fragment.Content,
-                            Instructions = pf.Instructions,
-                            Confidence = pf.Fragment.Confidence,
-                            Source = pf.Fragment.Source != null
-                                ? new SourceData
-                                {
-                                    Date = pf.Fragment.Source.Date.Date,
-                                    SourceType = pf.Fragment.Source.Type.ToString(),
-                                    Scope = pf.Fragment.Source.IsInternal == true ? "Internal" : "External",
-                                    PrimarySpeaker = pf.Fragment.Source.PrimarySpeaker?.Name,
-                                    PrimarySpeakerTrustLevel = pf.Fragment.Source.PrimarySpeaker?.TrustLevel,
-                                    Tags = pf.Fragment.Source.Tags.Select(t => new TagData
-                                    {
-                                        Type = t.TagType.Name,
-                                        Value = t.Value
-                                    }).ToList()
-                                }
-                                : null
+                            Id = pku.KnowledgeUnit.Id,
+                            Title = pku.KnowledgeUnit.Title,
+                            Summary = pku.KnowledgeUnit.Summary,
+                            Category = pku.KnowledgeUnit.Category.Name,
+                            Content = pku.KnowledgeUnit.Content,
+                            Instructions = pku.Instructions,
+                            Confidence = pku.KnowledgeUnit.Confidence
                         })
                         .ToList()
                 };
@@ -392,7 +357,6 @@ public class SystemContextManager
         public required string UserName { get; set; }
         public string? PrimaryGuidance { get; set; }
         public string? OrganizationContext { get; set; }
-        public string? FragmentWeightingGuidance { get; set; }
         public string? ArticleTypeGuidance { get; set; }
         public ArticleData? Article { get; set; }
         public AiDraftData? PendingAiDraft { get; set; }
@@ -421,6 +385,6 @@ public class SystemContextManager
     {
         public Guid Id { get; set; }
         public required string Instructions { get; set; }
-        public List<PlanFragmentData> Fragments { get; set; } = new();
+        public List<PlanKnowledgeUnitData> KnowledgeUnits { get; set; } = new();
     }
 }

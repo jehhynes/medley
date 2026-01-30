@@ -619,10 +619,10 @@ public class ArticleVersionService : IArticleVersionService
             var article = aiVersion.Article;
             article.Content = newContent;
 
-            // Copy fragments from plan to article if this version is from a plan implementation
+            // Copy knowledge units from plan to article if this version is from a plan implementation
             if (aiVersion.ConversationId.HasValue)
             {
-                await CopyFragmentsFromPlan(aiVersion, article, cancellationToken);
+                await CopyKnowledgeUnitsFromPlan(aiVersion, article, cancellationToken);
             }
 
             _logger.LogInformation(
@@ -650,36 +650,36 @@ public class ArticleVersionService : IArticleVersionService
         }
     }
 
-    private async Task CopyFragmentsFromPlan(ArticleVersion aiVersion, Article article, CancellationToken cancellationToken)
+    private async Task CopyKnowledgeUnitsFromPlan(ArticleVersion aiVersion, Article article, CancellationToken cancellationToken)
     {
         // Check if this conversation is implementing a plan
         var plan = await _planRepository.Query()
-            .Include(p => p.PlanFragments)
-                .ThenInclude(pf => pf.Fragment)
+            .Include(p => p.PlanKnowledgeUnits)
+                .ThenInclude(pku => pku.KnowledgeUnit)
             .FirstOrDefaultAsync(p => p.ConversationId != null && p.ConversationId == aiVersion.ConversationId, cancellationToken);
 
         if (plan != null)
         {
-            // Load article with fragments to check for duplicates
-            var articleWithFragments = await _articleRepository.Query()
-                .Include(a => a.Fragments)
+            // Load article with knowledge units to check for duplicates
+            var articleWithKnowledgeUnits = await _articleRepository.Query()
+                .Include(a => a.KnowledgeUnits)
                 .FirstOrDefaultAsync(a => a.Id == article.Id, cancellationToken);
 
-            if (articleWithFragments != null)
+            if (articleWithKnowledgeUnits != null)
             {
-                // Get fragments marked for inclusion
-                var fragmentsToAdd = plan.PlanFragments
-                    .Where(pf => pf.Include)
-                    .Select(pf => pf.Fragment)
+                // Get knowledge units marked for inclusion
+                var knowledgeUnitsToAdd = plan.PlanKnowledgeUnits
+                    .Where(pku => pku.Include)
+                    .Select(pku => pku.KnowledgeUnit)
                     .ToList();
 
-                // Add fragments that aren't already linked
+                // Add knowledge units that aren't already linked
                 var addedCount = 0;
-                foreach (var fragment in fragmentsToAdd)
+                foreach (var knowledgeUnit in knowledgeUnitsToAdd)
                 {
-                    if (!articleWithFragments.Fragments.Any(f => f.Id == fragment.Id))
+                    if (!articleWithKnowledgeUnits.KnowledgeUnits.Any(ku => ku.Id == knowledgeUnit.Id))
                     {
-                        articleWithFragments.Fragments.Add(fragment);
+                        articleWithKnowledgeUnits.KnowledgeUnits.Add(knowledgeUnit);
                         addedCount++;
                     }
                 }
@@ -687,7 +687,7 @@ public class ArticleVersionService : IArticleVersionService
                 if (addedCount > 0)
                 {
                     _logger.LogInformation(
-                        "Copied {Count} fragments from plan {PlanId} to article {ArticleId}",
+                        "Copied {Count} knowledge units from plan {PlanId} to article {ArticleId}",
                         addedCount, plan.Id, article.Id);
                 }
 

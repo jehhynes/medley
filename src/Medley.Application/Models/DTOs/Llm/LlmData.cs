@@ -25,9 +25,9 @@ public class FragmentWithContentData : FragmentData
 }
 
 /// <summary>
-/// Fragment data for system prompts (includes content and instructions)
+/// Knowledge unit data for system prompts (includes content and instructions)
 /// </summary>
-public class PlanFragmentData
+public class PlanKnowledgeUnitData
 {
     public required Guid Id { get; set; }
     public required string Title { get; set; }
@@ -36,7 +36,6 @@ public class PlanFragmentData
     public required string Content { get; set; }
     public string? Instructions { get; set; }
     public ConfidenceLevel? Confidence { get; set; }
-    public SourceData? Source { get; set; }
 }
 
 /// <summary>

@@ -273,13 +273,13 @@ export function useArticleSignalR(options: UseArticleSignalROptions) {
         eventArticleId,
         selectedId,
         planId: data.planId,
-        fragmentsAdded: data.fragmentsAdded,
+        knowledgeUnitsAdded: data.knowledgeUnitsAdded,
         matches: selectedId === eventArticleId
       });
 
-      // Reload plan when fragments are added for the currently selected article
+      // Reload plan when knowledge units are added for the currently selected article
       if (selectedId === eventArticleId && options.reloadPlan) {
-        console.log('Reloading plan after fragments added:', data.planId);
+        console.log('Reloading plan after knowledge units added:', data.planId);
         options.reloadPlan(data.planId);
       } else {
         console.log('Plan updated for different article, not reloading');

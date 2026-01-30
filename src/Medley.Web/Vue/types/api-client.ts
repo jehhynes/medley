@@ -1459,7 +1459,7 @@ export class FragmentsApiClient {
         return Promise.resolve<FragmentDto[]>(null as any);
     }
 
-    getByArticleId(articleId: string): Promise<FragmentDto[]> {
+    getByKnowledgeUnitId(articleId: string): Promise<FragmentDto[]> {
         let url_ = this.baseUrl + "/api/fragments/by-article/{articleId}";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
@@ -1474,11 +1474,11 @@ export class FragmentsApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetByArticleId(_response);
+            return this.processGetByKnowledgeUnitId(_response);
         });
     }
 
-    protected processGetByArticleId(response: Response): Promise<FragmentDto[]> {
+    protected processGetByKnowledgeUnitId(response: Response): Promise<FragmentDto[]> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -1495,7 +1495,7 @@ export class FragmentsApiClient {
         return Promise.resolve<FragmentDto[]>(null as any);
     }
 
-    getByKnowledgeUnitId(knowledgeUnitId: string): Promise<FragmentDto[]> {
+    getByKnowledgeUnitId2(knowledgeUnitId: string): Promise<FragmentDto[]> {
         let url_ = this.baseUrl + "/api/fragments/by-knowledge-unit/{knowledgeUnitId}";
         if (knowledgeUnitId === undefined || knowledgeUnitId === null)
             throw new globalThis.Error("The parameter 'knowledgeUnitId' must be defined.");
@@ -1510,11 +1510,11 @@ export class FragmentsApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetByKnowledgeUnitId(_response);
+            return this.processGetByKnowledgeUnitId2(_response);
         });
     }
 
-    protected processGetByKnowledgeUnitId(response: Response): Promise<FragmentDto[]> {
+    protected processGetByKnowledgeUnitId2(response: Response): Promise<FragmentDto[]> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -1580,53 +1580,6 @@ export class FragmentsApiClient {
             });
         }
         return Promise.resolve<FragmentSearchResult[]>(null as any);
-    }
-
-    getTitles(ids: string[]): Promise<FragmentTitleDto[]> {
-        let url_ = this.baseUrl + "/api/fragments/titles";
-        url_ = url_.replace(/[?&]$/, "");
-
-        const content_ = JSON.stringify(ids);
-
-        let options_: RequestInit = {
-            body: content_,
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            }
-        };
-
-        return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processGetTitles(_response);
-        });
-    }
-
-    protected processGetTitles(response: Response): Promise<FragmentTitleDto[]> {
-        const status = response.status;
-        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
-        if (status === 200) {
-            return response.text().then((_responseText) => {
-            let result200: any = null;
-            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as FragmentTitleDto[];
-            return result200;
-            });
-        } else if (status === 400) {
-            return response.text().then((_responseText) => {
-            let result400: any = null;
-            result400 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as ProblemDetails;
-            return throwException("A server side error occurred.", status, _responseText, _headers, result400);
-            });
-        } else if (status === 500) {
-            return response.text().then((_responseText) => {
-            return throwException("A server side error occurred.", status, _responseText, _headers);
-            });
-        } else if (status !== 200 && status !== 204) {
-            return response.text().then((_responseText) => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            });
-        }
-        return Promise.resolve<FragmentTitleDto[]>(null as any);
     }
 
     updateConfidence(id: string, request: UpdateFragmentConfidenceRequest): Promise<FragmentDto> {
@@ -1821,6 +1774,79 @@ export class KnowledgeUnitsApiClient {
             });
         }
         return Promise.resolve<DeleteKnowledgeUnitResponse>(null as any);
+    }
+
+    getTitles(ids: string[]): Promise<KnowledgeUnitTitleDto[]> {
+        let url_ = this.baseUrl + "/api/knowledge-units/titles";
+        url_ = url_.replace(/[?&]$/, "");
+
+        const content_ = JSON.stringify(ids);
+
+        let options_: RequestInit = {
+            body: content_,
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processGetTitles(_response);
+        });
+    }
+
+    protected processGetTitles(response: Response): Promise<KnowledgeUnitTitleDto[]> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as KnowledgeUnitTitleDto[];
+            return result200;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<KnowledgeUnitTitleDto[]>(null as any);
+    }
+
+    getByArticleId(articleId: string): Promise<KnowledgeUnitDto[]> {
+        let url_ = this.baseUrl + "/api/knowledge-units/by-article/{articleId}";
+        if (articleId === undefined || articleId === null)
+            throw new globalThis.Error("The parameter 'articleId' must be defined.");
+        url_ = url_.replace("{articleId}", encodeURIComponent("" + articleId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processGetByArticleId(_response);
+        });
+    }
+
+    protected processGetByArticleId(response: Response): Promise<KnowledgeUnitDto[]> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as KnowledgeUnitDto[];
+            return result200;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<KnowledgeUnitDto[]>(null as any);
     }
 
     search(query?: string | undefined, take?: number | undefined): Promise<KnowledgeUnitSearchResult[]> {
@@ -2130,17 +2156,17 @@ export class PlanApiClient {
         return Promise.resolve<PlanActionResponse>(null as any);
     }
 
-    updatePlanFragmentInclude(articleId: string, planId: string, fragmentId: string, request: UpdatePlanFragmentIncludeRequest): Promise<PlanActionResponse> {
-        let url_ = this.baseUrl + "/api/articles/{articleId}/plans/{planId}/fragments/{fragmentId}/include";
+    updatePlanKnowledgeUnitInclude(articleId: string, planId: string, knowledgeUnitId: string, request: UpdatePlanKnowledgeUnitIncludeRequest): Promise<PlanActionResponse> {
+        let url_ = this.baseUrl + "/api/articles/{articleId}/plans/{planId}/knowledge-units/{knowledgeUnitId}/include";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
         url_ = url_.replace("{articleId}", encodeURIComponent("" + articleId));
         if (planId === undefined || planId === null)
             throw new globalThis.Error("The parameter 'planId' must be defined.");
         url_ = url_.replace("{planId}", encodeURIComponent("" + planId));
-        if (fragmentId === undefined || fragmentId === null)
-            throw new globalThis.Error("The parameter 'fragmentId' must be defined.");
-        url_ = url_.replace("{fragmentId}", encodeURIComponent("" + fragmentId));
+        if (knowledgeUnitId === undefined || knowledgeUnitId === null)
+            throw new globalThis.Error("The parameter 'knowledgeUnitId' must be defined.");
+        url_ = url_.replace("{knowledgeUnitId}", encodeURIComponent("" + knowledgeUnitId));
         url_ = url_.replace(/[?&]$/, "");
 
         const content_ = JSON.stringify(request);
@@ -2155,11 +2181,11 @@ export class PlanApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processUpdatePlanFragmentInclude(_response);
+            return this.processUpdatePlanKnowledgeUnitInclude(_response);
         });
     }
 
-    protected processUpdatePlanFragmentInclude(response: Response): Promise<PlanActionResponse> {
+    protected processUpdatePlanKnowledgeUnitInclude(response: Response): Promise<PlanActionResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -2188,17 +2214,17 @@ export class PlanApiClient {
         return Promise.resolve<PlanActionResponse>(null as any);
     }
 
-    updatePlanFragmentInstructions(articleId: string, planId: string, fragmentId: string, request: UpdatePlanFragmentInstructionsRequest): Promise<PlanActionResponse> {
-        let url_ = this.baseUrl + "/api/articles/{articleId}/plans/{planId}/fragments/{fragmentId}/instructions";
+    updatePlanKnowledgeUnitInstructions(articleId: string, planId: string, knowledgeUnitId: string, request: UpdatePlanKnowledgeUnitInstructionsRequest): Promise<PlanActionResponse> {
+        let url_ = this.baseUrl + "/api/articles/{articleId}/plans/{planId}/knowledge-units/{knowledgeUnitId}/instructions";
         if (articleId === undefined || articleId === null)
             throw new globalThis.Error("The parameter 'articleId' must be defined.");
         url_ = url_.replace("{articleId}", encodeURIComponent("" + articleId));
         if (planId === undefined || planId === null)
             throw new globalThis.Error("The parameter 'planId' must be defined.");
         url_ = url_.replace("{planId}", encodeURIComponent("" + planId));
-        if (fragmentId === undefined || fragmentId === null)
-            throw new globalThis.Error("The parameter 'fragmentId' must be defined.");
-        url_ = url_.replace("{fragmentId}", encodeURIComponent("" + fragmentId));
+        if (knowledgeUnitId === undefined || knowledgeUnitId === null)
+            throw new globalThis.Error("The parameter 'knowledgeUnitId' must be defined.");
+        url_ = url_.replace("{knowledgeUnitId}", encodeURIComponent("" + knowledgeUnitId));
         url_ = url_.replace(/[?&]$/, "");
 
         const content_ = JSON.stringify(request);
@@ -2213,11 +2239,11 @@ export class PlanApiClient {
         };
 
         return this.http.fetch(url_, options_).then((_response: Response) => {
-            return this.processUpdatePlanFragmentInstructions(_response);
+            return this.processUpdatePlanKnowledgeUnitInstructions(_response);
         });
     }
 
-    protected processUpdatePlanFragmentInstructions(response: Response): Promise<PlanActionResponse> {
+    protected processUpdatePlanKnowledgeUnitInstructions(response: Response): Promise<PlanActionResponse> {
         const status = response.status;
         let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
         if (status === 200) {
@@ -3393,11 +3419,6 @@ export interface FragmentSearchResult {
     similarity?: number;
 }
 
-export interface FragmentTitleDto {
-    id?: string;
-    title?: string;
-}
-
 export interface UpdateFragmentConfidenceRequest {
     confidence?: ConfidenceLevel | null;
     confidenceComment?: string | null;
@@ -3421,6 +3442,11 @@ export interface KnowledgeUnitDto {
     fragmentCount?: number;
     createdAt?: Date;
     updatedAt?: Date;
+}
+
+export interface KnowledgeUnitTitleDto {
+    id?: string;
+    title?: string;
 }
 
 export interface KnowledgeUnitSearchResult {
@@ -3464,20 +3490,20 @@ export interface PlanDto {
     changesSummary?: string | null;
     createdAt?: Date;
     createdBy?: UserRef;
-    fragments?: PlanFragmentDto[];
+    knowledgeUnits?: PlanKnowledgeUnitDto[];
 }
 
-export interface PlanFragmentDto {
+export interface PlanKnowledgeUnitDto {
     id?: string;
-    fragmentId?: string;
+    knowledgeUnitId?: string;
     similarityScore?: number;
     include?: boolean;
     reasoning?: string | null;
     instructions?: string | null;
-    fragment?: FragmentInPlanDto;
+    knowledgeUnit?: KnowledgeUnitInPlanDto;
 }
 
-export interface FragmentInPlanDto {
+export interface KnowledgeUnitInPlanDto {
     id?: string;
     title?: string;
     summary?: string;
@@ -3486,14 +3512,6 @@ export interface FragmentInPlanDto {
     content?: string;
     confidence?: ConfidenceLevel | null;
     confidenceComment?: string | null;
-    source?: SourceInPlanDto | null;
-}
-
-export interface SourceInPlanDto {
-    id?: string;
-    name?: string;
-    type?: string;
-    date?: Date;
 }
 
 export interface PlanActionResponse {
@@ -3506,11 +3524,11 @@ export interface UpdatePlanRequest {
     instructions?: string;
 }
 
-export interface UpdatePlanFragmentIncludeRequest {
+export interface UpdatePlanKnowledgeUnitIncludeRequest {
     include?: boolean;
 }
 
-export interface UpdatePlanFragmentInstructionsRequest {
+export interface UpdatePlanKnowledgeUnitInstructionsRequest {
     instructions?: string;
 }
 

@@ -20,10 +20,10 @@
         </a>
       </template>
       
-      <!-- GetFragmentContent tool with link -->
-      <template v-else-if="tool.name && tool.name.toLowerCase().includes('getfragmentcontent') && tool.completed && getIdFromResult(tool.result)">
+      <!-- GetKnowledgeUnitContent tool with link -->
+      <template v-else-if="tool.name && tool.name.toLowerCase().includes('getknowledgeunitcontent') && tool.completed && getIdFromResult(tool.result)">
         <a href="#" 
-           @click.prevent="$emit('open-fragment', getIdFromResult(tool.result))"
+           @click.prevent="$emit('open-knowledge-unit', getIdFromResult(tool.result))"
            class="tool-call-link">
           {{ tool.display || formatToolName(tool.name) }}
         </a>
@@ -65,22 +65,22 @@
       <span v-else class="spinner-border spinner-border-xs ms-2" role="status"></span>
     </div>
     
-    <!-- Expanded fragment list -->
-    <div v-if="isExpanded" class="tool-fragments-list ms-4">
-      <div v-if="!fragments" class="text-muted small">
+    <!-- Expanded knowledge unit list -->
+    <div v-if="isExpanded" class="tool-knowledge-units-list ms-4">
+      <div v-if="!knowledgeUnits" class="text-muted small">
         <span class="spinner-border spinner-border-xs me-1" role="status"></span>
-        Loading fragments...
+        Loading knowledge units...
       </div>
-      <div v-else-if="fragments.length === 0" class="text-muted small">
-        No fragments found
+      <div v-else-if="knowledgeUnits.length === 0" class="text-muted small">
+        No knowledge units found
       </div>
       <div v-else>
-        <a v-for="fragment in fragments" 
-           :key="fragment.id"
+        <a v-for="knowledgeUnit in knowledgeUnits" 
+           :key="knowledgeUnit.id"
            href="#"
-           @click.prevent="$emit('open-fragment', fragment.id)"
-           class="d-block text-decoration-none text-muted small mb-1 fragment-link">
-          <i class="bi bi-puzzle me-1"></i>{{ fragment.title || 'Untitled Fragment' }}
+           @click.prevent="$emit('open-knowledge-unit', knowledgeUnit.id)"
+           class="d-block text-decoration-none text-muted small mb-1 knowledge-unit-link">
+          <i class="bi bi-puzzle me-1"></i>{{ knowledgeUnit.title || 'Untitled Knowledge Unit' }}
         </a>
       </div>
     </div>
@@ -100,7 +100,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { apiClients } from '@/utils/apiClients';
-import type { FragmentTitleDto } from '@/types/api-client';
+import type { KnowledgeUnitTitleDto } from '@/types/api-client';
 import CursorResponseModal from './CursorResponseModal.vue';
 import cursorIcon from '@/../wwwroot/images/cursor-ai.svg?url';
 
@@ -129,14 +129,14 @@ const props = defineProps<Props>();
 
 interface Emits {
   (e: 'open-plan', planId: string): void;
-  (e: 'open-fragment', fragmentId: string): void;
+  (e: 'open-knowledge-unit', knowledgeUnitId: string): void;
   (e: 'open-version', versionId: string): void;
 }
 
 const emit = defineEmits<Emits>();
 
 const isExpanded = ref<boolean>(false);
-const fragments = ref<FragmentTitleDto[] | null>(null);
+const knowledgeUnits = ref<KnowledgeUnitTitleDto[] | null>(null);
 const cursorModalVisible = ref<boolean>(false);
 
 function formatToolName(toolName: string): string {
@@ -160,7 +160,7 @@ function getToolIcon(toolName: string): string {
   if (lowerName.includes('search') || lowerName.includes('findsimilar')) {
     return 'bi-search';
   }
-  if (lowerName.includes('fragment') || lowerName.includes('content')) {
+  if (lowerName.includes('knowledgeunit') || lowerName.includes('content')) {
     return 'bi-puzzle';
   }
   if (lowerName.includes('createplan')) {
@@ -194,22 +194,22 @@ function isMultiResultTool(toolName: string): boolean {
 async function toggleExpansion(): Promise<void> {
   isExpanded.value = !isExpanded.value;
   
-  if (isExpanded.value && fragments.value === null) {
-    await loadFragments();
+  if (isExpanded.value && knowledgeUnits.value === null) {
+    await loadKnowledgeUnits();
   }
 }
 
-async function loadFragments(): Promise<void> {
+async function loadKnowledgeUnits(): Promise<void> {
   if (!props.tool.result || !props.tool.result.ids || props.tool.result.ids.length === 0) {
-    fragments.value = [];
+    knowledgeUnits.value = [];
     return;
   }
 
   try {
-    fragments.value = await apiClients.fragments.getTitles(props.tool.result.ids);
+    knowledgeUnits.value = await apiClients.knowledgeUnits.getTitles(props.tool.result.ids);
   } catch (err) {
-    console.error('Error loading tool fragments:', err);
-    fragments.value = [];
+    console.error('Error loading tool knowledge units:', err);
+    knowledgeUnits.value = [];
   }
 }
 

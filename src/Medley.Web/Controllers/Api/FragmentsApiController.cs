@@ -173,29 +173,6 @@ public class FragmentsApiController : ControllerBase
     /// <param name="articleId">Article ID</param>
     /// <returns>List of fragments linked to the article</returns>
     [HttpGet("by-article/{articleId}")]
-    [ProducesResponseType(typeof(List<FragmentDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<FragmentDto>>> GetByArticleId(Guid articleId)
-    {
-        // Get fragment IDs from the join table first
-        var fragmentIds = await _articleRepository.Query()
-            .Where(a => a.Id == articleId)
-            .SelectMany(a => a.Fragments.Select(f => f.Id))
-            .ToListAsync();
-
-        // Now get the full fragment data
-        var fragments = await _fragmentRepository.Query()
-            .Include(f => f.Source)
-                .ThenInclude(s => s!.PrimarySpeaker)
-            .Include(f => f.FragmentCategory)
-            .Where(f => fragmentIds.Contains(f.Id))
-            .OrderBy(f => f.Title)
-            .ThenBy(f => f.Id) // Deterministic tiebreaker
-            .Select(f => MapToFragmentDto(f))
-            .ToListAsync();
-
-        return Ok(fragments);
-    }
-
     /// <summary>
     /// Get all fragments for a specific knowledge unit
     /// </summary>
@@ -343,49 +320,6 @@ public class FragmentsApiController : ControllerBase
         {
             _logger.LogError(ex, "Error performing semantic search");
             return StatusCode(500, new { message = "Failed to perform search. Please try again." });
-        }
-    }
-
-    /// <summary>
-    /// Get titles for multiple fragments by their IDs
-    /// </summary>
-    /// <param name="ids">List of fragment IDs</param>
-    /// <returns>List of fragment titles</returns>
-    [HttpPost("titles")]
-    [ProducesResponseType(typeof(List<FragmentTitleDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<List<FragmentTitleDto>>> GetTitles([FromBody] List<Guid> ids)
-    {
-        if (ids == null || ids.Count == 0)
-        {
-            return BadRequest("At least one fragment ID is required");
-        }
-
-        try
-        {
-            var fragments = await _fragmentRepository.Query()
-                .Where(f => ids.Contains(f.Id))
-                .Select(f => new FragmentTitleDto
-                {
-                    Id = f.Id,
-                    Title = f.Title
-                })
-                .ToListAsync();
-
-            // Maintain the order of the input IDs
-            var fragmentLookup = fragments.ToDictionary(f => f.Id);
-            var orderedResults = ids
-                .Where(id => fragmentLookup.ContainsKey(id))
-                .Select(id => fragmentLookup[id])
-                .ToList();
-
-            return Ok(orderedResults);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving fragment titles");
-            return StatusCode(500, new { message = "Failed to retrieve fragment titles. Please try again." });
         }
     }
 

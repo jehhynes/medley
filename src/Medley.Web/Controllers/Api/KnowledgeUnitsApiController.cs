@@ -97,6 +97,48 @@ public class KnowledgeUnitsApiController : ControllerBase
     }
 
     /// <summary>
+    /// Get titles for multiple knowledge units by their IDs
+    /// </summary>
+    /// <param name="ids">List of knowledge unit IDs</param>
+    /// <returns>List of knowledge unit titles</returns>
+    [HttpPost("titles")]
+    [ProducesResponseType(typeof(List<KnowledgeUnitTitleDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<List<KnowledgeUnitTitleDto>>> GetTitles([FromBody] List<Guid> ids)
+    {
+        var knowledgeUnits = await _knowledgeUnitRepository.Query()
+            .Where(ku => ids.Contains(ku.Id))
+            .Select(ku => new KnowledgeUnitTitleDto
+            {
+                Id = ku.Id,
+                Title = ku.Title
+            })
+            .ToListAsync();
+
+        return Ok(knowledgeUnits);
+    }
+
+    /// <summary>
+    /// Get all knowledge units for a specific article
+    /// </summary>
+    /// <param name="articleId">Article ID</param>
+    /// <returns>List of knowledge units linked to the article</returns>
+    [HttpGet("by-article/{articleId}")]
+    [ProducesResponseType(typeof(List<KnowledgeUnitDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<List<KnowledgeUnitDto>>> GetByArticleId(Guid articleId)
+    {
+        var knowledgeUnits = await _knowledgeUnitRepository.Query()
+            .Include(ku => ku.Category)
+            .Include(ku => ku.Fragments)
+            .Where(ku => ku.Articles.Any(a => a.Id == articleId))
+            .OrderBy(ku => ku.Title)
+            .ThenBy(ku => ku.Id) // Deterministic tiebreaker
+            .Select(ku => MapToKnowledgeUnitDto(ku))
+            .ToListAsync();
+
+        return Ok(knowledgeUnits);
+    }
+
+    /// <summary>
     /// Search knowledge units using semantic similarity (vector search)
     /// </summary>
     /// <param name="query">Search query text</param>

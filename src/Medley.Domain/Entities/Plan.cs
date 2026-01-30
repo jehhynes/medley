@@ -95,7 +95,7 @@ public class Plan : BaseEntity
     public virtual ICollection<Plan> ChildPlans { get; set; } = new List<Plan>();
 
     /// <summary>
-    /// Fragment recommendations for this plan
+    /// Knowledge unit recommendations for this plan
     /// </summary>
-    public virtual ICollection<PlanFragment> PlanFragments { get; set; } = new List<PlanFragment>();
+    public virtual ICollection<PlanKnowledgeUnit> PlanKnowledgeUnits { get; set; } = new List<PlanKnowledgeUnit>();
 }

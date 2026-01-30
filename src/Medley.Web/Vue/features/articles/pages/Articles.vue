@@ -179,15 +179,15 @@
               @close-plan="closeContentTab('plan')" />
           </div>
 
-          <!-- Fragments Tab -->
+          <!-- Knowledge Units Tab -->
           <div
-            v-if="contentTabs.fragmentsOpen"
-            v-show="contentTabs.activeTabId === 'fragments'"
+            v-if="contentTabs.knowledgeUnitsOpen"
+            v-show="contentTabs.activeTabId === 'knowledge-units'"
             class="content-tab-pane">
-            <fragments-viewer
-              ref="fragmentsViewer"
+            <knowledge-units-viewer
+              ref="knowledgeUnitsViewer"
               :article-id="articles.selectedId"
-              @open-fragment="handleOpenFragment" />
+              @open-knowledge-unit="handleOpenKnowledgeUnit" />
           </div>
         </div>
       </template>
@@ -218,7 +218,7 @@
             :article-id="articles.selectedId" 
             :connection="signalr.connection"
             @open-plan="openPlanTab"
-            @open-fragment="handleOpenFragment"
+            @open-knowledge-unit="handleOpenKnowledgeUnit"
             @open-version="handleOpenVersion" />
         </div>
         <div v-show="ui.activeRightTab === 'versions'" class="sidebar-tab-pane">
@@ -415,6 +415,14 @@
       @close="closeFragmentModal"
       @updated="handleFragmentUpdated"
       @deleted="handleFragmentDeleted" />
+
+    <!-- Knowledge Unit Modal -->
+    <knowledge-unit-modal
+      :knowledge-unit="selectedKnowledgeUnit"
+      :visible="!!selectedKnowledgeUnit"
+      @close="closeKnowledgeUnitModal"
+      @updated="handleKnowledgeUnitUpdated"
+      @deleted="handleKnowledgeUnitDeleted" />
 </template>
 
 <script setup lang="ts">
@@ -433,6 +441,7 @@ import type {
   ArticleSummaryDto,
   ArticleVersionDto,
   FragmentDto,
+  KnowledgeUnitDto,
   ArticleUpdateContentRequest,
   ArticleStatus
 } from '@/types/api-client';
@@ -459,6 +468,7 @@ import { createArticleVersionsStore } from '../stores/versionStore';
 
 // Components
 import FragmentModal from '../../sources/components/FragmentModal.vue';
+import KnowledgeUnitModal from '../../knowledge-units/components/KnowledgeUnitModal.vue';
 import VersionViewer from '../components/VersionViewer.vue';
 import MyWorkList from '../components/MyWorkList.vue';
 import ChatPanel from '../components/ChatPanel.vue';
@@ -468,7 +478,7 @@ import ArticleList from '../components/ArticleList.vue';
 import TiptapEditor from '@/components/TiptapEditor.vue';
 import PlanViewer from '../components/PlanViewer.vue';
 import VerticalMenu from '@/components/VerticalMenu.vue';
-import FragmentsViewer from '../components/FragmentsViewer.vue';
+import KnowledgeUnitsViewer from '../components/KnowledgeUnitsViewer.vue';
 
 // Global types
 declare const bootbox: any;
@@ -502,7 +512,7 @@ interface ContentTabsState {
   activeTabId: string;
   versionData: { versionId: string; versionNumber: number } | null;
   planData: { planId: string | null; key: number } | null;
-  fragmentsOpen: boolean;
+  knowledgeUnitsOpen: boolean;
 }
 
 interface UIState {
@@ -546,8 +556,8 @@ interface VersionsPanelRef {
   openLatestVersion: () => void;
 }
 
-interface FragmentsViewerRef {
-  loadFragments: () => Promise<void>;
+interface KnowledgeUnitsViewerRef {
+  loadKnowledgeUnits: () => Promise<void>;
 }
 
 // Window types
@@ -578,7 +588,7 @@ const { leftSidebarVisible, rightSidebarVisible } = useSidebarState();
 const tiptapEditor = ref<TiptapEditorRef | null>(null);
 const chatPanel = ref<ChatPanelRef | null>(null);
 const versionsPanel = ref<VersionsPanelRef | null>(null);
-const fragmentsViewer = ref<FragmentsViewerRef | null>(null);
+const knowledgeUnitsViewer = ref<KnowledgeUnitsViewerRef | null>(null);
 const titleInput = ref<HTMLInputElement | null>(null);
 const editTitleInput = ref<HTMLInputElement | null>(null);
 const filterSearchInput = ref<HTMLInputElement | null>(null);
@@ -613,7 +623,7 @@ const contentTabs = reactive<ContentTabsState>({
   activeTabId: 'editor',
   versionData: null,
   planData: null,
-  fragmentsOpen: false
+  knowledgeUnitsOpen: false
 });
 
 // UI state
@@ -646,6 +656,9 @@ const currentUserId = window.MedleyUser?.id ?? null;
 
 // Fragment modal state
 const selectedFragment = ref<FragmentDto | null>(null);
+
+// Knowledge unit modal state
+const selectedKnowledgeUnit = ref<KnowledgeUnitDto | null>(null);
 
 // Provide drag state for child components
 provide('dragState', dragState);
@@ -775,12 +788,12 @@ const availableTabs = computed<ContentTab[]>(() => {
     });
   }
 
-  if (contentTabs.fragmentsOpen) {
+  if (contentTabs.knowledgeUnitsOpen) {
     tabs.push({
-      id: 'fragments',
-      label: 'Fragments',
+      id: 'knowledge-units',
+      label: 'Knowledge Units',
       closeable: true,
-      type: 'fragments'
+      type: 'knowledge-units'
     });
   }
 
@@ -790,7 +803,7 @@ const availableTabs = computed<ContentTab[]>(() => {
 const availableTabsToOpen = computed(() => {
   const openTabIds = new Set(availableTabs.value.map(t => t.id));
   const allTabs = [
-    { id: 'fragments', label: 'Fragments', icon: 'bi-puzzle' },
+    { id: 'knowledge-units', label: 'Knowledge Units', icon: 'bi-puzzle' },
     { id: 'plan', label: 'Plan', icon: 'bi-list-check' },
     { id: 'version', label: 'Versions', icon: 'bi-clock-history' }
   ];
@@ -1057,8 +1070,8 @@ const closeContentTab = (tabId: string): void => {
   } else if (tabId === 'plan') {
     contentTabs.planData = null;
     contentTabs.activeTabId = 'editor';
-  } else if (tabId === 'fragments') {
-    contentTabs.fragmentsOpen = false;
+  } else if (tabId === 'knowledge-units') {
+    contentTabs.knowledgeUnitsOpen = false;
     contentTabs.activeTabId = 'editor';
   }
 };
@@ -1076,9 +1089,9 @@ const reloadPlan = (planId: string): void => {
   }
 };
 
-const openFragmentsTab = (): void => {
-  contentTabs.fragmentsOpen = true;
-  contentTabs.activeTabId = 'fragments';
+const openKnowledgeUnitsTab = (): void => {
+  contentTabs.knowledgeUnitsOpen = true;
+  contentTabs.activeTabId = 'knowledge-units';
 };
 
 const openVersionTab = async (version: ArticleVersionDto | string): Promise<void> => {
@@ -1107,15 +1120,15 @@ const openVersionTab = async (version: ArticleVersionDto | string): Promise<void
 const clearAllTabs = (): void => {
   contentTabs.versionData = null;
   contentTabs.planData = null;
-  contentTabs.fragmentsOpen = false;
+  contentTabs.knowledgeUnitsOpen = false;
   contentTabs.activeTabId = 'editor';
 };
 
 const openTabFromDropdown = async (tabId: string): Promise<void> => {
   closeDropdown();
   
-  if (tabId === 'fragments') {
-    openFragmentsTab();
+  if (tabId === 'knowledge-units') {
+    openKnowledgeUnitsTab();
   } else if (tabId === 'plan') {
     // Always open plan tab when manually requested - PlanViewer will handle empty state
     // Open with current plan ID if it exists, otherwise null
@@ -1181,7 +1194,7 @@ const handlePlanConversationCreated = async (conversationId: string): Promise<vo
 };
 
 // ============================================================================
-// METHODS - Fragment Modal
+// METHODS - Fragment and Knowledge Unit Modals
 // ============================================================================
 
 const handleOpenFragment = async (fragmentId: string): Promise<void> => {
@@ -1193,6 +1206,17 @@ const handleOpenFragment = async (fragmentId: string): Promise<void> => {
   } catch (err: any) {
     console.error('Error loading fragment:', err);
     showToast('error', 'Failed to load fragment');
+  }
+};
+
+const handleOpenKnowledgeUnit = async (knowledgeUnitId: string): Promise<void> => {
+  if (!knowledgeUnitId) return;
+
+  try {
+    const knowledgeUnit = await apiClients.knowledgeUnits.get(knowledgeUnitId);
+    selectedKnowledgeUnit.value = knowledgeUnit;
+  } catch (err: any) {
+    console.error('Error loading knowledge unit:', err);
   }
 };
 
@@ -1221,6 +1245,24 @@ const handleFragmentDeleted = (fragmentId: string): void => {
   // Close the modal - fragment is now deleted
   selectedFragment.value = null;
   // Note: The fragment will no longer appear in searches since it's archived
+};
+
+const closeKnowledgeUnitModal = (): void => {
+  selectedKnowledgeUnit.value = null;
+};
+
+const handleKnowledgeUnitUpdated = (updatedKnowledgeUnit: KnowledgeUnitDto): void => {
+  // Update the selected knowledge unit to show the new data
+  selectedKnowledgeUnit.value = updatedKnowledgeUnit;
+};
+
+const handleKnowledgeUnitDeleted = (knowledgeUnitId: string): void => {
+  // Close the modal - knowledge unit is now deleted
+  selectedKnowledgeUnit.value = null;
+  // Reload knowledge units viewer if it's open
+  if (contentTabs.knowledgeUnitsOpen && knowledgeUnitsViewer.value) {
+    knowledgeUnitsViewer.value.loadKnowledgeUnits();
+  }
 };
 
 // ============================================================================

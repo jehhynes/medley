@@ -31,7 +31,6 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     public DbSet<Insight> Insights { get; set; }
     public DbSet<Observation> Observations { get; set; }
     public DbSet<Finding> Findings { get; set; }
-    public DbSet<ObservationCluster> ObservationClusters { get; set; }
     public DbSet<AiPrompt> AiPrompts { get; set; }
     public DbSet<TagType> TagTypes { get; set; }
     public DbSet<TagOption> TagOptions { get; set; }
@@ -39,7 +38,7 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     public DbSet<ChatConversation> ChatConversations { get; set; }
     public DbSet<ChatMessage> ChatMessages { get; set; }
     public DbSet<Plan> Plans { get; set; }
-    public DbSet<PlanFragment> PlanFragments { get; set; }
+    public DbSet<PlanKnowledgeUnit> PlanKnowledgeUnits { get; set; }
     public DbSet<AiTokenUsage> AiTokenUsages { get; set; }
     public DbSet<AiModelCostParameter> AiModelCostParameters { get; set; }
     public DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
@@ -119,9 +118,5 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
             .HasMany(a => a.KnowledgeUnits)
             .WithMany(ku => ku.Articles)
             .UsingEntity(j => j.ToTable("article_knowledge_units"));
-
-        // Ignore the Fragments navigation property on Article (legacy property, not mapped to database)
-        builder.Entity<Article>()
-            .Ignore(a => a.Fragments);
     }
 }

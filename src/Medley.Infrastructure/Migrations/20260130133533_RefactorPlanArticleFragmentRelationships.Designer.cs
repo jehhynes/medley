@@ -3,6 +3,7 @@ using System;
 using Medley.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -12,9 +13,11 @@ using Pgvector;
 namespace Medley.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260130133533_RefactorPlanArticleFragmentRelationships")]
+    partial class RefactorPlanArticleFragmentRelationships
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -911,6 +914,10 @@ namespace Medley.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_modified_at");
 
+                    b.Property<Guid?>("ObservationClusterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("observation_cluster_id");
+
                     b.Property<Guid?>("SourceId")
                         .HasColumnType("uuid")
                         .HasColumnName("source_id");
@@ -922,10 +929,42 @@ namespace Medley.Infrastructure.Migrations
                     b.HasKey("Id")
                         .HasName("pk_observations");
 
+                    b.HasIndex("ObservationClusterId")
+                        .HasDatabaseName("ix_observations_observation_cluster_id");
+
                     b.HasIndex("SourceId")
                         .HasDatabaseName("ix_observations_source_id");
 
                     b.ToTable("observations", (string)null);
+                });
+
+            modelBuilder.Entity("Medley.Domain.Entities.ObservationCluster", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.HasKey("Id")
+                        .HasName("pk_observation_clusters");
+
+                    b.ToTable("observation_clusters", (string)null);
                 });
 
             modelBuilder.Entity("Medley.Domain.Entities.Organization", b =>
@@ -1937,6 +1976,11 @@ namespace Medley.Infrastructure.Migrations
 
             modelBuilder.Entity("Medley.Domain.Entities.Observation", b =>
                 {
+                    b.HasOne("Medley.Domain.Entities.ObservationCluster", null)
+                        .WithMany("Observations")
+                        .HasForeignKey("ObservationClusterId")
+                        .HasConstraintName("fk_observations_observation_clusters_observation_cluster_id");
+
                     b.HasOne("Medley.Domain.Entities.Source", "Source")
                         .WithMany("Observations")
                         .HasForeignKey("SourceId")
@@ -2163,6 +2207,11 @@ namespace Medley.Infrastructure.Migrations
                     b.Navigation("Fragments");
 
                     b.Navigation("PlanKnowledgeUnits");
+                });
+
+            modelBuilder.Entity("Medley.Domain.Entities.ObservationCluster", b =>
+                {
+                    b.Navigation("Observations");
                 });
 
             modelBuilder.Entity("Medley.Domain.Entities.Plan", b =>

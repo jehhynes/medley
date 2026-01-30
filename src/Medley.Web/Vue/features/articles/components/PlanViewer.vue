@@ -117,39 +117,39 @@
         </template>
       </tiptap-editor>
 
-      <!-- Fragments Section -->
-      <div class="plan-fragments-container">
-        <!-- Included Fragments -->
+      <!-- Knowledge Units Section -->
+      <div class="plan-knowledge-units-container">
+        <!-- Included Knowledge Units -->
         <div>
           <div class="d-flex justify-content-between align-items-center p-2 " style="background-color: var(--bs-border-color);">
-            <h5 class="mb-0 text-center flex-grow-1">Included Fragments</h5>
-            <span class="badge bg-success">{{ includedFragments.length }}</span>
+            <h5 class="mb-0 text-center flex-grow-1">Included Knowledge Units</h5>
+            <span class="badge bg-success">{{ includedKnowledgeUnits.length }}</span>
           </div>
-          <div v-if="includedFragments.length === 0" class="text-muted text-center py-3 border rounded">
-            No fragments included in this plan
+          <div v-if="includedKnowledgeUnits.length === 0" class="text-muted text-center py-3 border rounded">
+            No knowledge units included in this plan
           </div>
           <div v-else>
             <div 
-              v-for="pf in includedFragments" 
-              :key="pf.fragmentId"
-              class="fragment-item border-bottom py-3 px-3">
+              v-for="pku in includedKnowledgeUnits" 
+              :key="pku.knowledgeUnitId"
+              class="knowledge-unit-item border-bottom py-3 px-3">
               <!-- Header Row: Icon, Title, Badges -->
               <div class="row g-2">
                 <div class="col-auto" style="width: 60px; text-align: center;">
-                  <i class="list-item-icon" :class="getIconClass(pf.fragment.categoryIcon, 'bi-puzzle')" style="font-size: 1.5rem;position:relative;top:-0.33rem;"></i>
+                  <i class="list-item-icon" :class="getIconClass(pku.knowledgeUnit.categoryIcon, 'bi-puzzle')" style="font-size: 1.5rem;position:relative;top:-0.33rem;"></i>
                 </div>
                 <div class="col">
-                  <div class="fw-semibold fragment-title" @click="selectFragment(pf)">{{ pf.fragment.title || 'Untitled Fragment' }}</div>
+                  <div class="fw-semibold knowledge-unit-title" @click="selectKnowledgeUnit(pku)">{{ pku.knowledgeUnit.title || 'Untitled Knowledge Unit' }}</div>
                 </div>
                 <div class="col-auto">
-                  <span class="badge me-2" :class="getSimilarityClass(pf.similarityScore)">
-                    {{ getSimilarityPercent(pf.similarityScore) }}%
+                  <span class="badge me-2" :class="getSimilarityClass(pku.similarityScore)">
+                    {{ getSimilarityPercent(pku.similarityScore) }}%
                   </span>
-                  <span v-if="pf.fragment.confidence !== null && pf.fragment.confidence !== undefined">
+                  <span v-if="pku.knowledgeUnit.confidence !== null && pku.knowledgeUnit.confidence !== undefined">
                     <i 
-                      :class="'fa-duotone ' + getConfidenceIcon(pf.fragment.confidence)" 
-                      :style="{ color: getConfidenceColor(pf.fragment.confidence) }"
-                      :title="'Confidence: ' + (pf.fragment.confidence || '')"
+                      :class="'fa-duotone ' + getConfidenceIcon(pku.knowledgeUnit.confidence)" 
+                      :style="{ color: getConfidenceColor(pku.knowledgeUnit.confidence) }"
+                      :title="'Confidence: ' + (pku.knowledgeUnit.confidence || '')"
                       style="font-size: 1.25rem;"
                     ></i>
                   </span>
@@ -162,11 +162,11 @@
                 <div class="col-auto pt-1" style="width: 60px; text-align: center;">
                   <button 
                     class="btn btn-sm btn-danger"
-                    @click.stop="toggleFragmentInclude(pf)"
-                    :disabled="savingFragments.has(pf.fragmentId) || !canEditPlan"
-                    title="Exclude this fragment"
+                    @click.stop="toggleKnowledgeUnitInclude(pku)"
+                    :disabled="savingKnowledgeUnits.has(pku.knowledgeUnitId) || !canEditPlan"
+                    title="Exclude this knowledge unit"
                     style="padding: 0.25rem 0.5rem;">
-                    <span v-if="savingFragments.has(pf.fragmentId)" class="spinner-border spinner-border-sm" role="status"></span>
+                    <span v-if="savingKnowledgeUnits.has(pku.knowledgeUnitId)" class="spinner-border spinner-border-sm" role="status"></span>
                     <i v-else class="bi bi-arrow-down"></i>
                   </button>
                 </div>
@@ -176,18 +176,18 @@
                   <div class="row gy-0">
                     <!-- Summary Column -->
                     <div class="col-12 col-xxl-6">
-                      <div v-if="pf.fragment.summary" class="text-muted small">{{ pf.fragment.summary }}</div>
+                      <div v-if="pku.knowledgeUnit.summary" class="text-muted small">{{ pku.knowledgeUnit.summary }}</div>
                     </div>
                     
                     <!-- Instructions Column (moves to right on xxl+) -->
                     <div class="col-12 col-xxl-6" @click.stop>
                       <textarea 
                         class="form-control form-control-sm"
-                        v-model="pf.instructions"
-                        @change="updateFragmentInstructions(pf)"
+                        v-model="pku.instructions"
+                        @change="updateKnowledgeUnitInstructions(pku)"
                         @input="autoExpandTextarea($event)"
                         :disabled="!canEditPlan"
-                        placeholder="How to use this fragment..."
+                        placeholder="How to use this knowledge unit..."
                         style="min-height: 100%; resize: vertical; overflow: hidden;"></textarea>
                     </div>
                   </div>
@@ -197,37 +197,37 @@
           </div>
         </div>
 
-        <!-- Excluded Fragments -->
+        <!-- Excluded Knowledge Units -->
         <div>
           <div class="d-flex justify-content-between align-items-center p-2 " style="background-color: var(--bs-border-color);">
-            <h5 class="mb-0 text-center flex-grow-1">Excluded Fragments</h5>
-            <span class="badge bg-danger">{{ excludedFragments.length }}</span>
+            <h5 class="mb-0 text-center flex-grow-1">Excluded Knowledge Units</h5>
+            <span class="badge bg-danger">{{ excludedKnowledgeUnits.length }}</span>
           </div>
-          <div v-if="excludedFragments.length === 0" class="text-muted text-center py-3 border rounded">
-            No fragments excluded from this plan
+          <div v-if="excludedKnowledgeUnits.length === 0" class="text-muted text-center py-3 border rounded">
+            No knowledge units excluded from this plan
           </div>
           <div v-else>
             <div 
-              v-for="pf in excludedFragments" 
-              :key="pf.fragmentId"
-              class="fragment-item border-bottom py-3 px-3">
+              v-for="pku in excludedKnowledgeUnits" 
+              :key="pku.knowledgeUnitId"
+              class="knowledge-unit-item border-bottom py-3 px-3">
               <!-- Header Row: Icon, Title, Badges -->
               <div class="row g-2">
                 <div class="col-auto" style="width: 60px; text-align: center;">
-                  <i class="list-item-icon" :class="getIconClass(pf.fragment.categoryIcon, 'bi-puzzle')" style="font-size: 1.5rem;position:relative;top:-0.33rem;"></i>
+                  <i class="list-item-icon" :class="getIconClass(pku.knowledgeUnit.categoryIcon, 'bi-puzzle')" style="font-size: 1.5rem;position:relative;top:-0.33rem;"></i>
                 </div>
                 <div class="col">
-                  <div class="fw-semibold fragment-title" @click="selectFragment(pf)">{{ pf.fragment.title || 'Untitled Fragment' }}</div>
+                  <div class="fw-semibold knowledge-unit-title" @click="selectKnowledgeUnit(pku)">{{ pku.knowledgeUnit.title || 'Untitled Knowledge Unit' }}</div>
                 </div>
                 <div class="col-auto">
-                  <span class="badge me-2" :class="getSimilarityClass(pf.similarityScore)">
-                    {{ getSimilarityPercent(pf.similarityScore) }}%
+                  <span class="badge me-2" :class="getSimilarityClass(pku.similarityScore)">
+                    {{ getSimilarityPercent(pku.similarityScore) }}%
                   </span>
-                  <span v-if="pf.fragment.confidence !== null && pf.fragment.confidence !== undefined">
+                  <span v-if="pku.knowledgeUnit.confidence !== null && pku.knowledgeUnit.confidence !== undefined">
                     <i 
-                      :class="'fa-duotone ' + getConfidenceIcon(pf.fragment.confidence)" 
-                      :style="{ color: getConfidenceColor(pf.fragment.confidence) }"
-                      :title="'Confidence: ' + (pf.fragment.confidence || '')"
+                      :class="'fa-duotone ' + getConfidenceIcon(pku.knowledgeUnit.confidence)" 
+                      :style="{ color: getConfidenceColor(pku.knowledgeUnit.confidence) }"
+                      :title="'Confidence: ' + (pku.knowledgeUnit.confidence || '')"
                       style="font-size: 1.25rem;"
                     ></i>
                   </span>
@@ -240,11 +240,11 @@
                 <div class="col-auto pt-1" style="width: 60px; text-align: center;">
                   <button 
                     class="btn btn-sm btn-success"
-                    @click.stop="toggleFragmentInclude(pf)"
-                    :disabled="savingFragments.has(pf.fragmentId) || !canEditPlan"
-                    title="Include this fragment"
+                    @click.stop="toggleKnowledgeUnitInclude(pku)"
+                    :disabled="savingKnowledgeUnits.has(pku.knowledgeUnitId) || !canEditPlan"
+                    title="Include this knowledge unit"
                     style="padding: 0.25rem 0.5rem;">
-                    <span v-if="savingFragments.has(pf.fragmentId)" class="spinner-border spinner-border-sm" role="status"></span>
+                    <span v-if="savingKnowledgeUnits.has(pku.knowledgeUnitId)" class="spinner-border spinner-border-sm" role="status"></span>
                     <i v-else class="bi bi-arrow-up"></i>
                   </button>
                 </div>
@@ -254,12 +254,12 @@
                   <div class="row gy-0">
                     <!-- Summary Column -->
                     <div class="col-12 col-xxl-6">
-                      <div v-if="pf.fragment.summary" class="text-muted small">{{ pf.fragment.summary }}</div>
+                      <div v-if="pku.knowledgeUnit.summary" class="text-muted small">{{ pku.knowledgeUnit.summary }}</div>
                     </div>
                     
                     <!-- Reasoning Column (moves to right on xxl+) -->
                     <div class="col-12 col-xxl-6">
-                      <div class="fst-italic text-muted small">{{ pf.reasoning }}</div>
+                      <div class="fst-italic text-muted small">{{ pku.reasoning }}</div>
                     </div>
                   </div>
                 </div>
@@ -270,20 +270,20 @@
       </div>
     </template>
 
-    <!-- Fragment Detail Modal -->
-    <fragment-modal
-      :fragment="selectedFragment"
-      :visible="!!selectedFragment"
-      @close="closeFragmentModal"
-      @updated="handleFragmentUpdated"
-      @deleted="handleFragmentDeleted"
+    <!-- Knowledge Unit Detail Modal -->
+    <knowledge-unit-modal
+      :knowledge-unit="selectedKnowledgeUnit"
+      :visible="!!selectedKnowledgeUnit"
+      @close="closeKnowledgeUnitModal"
+      @updated="handleKnowledgeUnitUpdated"
+      @deleted="handleKnowledgeUnitDeleted"
     />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
-import FragmentModal from '../../sources/components/FragmentModal.vue';
+import KnowledgeUnitModal from '../../knowledge-units/components/KnowledgeUnitModal.vue';
 import { 
   getIconClass, 
   getConfidenceIcon, 
@@ -291,7 +291,7 @@ import {
   getArticleTypes 
 } from '@/utils/helpers';
 import { apiClients } from '@/utils/apiClients';
-import type { FragmentDto, UserRef } from '@/types/api-client';
+import type { KnowledgeUnitDto, UserRef } from '@/types/api-client';
 
 // Declare global types
 declare const bootbox: {
@@ -311,9 +311,9 @@ declare const marked: {
 };
 
 // Plan types (not yet in generated types)
-interface PlanFragmentDto {
-  fragmentId: string;
-  fragment: FragmentDto;
+interface PlanKnowledgeUnitDto {
+  knowledgeUnitId: string;
+  knowledgeUnit: KnowledgeUnitDto;
   include: boolean;
   similarityScore: number;
   reasoning: string;
@@ -325,7 +325,7 @@ interface PlanDto {
   articleId: string;
   version: number;
   instructions: string;
-  fragments: PlanFragmentDto[];
+  knowledgeUnits: PlanKnowledgeUnitDto[];
   status: string;
   createdBy: UserRef;
   createdAt: Date;
@@ -344,7 +344,7 @@ const props = defineProps<Props>();
 interface Emits {
   (e: 'conversation-created', conversationId: string): void;
   (e: 'close-plan'): void;
-  (e: 'fragment-deleted', fragmentId: string): void;
+  (e: 'knowledge-unit-deleted', knowledgeUnitId: string): void;
 }
 
 const emit = defineEmits<Emits>();
@@ -356,21 +356,21 @@ const loading = ref<boolean>(true);
 const error = ref<string | null>(null);
 const isSaving = ref<boolean>(false);
 const planInstructions = ref<string>('');
-const savingFragments = ref<Set<string>>(new Set());
-const selectedFragment = ref<FragmentDto | null>(null);
+const savingKnowledgeUnits = ref<Set<string>>(new Set());
+const selectedKnowledgeUnit = ref<KnowledgeUnitDto | null>(null);
 const isRestoringPlan = ref<boolean>(false);
 const versionDropdownOpen = ref<boolean>(false);
 const planDropdown = ref<HTMLElement | null>(null);
 
 // Computed
-const includedFragments = computed<PlanFragmentDto[]>(() => {
+const includedKnowledgeUnits = computed<PlanKnowledgeUnitDto[]>(() => {
   if (!plan.value) return [];
-  return plan.value.fragments.filter(f => f.include);
+  return plan.value.knowledgeUnits.filter(ku => ku.include);
 });
 
-const excludedFragments = computed<PlanFragmentDto[]>(() => {
+const excludedKnowledgeUnits = computed<PlanKnowledgeUnitDto[]>(() => {
   if (!plan.value) return [];
-  return plan.value.fragments.filter(f => !f.include);
+  return plan.value.knowledgeUnits.filter(ku => !ku.include);
 });
 
 const isArchivedPlan = computed<boolean>(() => {
@@ -403,8 +403,8 @@ watch(() => plan.value?.instructions, (newVal) => {
   }
 }, { immediate: true });
 
-watch(() => plan.value?.fragments, () => {
-  // Auto-expand textareas when fragments change
+watch(() => plan.value?.knowledgeUnits, () => {
+  // Auto-expand textareas when knowledge units change
   nextTick(() => {
     const textareas = document.querySelectorAll<HTMLTextAreaElement>('textarea');
     textareas.forEach(textarea => {
@@ -620,71 +620,79 @@ async function rejectPlan(): Promise<void> {
   });
 }
 
-function selectFragment(planFragment: PlanFragmentDto): void {
-  selectedFragment.value = planFragment.fragment;
+function selectKnowledgeUnit(planKnowledgeUnit: PlanKnowledgeUnitDto): void {
+  selectedKnowledgeUnit.value = planKnowledgeUnit.knowledgeUnit;
 }
 
-function closeFragmentModal(): void {
-  selectedFragment.value = null;
+function closeKnowledgeUnitModal(): void {
+  selectedKnowledgeUnit.value = null;
 }
 
-function handleFragmentUpdated(updatedFragment: FragmentDto): void {
-  // Update the selected fragment to show the new data
-  selectedFragment.value = updatedFragment;
-}
-
-function handleFragmentDeleted(fragmentId: string): void {
-  // Close the modal
-  selectedFragment.value = null;
+function handleKnowledgeUnitUpdated(updatedKnowledgeUnit: KnowledgeUnitDto): void {
+  // Update the selected knowledge unit to show the new data
+  selectedKnowledgeUnit.value = updatedKnowledgeUnit;
   
-  // Note: The fragment is now deleted and won't appear in the plan anymore
-  // The plan will need to be refreshed to reflect this change
-  // Emit event to parent to reload the plan
-  emit('fragment-deleted', fragmentId);
-}
-
-async function updateFragmentInclude(planFragment: PlanFragmentDto): Promise<void> {
-  if (savingFragments.value.has(planFragment.fragmentId)) return;
-
-  savingFragments.value.add(planFragment.fragmentId);
-  try {
-    await apiClients.plans.updatePlanFragmentInclude(
-      props.articleId,
-      plan.value!.id,
-      planFragment.fragmentId,
-      { include: planFragment.include }
-    );
-  } catch (err: any) {
-    console.error('Error updating fragment:', err);
-    error.value = 'Failed to update fragment: ' + err.message;
-    // Revert the change on error
-    planFragment.include = !planFragment.include;
-  } finally {
-    savingFragments.value.delete(planFragment.fragmentId);
+  // Also update the knowledge unit in the plan's knowledge units list
+  if (plan.value) {
+    const pku = plan.value.knowledgeUnits.find(ku => ku.knowledgeUnitId === updatedKnowledgeUnit.id);
+    if (pku) {
+      pku.knowledgeUnit = updatedKnowledgeUnit;
+    }
   }
 }
 
-function toggleFragmentInclude(planFragment: PlanFragmentDto): void {
-  planFragment.include = !planFragment.include;
-  updateFragmentInclude(planFragment);
+function handleKnowledgeUnitDeleted(knowledgeUnitId: string): void {
+  // Close the modal
+  selectedKnowledgeUnit.value = null;
+  
+  // Reload the plan to reflect the deletion
+  if (plan.value) {
+    loadPlan();
+  }
 }
 
-async function updateFragmentInstructions(planFragment: PlanFragmentDto): Promise<void> {
-  if (savingFragments.value.has(planFragment.fragmentId)) return;
+async function updateKnowledgeUnitInclude(planKnowledgeUnit: PlanKnowledgeUnitDto): Promise<void> {
+  if (savingKnowledgeUnits.value.has(planKnowledgeUnit.knowledgeUnitId)) return;
 
-  savingFragments.value.add(planFragment.fragmentId);
+  savingKnowledgeUnits.value.add(planKnowledgeUnit.knowledgeUnitId);
   try {
-    await apiClients.plans.updatePlanFragmentInstructions(
+    await apiClients.plans.updatePlanKnowledgeUnitInclude(
       props.articleId,
       plan.value!.id,
-      planFragment.fragmentId,
-      { instructions: planFragment.instructions }
+      planKnowledgeUnit.knowledgeUnitId,
+      { include: planKnowledgeUnit.include }
+    );
+  } catch (err: any) {
+    console.error('Error updating knowledge unit:', err);
+    error.value = 'Failed to update knowledge unit: ' + err.message;
+    // Revert the change on error
+    planKnowledgeUnit.include = !planKnowledgeUnit.include;
+  } finally {
+    savingKnowledgeUnits.value.delete(planKnowledgeUnit.knowledgeUnitId);
+  }
+}
+
+function toggleKnowledgeUnitInclude(planKnowledgeUnit: PlanKnowledgeUnitDto): void {
+  planKnowledgeUnit.include = !planKnowledgeUnit.include;
+  updateKnowledgeUnitInclude(planKnowledgeUnit);
+}
+
+async function updateKnowledgeUnitInstructions(planKnowledgeUnit: PlanKnowledgeUnitDto): Promise<void> {
+  if (savingKnowledgeUnits.value.has(planKnowledgeUnit.knowledgeUnitId)) return;
+
+  savingKnowledgeUnits.value.add(planKnowledgeUnit.knowledgeUnitId);
+  try {
+    await apiClients.plans.updatePlanKnowledgeUnitInstructions(
+      props.articleId,
+      plan.value!.id,
+      planKnowledgeUnit.knowledgeUnitId,
+      { instructions: planKnowledgeUnit.instructions }
     );
   } catch (err: any) {
     console.error('Error updating instructions:', err);
     error.value = 'Failed to update instructions: ' + err.message;
   } finally {
-    savingFragments.value.delete(planFragment.fragmentId);
+    savingKnowledgeUnits.value.delete(planKnowledgeUnit.knowledgeUnitId);
   }
 }
 
@@ -742,3 +750,14 @@ onBeforeUnmount(() => {
 });
 </script>
 
+
+
+<style scoped>
+.knowledge-unit-title {
+  cursor: pointer;
+}
+
+.knowledge-unit-title:hover {
+  text-decoration: underline;
+}
+</style>

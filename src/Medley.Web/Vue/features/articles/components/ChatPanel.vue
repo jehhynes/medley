@@ -102,7 +102,7 @@
                           :conversation-id="conversationId"
                           :message-id="msg.id"
                           @open-plan="openPlan"
-                          @open-fragment="$emit('open-fragment', $event)"
+                          @open-knowledge-unit="$emit('open-knowledge-unit', $event)"
                           @open-version="$emit('open-version', $event)" />
                       </div>
                     </div>
@@ -133,7 +133,7 @@
                     :conversation-id="conversationId"
                     :message-id="msg.id"
                     @open-plan="openPlan"
-                    @open-fragment="$emit('open-fragment', $event)"
+                    @open-knowledge-unit="$emit('open-knowledge-unit', $event)"
                     @open-version="$emit('open-version', $event)" />
                 </div>
               </template>
@@ -230,7 +230,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 interface Emits {
   (e: 'open-plan', planId: string): void;
-  (e: 'open-fragment', fragmentId: string): void;
+  (e: 'open-knowledge-unit', knowledgeUnitId: string): void;
   (e: 'open-version', versionId: string): void;
 }
 

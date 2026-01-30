@@ -112,8 +112,6 @@ public class Article : BusinessEntity
     /// Navigation property to child articles
     /// </summary>
     public virtual ICollection<Article> ChildArticles { get; set; } = new List<Article>();
-        
-    public virtual ICollection<Fragment> Fragments { get; set; } = new List<Fragment>();
     
     /// <summary>
     /// Knowledge units referenced by this article

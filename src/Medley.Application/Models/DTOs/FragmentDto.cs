@@ -159,21 +159,6 @@ public class FragmentSearchResult
     public required double Similarity { get; set; }
 }
 
-/// <summary>
-/// Fragment title response
-/// </summary>
-public class FragmentTitleDto
-{
-    /// <summary>
-    /// Fragment ID
-    /// </summary>
-    public required Guid Id { get; set; }
-
-    /// <summary>
-    /// Fragment title
-    /// </summary>
-    public required string Title { get; set; }
-}
 
 /// <summary>
 /// Request to update fragment confidence level
