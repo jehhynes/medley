@@ -1849,6 +1849,42 @@ export class KnowledgeUnitsApiClient {
         return Promise.resolve<KnowledgeUnitDto[]>(null as any);
     }
 
+    getByFragmentId(fragmentId: string): Promise<KnowledgeUnitDto[]> {
+        let url_ = this.baseUrl + "/api/knowledge-units/by-fragment/{fragmentId}";
+        if (fragmentId === undefined || fragmentId === null)
+            throw new globalThis.Error("The parameter 'fragmentId' must be defined.");
+        url_ = url_.replace("{fragmentId}", encodeURIComponent("" + fragmentId));
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_: RequestInit = {
+            method: "GET",
+            headers: {
+                "Accept": "application/json"
+            }
+        };
+
+        return this.http.fetch(url_, options_).then((_response: Response) => {
+            return this.processGetByFragmentId(_response);
+        });
+    }
+
+    protected processGetByFragmentId(response: Response): Promise<KnowledgeUnitDto[]> {
+        const status = response.status;
+        let _headers: any = {}; if (response.headers && response.headers.forEach) { response.headers.forEach((v: any, k: any) => _headers[k] = v); };
+        if (status === 200) {
+            return response.text().then((_responseText) => {
+            let result200: any = null;
+            result200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver) as KnowledgeUnitDto[];
+            return result200;
+            });
+        } else if (status !== 200 && status !== 204) {
+            return response.text().then((_responseText) => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            });
+        }
+        return Promise.resolve<KnowledgeUnitDto[]>(null as any);
+    }
+
     search(query?: string | undefined, take?: number | undefined): Promise<KnowledgeUnitSearchResult[]> {
         let url_ = this.baseUrl + "/api/knowledge-units/search?";
         if (query === null)
@@ -3049,7 +3085,7 @@ export enum PromptType {
     CursorReview = "CursorReview",
     CursorQuestion = "CursorQuestion",
     FragmentWeighting = "FragmentWeighting",
-    FragmentClustering = "FragmentClustering",
+    KnowledgeUnitClustering = "KnowledgeUnitClustering",
 }
 
 export interface AiPromptDto {

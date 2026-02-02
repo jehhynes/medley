@@ -1990,6 +1990,41 @@
         }
       }
     },
+    "/api/knowledge-units/by-fragment/{fragmentId}": {
+      "get": {
+        "tags": [
+          "KnowledgeUnitsApi"
+        ],
+        "operationId": "KnowledgeUnitsApi_GetByFragmentId",
+        "parameters": [
+          {
+            "name": "fragmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/KnowledgeUnitDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/knowledge-units/search": {
       "get": {
         "tags": [
@@ -3283,7 +3318,7 @@
           "CursorReview",
           "CursorQuestion",
           "FragmentWeighting",
-          "FragmentClustering"
+          "KnowledgeUnitClustering"
         ],
         "enum": [
           "FragmentExtraction",
@@ -3298,7 +3333,7 @@
           "CursorReview",
           "CursorQuestion",
           "FragmentWeighting",
-          "FragmentClustering"
+          "KnowledgeUnitClustering"
         ]
       },
       "AiPromptDto": {

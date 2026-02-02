@@ -6,9 +6,9 @@ using Medley.Domain.Enums;
 namespace Medley.Application.Models.DTOs.Llm;
 
 /// <summary>
-/// Overall input payload for fragment clustering containing all fragments to be clustered
+/// System prompt guidance for fragment clustering containing instructions and category definitions
 /// </summary>
-public class FragmentClusteringRequest
+public class FragmentClusteringGuidance
 {
     [Required]
     public required string PrimaryGuidance { get; set; }
@@ -17,7 +17,13 @@ public class FragmentClusteringRequest
     public required string FragmentWeighting { get; set; }
 
     public required List<CategoryDefinition> CategoryDefinitions { get; set; }
+}
 
+/// <summary>
+/// User prompt for fragment clustering containing the fragments to be clustered
+/// </summary>
+public class FragmentClusteringRequest
+{
     [Required]
     public required List<FragmentWithContentData> Fragments { get; set; }
 }
@@ -31,7 +37,7 @@ public class FragmentClusteringResponse
     [Description("List of knowledge units created from the provided fragments. Can be empty if no valid clusters found.")]
     public required List<KnowledgeUnitCluster> KnowledgeUnits { get; set; }
 
-    [MaxLength(2000)]
+    [MaxLength(200)]
     [Description("Overall reasoning about the clustering decisions, including any fragments that were excluded")]
     public string? Message { get; set; }
 }
@@ -47,12 +53,12 @@ public class KnowledgeUnitCluster
     public required List<Guid> FragmentIds { get; set; }
 
     [Required]
-    [MaxLength(200)]
+    [MaxLength(75)]
     [Description("Clear, descriptive heading for the clustered content")]
     public required string Title { get; set; }
 
     [Required]
-    [MaxLength(500)]
+    [MaxLength(250)]
     [Description("Short, human-readable condensation of the full content")]
     public required string Summary { get; set; }
 
@@ -60,19 +66,20 @@ public class KnowledgeUnitCluster
     [Description("The knowledge category which is most appropriate for the consolidated content")]
     public required string Category { get; set; }
 
+    [MaxLength(500)]
     [Required]
-    [Description("The full consolidated text content synthesizing all fragments")]
+    [Description("The consolidated text content synthesizing all fragments")]
     public required string Content { get; set; }
 
     [Required]
     [Description("Confidence level for this cluster")]
     public required ConfidenceLevel Confidence { get; set; }
 
-    [MaxLength(1000)]
+    [MaxLength(200)]
     [Description("Explanation of the confidence level and any concerns or caveats about the clustered content")]
     public string? ConfidenceComment { get; set; }
 
-    [MaxLength(2000)]
+    [MaxLength(200)]
     [Description("Reasoning for why these specific fragments were grouped together")]
     public string? ClusteringRationale { get; set; }
 }

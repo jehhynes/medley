@@ -149,6 +149,22 @@
 
     <!-- Fragment Content -->
     <div class="markdown-container" v-html="renderedMarkdown"></div>
+
+    <!-- Knowledge Units Section -->
+    <div v-if="knowledgeUnits.length > 0">
+      <hr />
+      <h6 class="text-muted mb-2">
+        Knowledge Units ({{ knowledgeUnits.length }})
+      </h6>
+      <ul class="list-unstyled">
+        <li v-for="ku in knowledgeUnits" :key="ku.id" class="mb-1">
+          <a :href="'/KnowledgeUnits?id=' + ku.id" class="text-decoration-none">
+            <i :class="getIconClass(ku.categoryIcon, 'fal fa-atom')" class="me-1"></i>
+            {{ ku.title }}
+          </a>
+        </li>
+      </ul>
+    </div>
   </div>
 </template>
 
@@ -163,8 +179,8 @@ import {
   showToast,
   getTrustLevelClass
 } from '@/utils/helpers';
-import { fragmentsClient } from '@/utils/apiClients';
-import type { FragmentDto, ConfidenceLevel, UpdateFragmentConfidenceRequest } from '@/types/api-client';
+import { fragmentsClient, knowledgeUnitsClient } from '@/utils/apiClients';
+import type { FragmentDto, ConfidenceLevel, UpdateFragmentConfidenceRequest, KnowledgeUnitDto } from '@/types/api-client';
 
 // Declare bootbox as global
 declare const bootbox: {
@@ -227,6 +243,8 @@ const editedComment = ref<string>('');
 const isSaving = ref<boolean>(false);
 const hasUnsavedChanges = ref<boolean>(false);
 const isDeleting = ref<boolean>(false);
+const knowledgeUnits = ref<KnowledgeUnitDto[]>([]);
+const isLoadingKnowledgeUnits = ref<boolean>(false);
 
 // Computed
 const renderedMarkdown = computed<string>(() => {
@@ -246,7 +264,27 @@ watch([editedConfidence, editedComment], () => {
   }
 });
 
+// Watch for fragment changes and load knowledge units
+watch(() => props.fragment, async (newFragment) => {
+  if (newFragment?.id) {
+    await loadKnowledgeUnits(newFragment.id);
+  } else {
+    knowledgeUnits.value = [];
+  }
+}, { immediate: true });
+
 // Methods
+async function loadKnowledgeUnits(fragmentId: string): Promise<void> {
+  isLoadingKnowledgeUnits.value = true;
+  try {
+    knowledgeUnits.value = await knowledgeUnitsClient.getByFragmentId(fragmentId);
+  } catch (error: any) {
+    console.error('Error loading knowledge units:', error);
+    knowledgeUnits.value = [];
+  } finally {
+    isLoadingKnowledgeUnits.value = false;
+  }
+}
 function toggleConfidenceComment(): void {
   showConfidenceComment.value = !showConfidenceComment.value;
 }

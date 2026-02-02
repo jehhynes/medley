@@ -142,6 +142,28 @@ public class KnowledgeUnitsApiController : ControllerBase
     }
 
     /// <summary>
+    /// Get all knowledge units for a specific fragment
+    /// </summary>
+    /// <param name="fragmentId">Fragment ID</param>
+    /// <returns>List of knowledge units linked to the fragment</returns>
+    [HttpGet("by-fragment/{fragmentId}")]
+    [ProducesResponseType(typeof(List<KnowledgeUnitDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<List<KnowledgeUnitDto>>> GetByFragmentId(Guid fragmentId)
+    {
+        var knowledgeUnits = await _knowledgeUnitRepository.Query()
+            .Include(ku => ku.Category)
+            .Include(ku => ku.FragmentKnowledgeUnits)
+                .ThenInclude(fku => fku.Fragment)
+            .Where(ku => ku.FragmentKnowledgeUnits.Any(fku => fku.FragmentId == fragmentId))
+            .OrderBy(ku => ku.Title)
+            .ThenBy(ku => ku.Id) // Deterministic tiebreaker
+            .Select(ku => MapToKnowledgeUnitDto(ku))
+            .ToListAsync();
+
+        return Ok(knowledgeUnits);
+    }
+
+    /// <summary>
     /// Search knowledge units using semantic similarity (vector search)
     /// </summary>
     /// <param name="query">Search query text</param>

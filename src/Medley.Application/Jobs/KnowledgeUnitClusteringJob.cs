@@ -88,7 +88,7 @@ public class KnowledgeUnitClusteringJob : BaseHangfireJob<KnowledgeUnitClusterin
 
                 var similarResults = await _fragmentRepository.FindSimilarAsync(
                     candidate.Embedding!.ToArray(),
-                    limit: 100,
+                    limit: 200,
                     minSimilarity: minSimilarity,
                     excludeClustered: true,
                     cancellationToken: cancellationToken,
@@ -225,24 +225,15 @@ public class KnowledgeUnitClusteringJob : BaseHangfireJob<KnowledgeUnitClusterin
                 return true;
             });
 
-            // Trigger embedding generation for the newly created KnowledgeUnits (outside transaction)
-            if (createdKnowledgeUnitIds.Any())
-            {
-                var currentJobId = context.BackgroundJob.Id;
-                foreach (var knowledgeUnitId in createdKnowledgeUnitIds)
-                {
-                    _backgroundJobClient.ContinueJobWith<EmbeddingGenerationJob>(
-                        currentJobId,
-                        j => j.GenerateKnowledgeUnitEmbeddings(default!, default, knowledgeUnitId));
-                }
-                LogInfo(context, $"Enqueued embedding generation jobs for {createdKnowledgeUnitIds.Count} knowledge units");
-            }
-
             if (!shouldContinue)
             {
                 break;
             }
         }
+
+        _backgroundJobClient.ContinueJobWith<EmbeddingGenerationJob>(
+            context.BackgroundJob.Id,
+            j => j.GenerateKnowledgeUnitEmbeddings(default!, default));
 
         LogInfo(context, $"Knowledge Unit Clustering Job completed. Processed {processedCount} fragments in {(DateTimeOffset.UtcNow - startTime).TotalMinutes:F2} minutes.");
     }
@@ -253,11 +244,11 @@ public class KnowledgeUnitClusteringJob : BaseHangfireJob<KnowledgeUnitClusterin
         {
             // Retrieve the fragment clustering prompt template
             var clusteringPrompt = await _promptRepository.Query()
-                .FirstOrDefaultAsync(t => t.Type == PromptType.FragmentClustering, cancellationToken);
+                .FirstOrDefaultAsync(t => t.Type == PromptType.KnowledgeUnitClustering, cancellationToken);
 
             if (clusteringPrompt == null)
             {
-                throw new InvalidOperationException($"Fragment clustering prompt (PromptType.{nameof(PromptType.FragmentClustering)}) is not configured in the database.");
+                throw new InvalidOperationException($"Fragment clustering prompt (PromptType.{nameof(PromptType.KnowledgeUnitClustering)}) is not configured in the database.");
             }
 
             // Retrieve the fragment weighting prompt template
@@ -293,16 +284,24 @@ public class KnowledgeUnitClusteringJob : BaseHangfireJob<KnowledgeUnitClusterin
                 })
                 .ToList();
 
-            var request = new FragmentClusteringRequest
+            // Build system prompt with all guidance
+            var guidanceRequest = new FragmentClusteringGuidance
             {
                 PrimaryGuidance = clusteringPrompt.Content,
                 FragmentWeighting = weightingPrompt.Content,
-                CategoryDefinitions = categoryDefinitions,
+                CategoryDefinitions = categoryDefinitions
+            };
+
+            var systemPrompt = JsonSerializer.Serialize(guidanceRequest);
+
+            // Build user prompt with fragments
+            var userRequest = new FragmentClusteringRequest
+            {
                 Fragments = fragments.Select(f => new FragmentWithContentData
                 {
                     Id = f.Id,
                     Title = f.Title,
-                    Summary = f.Summary,
+                    //Summary = f.Summary,
                     Category = f.KnowledgeCategory.Name,
                     Content = f.Content,
                     Confidence = f.Confidence,
@@ -323,8 +322,7 @@ public class KnowledgeUnitClusteringJob : BaseHangfireJob<KnowledgeUnitClusterin
                 }).ToList()
             };
 
-            var userPrompt = JsonSerializer.Serialize(request);
-            var systemPrompt = "You are a knowledge clustering assistant. Process the provided JSON request containing instructions and fragments. Create multiple knowledge units when appropriate to maintain focused, granular clusters.";
+            var userPrompt = JsonSerializer.Serialize(userRequest);
 
             return await _aiProcessingService.ProcessStructuredPromptAsync<FragmentClusteringResponse>(
                 userPrompt: userPrompt,

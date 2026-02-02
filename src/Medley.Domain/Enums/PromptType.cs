@@ -82,7 +82,7 @@ public enum PromptType
     /// <summary>
     /// Template for clustering similar fragments together
     /// </summary>
-    [PromptTypeMetadata("Fragment Clustering", "Instructions for combining similar fragments into clusters")]
-    FragmentClustering = 13
+    [PromptTypeMetadata("Knowledge Unit Clustering", "Instructions for combining similar fragments into knowledge units")]
+    KnowledgeUnitClustering = 13
 }
 
