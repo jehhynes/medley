@@ -86,4 +86,9 @@ public class Fragment : BusinessEntity
     /// Indicates if this fragment has been deleted (soft delete)
     /// </summary>
     public bool IsDeleted { get; set; } = false;
+
+    /// <summary>
+    /// Clusters this fragment belongs to (many-to-many)
+    /// </summary>
+    public virtual ICollection<Cluster> Clusters { get; set; } = new List<Cluster>();
 }

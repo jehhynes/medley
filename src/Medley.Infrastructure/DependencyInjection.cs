@@ -74,6 +74,7 @@ public static class DependencyInjection
         services.AddScoped<IObservationRepository, ObservationRepository>();
         services.AddScoped<IFindingRepository, FindingRepository>();
         services.AddScoped<IInsightRepository, InsightRepository>();
+        services.AddScoped<IClusterRepository, ClusterRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         // Register application services
@@ -89,13 +90,17 @@ public static class DependencyInjection
         services.AddScoped<IEmbeddingHelper, EmbeddingHelper>();
         services.AddScoped<IArticleVersionService, ArticleVersionService>();
         services.AddScoped<FragmentExtractionService>();
+        services.AddScoped<KMeansBucketingService>();
+        services.AddScoped<HierarchicalClusteringService>();
+        services.AddScoped<IFragmentClusteringService, FragmentClusteringService>();
         
         // Register AI call context for token usage tracking
         services.AddScoped<AiCallContext>();
         
         //services.AddScoped<IntegrationHealthCheckJob>();
-        services.AddTransient<KnowledgeUnitClusteringJob>();
+        services.AddTransient<KnowledgeUnitGeneratorJob>();
         services.AddTransient<ArticleChatJob>();
+        services.AddTransient<FragmentClusteringJob>();
         services.AddSingleton<RecurringJobCleanUpManager>();
         services.AddSingleton<IJobRegistry, JobRegistry>();
 

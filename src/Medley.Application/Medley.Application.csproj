@@ -13,6 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Aglomera" Version="1.1.1" />
     <PackageReference Include="Cronos" Version="0.11.1" />
     <PackageReference Include="DiffMatchPatch" Version="5.0.0" />
     <PackageReference Include="Hangfire.Console" Version="1.4.3" />
@@ -27,6 +28,7 @@
     <PackageReference Include="AWSSDK.Extensions.Bedrock.MEAI" Version="4.0.5.1" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.0" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.1" />
+    <PackageReference Include="Microsoft.ML" Version="4.0.2" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="SSH.NET" Version="2025.1.0" />
   </ItemGroup>

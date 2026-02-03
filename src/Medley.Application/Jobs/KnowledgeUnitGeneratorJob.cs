@@ -15,7 +15,7 @@ using System.Text.Json;
 namespace Medley.Application.Jobs;
 
 [MissionLauncher]
-public class KnowledgeUnitClusteringJob : BaseHangfireJob<KnowledgeUnitClusteringJob>
+public class KnowledgeUnitGeneratorJob : BaseHangfireJob<KnowledgeUnitGeneratorJob>
 {
     private readonly IFragmentRepository _fragmentRepository;
     private readonly IKnowledgeUnitRepository _knowledgeUnitRepository;
@@ -26,7 +26,7 @@ public class KnowledgeUnitClusteringJob : BaseHangfireJob<KnowledgeUnitClusterin
     private readonly IBackgroundJobClient _backgroundJobClient;
     private readonly AiCallContext _aiCallContext;
 
-    public KnowledgeUnitClusteringJob(
+    public KnowledgeUnitGeneratorJob(
         IFragmentRepository fragmentRepository,
         IKnowledgeUnitRepository knowledgeUnitRepository,
         IRepository<KnowledgeCategory> knowledgeCategoryRepository,
@@ -35,7 +35,7 @@ public class KnowledgeUnitClusteringJob : BaseHangfireJob<KnowledgeUnitClusterin
         IAiProcessingService aiProcessingService,
         IBackgroundJobClient backgroundJobClient,
         IUnitOfWork unitOfWork,
-        ILogger<KnowledgeUnitClusteringJob> logger,
+        ILogger<KnowledgeUnitGeneratorJob> logger,
         AiCallContext aiCallContext) : base(unitOfWork, logger)
     {
         _fragmentRepository = fragmentRepository;
@@ -240,7 +240,7 @@ public class KnowledgeUnitClusteringJob : BaseHangfireJob<KnowledgeUnitClusterin
 
     private async Task<FragmentClusteringResponse> GenerateClusterAsync(List<Fragment> fragments, CancellationToken cancellationToken = default)
     {
-        using (_aiCallContext.SetContext(nameof(KnowledgeUnitClusteringJob), nameof(GenerateClusterAsync), nameof(Fragment), fragments.FirstOrDefault()?.Id ?? Guid.Empty))
+        using (_aiCallContext.SetContext(nameof(KnowledgeUnitGeneratorJob), nameof(GenerateClusterAsync), nameof(Fragment), fragments.FirstOrDefault()?.Id ?? Guid.Empty))
         {
             // Retrieve the fragment clustering prompt template
             var clusteringPrompt = await _promptRepository.Query()

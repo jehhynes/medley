@@ -44,6 +44,8 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     public DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
     public DbSet<Speaker> Speakers { get; set; }
     public DbSet<FragmentKnowledgeUnit> FragmentKnowledgeUnits { get; set; }
+    public DbSet<ClusteringSession> ClusteringSessions { get; set; }
+    public DbSet<Cluster> Clusters { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
