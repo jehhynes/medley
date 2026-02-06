@@ -3,6 +3,7 @@ using System;
 using Medley.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -12,9 +13,11 @@ using Pgvector;
 namespace Medley.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260206160831_RemoveDistanceMetric")]
+    partial class RemoveDistanceMetric
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -649,13 +652,29 @@ namespace Medley.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<double?>("DistanceThreshold")
+                        .HasColumnType("double precision")
+                        .HasColumnName("distance_threshold");
+
                     b.Property<int>("FragmentCount")
                         .HasColumnType("integer")
                         .HasColumnName("fragment_count");
 
+                    b.Property<int?>("Linkage")
+                        .HasColumnType("integer")
+                        .HasColumnName("linkage");
+
+                    b.Property<int?>("MaxClusterSize")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_cluster_size");
+
                     b.Property<int>("Method")
                         .HasColumnType("integer")
                         .HasColumnName("method");
+
+                    b.Property<int>("MinClusterSize")
+                        .HasColumnType("integer")
+                        .HasColumnName("min_cluster_size");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer")

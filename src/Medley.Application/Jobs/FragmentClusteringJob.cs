@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 namespace Medley.Application.Jobs;
 
 /// <summary>
-/// Background job for clustering fragments using Hierarchical Agglomerative Clustering
+/// Background job for clustering fragments using K-means clustering
 /// </summary>
 [MissionLauncher]
 public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
@@ -32,32 +32,17 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
     }
 
     /// <summary>
-    /// Executes fragment clustering with specified parameters
+    /// Executes fragment clustering using K-means
     /// </summary>
     /// <param name="context">Hangfire perform context</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <param name="distanceThreshold">Distance threshold for cutting dendrogram (optional, will auto-calculate if 0)</param>
-    /// <param name="minClusterSize">Minimum fragments per cluster (default: 2)</param>
-    /// <param name="maxClusterSize">Maximum fragments per cluster (optional)</param>
-    /// <param name="linkageType">Linkage type for HAC (default: Ward)</param>
-    /// <param name="distanceMetric">Distance metric (default: Cosine for embeddings, Euclidean for traditional Ward)</param>
     [Mission]
     [DisableConcurrentExecution(timeoutInSeconds: 10)]
     public async Task ExecuteAsync(
         PerformContext context,
-        CancellationToken cancellationToken,
-        double distanceThresholdOrZero = 0,
-        int minClusterSize = 2,
-        int maxClusterSize = 200,
-        LinkageType linkageType = LinkageType.Ward,
-        DistanceMetric distanceMetric = DistanceMetric.Cosine)
+        CancellationToken cancellationToken)
     {
-        var distanceThreshold = distanceThresholdOrZero > 0 ? distanceThresholdOrZero : (double?)null;
-
         LogInfo(context, "Starting Fragment Clustering Job");
-        LogInfo(context, $"Parameters: Threshold={distanceThreshold?.ToString() ?? "auto"}, " +
-                        $"MinSize={minClusterSize}, MaxSize={maxClusterSize}, " +
-                        $"Linkage={linkageType}, Distance={distanceMetric}");
 
         // Step 1: Create clustering session in a separate transaction
         var sessionId = await ExecuteWithTransactionAsync(async () =>
@@ -65,12 +50,7 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
             var session = new ClusteringSession
             {
                 Id = Guid.NewGuid(),
-                Method = ClusteringMethod.HierarchicalAgglomerative,
-                Linkage = linkageType,
-                DistanceMetric = distanceMetric,
-                DistanceThreshold = distanceThreshold,
-                MinClusterSize = minClusterSize,
-                MaxClusterSize = maxClusterSize,
+                Method = ClusteringMethod.KMeans,
                 Status = ClusteringStatus.Running,
                 CreatedAt = DateTimeOffset.UtcNow
             };
@@ -94,7 +74,7 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
                     throw new InvalidOperationException($"Clustering session {sessionId} not found");
                 }
 
-                // Perform HAC clustering
+                // Perform K-means clustering
                 var clusters = await _clusteringService.PerformClusteringAsync(session, cancellationToken);
                 var clusterList = clusters.ToList();
 

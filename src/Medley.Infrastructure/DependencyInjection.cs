@@ -91,7 +91,6 @@ public static class DependencyInjection
         services.AddScoped<IArticleVersionService, ArticleVersionService>();
         services.AddScoped<FragmentExtractionService>();
         services.AddScoped<KMeansBucketingService>();
-        services.AddScoped<HierarchicalClusteringService>();
         services.AddScoped<IFragmentClusteringService, FragmentClusteringService>();
         
         // Register AI call context for token usage tracking

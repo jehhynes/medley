@@ -15,31 +15,6 @@ public class ClusteringSession : BusinessEntity
     public ClusteringMethod Method { get; set; }
 
     /// <summary>
-    /// The linkage type for hierarchical clustering
-    /// </summary>
-    public LinkageType? Linkage { get; set; }
-
-    /// <summary>
-    /// The distance metric used for clustering
-    /// </summary>
-    public DistanceMetric DistanceMetric { get; set; } = DistanceMetric.Cosine;
-
-    /// <summary>
-    /// Distance threshold for cutting the dendrogram (lower = more similar required)
-    /// </summary>
-    public double? DistanceThreshold { get; set; }
-
-    /// <summary>
-    /// Minimum number of fragments required per cluster
-    /// </summary>
-    public int MinClusterSize { get; set; } = 2;
-
-    /// <summary>
-    /// Maximum number of fragments allowed per cluster (optional)
-    /// </summary>
-    public int? MaxClusterSize { get; set; }
-
-    /// <summary>
     /// Total number of fragments processed in this session
     /// </summary>
     public int FragmentCount { get; set; }

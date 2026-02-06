@@ -3,12 +3,12 @@ using Medley.Domain.Entities;
 namespace Medley.Application.Interfaces;
 
 /// <summary>
-/// Service for clustering fragments using various algorithms
+/// Service for clustering fragments using K-means clustering
 /// </summary>
 public interface IFragmentClusteringService
 {
     /// <summary>
-    /// Performs Hierarchical Agglomerative Clustering on fragments
+    /// Performs K-means clustering on fragments
     /// </summary>
     /// <param name="session">The clustering session configuration</param>
     /// <param name="cancellationToken">Cancellation token</param>
