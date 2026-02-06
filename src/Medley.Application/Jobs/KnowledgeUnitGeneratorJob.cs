@@ -22,6 +22,7 @@ public class KnowledgeUnitGeneratorJob : BaseHangfireJob<KnowledgeUnitGeneratorJ
     private readonly IRepository<KnowledgeCategory> _knowledgeCategoryRepository;
     private readonly IRepository<AiPrompt> _promptRepository;
     private readonly IRepository<FragmentKnowledgeUnit> _fragmentKnowledgeUnitRepository;
+    private readonly IClusterRepository _clusterRepository;
     private readonly IAiProcessingService _aiProcessingService;
     private readonly IBackgroundJobClient _backgroundJobClient;
     private readonly AiCallContext _aiCallContext;
@@ -32,6 +33,7 @@ public class KnowledgeUnitGeneratorJob : BaseHangfireJob<KnowledgeUnitGeneratorJ
         IRepository<KnowledgeCategory> knowledgeCategoryRepository,
         IRepository<AiPrompt> promptRepository,
         IRepository<FragmentKnowledgeUnit> fragmentKnowledgeUnitRepository,
+        IClusterRepository clusterRepository,
         IAiProcessingService aiProcessingService,
         IBackgroundJobClient backgroundJobClient,
         IUnitOfWork unitOfWork,
@@ -43,6 +45,7 @@ public class KnowledgeUnitGeneratorJob : BaseHangfireJob<KnowledgeUnitGeneratorJ
         _knowledgeCategoryRepository = knowledgeCategoryRepository;
         _promptRepository = promptRepository;
         _fragmentKnowledgeUnitRepository = fragmentKnowledgeUnitRepository;
+        _clusterRepository = clusterRepository;
         _aiProcessingService = aiProcessingService;
         _backgroundJobClient = backgroundJobClient;
         _aiCallContext = aiCallContext;
@@ -50,63 +53,45 @@ public class KnowledgeUnitGeneratorJob : BaseHangfireJob<KnowledgeUnitGeneratorJ
 
     [Mission]
     [DisableConcurrentExecution(timeoutInSeconds: 1)]
-    public async Task ExecuteAsync(PerformContext context, CancellationToken cancellationToken)
+    public async Task ExecuteAsync(Guid clusteringSessionId, PerformContext context, CancellationToken cancellationToken)
     {
-        LogInfo(context, "Starting Knowledge Unit Clustering Job");
+        LogInfo(context, $"Starting Knowledge Unit Generation Job for clustering session {clusteringSessionId}");
 
         var maxDuration = TimeSpan.FromMinutes(10);
         var startTime = DateTimeOffset.UtcNow;
-        var processedCount = 0;
+        var processedClusterCount = 0;
 
         while (DateTimeOffset.UtcNow - startTime < maxDuration)
         {
             if (cancellationToken.IsCancellationRequested)
             {
-                LogInfo(context, $"Cancellation requested after processing {processedCount} fragments. Exiting job loop.");
+                LogInfo(context, $"Cancellation requested after processing {processedClusterCount} clusters. Exiting job loop.");
                 break;
             }
 
             var createdKnowledgeUnitIds = new List<Guid>();
             var shouldContinue = await ExecuteWithTransactionAsync(async () =>
             {
-                // 1) Grab the first unprocessed fragment
-                var candidate = await _fragmentRepository.Query()
-                    .Where(f => !f.ClusteringProcessed.HasValue && f.Embedding != null)
-                    .OrderByDescending(f => f.CreatedAt) 
-                    .FirstOrDefaultAsync();
+                // 1) Find all clusters within the clustering session that have unprocessed fragments
+                // Server-side filtering: only get clusters where at least one fragment is unprocessed
+                var largestCluster = await _clusterRepository.Query()
+                    .Where(c => c.ClusteringSessionId == clusteringSessionId)
+                    .Where(c => c.Fragments.Any(f => f.ClusteringProcessed == null))
+                    .OrderByDescending(c => c.FragmentCount)
+                    .FirstOrDefaultAsync(cancellationToken);
 
-                if (candidate == null)
+                if (largestCluster == null)
                 {
-                    LogInfo(context, "No more unprocessed fragments found. Job finished.");
+                    LogInfo(context, "No more clusters with unprocessed fragments found. Job finished.");
                     return false;
                 }
 
-                LogInfo(context, $"Processing fragment {candidate.Id}");
+                LogInfo(context, $"Processing cluster {largestCluster.ClusterNumber} (total fragments: {largestCluster.FragmentCount})");
 
-                // 2) Query for similar fragments
-                var minSimilarity = 0.85; // 0 to 1 where 1 is identical
-
-                var similarResults = await _fragmentRepository.FindSimilarAsync(
-                    candidate.Embedding!.ToArray(),
-                    limit: 200,
-                    minSimilarity: minSimilarity,
-                    excludeClustered: true,
-                    cancellationToken: cancellationToken,
-                    filter: q => q.Where(f => f.Id != candidate.Id && !f.ClusteringProcessed.HasValue)
-                );
-
-
-                if (!similarResults.Any())
-                {
-                    LogInfo(context, $"No similar fragments found for {candidate.Id}. Marking as processed.");
-                    candidate.ClusteringProcessed = DateTimeOffset.UtcNow;
-                    return true;
-                }
-
-                // Reload fragments with navigation properties for clustering
-                var fragmentIds = similarResults.Select(f => f.Fragment.Id).Append(candidate.Id).ToList();
+                // 3) Reload fragments with full navigation properties for clustering
                 var clusterParticipants = await _fragmentRepository.Query()
-                    .Where(f => fragmentIds.Contains(f.Id))
+                    .Where(f => f.Clusters.Any(c => c.Id == largestCluster.Id))
+                    .Where(f => !f.ClusteringProcessed.HasValue)
                     .Include(f => f.KnowledgeCategory)
                     .Include(f => f.Source)
                         .ThenInclude(s => s!.PrimarySpeaker)
@@ -118,9 +103,9 @@ public class KnowledgeUnitGeneratorJob : BaseHangfireJob<KnowledgeUnitGeneratorJ
                             .ThenInclude(t => t.TagOption)
                     .ToListAsync(cancellationToken);
 
-                LogInfo(context, $"Found {fragmentIds.Count} similar fragments to cluster.");
+                LogInfo(context, $"Loaded {clusterParticipants.Count} fragments from cluster {largestCluster.ClusterNumber}");
 
-                // 3) Pass contents to LLM
+                // 4) Pass contents to LLM
                 var clusterResponse = await GenerateClusterAsync(clusterParticipants, cancellationToken);
                 
                 // Check if LLM created any knowledge units
@@ -134,10 +119,10 @@ public class KnowledgeUnitGeneratorJob : BaseHangfireJob<KnowledgeUnitGeneratorJ
                     return true;
                 }
 
-                // Track which fragments were included in any cluster
+                // Track which fragments were included in any knowledge unit
                 var allIncludedFragmentIds = new HashSet<Guid>();
 
-                // 4) Create each knowledge unit
+                // 5) Create each knowledge unit
                 foreach (var kuCluster in clusterResponse.KnowledgeUnits)
                 {
                     // Validate minimum fragments
@@ -147,7 +132,7 @@ public class KnowledgeUnitGeneratorJob : BaseHangfireJob<KnowledgeUnitGeneratorJ
                         continue;
                     }
 
-                    // Get fragments for this cluster
+                    // Get fragments for this knowledge unit
                     var clusterFragments = clusterParticipants
                         .Where(f => kuCluster.FragmentIds.Contains(f.Id))
                         .ToList();
@@ -207,7 +192,7 @@ public class KnowledgeUnitGeneratorJob : BaseHangfireJob<KnowledgeUnitGeneratorJ
                     LogSuccess(context, $"Created KnowledgeUnit '{knowledgeUnit.Title}' ({knowledgeUnit.Id}) with {clusterFragments.Count} fragments");
                 }
 
-                // 5) Mark ALL processed fragments as ClusteringProcessed
+                // 6) Mark ALL processed fragments as ClusteringProcessed
                 foreach (var fragment in clusterParticipants)
                 {
                     fragment.ClusteringProcessed = DateTimeOffset.UtcNow;
@@ -221,7 +206,7 @@ public class KnowledgeUnitGeneratorJob : BaseHangfireJob<KnowledgeUnitGeneratorJ
                     LogDebug($"LLM clustering message: {clusterResponse.Message}");
                 }
 
-                processedCount++;
+                processedClusterCount++;
                 return true;
             });
 
@@ -235,7 +220,7 @@ public class KnowledgeUnitGeneratorJob : BaseHangfireJob<KnowledgeUnitGeneratorJ
             context.BackgroundJob.Id,
             j => j.GenerateKnowledgeUnitEmbeddings(default!, default));
 
-        LogInfo(context, $"Knowledge Unit Clustering Job completed. Processed {processedCount} fragments in {(DateTimeOffset.UtcNow - startTime).TotalMinutes:F2} minutes.");
+        LogInfo(context, $"Knowledge Unit Generation Job completed. Processed {processedClusterCount} clusters in {(DateTimeOffset.UtcNow - startTime).TotalMinutes:F2} minutes.");
     }
 
     private async Task<FragmentClusteringResponse> GenerateClusterAsync(List<Fragment> fragments, CancellationToken cancellationToken = default)

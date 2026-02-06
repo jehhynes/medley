@@ -46,6 +46,12 @@ public class Fragment : BusinessEntity
     public Vector? Embedding { get; set; }
 
     /// <summary>
+    /// Vector embedding specifically for clustering operations
+    /// </summary>
+    [Column(TypeName = "vector(2000)")]
+    public Vector? ClusteringEmbedding { get; set; }
+
+    /// <summary>
     /// The ID of the originating source
     /// </summary>
     public Guid? SourceId { get; set; }

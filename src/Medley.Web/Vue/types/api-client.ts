@@ -3086,6 +3086,7 @@ export enum PromptType {
     CursorQuestion = "CursorQuestion",
     FragmentWeighting = "FragmentWeighting",
     KnowledgeUnitClustering = "KnowledgeUnitClustering",
+    FragmentEmbeddingInstructions = "FragmentEmbeddingInstructions",
 }
 
 export interface AiPromptDto {

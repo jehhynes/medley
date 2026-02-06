@@ -7,6 +7,7 @@ using Medley.Application.Configuration;
 using Medley.Application.Interfaces;
 using Medley.Application.Services;
 using Medley.Domain.Entities;
+using Medley.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
@@ -29,6 +30,7 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
     private readonly IEmbeddingHelper _embeddingHelper;
     private readonly EmbeddingSettings _embeddingSettings;
     private readonly AiCallContext _aiCallContext;
+    private readonly IRepository<AiPrompt> _promptRepository;
 
     private const int BatchSize = 100; // Process up to 100 fragments per run
 
@@ -41,7 +43,8 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
         IOptions<EmbeddingSettings> embeddingSettings,
         IUnitOfWork unitOfWork,
         ILogger<EmbeddingGenerationJob> logger,
-        AiCallContext aiCallContext) : base(unitOfWork, logger)
+        AiCallContext aiCallContext,
+        IRepository<AiPrompt> promptRepository) : base(unitOfWork, logger)
     {
         _fragmentRepository = fragmentRepository;
         _knowledgeUnitRepository = knowledgeUnitRepository;
@@ -50,6 +53,7 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
         _embeddingHelper = embeddingHelper;
         _embeddingSettings = embeddingSettings.Value;
         _aiCallContext = aiCallContext;
+        _promptRepository = promptRepository;
     }
 
     [Mission]
@@ -331,5 +335,155 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
         }
 
         return string.Join("\n\n", parts);
+    }
+
+    [Mission]
+    public async Task GenerateFragmentClusteringEmbeddings(PerformContext context, CancellationToken cancellationToken)
+    {
+        await GenerateFragmentClusteringEmbeddings(context, cancellationToken, null, null);
+    }
+
+    /// <summary>
+    /// Processes fragments that don't have clustering embeddings and generates embeddings for them
+    /// Uses qwen3-embedding model with instructions from FragmentEmbeddingInstructions prompt
+    /// </summary>
+    /// <param name="sourceId">Optional source ID to filter fragments by specific source</param>
+    /// <param name="fragmentId">Optional fragment ID to process a specific fragment</param>
+    public async Task GenerateFragmentClusteringEmbeddings(PerformContext context, CancellationToken cancellationToken, Guid? sourceId = null, Guid? fragmentId = null)
+    {
+        // Validate that we're using qwen3-embedding model
+        if (!(_embeddingSettings.Provider.Equals("Ollama", StringComparison.OrdinalIgnoreCase) &&
+              _embeddingSettings.Ollama.Model.Contains("qwen3-embedding", StringComparison.OrdinalIgnoreCase)))
+        {
+            var errorMessage = $"Fragment clustering embeddings require qwen3-embedding model. Current configuration: Provider={_embeddingSettings.Provider}, Model={_embeddingSettings.Ollama.Model}";
+            LogError(context, new InvalidOperationException(errorMessage), errorMessage);
+            throw new InvalidOperationException(errorMessage);
+        }
+
+        bool shouldRequeue = false;
+
+        await ExecuteWithTransactionAsync(async () =>
+        {
+            var logMessage = fragmentId.HasValue
+                ? $"Starting clustering embedding generation job for fragment {fragmentId.Value}"
+                : sourceId.HasValue
+                    ? $"Starting clustering embedding generation job for source {sourceId.Value}"
+                    : "Starting clustering embedding generation job for fragments without clustering embeddings";
+            LogInfo(context, logMessage);
+
+            // Load the embedding instructions prompt
+            var embeddingPrompt = await _promptRepository.Query()
+                .FirstOrDefaultAsync(p => p.Type == PromptType.FragmentEmbeddingInstructions, cancellationToken);
+
+            if (embeddingPrompt == null)
+            {
+                var errorMessage = "FragmentEmbeddingInstructions prompt not found in database";
+                LogError(context, new InvalidOperationException(errorMessage), errorMessage);
+                throw new InvalidOperationException(errorMessage);
+            }
+
+            LogInfo(context, "Loaded FragmentEmbeddingInstructions prompt");
+
+            // Query fragments that don't have clustering embeddings
+            var query = _fragmentRepository.Query()
+                .Where(f => f.ClusteringEmbedding == null);
+
+            // Filter by fragment ID if specified (highest priority)
+            if (fragmentId.HasValue)
+            {
+                query = query.Where(f => f.Id == fragmentId.Value);
+            }
+            // Filter by source if specified
+            else if (sourceId.HasValue)
+            {
+                query = query.Where(f => f.SourceId == sourceId.Value);
+            }
+
+            var fragmentsWithoutEmbeddings = await query
+                .OrderBy(f => f.CreatedAt) // Process oldest first
+                .Take(BatchSize) // Limit to BatchSize fragments per run to avoid long-running jobs
+                .ToListAsync(cancellationToken);
+
+            shouldRequeue = fragmentsWithoutEmbeddings.Count == BatchSize;
+
+            if (fragmentsWithoutEmbeddings.Count == 0)
+            {
+                LogInfo(context, "No fragments found without clustering embeddings");
+                return;
+            }
+
+            LogInfo(context, $"Found {fragmentsWithoutEmbeddings.Count} fragments without clustering embeddings. Processing all in a single batch");
+
+            int processedCount = 0;
+            int errorCount = 0;
+
+            try
+            {
+                // Generate embeddings for all fragments at once
+                // Prepend the instructions to each fragment's text
+                var textsToEmbed = fragmentsWithoutEmbeddings
+                    .Select(f => @$"{embeddingPrompt.Content}
+_________________________
+Fragment Content:
+
+{BuildTextForEmbedding(f)}")
+                    .ToList();
+                
+                var options = new EmbeddingGenerationOptions
+                {
+                    Dimensions = _embeddingSettings.Dimensions
+                };
+
+                // Set AI call context for token tracking - use first fragment as representative
+                using (_aiCallContext.SetContext(nameof(EmbeddingGenerationJob), nameof(GenerateFragmentClusteringEmbeddings), nameof(Fragment), fragmentsWithoutEmbeddings.First().Id))
+                {
+                    var embeddings = await _embeddingGenerator.GenerateAsync(textsToEmbed, options, cancellationToken: cancellationToken);
+
+                    // Update fragments with their clustering embeddings (normalized for cosine similarity)
+                    var embeddingList = embeddings.ToList();
+                    for (int j = 0; j < fragmentsWithoutEmbeddings.Count && j < embeddingList.Count; j++)
+                    {
+                        if (cancellationToken.IsCancellationRequested)
+                            break;
+
+                        var fragment = fragmentsWithoutEmbeddings[j];
+                        var embedding = embeddingList[j];
+
+                        // Process embedding (conditionally normalize based on model)
+                        var processedVector = _embeddingHelper.ProcessEmbedding(embedding.Vector.ToArray());
+
+                        fragment.ClusteringEmbedding = new Vector(processedVector);
+
+                        processedCount++;
+
+                        LogDebug($"Generated clustering embedding for fragment {fragment.Id} (Title: {fragment.Title ?? "Untitled"}) with {embedding.Vector.Length} dimensions");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                errorCount = fragmentsWithoutEmbeddings.Count;
+                LogError(context, ex, "Failed to generate clustering embeddings for fragments");
+                throw;
+            }
+
+            LogInfo(context, $"Clustering embedding generation job completed. Processed: {processedCount}, Errors: {errorCount}");
+        });
+
+        // If we processed exactly BatchSize fragments, there might be more - requeue the job
+        // This happens outside the transaction to ensure it only runs after successful commit
+        // Don't requeue if processing a specific fragment
+        if (shouldRequeue && !fragmentId.HasValue)
+        {
+            var requeueMessage = sourceId.HasValue
+                ? $"Processed exactly {BatchSize} fragments for source {sourceId.Value}. Continuing with next batch"
+                : $"Processed exactly {BatchSize} fragments. Continuing with next batch";
+            LogInfo(context, requeueMessage);
+
+            var currentJobId = context.BackgroundJob.Id;
+            _backgroundJobClient.ContinueJobWith<EmbeddingGenerationJob>(
+                currentJobId,
+                j => j.GenerateFragmentClusteringEmbeddings(default!, default, sourceId, null));
+        }
     }
 }

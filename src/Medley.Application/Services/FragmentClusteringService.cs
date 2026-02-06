@@ -33,15 +33,15 @@ public class FragmentClusteringService(
 
         try
         {
-            // Load fragments with embeddings
+            // Load fragments with clustering embeddings
             var fragments = await _fragmentRepository.Query()
-                .Where(f => !f.IsDeleted && f.Embedding != null)
-                .Select(f => new { f.Id, f.Embedding })
+                .Where(f => !f.IsDeleted && f.ClusteringEmbedding != null)
+                .Select(f => new { f.Id, Embedding = f.ClusteringEmbedding })
                 .ToListAsync(cancellationToken);
 
             if (fragments.Count == 0)
             {
-                _logger.LogWarning("No fragments with embeddings found for clustering");
+                _logger.LogWarning("No fragments with clustering embeddings found for clustering");
                 return [];
             }
 
@@ -123,22 +123,22 @@ public class FragmentClusteringService(
         }
 
         var fragments = clusterWithFragments.Fragments
-            .Where(f => f.Embedding != null)
+            .Where(f => f.ClusteringEmbedding != null)
             .ToList();
 
         if (fragments.Count == 0)
         {
-            _logger.LogWarning("Cluster {ClusterId} has no fragments with embeddings", cluster.Id);
+            _logger.LogWarning("Cluster {ClusterId} has no fragments with clustering embeddings", cluster.Id);
             return;
         }
 
         // Calculate centroid
-        var centroid = CalculateCentroid(fragments.Select(f => f.Embedding!.ToArray()).ToList());
+        var centroid = CalculateCentroid(fragments.Select(f => f.ClusteringEmbedding!.ToArray()).ToList());
         cluster.Centroid = new Vector(centroid);
 
         // Calculate intra-cluster distance (average distance to centroid)
         var distances = fragments
-            .Select(f => CalculateCosineDistance(f.Embedding!.ToArray(), centroid))
+            .Select(f => CalculateCosineDistance(f.ClusteringEmbedding!.ToArray(), centroid))
             .ToList();
 
         cluster.IntraClusterDistance = distances.Average();

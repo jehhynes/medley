@@ -3318,7 +3318,8 @@
           "CursorReview",
           "CursorQuestion",
           "FragmentWeighting",
-          "KnowledgeUnitClustering"
+          "KnowledgeUnitClustering",
+          "FragmentEmbeddingInstructions"
         ],
         "enum": [
           "FragmentExtraction",
@@ -3333,7 +3334,8 @@
           "CursorReview",
           "CursorQuestion",
           "FragmentWeighting",
-          "KnowledgeUnitClustering"
+          "KnowledgeUnitClustering",
+          "FragmentEmbeddingInstructions"
         ]
       },
       "AiPromptDto": {

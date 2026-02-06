@@ -14,7 +14,7 @@ public class KMeansBucketingService
     private readonly ILogger<KMeansBucketingService> _logger;
     
     private const int TARGET_BUCKET_SIZE = 50;
-    private const int MAX_BUCKET_SIZE = 120;
+    private const int MAX_BUCKET_SIZE = 100;
     private const int MAX_ITERATIONS = 1000;
 
     public KMeansBucketingService(ILogger<KMeansBucketingService> logger)
