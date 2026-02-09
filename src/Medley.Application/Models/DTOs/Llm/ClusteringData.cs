@@ -53,9 +53,27 @@ public class FragmentClusteringResponse
     [Description("List of knowledge units created from the provided fragments. Can be empty if no valid clusters found.")]
     public required List<KnowledgeUnitCluster> KnowledgeUnits { get; set; }
 
+    [Description("List of fragment IDs that were excluded from clustering with explanations")]
+    public List<ExcludedFragment>? ExcludedFragments { get; set; }
+
     [MaxLength(200)]
-    [Description("Overall reasoning about the clustering decisions, including any fragments that were excluded")]
+    [Description("Overall reasoning about the clustering decisions")]
     public string? Message { get; set; }
+}
+
+/// <summary>
+/// Represents a fragment that was excluded from clustering
+/// </summary>
+public class ExcludedFragment
+{
+    [Required]
+    [Description("The fragment ID (integer from the provided fragments) that was excluded")]
+    public required int FragmentId { get; set; }
+
+    [Required]
+    [MaxLength(500)]
+    [Description("Clear explanation of why this fragment was excluded from clustering")]
+    public required string Reason { get; set; }
 }
 
 /// <summary>

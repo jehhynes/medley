@@ -75,23 +75,23 @@ public class KnowledgeUnitGeneratorJob : BaseHangfireJob<KnowledgeUnitGeneratorJ
             {
                 // 1) Find all clusters within the clustering session that have unprocessed fragments
                 // Server-side filtering: only get clusters where at least one fragment is unprocessed
-                var largestCluster = await _clusterRepository.Query()
+                var clusterToProcess = await _clusterRepository.Query()
                     .Where(c => c.ClusteringSessionId == clusteringSessionId)
                     .Where(c => c.Fragments.Any(f => f.ClusteringProcessed == null))
                     .OrderByDescending(c => c.FragmentCount)
                     .FirstOrDefaultAsync(cancellationToken);
 
-                if (largestCluster == null)
+                if (clusterToProcess == null)
                 {
                     LogInfo(context, "No more clusters with unprocessed fragments found. Job finished.");
                     return false;
                 }
 
-                LogInfo(context, $"Processing cluster {largestCluster.ClusterNumber} (total fragments: {largestCluster.FragmentCount})");
+                LogInfo(context, $"Processing cluster {clusterToProcess.ClusterNumber} (total fragments: {clusterToProcess.FragmentCount})");
 
                 // 3) Reload fragments with full navigation properties for clustering
                 var clusterParticipants = await _fragmentRepository.Query()
-                    .Where(f => f.Clusters.Any(c => c.Id == largestCluster.Id))
+                    .Where(f => f.Clusters.Any(c => c.Id == clusterToProcess.Id))
                     .Where(f => !f.ClusteringProcessed.HasValue)
                     .Include(f => f.KnowledgeCategory)
                     .Include(f => f.Source)
@@ -104,7 +104,7 @@ public class KnowledgeUnitGeneratorJob : BaseHangfireJob<KnowledgeUnitGeneratorJ
                             .ThenInclude(t => t.TagOption)
                     .ToListAsync(cancellationToken);
 
-                LogInfo(context, $"Loaded {clusterParticipants.Count} fragments from cluster {largestCluster.ClusterNumber}");
+                LogInfo(context, $"Loaded {clusterParticipants.Count} fragments from cluster {clusterToProcess.ClusterNumber}");
 
                 // 4) Pass contents to LLM with integer IDs
                 var clusterResponse = await GenerateClusterAsync(clusterParticipants, cancellationToken);
@@ -194,7 +194,28 @@ public class KnowledgeUnitGeneratorJob : BaseHangfireJob<KnowledgeUnitGeneratorJ
                     LogSuccess(context, $"Created KnowledgeUnit '{knowledgeUnit.Title}' ({knowledgeUnit.Id}) with {clusterFragments.Count} fragments");
                 }
 
-                // 6) Mark ALL processed fragments as ClusteringProcessed
+                // 6) Process excluded fragments and add clustering comments
+                if (clusterResponse.ExcludedFragments != null && clusterResponse.ExcludedFragments.Any())
+                {
+                    foreach (var excluded in clusterResponse.ExcludedFragments)
+                    {
+                        if (excluded.FragmentId >= 0 && excluded.FragmentId < clusterParticipants.Count)
+                        {
+                            var fragment = clusterParticipants[excluded.FragmentId];
+                            fragment.ClusteringComment = excluded.Reason.Trim().Substring(0, Math.Min(2000, excluded.Reason.Trim().Length));
+                            LogInfo(context, $"Fragment {excluded.FragmentId} excluded: {excluded.Reason}");
+                        }
+                    }
+                }
+
+                // 7) Store the overall clustering message on the cluster
+                if (!string.IsNullOrWhiteSpace(clusterResponse.Message))
+                {
+                    clusterToProcess.ClusteringComment = clusterResponse.Message.Trim().Substring(0, Math.Min(2000, clusterResponse.Message.Trim().Length));
+                    LogDebug($"LLM clustering message: {clusterResponse.Message}");
+                }
+
+                // 8) Mark ALL processed fragments as ClusteringProcessed
                 foreach (var fragment in clusterParticipants)
                 {
                     fragment.ClusteringProcessed = DateTimeOffset.UtcNow;
@@ -202,11 +223,6 @@ public class KnowledgeUnitGeneratorJob : BaseHangfireJob<KnowledgeUnitGeneratorJ
 
                 var excludedCount = clusterParticipants.Count - allIncludedFragmentIds.Count;
                 LogInfo(context, $"Created {createdKnowledgeUnitIds.Count} knowledge units. Included {allIncludedFragmentIds.Count} fragments, excluded {excludedCount}");
-                
-                if (!string.IsNullOrWhiteSpace(clusterResponse.Message))
-                {
-                    LogDebug($"LLM clustering message: {clusterResponse.Message}");
-                }
 
                 processedClusterCount++;
                 return true;

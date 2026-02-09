@@ -41,6 +41,12 @@ public class Cluster : BusinessEntity
     public double? IntraClusterDistance { get; set; }
 
     /// <summary>
+    /// Overall reasoning from the LLM about the clustering decisions for this cluster
+    /// </summary>
+    [System.ComponentModel.DataAnnotations.MaxLength(2000)]
+    public string? ClusteringComment { get; set; }
+
+    /// <summary>
     /// Fragments in this cluster (many-to-many)
     /// </summary>
     public virtual ICollection<Fragment> Fragments { get; set; } = new List<Fragment>();

@@ -89,6 +89,12 @@ public class Fragment : BusinessEntity
     public string? ConfidenceComment { get; set; }
 
     /// <summary>
+    /// Explanation from the LLM about why this fragment was excluded from clustering or other processing decisions
+    /// </summary>
+    [MaxLength(2000)]
+    public string? ClusteringComment { get; set; }
+
+    /// <summary>
     /// Indicates if this fragment has been deleted (soft delete)
     /// </summary>
     public bool IsDeleted { get; set; } = false;
