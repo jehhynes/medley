@@ -6,6 +6,20 @@ using Medley.Domain.Enums;
 namespace Medley.Application.Models.DTOs.Llm;
 
 /// <summary>
+/// Fragment data for clustering with integer ID instead of GUID
+/// </summary>
+public class ClusteringFragmentData
+{
+    public required int Id { get; set; }
+    public required string Title { get; set; }
+    public string? Category { get; set; }
+    public required string Content { get; set; }
+    public ConfidenceLevel? Confidence { get; set; }
+    public string? ConfidenceComment { get; set; }
+    public SourceData? Source { get; set; }
+}
+
+/// <summary>
 /// System prompt guidance for fragment clustering containing instructions and category definitions
 /// </summary>
 public class FragmentClusteringGuidance
@@ -16,6 +30,8 @@ public class FragmentClusteringGuidance
     [Required]
     public required string FragmentWeighting { get; set; }
 
+    public string? OrganizationContext { get; set; }
+
     public required List<CategoryDefinition> CategoryDefinitions { get; set; }
 }
 
@@ -25,7 +41,7 @@ public class FragmentClusteringGuidance
 public class FragmentClusteringRequest
 {
     [Required]
-    public required List<FragmentWithContentData> Fragments { get; set; }
+    public required List<ClusteringFragmentData> Fragments { get; set; }
 }
 
 /// <summary>
@@ -49,8 +65,8 @@ public class KnowledgeUnitCluster
 {
     [Required]
     [MinLength(2)]
-    [Description("List of fragment IDs that belong to this knowledge unit. Must contain at least 2 fragments.")]
-    public required List<Guid> FragmentIds { get; set; }
+    [Description("List of fragment IDs (integers from the provided fragments) that belong to this knowledge unit. Must contain at least 2 fragments.")]
+    public required List<int> FragmentIds { get; set; }
 
     [Required]
     [MaxLength(75)]
@@ -66,7 +82,7 @@ public class KnowledgeUnitCluster
     [Description("The knowledge category which is most appropriate for the consolidated content")]
     public required string Category { get; set; }
 
-    [MaxLength(500)]
+    [MaxLength(2000)]
     [Required]
     [Description("The consolidated text content synthesizing all fragments")]
     public required string Content { get; set; }

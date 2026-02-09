@@ -53,15 +53,16 @@ public class KnowledgeUnitGeneratorJob : BaseHangfireJob<KnowledgeUnitGeneratorJ
 
     [Mission]
     [DisableConcurrentExecution(timeoutInSeconds: 1)]
-    public async Task ExecuteAsync(Guid clusteringSessionId, PerformContext context, CancellationToken cancellationToken)
+    public async Task ExecuteAsync(Guid clusteringSessionId, bool shouldRequeue, PerformContext context, CancellationToken cancellationToken)
     {
         LogInfo(context, $"Starting Knowledge Unit Generation Job for clustering session {clusteringSessionId}");
 
         var maxDuration = TimeSpan.FromMinutes(10);
         var startTime = DateTimeOffset.UtcNow;
         var processedClusterCount = 0;
+        var hasMoreClusters = true;
 
-        while (DateTimeOffset.UtcNow - startTime < maxDuration)
+        while (DateTimeOffset.UtcNow - startTime < maxDuration && hasMoreClusters)
         {
             if (cancellationToken.IsCancellationRequested)
             {
@@ -70,7 +71,7 @@ public class KnowledgeUnitGeneratorJob : BaseHangfireJob<KnowledgeUnitGeneratorJ
             }
 
             var createdKnowledgeUnitIds = new List<Guid>();
-            var shouldContinue = await ExecuteWithTransactionAsync(async () =>
+            hasMoreClusters = await ExecuteWithTransactionAsync(async () =>
             {
                 // 1) Find all clusters within the clustering session that have unprocessed fragments
                 // Server-side filtering: only get clusters where at least one fragment is unprocessed
@@ -105,7 +106,7 @@ public class KnowledgeUnitGeneratorJob : BaseHangfireJob<KnowledgeUnitGeneratorJ
 
                 LogInfo(context, $"Loaded {clusterParticipants.Count} fragments from cluster {largestCluster.ClusterNumber}");
 
-                // 4) Pass contents to LLM
+                // 4) Pass contents to LLM with integer IDs
                 var clusterResponse = await GenerateClusterAsync(clusterParticipants, cancellationToken);
                 
                 // Check if LLM created any knowledge units
@@ -126,22 +127,23 @@ public class KnowledgeUnitGeneratorJob : BaseHangfireJob<KnowledgeUnitGeneratorJ
                 foreach (var kuCluster in clusterResponse.KnowledgeUnits)
                 {
                     // Validate minimum fragments
-                    if (kuCluster.FragmentIds.Count < 2)
-                    {
-                        LogWarning(context, $"Skipping knowledge unit '{kuCluster.Title}' - only {kuCluster.FragmentIds.Count} fragment(s)");
-                        continue;
-                    }
+                    //if (kuCluster.FragmentIds.Count < 2)
+                    //{
+                    //    LogWarning(context, $"Skipping knowledge unit '{kuCluster.Title}' - only {kuCluster.FragmentIds.Count} fragment(s)");
+                    //    continue;
+                    //}
 
-                    // Get fragments for this knowledge unit
-                    var clusterFragments = clusterParticipants
-                        .Where(f => kuCluster.FragmentIds.Contains(f.Id))
+                    // Get fragments for this knowledge unit using the IDs as list indices
+                    var clusterFragments = kuCluster.FragmentIds
+                        .Where(id => id >= 0 && id < clusterParticipants.Count)
+                        .Select(id => clusterParticipants[id])
                         .ToList();
 
-                    if (clusterFragments.Count < 2)
-                    {
-                        LogWarning(context, $"Skipping knowledge unit '{kuCluster.Title}' - invalid fragment IDs");
-                        continue;
-                    }
+                    //if (clusterFragments.Count < 2)
+                    //{
+                    //    LogWarning(context, $"Skipping knowledge unit '{kuCluster.Title}' - invalid fragment IDs");
+                    //    continue;
+                    //}
 
                     // Find category
                     var knowledgeCategory = await _knowledgeCategoryRepository.Query()
@@ -209,13 +211,18 @@ public class KnowledgeUnitGeneratorJob : BaseHangfireJob<KnowledgeUnitGeneratorJ
                 processedClusterCount++;
                 return true;
             });
-
-            if (!shouldContinue)
-            {
-                break;
-            }
         }
 
+        // If we exited due to time limit and there are more clusters, requeue the job
+        if (shouldRequeue && hasMoreClusters && DateTimeOffset.UtcNow - startTime >= maxDuration)
+        {
+            LogInfo(context, $"Time limit reached after processing {processedClusterCount} clusters. Requeuing job to continue processing remaining clusters.");
+            _backgroundJobClient.ContinueJobWith<KnowledgeUnitGeneratorJob>(
+                context.BackgroundJob.Id,
+                j => j.ExecuteAsync(clusteringSessionId, true, null!, default));
+        }
+
+        // Always queue embedding generation for any knowledge units created
         _backgroundJobClient.ContinueJobWith<EmbeddingGenerationJob>(
             context.BackgroundJob.Id,
             j => j.GenerateKnowledgeUnitEmbeddings(default!, default));
@@ -244,6 +251,10 @@ public class KnowledgeUnitGeneratorJob : BaseHangfireJob<KnowledgeUnitGeneratorJ
             {
                 throw new InvalidOperationException($"Fragment weighting prompt (PromptType.{nameof(PromptType.FragmentWeighting)}) is not configured in the database.");
             }
+
+            // Retrieve the organization context prompt template
+            var orgContextPrompt = await _promptRepository.Query()
+                .FirstOrDefaultAsync(t => t.Type == PromptType.OrganizationContext, cancellationToken);
 
             // Get distinct categories from the fragments
             var distinctCategoryIds = fragments
@@ -274,19 +285,19 @@ public class KnowledgeUnitGeneratorJob : BaseHangfireJob<KnowledgeUnitGeneratorJ
             {
                 PrimaryGuidance = clusteringPrompt.Content,
                 FragmentWeighting = weightingPrompt.Content,
+                OrganizationContext = orgContextPrompt?.Content,
                 CategoryDefinitions = categoryDefinitions
             };
 
             var systemPrompt = JsonSerializer.Serialize(guidanceRequest);
 
-            // Build user prompt with fragments
+            // Build user prompt with fragments using integer IDs
             var userRequest = new FragmentClusteringRequest
             {
-                Fragments = fragments.Select(f => new FragmentWithContentData
+                Fragments = fragments.Select((f, index) => new ClusteringFragmentData
                 {
-                    Id = f.Id,
+                    Id = index,
                     Title = f.Title,
-                    //Summary = f.Summary,
                     Category = f.KnowledgeCategory.Name,
                     Content = f.Content,
                     Confidence = f.Confidence,
