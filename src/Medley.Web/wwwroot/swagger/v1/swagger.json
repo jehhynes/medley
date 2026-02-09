@@ -4262,6 +4262,24 @@
             "type": "integer",
             "format": "int32"
           },
+          "fragmentsPendingKnowledgeUnitGeneration": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalKnowledgeUnits": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "knowledgeUnitsByCategory": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MetricItem"
+            }
+          },
+          "knowledgeUnitsPendingEmbedding": {
+            "type": "integer",
+            "format": "int32"
+          },
           "totalArticles": {
             "type": "integer",
             "format": "int32"

@@ -24,6 +24,12 @@ namespace Medley.Web.Models
         public int TotalFragments { get; set; }
         public List<MetricItem> FragmentsByCategory { get; set; } = new();
         public int FragmentsPendingEmbedding { get; set; }
+        public int FragmentsPendingKnowledgeUnitGeneration { get; set; }
+
+        // Knowledge Unit metrics
+        public int TotalKnowledgeUnits { get; set; }
+        public List<MetricItem> KnowledgeUnitsByCategory { get; set; } = new();
+        public int KnowledgeUnitsPendingEmbedding { get; set; }
 
         // Article metrics
         public int TotalArticles { get; set; }

@@ -3376,6 +3376,10 @@ export interface DashboardMetrics {
     totalFragments?: number;
     fragmentsByCategory?: MetricItem[];
     fragmentsPendingEmbedding?: number;
+    fragmentsPendingKnowledgeUnitGeneration?: number;
+    totalKnowledgeUnits?: number;
+    knowledgeUnitsByCategory?: MetricItem[];
+    knowledgeUnitsPendingEmbedding?: number;
     totalArticles?: number;
     articlesByType?: MetricItem[];
 }

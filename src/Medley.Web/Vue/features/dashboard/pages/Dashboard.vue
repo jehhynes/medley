@@ -24,7 +24,7 @@
     <template v-else>
       <!-- Overview Cards -->
       <div class="row g-3 mb-4">
-        <div class="col-md-4">
+        <div class="col-md-3">
           <div class="metric-card delay-1">
             <div class="d-flex justify-content-between align-items-start">
               <div>
@@ -35,7 +35,7 @@
             </div>
           </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
           <div class="metric-card delay-2">
             <div class="d-flex justify-content-between align-items-start">
               <div>
@@ -46,8 +46,19 @@
             </div>
           </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
           <div class="metric-card delay-3">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <div class="metric-card-title">Total Knowledge Units</div>
+                <div class="metric-card-value">{{ metrics.totalKnowledgeUnits }}</div>
+              </div>
+              <i class="fal fa-atom metric-card-icon"></i>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="metric-card delay-4">
             <div class="d-flex justify-content-between align-items-start">
               <div>
                 <div class="metric-card-title">Total Articles</div>
@@ -102,18 +113,18 @@
       <!-- Processing Status -->
       <h2 class="section-title"><i class="bi bi-hourglass-split me-2"></i>Processing Status</h2>
       <div class="row g-3 mb-4">
-        <div class="col-md-4">
+        <div class="col-md-3">
           <div class="metric-card delay-2">
             <div class="d-flex justify-content-between align-items-start">
               <div>
-                <div class="metric-card-title">Fragments Pending Embedding</div>
-                <div class="metric-card-value">{{ metrics.fragmentsPendingEmbedding }}</div>
-                <small style="opacity: 0.9;">of {{ metrics.totalFragments }} total</small>
+                <div class="metric-card-title">Sources Pending Fragment Generation</div>
+                <div class="metric-card-value">{{ metrics.sourcesPendingFragmentGeneration }}</div>
+                <small style="opacity: 0.9;">of {{ metrics.totalSources }} total</small>
               </div>
             </div>
           </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
           <div class="metric-card delay-3">
             <div class="d-flex justify-content-between align-items-start">
               <div>
@@ -124,13 +135,35 @@
             </div>
           </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
           <div class="metric-card delay-4">
             <div class="d-flex justify-content-between align-items-start">
               <div>
-                <div class="metric-card-title">Sources Pending Fragment Generation</div>
-                <div class="metric-card-value">{{ metrics.sourcesPendingFragmentGeneration }}</div>
-                <small style="opacity: 0.9;">of {{ metrics.totalSources }} total</small>
+                <div class="metric-card-title">Fragments Pending Embedding</div>
+                <div class="metric-card-value">{{ metrics.fragmentsPendingEmbedding }}</div>
+                <small style="opacity: 0.9;">of {{ metrics.totalFragments }} total</small>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="metric-card delay-5">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <div class="metric-card-title">Fragments Pending KU Generation</div>
+                <div class="metric-card-value">{{ metrics.fragmentsPendingKnowledgeUnitGeneration }}</div>
+                <small style="opacity: 0.9;">of {{ metrics.totalFragments }} total</small>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="metric-card delay-6">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <div class="metric-card-title">Knowledge Units Pending Embedding</div>
+                <div class="metric-card-value">{{ metrics.knowledgeUnitsPendingEmbedding }}</div>
+                <small style="opacity: 0.9;">of {{ metrics.totalKnowledgeUnits }} total</small>
               </div>
             </div>
           </div>
@@ -140,7 +173,7 @@
       <!-- Content Analytics -->
       <h2 class="section-title">Content Analytics</h2>
       <div class="row g-3 mb-4">
-        <div class="col-lg-6">
+        <div class="col-lg-4">
           <div class="chart-card delay-4">
             <h3 class="chart-card-title"><i class="bi bi-puzzle me-2"></i>Fragments by Category</h3>
             <div class="chart-container small">
@@ -149,8 +182,17 @@
             <div ref="fragmentsByCategoryLegend" class="mt-3 text-center"></div>
           </div>
         </div>
-        <div class="col-lg-6">
+        <div class="col-lg-4">
           <div class="chart-card delay-5">
+            <h3 class="chart-card-title"><i class="bi bi-lightbulb me-2"></i>Knowledge Units by Category</h3>
+            <div class="chart-container small">
+              <canvas ref="knowledgeUnitsByCategoryChart"></canvas>
+            </div>
+            <div ref="knowledgeUnitsByCategoryLegend" class="mt-3 text-center"></div>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="chart-card delay-6">
             <h3 class="chart-card-title"><i class="bi bi-file-text me-2"></i>Articles by Type</h3>
             <div class="chart-container small">
               <canvas ref="articlesByTypeChart"></canvas>
@@ -194,15 +236,19 @@ Chart.register(...registerables);
 interface MetricData {
   totalSources: number;
   totalFragments: number;
+  totalKnowledgeUnits: number;
   totalArticles: number;
   sourcesByType: Array<{ label: string; count: number }>;
   sourcesByIntegration: Array<{ label: string; count: number }>;
   sourcesByYear: Array<{ label: string; count: number; values: Record<string, number> }>;
   sourcesByMonth: Array<{ label: string; count: number }>;
   fragmentsByCategory: Array<{ label: string; count: number; icon?: string }>;
+  knowledgeUnitsByCategory: Array<{ label: string; count: number; icon?: string }>;
   articlesByType: Array<{ label: string; count: number; icon?: string }>;
   sourcesByTagType: Array<{ tagTypeName: string; tagCounts: Array<{ label: string; count: number }> }>;
   fragmentsPendingEmbedding: number;
+  fragmentsPendingKnowledgeUnitGeneration: number;
+  knowledgeUnitsPendingEmbedding: number;
   sourcesPendingSmartTagging: number;
   sourcesPendingFragmentGeneration: number;
 }
@@ -211,15 +257,19 @@ interface MetricData {
 const metrics = ref<MetricData>({
   totalSources: 0,
   totalFragments: 0,
+  totalKnowledgeUnits: 0,
   totalArticles: 0,
   sourcesByType: [],
   sourcesByIntegration: [],
   sourcesByYear: [],
   sourcesByMonth: [],
   fragmentsByCategory: [],
+  knowledgeUnitsByCategory: [],
   articlesByType: [],
   sourcesByTagType: [],
   fragmentsPendingEmbedding: 0,
+  fragmentsPendingKnowledgeUnitGeneration: 0,
+  knowledgeUnitsPendingEmbedding: 0,
   sourcesPendingSmartTagging: 0,
   sourcesPendingFragmentGeneration: 0
 });
@@ -237,10 +287,12 @@ const sourcesByIntegrationChart = ref<HTMLCanvasElement | null>(null);
 const sourcesByYearChart = ref<HTMLCanvasElement | null>(null);
 const sourcesByMonthChart = ref<HTMLCanvasElement | null>(null);
 const fragmentsByCategoryChart = ref<HTMLCanvasElement | null>(null);
+const knowledgeUnitsByCategoryChart = ref<HTMLCanvasElement | null>(null);
 const articlesByTypeChart = ref<HTMLCanvasElement | null>(null);
 const sourcesByTypeLegend = ref<HTMLDivElement | null>(null);
 const sourcesByIntegrationLegend = ref<HTMLDivElement | null>(null);
 const fragmentsByCategoryLegend = ref<HTMLDivElement | null>(null);
+const knowledgeUnitsByCategoryLegend = ref<HTMLDivElement | null>(null);
 const articlesByTypeLegend = ref<HTMLDivElement | null>(null);
 
 // Methods
@@ -297,6 +349,13 @@ const initializeCharts = (): void => {
 
   // Update icon map with fragment categories
   metrics.value.fragmentsByCategory.forEach(item => {
+    if (item.icon) {
+      iconMap[item.label] = item.icon;
+    }
+  });
+
+  // Update icon map with knowledge unit categories
+  metrics.value.knowledgeUnitsByCategory.forEach(item => {
     if (item.icon) {
       iconMap[item.label] = item.icon;
     }
@@ -495,6 +554,23 @@ const initializeCharts = (): void => {
       options: defaultOptions
     });
     generateHtmlLegend(charts.value.fragmentsByCategory, fragmentsByCategoryLegend.value);
+  }
+
+  // Knowledge Units by Category Chart
+  if (metrics.value.knowledgeUnitsByCategory.length > 0 && knowledgeUnitsByCategoryChart.value) {
+    charts.value.knowledgeUnitsByCategory = new Chart(knowledgeUnitsByCategoryChart.value, {
+      type: 'doughnut',
+      data: {
+        labels: metrics.value.knowledgeUnitsByCategory.map(x => x.label),
+        datasets: [{
+          data: metrics.value.knowledgeUnitsByCategory.map(x => x.count),
+          backgroundColor: colors.primary.slice(0, metrics.value.knowledgeUnitsByCategory.length),
+          borderWidth: 0
+        }]
+      },
+      options: defaultOptions
+    });
+    generateHtmlLegend(charts.value.knowledgeUnitsByCategory, knowledgeUnitsByCategoryLegend.value);
   }
 
   // Articles by Type Chart

@@ -15,6 +15,7 @@ public class DashboardApiController : ControllerBase
 {
     private readonly IRepository<Source> _sourceRepository;
     private readonly IRepository<Fragment> _fragmentRepository;
+    private readonly IRepository<KnowledgeUnit> _knowledgeUnitRepository;
     private readonly IRepository<Article> _articleRepository;
     private readonly IRepository<ArticleType> _articleTypeRepository;
     private readonly IRepository<Tag> _tagRepository;
@@ -22,12 +23,14 @@ public class DashboardApiController : ControllerBase
     public DashboardApiController(
         IRepository<Source> sourceRepository,
         IRepository<Fragment> fragmentRepository,
+        IRepository<KnowledgeUnit> knowledgeUnitRepository,
         IRepository<Article> articleRepository,
         IRepository<ArticleType> articleTypeRepository,
         IRepository<Tag> tagRepository)
     {
         _sourceRepository = sourceRepository;
         _fragmentRepository = fragmentRepository;
+        _knowledgeUnitRepository = knowledgeUnitRepository;
         _articleRepository = articleRepository;
         _articleTypeRepository = articleTypeRepository;
         _tagRepository = tagRepository;
@@ -176,6 +179,23 @@ public class DashboardApiController : ControllerBase
         
         metrics.FragmentsPendingEmbedding = await _fragmentRepository.Query()
             .CountAsync(f => f.Embedding == null);
+        
+        metrics.FragmentsPendingKnowledgeUnitGeneration = await _fragmentRepository.Query()
+            .CountAsync(f => f.ClusteringProcessed == null);
+
+        // Knowledge Unit metrics
+        metrics.TotalKnowledgeUnits = await _knowledgeUnitRepository.Query()
+            .CountAsync(ku => !ku.IsDeleted);
+        
+        metrics.KnowledgeUnitsByCategory = await _knowledgeUnitRepository.Query()
+            .Where(ku => !ku.IsDeleted)
+            .Include(ku => ku.Category)
+            .GroupBy(ku => ku.Category.Name)
+            .Select(g => new MetricItem { Label = g.Key, Count = g.Count(), Icon = g.First().Category.Icon })
+            .ToListAsync();
+        
+        metrics.KnowledgeUnitsPendingEmbedding = await _knowledgeUnitRepository.Query()
+            .CountAsync(ku => !ku.IsDeleted && ku.Embedding == null);
 
         // Article metrics
         metrics.TotalArticles = await _articleRepository.Query().CountAsync();
