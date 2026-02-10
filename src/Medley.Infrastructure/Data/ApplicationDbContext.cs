@@ -46,6 +46,7 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
     public DbSet<FragmentKnowledgeUnit> FragmentKnowledgeUnits { get; set; }
     public DbSet<ClusteringSession> ClusteringSessions { get; set; }
     public DbSet<Cluster> Clusters { get; set; }
+    public DbSet<ArticleReview> ArticleReviews { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -138,5 +139,9 @@ public class ApplicationDbContext : IdentityDbContext<User, IdentityRole<Guid>, 
             entity.HasIndex(fku => new { fku.FragmentId, fku.KnowledgeUnitId })
                 .IsUnique();
         });
+
+        // Configure index for ArticleReview queries by ArticleId
+        builder.Entity<ArticleReview>()
+            .HasIndex(ar => ar.ArticleId);
     }
 }

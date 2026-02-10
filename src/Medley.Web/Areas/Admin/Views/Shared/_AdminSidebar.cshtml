@@ -2,6 +2,7 @@
     var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
     var currentArea = ViewContext.RouteData.Values["area"]?.ToString();
     var isSettings = currentArea == "Admin" && currentController == "Settings";
+    var isReviewSettings = currentArea == "Admin" && currentController == "ReviewSettings";
     var isAiPrompts = currentArea == "Admin" && currentController == "AiPrompts";
     var isSpeakers = currentArea == "Admin" && currentController == "Speakers";
     var isIntegrations = currentArea == "Integrations";
@@ -24,6 +25,14 @@
                 <i class="list-item-icon bi bi-gear"></i>
                 <div class="list-item-body">
                     <div class="list-item-title">General</div>
+                </div>
+            </a>
+        </li>
+        <li class="list-item">
+            <a asp-area="Admin" asp-controller="ReviewSettings" asp-action="Index" class="list-item-content @(isReviewSettings ? "active" : "")">
+                <i class="list-item-icon bi bi-list-check"></i>
+                <div class="list-item-body">
+                    <div class="list-item-title">Article Review Settings</div>
                 </div>
             </a>
         </li>

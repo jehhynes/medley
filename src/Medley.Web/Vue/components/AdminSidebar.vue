@@ -20,6 +20,14 @@
           </a>
         </li>
         <li class="list-item">
+          <a href="/Admin/ReviewSettings" class="list-item-content" :class="{ active: currentPage === 'ReviewSettings' }">
+            <i class="list-item-icon bi bi-list-check"></i>
+            <div class="list-item-body">
+              <div class="list-item-title">Article Review Settings</div>
+            </div>
+          </a>
+        </li>
+        <li class="list-item">
           <a href="/Admin/AiPrompts" class="list-item-content" :class="{ active: currentPage === 'AiPrompts' }">
             <i class="list-item-icon bi bi-robot"></i>
             <div class="list-item-body">
@@ -137,6 +145,7 @@ const currentPage = computed<string>(() => {
   
   // Extract controller name from path
   if (path.includes('/Admin/Settings')) return 'Settings';
+  if (path.includes('/Admin/ReviewSettings')) return 'ReviewSettings';
   if (path.includes('/Admin/AiPrompts')) return 'AiPrompts';
   if (path.includes('/Admin/TagTypes')) return 'TagTypes';
   if (path.includes('/Admin/ArticleTypes')) return 'ArticleTypes';

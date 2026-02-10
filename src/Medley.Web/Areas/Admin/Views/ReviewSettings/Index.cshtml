@@ -1,0 +1,130 @@
+@{
+    ViewData["Title"] = "Article Review Settings";
+    var organizationId = ViewBag.OrganizationId as Guid? ?? Guid.Empty;
+    var requiredReviewCount = ViewBag.RequiredReviewCount as int? ?? 1;
+    var requiredReviewerId = ViewBag.RequiredReviewerId as Guid?;
+    var autoApprove = ViewBag.AutoApprove as bool? ?? false;
+    var users = ViewBag.Users as List<Medley.Domain.Entities.User> ?? new List<Medley.Domain.Entities.User>();
+}
+
+<div class="main-content-header">
+    <h1 class="main-content-title">Article Review Settings</h1>
+    <p class="text-muted">Configure approval requirements and review workflow settings for articles.</p>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Approval Requirements</h5>
+    </div>
+    <div class="card-body">
+        <form asp-action="SaveSettings" method="post" class="form-layout">
+            <input type="hidden" name="organizationId" value="@organizationId" />
+            
+            <div class="mb-3 form-group-overlap">
+                <label for="requiredReviewCount" class="form-label">Required Review Count</label>
+                <input type="number" 
+                       class="form-control" 
+                       id="requiredReviewCount" 
+                       name="requiredReviewCount" 
+                       value="@requiredReviewCount" 
+                       min="1" 
+                       required />
+            </div>
+            <div class="form-text mb-3">
+                Number of approvals required before an article can be approved.
+            </div>
+
+            <div class="mb-3 form-group-overlap">
+                <label for="requiredReviewerId" class="form-label">Required Reviewer (Optional)</label>
+                <select class="form-select" id="requiredReviewerId" name="requiredReviewerId">
+                    <option value="">None - No specific reviewer required</option>
+                    @foreach (var user in users)
+                    {
+                        <option value="@user.Id" selected="@(requiredReviewerId == user.Id ? "selected" : null)">@user.FullName</option>
+                    }
+                </select>
+            </div>
+            <div class="form-text mb-3">
+                If set, this user must approve every article
+            </div>
+
+            <div class="my-3">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" 
+                           type="checkbox" 
+                           id="autoApprove" 
+                           name="autoApprove" 
+                           value="true"
+                           @(autoApprove ? "checked" : "") />
+                    <label class="form-check-label" for="autoApprove">
+                        Auto-Approve When Requirements Met
+                    </label>
+                </div>
+                <div class="form-text">
+                    Automatically approve articles when review count is reached and required reviewer (if set) has approved.
+                </div>
+            </div>
+
+            <hr class="my-4" />
+
+            <h5 class="mb-3">User Review Successors</h5>
+            <p class="text-muted mb-3">
+                Configure automatic article reassignment after users submit reviews. When a user completes a review, 
+                the article will be automatically reassigned to their designated successor.
+            </p>
+
+            <div class="table-responsive mb-3" style="max-width:40rem;">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Review Successor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in users)
+                        {
+                            <tr>
+                                <td>@user.FullName</td>
+                                <td>
+                                    <select class="form-select" name="reviewSuccessors[@user.Id]">
+                                        <option value="">None</option>
+                                        @foreach (var successor in users)
+                                        {
+                                            if (successor.Id != user.Id)
+                                            {
+                                                <option value="@successor.Id" selected="@(user.ReviewSuccessorId == successor.Id ? "selected" : null)">@successor.FullName</option>
+                                            }
+                                        }
+                                    </select>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save"></i> Save Settings
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace Medley.Domain.Entities;
 
@@ -33,6 +35,28 @@ public class Organization : BaseEntity
     /// </summary>
     [MaxLength(50)]
     public string TimeZone { get; set; } = "America/New_York"; // Default to EST
+
+    /// <summary>
+    /// Number of approvals required before an article can be approved
+    /// </summary>
+    public int RequiredReviewCount { get; set; } = 1;
+
+    /// <summary>
+    /// User who must always review articles (nullable - no required reviewer if null)
+    /// </summary>
+    public Guid? RequiredReviewerId { get; set; }
+
+    /// <summary>
+    /// Automatically approve articles when review count is reached and required reviewer (if set) has approved
+    /// </summary>
+    public bool AutoApprove { get; set; } = false;
+
+    /// <summary>
+    /// Navigation property to the required reviewer user
+    /// </summary>
+    [ForeignKey(nameof(RequiredReviewerId))]
+    [DeleteBehavior(DeleteBehavior.SetNull)]
+    public User? RequiredReviewer { get; set; }
 }
 
 
