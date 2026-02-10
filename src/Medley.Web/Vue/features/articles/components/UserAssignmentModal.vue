@@ -75,7 +75,7 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount } from 'vue';
-import { articlesClient } from '@/utils/apiClients';
+import { articlesClient, usersClient } from '@/utils/apiClients';
 import type { UserSummaryDto } from '@/types/api-client';
 
 const props = defineProps<{
@@ -121,18 +121,7 @@ const loadUsers = async () => {
   loading.value = true;
   error.value = null;
   try {
-    // Direct fetch since UsersApiClient doesn't exist yet in generated types
-    const response = await fetch('/api/users', {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to load users');
-    }
-    
-    users.value = await response.json();
+    users.value = await usersClient.getAll();
   } catch (err) {
     console.error('Failed to load users:', err);
     error.value = 'Failed to load users. Please try again.';

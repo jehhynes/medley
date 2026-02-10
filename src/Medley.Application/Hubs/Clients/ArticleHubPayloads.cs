@@ -1,3 +1,4 @@
+using Medley.Application.Models.DTOs;
 using Medley.Domain.Enums;
 
 namespace Medley.Application.Hubs.Clients;
@@ -211,4 +212,26 @@ public record ConversationCancelledPayload
     public required Guid ConversationId { get; init; }
     public required Guid ArticleId { get; init; }
     public required DateTimeOffset Timestamp { get; init; }
+}
+
+/// <summary>
+/// Payload for ArticleReviewAdded event
+/// </summary>
+public record ArticleReviewAddedPayload
+{
+    public required Guid ArticleId { get; init; }
+    public required Guid ReviewId { get; init; }
+    public required Guid ReviewedById { get; init; }
+    public required string ReviewedByName { get; init; }
+    public required ArticleReviewAction Action { get; init; }
+    public required DateTimeOffset ReviewedAt { get; init; }
+}
+
+/// <summary>
+/// Payload for ArticleApproved event
+/// </summary>
+public record ArticleApprovedPayload
+{
+    public required Guid ArticleId { get; init; }
+    public required DateTimeOffset ApprovedAt { get; init; }
 }

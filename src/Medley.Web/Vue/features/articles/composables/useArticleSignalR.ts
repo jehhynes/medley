@@ -66,6 +66,9 @@ export interface UseArticleSignalROptions {
   onVersionCreated?: (version: any) => Promise<void>;
   onVersionUpdated?: (version: any) => void;
   onVersionDeleted?: (versionId: string) => void;
+  onReviewAdded?: (review: any) => void;
+  onArticleApproved?: (articleId: string) => void;
+  onArticleReassigned?: (articleId: string, assignedUserId: string) => void;
   selectedArticleId: Ref<string | null>;
   articlesIndex: Map<string, ArticleDto>;
   clearSelectedArticle?: () => void;
@@ -190,6 +193,14 @@ export function useArticleSignalR(options: UseArticleSignalROptions) {
           } : null
         }
       });
+
+      // Also handle review-triggered reassignments for the selected article
+      const selectedId = normalizeId(options.selectedArticleId.value);
+      const eventArticleId = normalizeId(data.articleId);
+      
+      if (selectedId === eventArticleId && options.onArticleReassigned) {
+        options.onArticleReassigned(data.articleId, data.userId);
+      }
     });
 
     // Article deleted event
@@ -283,6 +294,42 @@ export function useArticleSignalR(options: UseArticleSignalROptions) {
         options.reloadPlan(data.planId);
       } else {
         console.log('Plan updated for different article, not reloading');
+      }
+    });
+
+    // Article review added event
+    connection.value.on('ArticleReviewAdded', (articleId, review) => {
+      const selectedId = normalizeId(options.selectedArticleId.value);
+      const eventArticleId = normalizeId(articleId);
+
+      console.log('ArticleReviewAdded event received:', {
+        eventArticleId,
+        selectedId,
+        reviewId: review.id,
+        action: review.action,
+        matches: selectedId === eventArticleId
+      });
+
+      // Reload reviews if it's for the currently selected article
+      if (selectedId === eventArticleId && options.onReviewAdded) {
+        options.onReviewAdded(review);
+      }
+    });
+
+    // Article approved event
+    connection.value.on('ArticleApproved', (articleId) => {
+      const selectedId = normalizeId(options.selectedArticleId.value);
+      const eventArticleId = normalizeId(articleId);
+
+      console.log('ArticleApproved event received:', {
+        eventArticleId,
+        selectedId,
+        matches: selectedId === eventArticleId
+      });
+
+      // Update article status if it's the currently selected article
+      if (selectedId === eventArticleId && options.onArticleApproved) {
+        options.onArticleApproved(articleId);
       }
     });
 

@@ -94,4 +94,14 @@ public interface IArticleClient
     /// Notifies clients that a conversation was cancelled
     /// </summary>
     Task ConversationCancelled(ConversationCancelledPayload payload);
+
+    /// <summary>
+    /// Notifies clients that a review was added to an article
+    /// </summary>
+    Task ArticleReviewAdded(Guid articleId, Application.Models.DTOs.ArticleReviewDto review);
+
+    /// <summary>
+    /// Notifies clients that an article was auto-approved
+    /// </summary>
+    Task ArticleApproved(Guid articleId);
 }

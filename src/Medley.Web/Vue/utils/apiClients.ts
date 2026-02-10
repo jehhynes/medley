@@ -1,6 +1,7 @@
 import {
   ArticlesApiClient,
   ArticleChatApiClient,
+  ArticleReviewsApiClient,
   DashboardApiClient,
   FragmentsApiClient,
   KnowledgeUnitsApiClient,
@@ -9,12 +10,14 @@ import {
   TagTypesApiClient,
   AiPromptApiClient,
   SpeakersApiClient,
-  TokenUsageApiClient
+  TokenUsageApiClient,
+  UsersApiClient
 } from '@/types/api-client';
 
 export const apiClients = {
   articles: new ArticlesApiClient(),
   articleChat: new ArticleChatApiClient(),
+  articleReviews: new ArticleReviewsApiClient(),
   dashboard: new DashboardApiClient(),
   fragments: new FragmentsApiClient(),
   knowledgeUnits: new KnowledgeUnitsApiClient(),
@@ -23,12 +26,14 @@ export const apiClients = {
   tagTypes: new TagTypesApiClient(),
   aiPrompts: new AiPromptApiClient(),
   speakers: new SpeakersApiClient(),
-  tokenUsage: new TokenUsageApiClient()
+  tokenUsage: new TokenUsageApiClient(),
+  users: new UsersApiClient()
 } as const;
 
 export const {
   articles: articlesClient,
   articleChat: articleChatClient,
+  articleReviews: articleReviewsClient,
   dashboard: dashboardClient,
   fragments: fragmentsClient,
   knowledgeUnits: knowledgeUnitsClient,
@@ -37,5 +42,6 @@ export const {
   tagTypes: tagTypesClient,
   aiPrompts: aiPromptsClient,
   speakers: speakersClient,
-  tokenUsage: tokenUsageClient
+  tokenUsage: tokenUsageClient,
+  users: usersClient
 } = apiClients;

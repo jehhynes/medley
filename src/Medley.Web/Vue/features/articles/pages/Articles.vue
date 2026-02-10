@@ -211,6 +211,14 @@
             :class="{ 'active': ui.activeRightTab === 'versions' }"
             @click="setActiveRightTab('versions')">
             <i class="bi bi-clock-history"></i> Versions
+            <span v-if="versionsCount > 0" class="badge bg-primary ms-1">{{ versionsCount }}</span>
+          </button>
+          <button 
+            class="sidebar-tab" 
+            :class="{ 'active': ui.activeRightTab === 'reviews' }"
+            @click="setActiveRightTab('reviews')">
+            <i class="bi bi-chat-left-text"></i> Reviews
+            <span v-if="reviewsCount > 0" class="badge bg-primary ms-1">{{ reviewsCount }}</span>
           </button>
         </div>
       </div>
@@ -230,6 +238,13 @@
             :article-id="articles.selectedId"
             :selected-version-id="version.selected?.id"
             @select-version="handleVersionSelect" />
+        </div>
+        <div v-show="ui.activeRightTab === 'reviews'" class="sidebar-tab-pane">
+          <reviews-panel 
+            ref="reviewsPanel"
+            :article-id="articles.selectedId"
+            @review-added="handleReviewAdded"
+            @reviews-loaded="handleReviewsLoaded" />
         </div>
       </div>
     </div>
@@ -474,6 +489,7 @@ import VersionViewer from '../components/VersionViewer.vue';
 import MyWorkList from '../components/MyWorkList.vue';
 import ChatPanel from '../components/ChatPanel.vue';
 import VersionsPanel from '../components/VersionsPanel.vue';
+import ReviewsPanel from '../components/ReviewsPanel.vue';
 import ArticleTree from '../components/ArticleTree.vue';
 import ArticleList from '../components/ArticleList.vue';
 import UserAssignmentModal from '../components/UserAssignmentModal.vue';
@@ -520,7 +536,7 @@ interface ContentTabsState {
 interface UIState {
   loading: boolean;
   error: string | null;
-  activeRightTab: 'assistant' | 'versions';
+  activeRightTab: 'assistant' | 'versions' | 'reviews';
 }
 
 interface VersionState {
@@ -590,6 +606,7 @@ const { leftSidebarVisible, rightSidebarVisible } = useSidebarState();
 const tiptapEditor = ref<TiptapEditorRef | null>(null);
 const chatPanel = ref<ChatPanelRef | null>(null);
 const versionsPanel = ref<VersionsPanelRef | null>(null);
+const reviewsPanel = ref<any | null>(null);
 const knowledgeUnitsViewer = ref<KnowledgeUnitsViewerRef | null>(null);
 const titleInput = ref<HTMLInputElement | null>(null);
 const editTitleInput = ref<HTMLInputElement | null>(null);
@@ -665,6 +682,12 @@ const assignmentModal = reactive({
   articleId: '',
   currentUserId: null as string | null
 });
+
+// Reviews state
+const reviewsCount = ref(0);
+
+// Versions state
+const versionsCount = ref(0);
 
 // Provide drag state for child components
 provide('dragState', dragState);
@@ -764,6 +787,11 @@ watch(() => versionsStore.pendingAiVersion.value, (pendingAi) => {
     openVersionTab(pendingAi);
   }
 });
+
+// Watch for versions changes to update count
+watch(() => versionsStore.versions.value, (versions) => {
+  versionsCount.value = versions.length;
+}, { immediate: true });
 
 // ============================================================================
 // COMPUTED PROPERTIES
@@ -1230,6 +1258,18 @@ const closeKnowledgeUnitModal = (): void => {
   selectedKnowledgeUnit.value = null;
 };
 
+// ============================================================================
+// METHODS - Review Handlers
+// ============================================================================
+
+const handleReviewAdded = (review: any): void => {
+  // Count will be incremented via SignalR event
+};
+
+const handleReviewsLoaded = (count: number): void => {
+  reviewsCount.value = count;
+};
+
 const handleKnowledgeUnitUpdated = (updatedKnowledgeUnit: KnowledgeUnitDto): void => {
   // Update the selected knowledge unit to show the new data
   selectedKnowledgeUnit.value = updatedKnowledgeUnit;
@@ -1331,6 +1371,29 @@ onMounted(async () => {
     onVersionCreated: (version) => versionsInternal.handleVersionCreated(version),
     onVersionUpdated: (version) => versionsInternal.handleVersionUpdated(version),
     onVersionDeleted: (versionId) => versionsInternal.handleVersionDeleted(versionId),
+    onReviewAdded: (review) => {
+      if (reviewsPanel.value) {
+        reviewsPanel.value.addReview(review);
+      }
+      reviewsCount.value++;
+    },
+    onArticleApproved: (articleId) => {
+      // Update article status in the UI
+      if (articles.selected && articles.selected.id === articleId) {
+        articles.selected.status = 2; // ArticleStatus.Approved
+      }
+    },
+    onArticleReassigned: async (articleId, assignedUserId) => {
+      // Reload the article to get the updated assignment
+      if (articles.selected && articles.selected.id === articleId) {
+        try {
+          const fullArticle = await apiClients.articles.get(articleId);
+          articles.selected = fullArticle;
+        } catch (err: any) {
+          console.error('Error reloading article after reassignment:', err);
+        }
+      }
+    },
     selectedArticleId: computed(() => articles.selectedId),
     articlesIndex: articles.index,
     clearSelectedArticle: () => {

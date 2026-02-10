@@ -692,6 +692,175 @@
         }
       }
     },
+    "/api/articles/{articleId}/reviews": {
+      "get": {
+        "tags": [
+          "ArticleReviewsApi"
+        ],
+        "operationId": "ArticleReviewsApi_GetReviews",
+        "parameters": [
+          {
+            "name": "articleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ArticleReviewDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "ArticleReviewsApi"
+        ],
+        "operationId": "ArticleReviewsApi_CreateReview",
+        "parameters": [
+          {
+            "name": "articleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateArticleReviewRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateArticleReviewResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/articles/{articleId}/reviews/{reviewId}": {
+      "get": {
+        "tags": [
+          "ArticleReviewsApi"
+        ],
+        "operationId": "ArticleReviewsApi_GetReview",
+        "parameters": [
+          {
+            "name": "articleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "reviewId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "guid"
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticleReviewDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/articles/types": {
       "get": {
         "tags": [
@@ -3856,6 +4025,115 @@
           }
         }
       },
+      "ArticleReviewDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "articleId": {
+            "type": "string",
+            "format": "guid"
+          },
+          "reviewedBy": {
+            "$ref": "#/components/schemas/UserSummaryDto"
+          },
+          "reviewedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "action": {
+            "$ref": "#/components/schemas/ArticleReviewAction"
+          },
+          "comments": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "UserSummaryDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "initials": {
+            "type": "string",
+            "nullable": true
+          },
+          "color": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "ArticleReviewAction": {
+        "type": "string",
+        "description": "",
+        "x-enumNames": [
+          "Approve",
+          "RequestChanges",
+          "Comment"
+        ],
+        "enum": [
+          "Approve",
+          "RequestChanges",
+          "Comment"
+        ]
+      },
+      "CreateArticleReviewResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "review": {
+            "$ref": "#/components/schemas/ArticleReviewDto"
+          },
+          "articleApproved": {
+            "type": "boolean"
+          },
+          "articleReassigned": {
+            "type": "boolean"
+          },
+          "reassignedToUserId": {
+            "type": "string",
+            "format": "guid",
+            "nullable": true
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateArticleReviewRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "action"
+        ],
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/ArticleReviewAction"
+          },
+          "comments": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 0,
+            "nullable": true
+          },
+          "reassignToUserId": {
+            "type": "string",
+            "format": "guid",
+            "nullable": true
+          }
+        }
+      },
       "ArticleSummaryDto": {
         "type": "object",
         "additionalProperties": false,
@@ -3928,27 +4206,6 @@
           "Approved",
           "Archived"
         ]
-      },
-      "UserSummaryDto": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "guid"
-          },
-          "fullName": {
-            "type": "string"
-          },
-          "initials": {
-            "type": "string",
-            "nullable": true
-          },
-          "color": {
-            "type": "string",
-            "nullable": true
-          }
-        }
       },
       "ConversationSummaryDto": {
         "type": "object",
