@@ -545,7 +545,7 @@ public class ArticleChatApiController : ControllerBase
             article.CurrentConversationId = conversationId;
             
             // Auto-assign to current user if in Plan mode
-            if (conversation.Mode == ConversationMode.Plan && article.AssignedUserId != userId.Value)
+            if (conversation.Mode == ConversationMode.Plan && article.AssignedUserId != userId)
             {
                 article.AssignedUserId = userId.Value;
                 

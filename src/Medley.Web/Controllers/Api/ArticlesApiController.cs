@@ -361,9 +361,9 @@ public class ArticlesApiController : ControllerBase
         }
 
         // Auto-assign to current user
-        var assignmentChanged = await AssignArticleToUserAsync(article, user.Id);
-
-        
+        bool assignmentChanged = false;
+        if (article.AssignedUserId == null)
+            assignmentChanged = await AssignArticleToUserAsync(article, user);
 
         // Capture version after saving article
         var capturedVersion = await _versionService.CaptureUserVersionAsync(id, article.Content, oldContent, user.Id);
@@ -939,21 +939,16 @@ public class ArticlesApiController : ControllerBase
     /// Assign article to user if not already assigned
     /// </summary>
     /// <returns>True if assignment changed, false otherwise</returns>
-    private async Task<bool> AssignArticleToUserAsync(Article article, Guid userId)
+    private async Task<bool> AssignArticleToUserAsync(Article article, User user)
     {
-        if (userId == Guid.Empty || article.AssignedUserId == userId)
+        if (user == null || article.AssignedUserId == user.Id)
         {
             return false;
         }
 
-        article.AssignedUserId = userId;
+        article.AssignedUser = user;
+        article.AssignedUserId = user.Id;
         
-        // Load user data if not already loaded
-        if (article.AssignedUser == null || article.AssignedUser.Id != userId)
-        {
-            article.AssignedUser = await _userRepository.GetByIdAsync(userId);
-        }
-
         return true;
     }
 
