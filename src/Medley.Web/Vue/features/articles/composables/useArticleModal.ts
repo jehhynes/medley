@@ -1,6 +1,6 @@
 import { ref, nextTick, type Ref } from 'vue';
 import { articlesClient } from '@/utils/apiClients';
-import type { ArticleDto, ArticleSummaryDto, ArticleCreateRequest, ArticleUpdateMetadataRequest } from '@/types/api-client';
+import type { ArticleDto, ArticleSummaryDto, ArticleCreateRequest, ArticleUpdateMetadataRequest, ArticleStatus } from '@/types/api-client';
 
 export interface CreateModalState {
   visible: boolean;
@@ -15,6 +15,7 @@ export interface EditModalState {
   articleId: string | null;
   title: string;
   typeId: string | null;
+  status: ArticleStatus | null;
   isSubmitting: boolean;
 }
 
@@ -45,6 +46,7 @@ export function useArticleModal(options: UseArticleModalOptions) {
     articleId: null,
     title: '',
     typeId: null,
+    status: null,
     isSubmitting: false
   });
 
@@ -133,6 +135,7 @@ export function useArticleModal(options: UseArticleModalOptions) {
     editModal.value.articleId = article.id || null;
     editModal.value.title = article.title || '';
     editModal.value.typeId = article.articleTypeId || null;
+    editModal.value.status = article.status ?? null;
     editModal.value.visible = true;
 
     nextTick(() => {
@@ -147,6 +150,7 @@ export function useArticleModal(options: UseArticleModalOptions) {
     editModal.value.articleId = null;
     editModal.value.title = '';
     editModal.value.typeId = null;
+    editModal.value.status = null;
   };
 
   const updateArticle = async () => {
@@ -163,14 +167,16 @@ export function useArticleModal(options: UseArticleModalOptions) {
     try {
       const request: ArticleUpdateMetadataRequest = {
         title: editModal.value.title!,
-        articleTypeId: editModal.value.typeId!
+        articleTypeId: editModal.value.typeId!,
+        status: editModal.value.status ?? undefined
       };
       
       await articlesClient.updateMetadata(editModal.value.articleId, request);
 
       options.updateArticleInTree(editModal.value.articleId, {
         title: editModal.value.title,
-        articleTypeId: editModal.value.typeId
+        articleTypeId: editModal.value.typeId,
+        status: editModal.value.status ?? undefined
       });
 
       if (options.selectedArticleId.value === editModal.value.articleId) {

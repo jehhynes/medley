@@ -327,6 +327,16 @@
               </select>
               <label>Article Type *</label>
             </div>
+
+            <div class="mb-3 form-group-overlap">
+              <select class="form-select" v-model="editModal.status">
+                <option value="Draft">Draft</option>
+                <option value="Review">Review</option>
+                <option value="Approved">Approved</option>
+                <option value="Archived">Archived</option>
+              </select>
+              <label>Status</label>
+            </div>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-outline-secondary" @click="closeEditModal">Cancel</button>
@@ -1380,7 +1390,7 @@ onMounted(async () => {
     onArticleApproved: (articleId) => {
       // Update article status in the UI
       if (articles.selected && articles.selected.id === articleId) {
-        articles.selected.status = 2; // ArticleStatus.Approved
+        articles.selected.status = 'Approved' as ArticleStatus;
       }
     },
     onArticleReassigned: async (articleId, assignedUserId) => {
