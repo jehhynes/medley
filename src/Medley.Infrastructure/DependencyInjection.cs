@@ -114,6 +114,10 @@ public static class DependencyInjection
         // Register concrete integration services for direct injection
         services.AddScoped<FellowIntegrationService>();
         services.AddScoped<GitHubIntegrationService>();
+        services.AddScoped<ZendeskService>();
+
+        // Configure Zendesk settings
+        services.Configure<ZendeskSettings>(configuration.GetSection("Zendesk"));
 
         // Configure Hangfire
         services.AddHangfire(configuration => configuration

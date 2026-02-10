@@ -27,6 +27,7 @@ public class JobRegistry : IJobRegistry
             RecurringJobDescriptor.Create<EmbeddingGenerationJob>(j => j.GenerateFragmentEmbeddings(default!, default, null), Daily(2, 0)), // Run nightly at 2 AM to pickup missed fragments
             RecurringJobDescriptor.Create<SmartTagProcessorJob>(j => j.ExecuteAsync(default!, default, null), Daily(3, 0)), // Run nightly at 3 AM to pickup missed sources
             RecurringJobDescriptor.Create<SpeakerExtractionJob>(j => j.ExecuteAsync(default!, default, null), Daily(4, 0)), // Run nightly at 4 AM to extract speakers
+            RecurringJobDescriptor.Create<ZendeskArticleSyncJob>(j => j.SyncAllApprovedArticlesAsync(default!, default), Daily(5, 0)), // Run nightly at 5 AM to sync approved articles to Zendesk
             
             //RecurringJobDescriptor.Create<KnowledgeUnitClusteringJob>(j => j.ExecuteAsync(default!, default), MinuteInterval(1))
         };

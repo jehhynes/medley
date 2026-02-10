@@ -26,6 +26,17 @@ public class Article : BusinessEntity
     public ArticleStatus Status { get; set; } = ArticleStatus.Draft;
 
     public DateTimeOffset? PublishedAt { get; set; }
+
+    /// <summary>
+    /// Zendesk article ID for synced articles
+    /// </summary>
+    [MaxLength(100)]
+    public string? ZendeskArticleId { get; set; }
+
+    /// <summary>
+    /// Timestamp when article was last successfully synced to Zendesk
+    /// </summary>
+    public DateTimeOffset? LastSyncedToZendeskAt { get; set; }
     
     /// <summary>
     /// User who created this article

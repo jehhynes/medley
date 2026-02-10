@@ -2,9 +2,11 @@ using System;
 using System.Linq;
 using System.Security.Claims;
 using System.Text.RegularExpressions;
+using Hangfire;
 using Medley.Application.Hubs;
 using Medley.Application.Hubs.Clients;
 using Medley.Application.Interfaces;
+using Medley.Application.Jobs;
 using Medley.Application.Models.DTOs;
 using Medley.Domain.Entities;
 using Medley.Domain.Enums;
@@ -26,30 +28,36 @@ public class ArticlesApiController : ControllerBase
     private readonly IRepository<Article> _articleRepository;
     private readonly IRepository<ArticleType> _articleTypeRepository;
     private readonly IRepository<User> _userRepository;
+    private readonly IRepository<Organization> _organizationRepository;
     private readonly IHubContext<ArticleHub, IArticleClient> _hubContext;
     private readonly IArticleVersionService _versionService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMedleyContext _medleyContext;
     private readonly ILogger<ArticlesApiController> _logger;
+    private readonly IBackgroundJobClient _backgroundJobClient;
 
     public ArticlesApiController(
         IRepository<Article> articleRepository,
         IRepository<ArticleType> articleTypeRepository,
         IRepository<User> userRepository,
+        IRepository<Organization> organizationRepository,
         IHubContext<ArticleHub, IArticleClient> hubContext,
         IArticleVersionService versionService,
         IUnitOfWork unitOfWork,
         IMedleyContext medleyContext,
-        ILogger<ArticlesApiController> logger)
+        ILogger<ArticlesApiController> logger,
+        IBackgroundJobClient backgroundJobClient)
     {
         _articleRepository = articleRepository;
         _articleTypeRepository = articleTypeRepository;
         _userRepository = userRepository;
+        _organizationRepository = organizationRepository;
         _hubContext = hubContext;
         _versionService = versionService;
         _unitOfWork = unitOfWork;
         _medleyContext = medleyContext;
         _logger = logger;
+        _backgroundJobClient = backgroundJobClient;
     }
 
     /// <summary>
@@ -403,6 +411,22 @@ public class ArticlesApiController : ControllerBase
         if (assignmentChanged)
         {
             await SendAssignmentNotificationAsync(article);
+        }
+
+        // Trigger Zendesk sync if article is approved and org has sync enabled
+        if (article.Status == ArticleStatus.Approved)
+        {
+            HttpContext.RegisterPostCommitAction(async () =>
+            {
+                var organization = await _organizationRepository.Query().FirstOrDefaultAsync();
+                if (organization?.EnableArticleZendeskSync == true)
+                {
+                    _backgroundJobClient.Enqueue<ZendeskArticleSyncJob>(
+                        job => job.SyncArticleAsync(article.Id, default!, default));
+                    
+                    _logger.LogInformation("Enqueued Zendesk sync job for updated article {ArticleId}", article.Id);
+                }
+            });
         }
 
         return Ok(new VersionCaptureResponse

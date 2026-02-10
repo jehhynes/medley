@@ -1,4 +1,6 @@
+using Hangfire;
 using Medley.Application.Interfaces;
+using Medley.Application.Jobs;
 using Medley.Application.Models.DTOs;
 using Medley.Domain.Entities;
 using Medley.Domain.Enums;
@@ -19,6 +21,7 @@ public class ArticleReviewService : IArticleReviewService
     private readonly IRepository<Organization> _organizationRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<ArticleReviewService> _logger;
+    private readonly IBackgroundJobClient _backgroundJobClient;
 
     public ArticleReviewService(
         IRepository<ArticleReview> reviewRepository,
@@ -27,7 +30,8 @@ public class ArticleReviewService : IArticleReviewService
         IRepository<User> userRepository,
         IRepository<Organization> organizationRepository,
         IUnitOfWork unitOfWork,
-        ILogger<ArticleReviewService> logger)
+        ILogger<ArticleReviewService> logger,
+        IBackgroundJobClient backgroundJobClient)
     {
         _reviewRepository = reviewRepository;
         _articleRepository = articleRepository;
@@ -36,6 +40,7 @@ public class ArticleReviewService : IArticleReviewService
         _organizationRepository = organizationRepository;
         _unitOfWork = unitOfWork;
         _logger = logger;
+        _backgroundJobClient = backgroundJobClient;
     }
 
     /// <summary>
@@ -193,6 +198,15 @@ public class ArticleReviewService : IArticleReviewService
             response.Message = $"Review submitted. Article auto-approved with {approvalCount} approval(s).";
 
             _logger.LogInformation("Article {ArticleId} auto-approved", article.Id);
+
+            // Trigger Zendesk sync if enabled
+            if (organization.EnableArticleZendeskSync)
+            {
+                _backgroundJobClient.Enqueue<ZendeskArticleSyncJob>(
+                    job => job.SyncArticleAsync(article.Id, default!, default));
+                
+                _logger.LogInformation("Enqueued Zendesk sync job for article {ArticleId}", article.Id);
+            }
         }
         else
         {

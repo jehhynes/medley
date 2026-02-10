@@ -30,6 +30,11 @@ public class Organization : BaseEntity
     public bool EnableSpeakerExtraction { get; set; } = false;
 
     /// <summary>
+    /// Indicates whether article sync to Zendesk Help Center is enabled
+    /// </summary>
+    public bool EnableArticleZendeskSync { get; set; } = false;
+
+    /// <summary>
     /// IANA timezone identifier for the organization (e.g., "America/New_York", "America/Chicago", "America/Los_Angeles")
     /// Used for converting UTC timestamps to local time for reporting and analytics
     /// </summary>

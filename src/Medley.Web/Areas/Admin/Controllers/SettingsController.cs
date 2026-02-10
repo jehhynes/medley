@@ -37,6 +37,7 @@ public class SettingsController : Controller
         ViewBag.EmailDomain = organization.EmailDomain ?? "";
         ViewBag.EnableSmartTagging = organization.EnableSmartTagging;
         ViewBag.EnableSpeakerExtraction = organization.EnableSpeakerExtraction;
+        ViewBag.EnableArticleZendeskSync = organization.EnableArticleZendeskSync;
         ViewBag.TimeZone = organization.TimeZone ?? "America/New_York";
 
         return View();
@@ -49,6 +50,7 @@ public class SettingsController : Controller
         string? emailDomain, 
         bool enableSmartTagging, 
         bool enableSpeakerExtraction,
+        bool enableArticleZendeskSync,
         string timeZone)
     {
         try
@@ -68,6 +70,7 @@ public class SettingsController : Controller
             organization.EmailDomain = normalizedDomain;
             organization.EnableSmartTagging = enableSmartTagging;
             organization.EnableSpeakerExtraction = enableSpeakerExtraction;
+            organization.EnableArticleZendeskSync = enableArticleZendeskSync;
             organization.TimeZone = string.IsNullOrWhiteSpace(timeZone) ? "America/New_York" : timeZone;
             
             await _unitOfWork.SaveChangesAsync();
