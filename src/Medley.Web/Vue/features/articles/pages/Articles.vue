@@ -68,6 +68,7 @@
             @create-child="showCreateArticleModal"
             @edit-article="showEditArticleModal"
             @move-article="moveArticle"
+            @open-assignment-modal="openAssignmentModal"
           ></article-tree>
           <article-list
             v-show="viewMode === 'list'"
@@ -76,6 +77,7 @@
             :selected-id="articles.selectedId"
             @select="selectArticle"
             @edit-article="showEditArticleModal"
+            @open-assignment-modal="openAssignmentModal"
           ></article-list>
           <my-work-list
             v-show="viewMode === 'mywork'"
@@ -84,6 +86,7 @@
             :selected-id="articles.selectedId"
             @select="selectArticle"
             @edit-article="showEditArticleModal"
+            @open-assignment-modal="openAssignmentModal"
           ></my-work-list>
         </template>
       </div>
@@ -415,6 +418,14 @@
       @close="closeKnowledgeUnitModal"
       @updated="handleKnowledgeUnitUpdated"
       @deleted="handleKnowledgeUnitDeleted" />
+
+    <!-- User Assignment Modal -->
+    <user-assignment-modal
+      :visible="assignmentModal.visible"
+      :article-id="assignmentModal.articleId"
+      :current-user-id="assignmentModal.currentUserId"
+      @close="closeAssignmentModal"
+      @assigned="handleAssignmentModalAssigned" />
 </template>
 
 <script setup lang="ts">
@@ -465,6 +476,7 @@ import ChatPanel from '../components/ChatPanel.vue';
 import VersionsPanel from '../components/VersionsPanel.vue';
 import ArticleTree from '../components/ArticleTree.vue';
 import ArticleList from '../components/ArticleList.vue';
+import UserAssignmentModal from '../components/UserAssignmentModal.vue';
 import TiptapEditor from '@/components/TiptapEditor.vue';
 import PlanViewer from '../components/PlanViewer.vue';
 import VerticalMenu from '@/components/VerticalMenu.vue';
@@ -646,6 +658,13 @@ const currentUserId = window.MedleyUser?.id ?? null;
 
 // Knowledge unit modal state
 const selectedKnowledgeUnit = ref<KnowledgeUnitDto | null>(null);
+
+// Assignment modal state
+const assignmentModal = reactive({
+  visible: false,
+  articleId: '',
+  currentUserId: null as string | null
+});
 
 // Provide drag state for child components
 provide('dragState', dragState);
@@ -1223,6 +1242,32 @@ const handleKnowledgeUnitDeleted = (knowledgeUnitId: string): void => {
   if (contentTabs.knowledgeUnitsOpen && knowledgeUnitsViewer.value) {
     knowledgeUnitsViewer.value.loadKnowledgeUnits();
   }
+};
+
+// ============================================================================
+// Assignment Modal
+// ============================================================================
+
+const openAssignmentModal = (article: ArticleDto): void => {
+  assignmentModal.articleId = article.id!;
+  assignmentModal.currentUserId = article.assignedUser?.id ?? null;
+  assignmentModal.visible = true;
+};
+
+const closeAssignmentModal = (): void => {
+  assignmentModal.visible = false;
+  assignmentModal.articleId = '';
+  assignmentModal.currentUserId = null;
+};
+
+const handleAssignmentModalAssigned = (user: any): void => {
+  // Update the article in the tree
+  treeOps.updateArticleInTree(assignmentModal.articleId, {
+    assignedUser: user
+  });
+  
+  // Close the modal
+  closeAssignmentModal();
 };
 
 // ============================================================================

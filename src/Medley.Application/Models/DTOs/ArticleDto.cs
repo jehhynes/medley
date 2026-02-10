@@ -175,6 +175,18 @@ public class ArticleMoveRequest
 }
 
 /// <summary>
+/// Request to assign an article to a user
+/// </summary>
+public class ArticleAssignRequest
+{
+    /// <summary>
+    /// User ID to assign the article to
+    /// </summary>
+    [Required]
+    public required Guid UserId { get; set; }
+}
+
+/// <summary>
 /// Article type information
 /// </summary>
 public class ArticleTypeDto

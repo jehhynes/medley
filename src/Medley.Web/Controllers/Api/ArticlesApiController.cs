@@ -524,6 +524,86 @@ public class ArticlesApiController : ControllerBase
     }
 
     /// <summary>
+    /// Assign an article to a user
+    /// </summary>
+    /// <param name="id">Article ID</param>
+    /// <param name="request">Assignment request with user ID</param>
+    /// <returns>Updated user information</returns>
+    [HttpPut("{id}/assign")]
+    [ProducesResponseType(typeof(UserSummaryDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<UserSummaryDto>> Assign(Guid id, [FromBody] ArticleAssignRequest request)
+    {
+        // Get the article
+        var article = await _articleRepository.Query()
+            .Include(a => a.AssignedUser)
+            .FirstOrDefaultAsync(a => a.Id == id);
+        
+        if (article == null)
+        {
+            return NotFound(new { message = "Article not found" });
+        }
+
+        // Get the user to assign
+        var user = await _userRepository.Query()
+            .FirstOrDefaultAsync(u => u.Id == request.UserId);
+        
+        if (user == null)
+        {
+            return NotFound(new { message = "User not found" });
+        }
+
+        // Assign the article
+        article.AssignedUser = user;
+        article.AssignedUserId = user.Id;
+        
+        await _unitOfWork.SaveChangesAsync();
+
+        // Send SignalR notification
+        await SendAssignmentNotificationAsync(article);
+
+        return Ok(new UserSummaryDto
+        {
+            Id = user.Id,
+            FullName = user.FullName,
+            Initials = user.Initials,
+            Color = user.Color
+        });
+    }
+
+    /// <summary>
+    /// Unassign an article from its current user
+    /// </summary>
+    /// <param name="id">Article ID</param>
+    /// <returns>No content on success</returns>
+    [HttpPut("{id}/unassign")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult> Unassign(Guid id)
+    {
+        // Get the article
+        var article = await _articleRepository.Query()
+            .Include(a => a.AssignedUser)
+            .FirstOrDefaultAsync(a => a.Id == id);
+        
+        if (article == null)
+        {
+            return NotFound(new { message = "Article not found" });
+        }
+
+        // Unassign the article
+        article.AssignedUser = null;
+        article.AssignedUserId = null;
+        
+        await _unitOfWork.SaveChangesAsync();
+
+        // Send SignalR notification
+        await SendAssignmentNotificationAsync(article);
+
+        return NoContent();
+    }
+
+    /// <summary>
     /// Check if moving an article would create a circular reference
     /// </summary>
     private async Task<bool> IsCircularReference(Guid articleId, Guid targetParentId)

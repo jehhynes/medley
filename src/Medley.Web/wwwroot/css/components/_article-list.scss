@@ -89,6 +89,17 @@
         color: white;
         flex-shrink: 0;
         margin-right: 0.125rem;
+        cursor: pointer;
+        transition: opacity 0.15s ease, transform 0.15s ease;
+
+        &:hover {
+            opacity: 0.85;
+            transform: scale(1.05);
+        }
+
+        &:active {
+            transform: scale(0.95);
+        }
     }
 
     .status-icon-wrapper {

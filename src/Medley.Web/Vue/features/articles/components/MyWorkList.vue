@@ -35,7 +35,8 @@
           <span v-if="article.assignedUser" 
                 class="user-badge" 
                 :style="{ backgroundColor: article.assignedUser.color || '#6c757d' }"
-                :title="article.assignedUser.fullName || 'Assigned User'">
+                :title="article.assignedUser.fullName || 'Assigned User'"
+                @click.stop="openAssignmentModal(article)">
             {{ article.assignedUser.initials || '?' }}
           </span>
           <div class="status-icon-wrapper">
@@ -52,6 +53,7 @@
             </button>
             <ul v-if="isDropdownOpen(article.id!)" class="dropdown-menu dropdown-menu-end show" :class="getPositionClasses()">
               <li><button class="dropdown-item" @click.stop="editArticle(article); closeDropdown()">Edit</button></li>
+              <li><button class="dropdown-item" @click.stop="openAssignmentModal(article); closeDropdown()">Assign</button></li>
             </ul>
           </div>
         </div>
@@ -85,9 +87,14 @@ const currentUserId = window.MedleyUser?.id ?? null;
 interface Emits {
   (e: 'select', article: ArticleDto): void;
   (e: 'edit-article', article: ArticleDto): void;
+  (e: 'open-assignment-modal', article: ArticleDto): void;
 }
 
 const emit = defineEmits<Emits>();
+
+const openAssignmentModal = (article: ArticleDto) => {
+  emit('open-assignment-modal', article);
+};
 
 const {
   selectArticle,
