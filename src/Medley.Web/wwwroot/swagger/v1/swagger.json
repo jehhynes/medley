@@ -4106,10 +4106,37 @@
             "format": "guid",
             "nullable": true
           },
+          "statusChanged": {
+            "type": "boolean"
+          },
+          "newStatus": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ArticleStatus"
+              }
+            ]
+          },
           "message": {
             "type": "string"
           }
         }
+      },
+      "ArticleStatus": {
+        "type": "string",
+        "description": "",
+        "x-enumNames": [
+          "Draft",
+          "Review",
+          "Approved",
+          "Archived"
+        ],
+        "enum": [
+          "Draft",
+          "Review",
+          "Approved",
+          "Archived"
+        ]
       },
       "CreateArticleReviewRequest": {
         "type": "object",
@@ -4190,22 +4217,6 @@
             "nullable": true
           }
         }
-      },
-      "ArticleStatus": {
-        "type": "string",
-        "description": "",
-        "x-enumNames": [
-          "Draft",
-          "Review",
-          "Approved",
-          "Archived"
-        ],
-        "enum": [
-          "Draft",
-          "Review",
-          "Approved",
-          "Archived"
-        ]
       },
       "ConversationSummaryDto": {
         "type": "object",

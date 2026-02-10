@@ -126,6 +126,17 @@ public class ArticleReviewService : IArticleReviewService
         else if (request.Action == ArticleReviewAction.RequestChanges)
         {
             await AssignToPreviousAuthorAsync(article, currentUser.Id, response, cancellationToken);
+            
+            // Set status to Review if currently Draft or Approved
+            if (article.Status == ArticleStatus.Draft || article.Status == ArticleStatus.Approved)
+            {
+                article.Status = ArticleStatus.Review;
+                _logger.LogInformation("Article {ArticleId} status changed to Review after RequestChanges", article.Id);
+                
+                // Update response to indicate status change
+                response.StatusChanged = true;
+                response.NewStatus = ArticleStatus.Review;
+            }
         }
         // If action is Comment (and no manual reassignment), no reassignment occurs
 

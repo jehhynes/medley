@@ -180,6 +180,30 @@ public class ArticleReviewsApiController : ControllerBase
                 _logger.LogInformation("Sent article approved notification for {ArticleId}", articleId);
             }
 
+            // If article status was changed, send article updated notification
+            if (response.StatusChanged)
+            {
+                var article = await _articleRepository.Query()
+                    .Where(a => a.Id == articleId)
+                    .FirstOrDefaultAsync();
+
+                if (article != null)
+                {
+                    await _hubContext.Clients.All.ArticleUpdated(new ArticleUpdatedPayload
+                    {
+                        ArticleId = articleId,
+                        Title = article.Title,
+                        ArticleTypeId = article.ArticleTypeId,
+                        Timestamp = DateTimeOffset.UtcNow
+                    });
+
+                    _logger.LogInformation(
+                        "Sent article status changed notification for {ArticleId} to status {Status}",
+                        articleId,
+                        response.NewStatus);
+                }
+            }
+
             // If article was reassigned, send assignment changed notification
             if (response.ArticleReassigned && response.ReassignedToUserId.HasValue)
             {

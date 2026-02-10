@@ -88,6 +88,16 @@ public class CreateArticleReviewResponse
     public Guid? ReassignedToUserId { get; set; }
 
     /// <summary>
+    /// Indicates if the article status was changed
+    /// </summary>
+    public bool StatusChanged { get; set; }
+
+    /// <summary>
+    /// New article status (if status was changed)
+    /// </summary>
+    public ArticleStatus? NewStatus { get; set; }
+
+    /// <summary>
     /// Status message
     /// </summary>
     public required string Message { get; set; }

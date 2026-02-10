@@ -3534,7 +3534,16 @@ export interface CreateArticleReviewResponse {
     articleApproved?: boolean;
     articleReassigned?: boolean;
     reassignedToUserId?: string | null;
+    statusChanged?: boolean;
+    newStatus?: ArticleStatus | null;
     message?: string;
+}
+
+export enum ArticleStatus {
+    Draft = "Draft",
+    Review = "Review",
+    Approved = "Approved",
+    Archived = "Archived",
 }
 
 export interface CreateArticleReviewRequest {
@@ -3554,13 +3563,6 @@ export interface ArticleSummaryDto {
     currentConversation?: ConversationSummaryDto | null;
     createdAt?: Date;
     modifiedAt?: Date | null;
-}
-
-export enum ArticleStatus {
-    Draft = "Draft",
-    Review = "Review",
-    Approved = "Approved",
-    Archived = "Archived",
 }
 
 export interface ConversationSummaryDto {

@@ -937,6 +937,26 @@ public class ArticlesApiController : ControllerBase
         {
             var newVersion = await _versionService.AcceptAiVersionAsync(versionId, currentUser);
 
+            // Set article status to Review for newly accepted AI content
+            if (article.Status == ArticleStatus.Draft || article.Status == ArticleStatus.Approved)
+            {
+                article.Status = ArticleStatus.Review;
+                await _unitOfWork.SaveChangesAsync();
+                _logger.LogInformation("Article {ArticleId} status changed to Review after AI version accepted", articleId);
+                
+                // Register post-commit action to send SignalR notification for status change
+                HttpContext.RegisterPostCommitAction(async () =>
+                {
+                    await _hubContext.Clients.All.ArticleUpdated(new ArticleUpdatedPayload
+                    {
+                        ArticleId = articleId,
+                        Title = article.Title,
+                        ArticleTypeId = article.ArticleTypeId,
+                        Timestamp = DateTimeOffset.UtcNow
+                    });
+                });
+            }
+
             // Register post-commit action to send SignalR notification
             HttpContext.RegisterPostCommitAction(async () =>
             {
