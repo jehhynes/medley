@@ -35,6 +35,7 @@ public class ArticleChatApiController : ControllerBase
     private readonly ILogger<ArticleChatApiController> _logger;
     private readonly ToolDisplayExtractor _toolDisplayExtractor;
     private readonly IMedleyContext _medleyContext;
+    private readonly IUnitOfWork _unitOfWork;
 
     public ArticleChatApiController(
         IArticleChatService chatService,
@@ -47,7 +48,8 @@ public class ArticleChatApiController : ControllerBase
         IHubContext<ArticleHub, IArticleClient> hubContext,
         ILogger<ArticleChatApiController> logger,
         ToolDisplayExtractor toolDisplayExtractor,
-        IMedleyContext medleyContext)
+        IMedleyContext medleyContext,
+        IUnitOfWork unitOfWork)
     {
         _chatService = chatService;
         _conversationRepository = conversationRepository;
@@ -60,6 +62,7 @@ public class ArticleChatApiController : ControllerBase
         _logger = logger;
         _toolDisplayExtractor = toolDisplayExtractor;
         _medleyContext = medleyContext;
+        _unitOfWork = unitOfWork;
     }
 
     /// <summary>
@@ -615,7 +618,16 @@ public class ArticleChatApiController : ControllerBase
                 var jobId = _backgroundJobClient.Enqueue<ArticleChatJob>(job => job.ProcessChatMessageAsync(messageId, default!, default));
 
                 _logger.LogInformation("Enqueued chat job {JobId} for conversation {ConversationId}", jobId, capturedConversationId);
+                
+                // Store the job ID in the conversation (in a separate transaction)
+                var conv = await _conversationRepository.GetByIdAsync(capturedConversationId);
+                if (conv != null)
+                {
+                    conv.CurrentJobId = jobId;
+                    await _conversationRepository.Add(conv);
+                    await _unitOfWork.SaveChangesAsync();
                 }
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error enqueueing chat job for message {MessageId}", messageId);
@@ -627,6 +639,50 @@ public class ArticleChatApiController : ControllerBase
             MessageId = userMessage.Id,
             ConversationId = conversationId
         });
+    }
+
+    /// <summary>
+    /// Stop a running conversation
+    /// </summary>
+    [HttpPost("conversations/{conversationId}/stop")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult> StopConversation(
+        Guid articleId,
+        Guid conversationId)
+    {
+        var conversation = await _chatService.GetConversationAsync(conversationId);
+        if (conversation == null || conversation.ArticleId != articleId)
+        {
+            return NotFound(new { message = "Conversation not found" });
+        }
+
+        if (!conversation.IsRunning)
+        {
+            return BadRequest(new { message = "Conversation is not running" });
+        }
+
+        // Cancel the Hangfire job if it exists
+        if (!string.IsNullOrEmpty(conversation.CurrentJobId))
+        {
+            try
+            {
+                // Delete the job which will trigger cancellation
+                _backgroundJobClient.Delete(conversation.CurrentJobId);
+                _logger.LogInformation("Requested cancellation of Hangfire job {JobId} for conversation {ConversationId}", 
+                    conversation.CurrentJobId, conversationId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to cancel Hangfire job {JobId} for conversation {ConversationId}", 
+                    conversation.CurrentJobId, conversationId);
+            }
+        }
+
+        _logger.LogInformation("Stop requested for conversation {ConversationId}", conversationId);
+
+        return Ok(new { message = "Conversation stop requested" });
     }
 
     private Microsoft.Extensions.AI.ChatMessage? TryDeserializeMessage(string serializedMessage, Guid messageId)

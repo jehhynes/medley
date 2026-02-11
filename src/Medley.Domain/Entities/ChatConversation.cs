@@ -52,6 +52,11 @@ public class ChatConversation : BaseEntity
     public bool IsRunning { get; set; } = false;
 
     /// <summary>
+    /// The Hangfire job ID for the currently running chat processing job
+    /// </summary>
+    public string? CurrentJobId { get; set; }
+
+    /// <summary>
     /// When this conversation was created
     /// </summary>
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;

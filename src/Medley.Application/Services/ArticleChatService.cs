@@ -72,7 +72,7 @@ public class ArticleChatService : IArticleChatService
         CancellationToken cancellationToken = default)
     {
         // Load required navigation properties
-        var article = await _articleRepository.GetByIdAsync(articleId);
+        var article = await _articleRepository.GetByIdAsync(articleId, cancellationToken);
         if (article == null)
         {
             throw new InvalidOperationException($"Article {articleId} not found");
@@ -344,7 +344,7 @@ public class ArticleChatService : IArticleChatService
 
                 if (isBalanced) //Wait to save function call messages until we have the result as well. Otherwise it will cause MAF errors due to inconsistent state
                 {
-                    var messages = await SaveMessages(chatResponse, accumulatedUpdates, conversationId, lastMessage);
+                    var messages = await SaveMessages(chatResponse, accumulatedUpdates, conversationId, lastMessage, cancellationToken);
                     if (messages.Any())
                         lastMessage = messages.Last();
                     accumulatedUpdates.Clear();
@@ -353,10 +353,15 @@ public class ArticleChatService : IArticleChatService
         }
     }
 
-    private async Task<List<DomainChatMessage>> SaveMessages(ChatResponse chatResponse, List<ChatResponseUpdate> responseUpdates, Guid conversationId, DomainChatMessage lastMessage)
+    private async Task<List<DomainChatMessage>> SaveMessages(
+        ChatResponse chatResponse, 
+        List<ChatResponseUpdate> responseUpdates, 
+        Guid conversationId, 
+        DomainChatMessage lastMessage,
+        CancellationToken cancellationToken = default)
     {
         // Load conversation for required navigation property
-        var conversation = await _conversationRepository.GetByIdAsync(conversationId);
+        var conversation = await _conversationRepository.GetByIdAsync(conversationId, cancellationToken);
         if (conversation == null)
         {
             throw new InvalidOperationException($"Conversation {conversationId} not found");
@@ -394,9 +399,9 @@ public class ArticleChatService : IArticleChatService
 
             await _chatMessageRepository.Add(message);
 
-            await _unitOfWork.SaveChangesAsync();
-            await _unitOfWork.CommitTransactionAsync();
-            await _unitOfWork.BeginTransactionAsync();
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _unitOfWork.CommitTransactionAsync(cancellationToken);
+            await _unitOfWork.BeginTransactionAsync(cancellationToken: cancellationToken);
         }
 
         return result;
@@ -425,7 +430,7 @@ public class ArticleChatService : IArticleChatService
         ConversationMode mode,
         CancellationToken cancellationToken = default)
     {
-        var conversation = await _conversationRepository.GetByIdAsync(conversationId);
+        var conversation = await _conversationRepository.GetByIdAsync(conversationId, cancellationToken);
         if (conversation == null)
         {
             throw new InvalidOperationException($"Conversation {conversationId} not found");

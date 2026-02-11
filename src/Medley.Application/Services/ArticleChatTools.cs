@@ -158,6 +158,8 @@ public class ArticleChatTools
             var knowledgeUnits = new List<ToolKnowledgeUnitSearchResult>();
             foreach (var result in results)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 var knowledgeUnit = result.KnowledgeUnit;
 
                 knowledgeUnits.Add(new ToolKnowledgeUnitSearchResult
@@ -275,6 +277,8 @@ public class ArticleChatTools
             var knowledgeUnits = new List<ToolKnowledgeUnitSearchResult>();
             foreach (var result in results)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 var knowledgeUnit = result.KnowledgeUnit;
 
                 knowledgeUnits.Add(new ToolKnowledgeUnitSearchResult
@@ -465,7 +469,7 @@ public class ArticleChatTools
             }
 
             // Load required navigation properties for Plan
-            var article = await _articleRepository.GetByIdAsync(_articleId);
+            var article = await _articleRepository.GetByIdAsync(_articleId, cancellationToken);
             if (article == null)
             {
                 throw new InvalidOperationException($"Article {_articleId} not found");
@@ -477,7 +481,7 @@ public class ArticleChatTools
                 throw new InvalidOperationException($"User {_currentUserId} not found");
             }
 
-            var conversation = await _conversationRepository.GetByIdAsync(_conversationId);
+            var conversation = await _conversationRepository.GetByIdAsync(_conversationId, cancellationToken);
             if(conversation == null)
             {
                 throw new InvalidOperationException($"Conversation {_conversationId} not found");
@@ -506,8 +510,10 @@ public class ArticleChatTools
             // Create plan knowledge units
             foreach (var rec in request.Recommendations)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 // Load knowledge unit for required navigation property
-                var knowledgeUnit = await _knowledgeUnitRepository.GetByIdAsync(rec.KnowledgeUnitId);
+                var knowledgeUnit = await _knowledgeUnitRepository.GetByIdAsync(rec.KnowledgeUnitId, cancellationToken);
                 if (knowledgeUnit == null)
                 {
                     _logger.LogWarning("Knowledge unit {KnowledgeUnitId} not found, skipping plan knowledge unit", rec.KnowledgeUnitId);
@@ -935,6 +941,8 @@ public class ArticleChatTools
             // Process each recommendation
             foreach (var rec in request.Recommendations)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 // Check if knowledge unit already exists in plan
                 if (existingKnowledgeUnitIds.Contains(rec.KnowledgeUnitId))
                 {

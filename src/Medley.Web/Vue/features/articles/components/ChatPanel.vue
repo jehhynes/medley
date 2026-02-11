@@ -175,10 +175,20 @@
             </div>
             
             <button 
+              v-if="!isAiTurn"
               @click="sendMessage"
               :disabled="!canSendMessage"
-              class="btn btn-primary chat-send-btn">
+              class="btn btn-primary chat-send-btn"
+              title="Send message">
               <i class="bi bi-arrow-right-short"></i>
+            </button>
+            
+            <button 
+              v-else
+              @click="stopConversation"
+              class="btn btn-danger chat-send-btn"
+              title="Stop generation">
+              <i class="bi bi-stop-fill"></i>
             </button>
           </div>
         </div>
@@ -467,6 +477,20 @@ async function sendMessage(): Promise<void> {
   } catch (err) {
     console.error('Error sending message:', err);
     error.value = 'Failed to send message';
+  }
+}
+
+async function stopConversation(): Promise<void> {
+  if (!conversationId.value || !isAiTurn.value) return;
+
+  try {
+    await apiClients.articleChat.stopConversation(props.articleId!, conversationId.value);
+    // The UI will be updated via the ChatTurnStopped SignalR event
+  } catch (err) {
+    console.error('Error stopping conversation:', err);
+    error.value = 'Failed to stop conversation';
+    // Reset state anyway
+    isAiTurn.value = false;
   }
 }
 
