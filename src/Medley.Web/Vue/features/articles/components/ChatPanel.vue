@@ -16,8 +16,7 @@
       <div v-if="conversations.length > 0" class="conversation-selector-bar">
         <select 
           v-model="selectedConversationId" 
-          @change="onConversationChange"
-          :disabled="isAiTurn"
+          :disabled="isRunning"
           class="form-select form-select-sm">
           <option :value="null" v-if="!selectedConversationId">New conversation</option>
           <option v-for="conv in conversations" :key="conv.id" :value="conv.id">
@@ -26,7 +25,7 @@
         </select>
         <button 
           @click="createNewConversation"
-          :disabled="isAiTurn"
+          :disabled="isRunning"
           class="btn btn-sm btn-outline-primary ms-2"
           title="New Conversation">
           <i class="bi bi-plus-lg"></i>
@@ -34,21 +33,21 @@
       </div>
 
       <div class="chat-messages" ref="messagesContainer">
-        <div v-if="!hasMessages && !isAiTurn" class="empty-state" v-cloak>
+        <div v-if="!hasMessages && !isRunning" class="empty-state" v-cloak>
           <i class="bi bi-chat-dots empty-state-icon"></i>
           <p class="empty-state-text">Start a conversation with the AI assistant</p>
           <p class="empty-state-hint">Ask questions or request improvements to your article</p>
           <div class="d-flex gap-2 mt-3">
             <button 
               @click="createPlan"
-              :disabled="isAiTurn"
+              :disabled="isRunning"
               class="btn btn-primary">
               <i class="far fa-magnifying-glass-play"></i>
               Create a Plan
             </button>
             <button 
               @click="reviewWithCursor"
-              :disabled="isAiTurn"
+              :disabled="isRunning"
               class="btn btn-primary">
               <img :src="cursorIcon" 
                    class="svg-icon me-1" 
@@ -141,7 +140,7 @@
           </div>
         </template>
 
-        <div v-if="isAiTurn" class="chat-message chat-message-assistant thinking">
+        <div v-if="isRunning" class="chat-message chat-message-assistant thinking">
           <div class="chat-message-body">
             <span class="typing-indicator">
               <span></span>
@@ -159,23 +158,23 @@
             v-model="newMessage"
             @input="adjustTextareaHeight"
             @keydown.enter.exact.prevent="sendMessage"
-            :disabled="!articleId || isAiTurn"
+            :disabled="!articleId || isRunning"
             class="form-control chat-input"
             placeholder="Ask the AI assistant..."
             rows="1"></textarea>
           
           <div class="chat-input-footer">
             <div class="chat-mode-selector">
-              <select v-model="mode" 
-                      :disabled="isAiTurn"
+              <select v-model="newConversationMode" 
+                      :disabled="isRunning"
                       class="form-select form-select-sm mode-select">
-                <option value="Agent">Agent</option>
-                <option value="Plan">Plan</option>
+                <option :value="ConversationMode.Agent">Agent</option>
+                <option :value="ConversationMode.Plan">Plan</option>
               </select>
             </div>
             
             <button 
-              v-if="!isAiTurn"
+              v-if="!isRunning"
               @click="sendMessage"
               :disabled="!canSendMessage"
               class="btn btn-primary chat-send-btn"
@@ -226,6 +225,10 @@ interface Conversation {
   mode: ConversationMode;
   implementingPlanId?: string | null;
   implementingPlanVersion?: number | null;
+  isRunning?: boolean;
+  createdBy?: { fullName?: string };
+  createdAt?: string;
+  firstUserMessageAt?: string;
 }
 
 interface Props {
@@ -246,21 +249,29 @@ interface Emits {
 
 const emit = defineEmits<Emits>();
 
-const conversationId = ref<string | null>(null);
-const conversations = ref<any[]>([]);
-const selectedConversationId = ref<string | null>(null);
+const currentConversation = ref<Conversation | null>(null);
+const conversations = ref<Conversation[]>([]);
 const messages = ref<ChatMessage[]>([]);
 const newMessage = ref<string>('');
-const isAiTurn = ref<boolean>(false);
 const error = ref<string | null>(null);
 const isLoading = ref<boolean>(false);
 const expandedMessages = ref<Record<string, boolean>>({});
-const mode = ref<ConversationMode>(ConversationMode.Agent);
-const implementingPlanId = ref<string | null>(null);
-const implementingPlanVersion = ref<number | null>(null);
+const newConversationMode = ref<ConversationMode>(ConversationMode.Agent);
 
 const messagesContainer = ref<HTMLElement | null>(null);
 const chatInput = ref<HTMLTextAreaElement | null>(null);
+
+const conversationId = computed(() => currentConversation.value?.id || null);
+const selectedConversationId = computed({
+  get: () => currentConversation.value?.id || null,
+  set: (value) => {
+    if (value) {
+      onConversationChange(value);
+    }
+  }
+});
+const mode = computed(() => currentConversation.value?.mode || newConversationMode.value);
+const isRunning = computed(() => currentConversation.value?.isRunning || false);
 
 const isConnected = computed<boolean>(() => {
   return !!(props.connection && props.connection.state === signalR.HubConnectionState.Connected);
@@ -273,7 +284,7 @@ const hasMessages = computed<boolean>(() => {
 const canSendMessage = computed<boolean>(() => {
   return !!(props.articleId &&
     newMessage.value.trim() !== '' &&
-    !isAiTurn.value);
+    !isRunning.value);
 });
 
 watch(() => props.articleId, async (newId, oldId) => {
@@ -342,20 +353,18 @@ async function loadConversations(): Promise<void> {
 
     if (allConversations.length === 0) {
       // No conversations exist yet
-      conversationId.value = null;
-      selectedConversationId.value = null;
+      currentConversation.value = null;
       messages.value = [];
       return;
     }
 
     // Load the current conversation (from article's CurrentConversation)
     try {
-      const currentConversation = await apiClients.articleChat.getConversation(props.articleId, null as any);
-      conversationId.value = currentConversation.id;
-      selectedConversationId.value = currentConversation.id;
-      mode.value = currentConversation.mode || ConversationMode.Agent;
-      implementingPlanId.value = currentConversation.implementingPlanId || null;
-      implementingPlanVersion.value = currentConversation.implementingPlanVersion || null;
+      const conversation = await apiClients.articleChat.getConversation(props.articleId, null as any);
+      currentConversation.value = conversation;
+      
+      // Set the mode selector to match the conversation's mode
+      newConversationMode.value = conversation.mode || ConversationMode.Agent;
       
       await loadMessages();
     } catch (err: any) {
@@ -385,36 +394,19 @@ async function loadConversation(conversationIdParam: string | null = null): Prom
   error.value = null;
 
   try {
-    if (conversationIdParam) {
-      // Load specific conversation
-      const conversation = await apiClients.articleChat.getConversation(props.articleId, conversationIdParam);
-      conversationId.value = conversation.id;
-      selectedConversationId.value = conversation.id;
-      mode.value = conversation.mode || ConversationMode.Agent;
-      implementingPlanId.value = conversation.implementingPlanId || null;
-      implementingPlanVersion.value = conversation.implementingPlanVersion || null;
-    } else {
-      // Load or create default conversation
-      try {
-        const conversation = await apiClients.articleChat.getConversation(props.articleId, null as any);
-        conversationId.value = conversation.id;
-        selectedConversationId.value = conversation.id;
-        mode.value = conversation.mode || ConversationMode.Agent;
-        implementingPlanId.value = conversation.implementingPlanId || null;
-        implementingPlanVersion.value = conversation.implementingPlanVersion || null;
-      } catch (err: any) {
-        // No conversation exists yet
-        conversationId.value = null;
-        selectedConversationId.value = null;
-        messages.value = [];
-        return;
-      }
-    }
+    const conversation = await apiClients.articleChat.getConversation(props.articleId, conversationIdParam || null as any);
+    currentConversation.value = conversation;
 
     await loadMessages();
-  } catch (err) {
-    console.error('Error loading conversation:', err);
-    error.value = (err as Error).message || 'Failed to load conversation';
+  } catch (err: any) {
+    if (!conversationIdParam) {
+      // No conversation exists yet
+      currentConversation.value = null;
+      messages.value = [];
+    } else {
+      console.error('Error loading conversation:', err);
+      error.value = (err as Error).message || 'Failed to load conversation';
+    }
   } finally {
     isLoading.value = false;
     nextTick(() => {
@@ -435,13 +427,6 @@ async function loadMessages(): Promise<void> {
       ...msg,
       isStreaming: false
     }));
-
-    if (messages.value.length > 0) {
-      const lastMessage = messages.value[messages.value.length - 1];
-      if (lastMessage && lastMessage.role === ChatMessageRole.User) {
-        isAiTurn.value = true;
-      }
-    }
   } catch (err) {
     console.error('Error loading messages:', err);
     error.value = 'Failed to load messages';
@@ -458,20 +443,20 @@ async function sendMessage(): Promise<void> {
   try {
     if (!conversationId.value) {
       // Create conversation when sending first message
-      const conversation = await apiClients.articleChat.createConversation(props.articleId!, mode.value);
-      conversationId.value = conversation.id;
-      selectedConversationId.value = conversation.id;
+      const conversation = await apiClients.articleChat.createConversation(props.articleId!, newConversationMode.value);
+      currentConversation.value = conversation;
       
       // Reload conversations list to include the new one
       await loadConversations();
     }
 
-    await apiClients.articleChat.sendMessage(props.articleId!, conversationId.value, {
+    // Always use the selected mode for the message
+    await apiClients.articleChat.sendMessage(props.articleId!, conversationId.value!, {
       message: messageText,
-      mode: mode.value
+      mode: newConversationMode.value
     });
 
-    isAiTurn.value = true;
+    // isRunning will be set by ChatTurnStarted event
     nextTick(() => scrollToBottom());
 
   } catch (err) {
@@ -481,16 +466,18 @@ async function sendMessage(): Promise<void> {
 }
 
 async function stopConversation(): Promise<void> {
-  if (!conversationId.value || !isAiTurn.value) return;
+  if (!conversationId.value || !isRunning.value) return;
 
   try {
     await apiClients.articleChat.stopConversation(props.articleId!, conversationId.value);
-    // The UI will be updated via the ChatTurnStopped SignalR event
+    // isRunning will be set to false by ChatTurnComplete event
   } catch (err) {
     console.error('Error stopping conversation:', err);
     error.value = 'Failed to stop conversation';
     // Reset state anyway
-    isAiTurn.value = false;
+    if (currentConversation.value) {
+      currentConversation.value.isRunning = false;
+    }
   }
 }
 
@@ -499,7 +486,9 @@ function onTurnStarted(data: ChatTurnStartedPayload) {
     return;
   }
 
-  isAiTurn.value = true;
+  if (currentConversation.value) {
+    currentConversation.value.isRunning = true;
+  }
   nextTick(() => scrollToBottom());
 }
 
@@ -655,7 +644,9 @@ function onTurnComplete(data: ChatTurnCompletePayload) {
   }
 
   console.log('Turn complete');
-  isAiTurn.value = false;
+  if (currentConversation.value) {
+    currentConversation.value.isRunning = false;
+  }
 }
 
 function onChatError(data: ChatErrorPayload) {
@@ -665,7 +656,9 @@ function onChatError(data: ChatErrorPayload) {
 
   console.error('Chat error:', data);
   error.value = data.message || 'An error occurred';
-  isAiTurn.value = false;
+  if (currentConversation.value) {
+    currentConversation.value.isRunning = false;
+  }
 }
 
 function scrollToBottom(): void {
@@ -676,17 +669,13 @@ function scrollToBottom(): void {
 }
 
 function reset(): void {
-  conversationId.value = null;
+  currentConversation.value = null;
   conversations.value = [];
-  selectedConversationId.value = null;
   messages.value = [];
   newMessage.value = '';
-  isAiTurn.value = false;
   error.value = null;
   expandedMessages.value = {};
-  mode.value = ConversationMode.Agent;
-  implementingPlanId.value = null;
-  implementingPlanVersion.value = null;
+  newConversationMode.value = ConversationMode.Agent;
 }
 
 async function switchConversation(newConversationId: string): Promise<void> {
@@ -694,11 +683,10 @@ async function switchConversation(newConversationId: string): Promise<void> {
   
   try {
     const conversation = await apiClients.articleChat.getConversation(props.articleId, newConversationId);
-    conversationId.value = conversation.id;
-    selectedConversationId.value = conversation.id;
-    mode.value = conversation.mode || ConversationMode.Agent;
-    implementingPlanId.value = conversation.implementingPlanId || null;
-    implementingPlanVersion.value = conversation.implementingPlanVersion || null;
+    currentConversation.value = conversation;
+    
+    // Set the mode selector to match the conversation's mode
+    newConversationMode.value = conversation.mode || ConversationMode.Agent;
     
     await loadMessages();
     
@@ -713,9 +701,9 @@ async function switchConversation(newConversationId: string): Promise<void> {
   }
 }
 
-async function onConversationChange(): Promise<void> {
-  if (selectedConversationId.value) {
-    await switchConversation(selectedConversationId.value);
+async function onConversationChange(newConversationId: string | null): Promise<void> {
+  if (newConversationId) {
+    await switchConversation(newConversationId);
   } else {
     // User selected "New conversation" from dropdown
     createNewConversation();
@@ -723,14 +711,13 @@ async function onConversationChange(): Promise<void> {
 }
 
 async function createNewConversation(): Promise<void> {
-  if (!props.articleId || isAiTurn.value) return;
+  if (!props.articleId || isRunning.value) return;
 
   // Don't actually create the conversation yet - just clear the current state
   // The conversation will be created when the first message is sent
-  conversationId.value = null;
-  selectedConversationId.value = null;
+  currentConversation.value = null;
   messages.value = [];
-  mode.value = ConversationMode.Agent;
+  newConversationMode.value = ConversationMode.Agent;
   
   nextTick(() => {
     chatInput.value?.focus();
@@ -779,28 +766,28 @@ function openPlan(planId: string): void {
 }
 
 async function createPlan(): Promise<void> {
-  if (!props.articleId || isAiTurn.value) return;
+  if (!props.articleId || isRunning.value) return;
 
-  // Switch to Plan mode
-  mode.value = ConversationMode.Plan;
+  // Set mode for new conversation
+  newConversationMode.value = ConversationMode.Plan;
 
   // Set the command message
   newMessage.value = 'Create a plan for improving this article';
 
-  // Send it using the standard chat flow
+  // Send it using the standard chat flow (will create conversation if needed)
   await sendMessage();
 }
 
 async function reviewWithCursor(): Promise<void> {
-  if (!props.articleId || isAiTurn.value) return;
+  if (!props.articleId || isRunning.value) return;
 
-  // Switch to Agent mode
-  mode.value = ConversationMode.Agent;
+  // Set mode for new conversation
+  newConversationMode.value = ConversationMode.Agent;
 
   // Set the command message
   newMessage.value = 'Review this article with Cursor';
 
-  // Send it using the standard chat flow
+  // Send it using the standard chat flow (will create conversation if needed)
   await sendMessage();
 }
 
