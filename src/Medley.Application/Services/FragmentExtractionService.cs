@@ -104,7 +104,7 @@ public class FragmentExtractionService
             
             foreach (var fragment in existingFragments)
             {
-                await _fragmentRepository.DeleteAsync(fragment);
+                await _fragmentRepository.Remove(fragment);
             }
         }
 
@@ -315,7 +315,7 @@ public class FragmentExtractionService
                     LastModifiedAt = DateTimeOffset.UtcNow,
                 };
 
-                await _fragmentRepository.AddAsync(fragment);
+                await _fragmentRepository.Add(fragment);
                 fragmentCount++;
 
                 _logger.LogDebug("Created fragment: {Title}", fragment.Title);

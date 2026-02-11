@@ -333,7 +333,7 @@ public class TaggingService : ITaggingService
                     Value = valueToStore
                 };
 
-                await _tagRepository.AddAsync(newTag);
+                await _tagRepository.Add(newTag);
                 source.Tags.Add(newTag);
             }
         }

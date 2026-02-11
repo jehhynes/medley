@@ -55,7 +55,7 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
                 CreatedAt = DateTimeOffset.UtcNow
             };
 
-            await _sessionRepository.AddAsync(session);
+            await _sessionRepository.Add(session);
             
             LogInfo(context, $"Created clustering session {session.Id}");
             
@@ -90,7 +90,7 @@ public class FragmentClusteringJob : BaseHangfireJob<FragmentClusteringJob>
                 // Add clusters to repository (EF Core will handle many-to-many)
                 foreach (var cluster in clusterList)
                 {
-                    await _clusterRepository.AddAsync(cluster);
+                    await _clusterRepository.Add(cluster);
                 }
 
                 await _unitOfWork.SaveChangesAsync();

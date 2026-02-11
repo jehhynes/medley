@@ -99,7 +99,7 @@ public class FragmentRepositoryTests : DatabaseTestBase
         };
 
         // Act
-        await _repository.AddAsync(fragment);
+        await _repository.Add(fragment);
 
         // Assert
         var saved = await _dbContext.Fragments.FindAsync(fragment.Id);

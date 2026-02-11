@@ -109,7 +109,7 @@ public class TokenTrackingEmbeddingGenerator : DelegatingEmbeddingGenerator<stri
 
             // Begin transaction, save, commit immediately
             await unitOfWork.BeginTransactionAsync(IsolationLevel.ReadCommitted);
-            await tokenUsageRepository.AddAsync(usage);
+            await tokenUsageRepository.Add(usage);
             await unitOfWork.SaveChangesAsync();
             await unitOfWork.CommitTransactionAsync();
 

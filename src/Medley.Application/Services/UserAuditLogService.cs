@@ -29,7 +29,7 @@ public class UserAuditLogService : IUserAuditLogService
             Timestamp = DateTimeOffset.UtcNow
         };
 
-        await _auditLogRepository.AddAsync(auditLog);
+        await _auditLogRepository.Add(auditLog);
     }
 
     public async Task LogFailedLoginAsync(string userName, string ipAddress, string reason)
@@ -44,7 +44,7 @@ public class UserAuditLogService : IUserAuditLogService
             Timestamp = DateTimeOffset.UtcNow
         };
 
-        await _auditLogRepository.AddAsync(auditLog);
+        await _auditLogRepository.Add(auditLog);
     }
 
     public async Task LogLogoutAsync(Guid userId, string userName, string ipAddress)
@@ -60,7 +60,7 @@ public class UserAuditLogService : IUserAuditLogService
             Timestamp = DateTimeOffset.UtcNow
         };
 
-        await _auditLogRepository.AddAsync(auditLog);
+        await _auditLogRepository.Add(auditLog);
     }
 
     public async Task LogRoleChangeAsync(Guid userId, string userName, string performedBy, string details, string ipAddress)
@@ -76,7 +76,7 @@ public class UserAuditLogService : IUserAuditLogService
             Timestamp = DateTimeOffset.UtcNow
         };
 
-        await _auditLogRepository.AddAsync(auditLog);
+        await _auditLogRepository.Add(auditLog);
     }
 
     public async Task LogUserManagementAsync(UserAuditAction action, Guid userId, string userName, string performedBy, string ipAddress, string? details = null)
@@ -92,7 +92,7 @@ public class UserAuditLogService : IUserAuditLogService
             Timestamp = DateTimeOffset.UtcNow
         };
 
-        await _auditLogRepository.AddAsync(auditLog);
+        await _auditLogRepository.Add(auditLog);
     }
 
     public IQueryable<UserAuditLog> GetUserAuditLogs()

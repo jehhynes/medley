@@ -441,7 +441,7 @@ public class SpeakerExtractionJob : BaseHangfireJob<SpeakerExtractionJob>
                 IsInternal = speakerInfo.IsInternal,
                 TrustLevel = null
             };
-            await _speakerRepository.AddAsync(speaker);
+            await _speakerRepository.Add(speaker);
             existingSpeakers.Add(speaker);
 
             LogDebug($"Created new speaker: {speakerInfo.Name} with IsInternal={speakerInfo.IsInternal?.ToString() ?? "null"}, Email={speakerInfo.Email ?? "null"}");

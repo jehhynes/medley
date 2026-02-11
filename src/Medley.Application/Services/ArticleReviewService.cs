@@ -100,7 +100,7 @@ public class ArticleReviewService : IArticleReviewService
             Comments = request.Comments
         };
 
-        await _reviewRepository.AddAsync(review);
+        await _reviewRepository.Add(review);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         // Reload review with user data for DTO mapping

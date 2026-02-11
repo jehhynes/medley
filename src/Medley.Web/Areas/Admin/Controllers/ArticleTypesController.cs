@@ -52,7 +52,7 @@ public class ArticleTypesController : Controller
 
         try
         {
-            await _articleTypeRepository.AddAsync(model);
+            await _articleTypeRepository.Add(model);
             await _unitOfWork.SaveChangesAsync();
             
             TempData["SuccessMessage"] = "Article type created";
@@ -130,7 +130,7 @@ public class ArticleTypesController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        await _articleTypeRepository.DeleteAsync(articleType);
+        await _articleTypeRepository.Remove(articleType);
         await _unitOfWork.SaveChangesAsync();
 
         TempData["SuccessMessage"] = "Article type deleted";

@@ -570,8 +570,8 @@ public class ArticleChatApiController : ControllerBase
             
         }
         
-        await _conversationRepository.AddAsync(conversation);
-        await _chatMessageRepository.AddAsync(userMessage);
+        await _conversationRepository.Add(conversation);
+        await _chatMessageRepository.Add(userMessage);
 
         // Get user's full name for broadcast
         var user = await _userRepository.GetByIdAsync(userId.Value);
@@ -615,7 +615,7 @@ public class ArticleChatApiController : ControllerBase
                 var jobId = _backgroundJobClient.Enqueue<ArticleChatJob>(job => job.ProcessChatMessageAsync(messageId, default!, default));
 
                 _logger.LogInformation("Enqueued chat job {JobId} for conversation {ConversationId}", jobId, capturedConversationId);
-            }
+                }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error enqueueing chat job for message {MessageId}", messageId);

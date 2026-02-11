@@ -328,7 +328,7 @@ public class PlanApiController : ControllerBase
             Text = "Please implement the improvement plan as described.",
             CreatedAt = DateTimeOffset.UtcNow
         };
-        await _messageRepository.AddAsync(userMessage);
+        await _messageRepository.Add(userMessage);
 
         // 6. Register post-commit actions
         HttpContext.RegisterPostCommitAction(async () =>

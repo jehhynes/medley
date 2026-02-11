@@ -376,7 +376,7 @@ public class AiPromptApiController : ControllerBase
                     LastModifiedAt = DateTimeOffset.UtcNow
                 };
 
-                await _promptRepository.AddAsync(newTemplate);
+                await _promptRepository.Add(newTemplate);
                 await _unitOfWork.SaveChangesAsync();
 
                 _logger.LogInformation(

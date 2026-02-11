@@ -52,7 +52,7 @@ public class KnowledgeCategoriesController : Controller
 
         try
         {
-            await _knowledgeCategoryRepository.AddAsync(model);
+            await _knowledgeCategoryRepository.Add(model);
             await _unitOfWork.SaveChangesAsync();
             
             TempData["SuccessMessage"] = "Knowledge category created";
@@ -130,7 +130,7 @@ public class KnowledgeCategoriesController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        await _knowledgeCategoryRepository.DeleteAsync(knowledgeCategory);
+        await _knowledgeCategoryRepository.Remove(knowledgeCategory);
         await _unitOfWork.SaveChangesAsync();
 
         TempData["SuccessMessage"] = "Knowledge category deleted";

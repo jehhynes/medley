@@ -294,7 +294,7 @@ public class ArticleVersionService : IArticleVersionService
 
         version.ModifiedAt = version.CreatedAt;
 
-        await _versionRepository.AddAsync(version);
+        await _versionRepository.Add(version);
 
         // Update the article's CurrentVersionId to point to this new User version
         article.CurrentVersionId = version.Id;
@@ -330,7 +330,7 @@ public class ArticleVersionService : IArticleVersionService
 
         baseVersion.ModifiedAt = baseVersion.CreatedAt;
 
-        await _versionRepository.AddAsync(baseVersion);
+        await _versionRepository.Add(baseVersion);
 
         // Update the article's CurrentVersionId to point to this base version
         article.CurrentVersionId = baseVersion.Id;
@@ -537,7 +537,7 @@ public class ArticleVersionService : IArticleVersionService
                 ReviewAction = ReviewAction.None
             };
 
-            await _versionRepository.AddAsync(newVersion);
+            await _versionRepository.Add(newVersion);
 
             _logger.LogInformation("Created AI article version {VersionId} (v{VersionNumber}) for article {ArticleId}",
                 newVersion.Id, versionNumber, articleId);

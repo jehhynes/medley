@@ -93,7 +93,7 @@ public class ArticleChatService : IArticleChatService
             CreatedAt = DateTimeOffset.UtcNow
         };
 
-        await _conversationRepository.AddAsync(conversation);
+        await _conversationRepository.Add(conversation);
         if (article != null)
         {
             article.CurrentConversationId = conversation.Id;
@@ -392,7 +392,7 @@ public class ArticleChatService : IArticleChatService
 
             result.Add(message);
 
-            await _chatMessageRepository.AddAsync(message);
+            await _chatMessageRepository.Add(message);
 
             await _unitOfWork.SaveChangesAsync();
             await _unitOfWork.CommitTransactionAsync();
@@ -437,7 +437,7 @@ public class ArticleChatService : IArticleChatService
                 conversationId, conversation.Mode, mode);
             
             conversation.Mode = mode;
-            await _conversationRepository.AddAsync(conversation);
+            await _conversationRepository.Add(conversation);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
     }

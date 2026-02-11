@@ -171,7 +171,7 @@ public class KnowledgeUnitGeneratorJob : BaseHangfireJob<KnowledgeUnitGeneratorJ
                         UpdatedAt = DateTimeOffset.UtcNow
                     };
 
-                    await _knowledgeUnitRepository.AddAsync(knowledgeUnit);
+                    await _knowledgeUnitRepository.Add(knowledgeUnit);
                     createdKnowledgeUnitIds.Add(knowledgeUnit.Id);
 
                     // Create many-to-many relationships
@@ -187,7 +187,7 @@ public class KnowledgeUnitGeneratorJob : BaseHangfireJob<KnowledgeUnitGeneratorJ
                             CreatedAt = DateTimeOffset.UtcNow
                         };
                         
-                        await _fragmentKnowledgeUnitRepository.AddAsync(joinEntity);
+                        await _fragmentKnowledgeUnitRepository.Add(joinEntity);
                         allIncludedFragmentIds.Add(fragment.Id);
                     }
 

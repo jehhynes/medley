@@ -57,7 +57,7 @@ public class TagTypesController : Controller
             return View(model);
         }
 
-        await _tagTypeRepository.AddAsync(model);
+        await _tagTypeRepository.Add(model);
 
         // Handle allowed values (one per line)
         var values = ParseAllowedValues(allowedValues);
@@ -69,7 +69,7 @@ public class TagTypesController : Controller
                 TagTypeId = model.Id,
                 Value = value
             };
-            await _tagOptionRepository.AddAsync(option);
+            await _tagOptionRepository.Add(option);
         }
 
         await _unitOfWork.SaveChangesAsync();
@@ -121,7 +121,7 @@ public class TagTypesController : Controller
         var toRemove = existing.AllowedValues.Where(av => !newValues.Contains(av.Value, StringComparer.OrdinalIgnoreCase)).ToList();
         foreach (var remove in toRemove)
         {
-            await _tagOptionRepository.DeleteAsync(remove);
+            await _tagOptionRepository.Remove(remove);
         }
 
         foreach (var value in newValues)
@@ -134,7 +134,7 @@ public class TagTypesController : Controller
                     TagTypeId = existing.Id,
                     Value = value
                 };
-                await _tagOptionRepository.AddAsync(option);
+                await _tagOptionRepository.Add(option);
             }
         }
 
@@ -155,7 +155,7 @@ public class TagTypesController : Controller
             return NotFound();
         }
 
-        await _tagTypeRepository.DeleteAsync(tagType);
+        await _tagTypeRepository.Remove(tagType);
         await _unitOfWork.SaveChangesAsync();
 
         TempData["SuccessMessage"] = "Tag type deleted";

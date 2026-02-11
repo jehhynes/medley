@@ -246,7 +246,7 @@ public class TokenUsageApiController : ControllerBase
                 EmbeddingCostPerMillion = request.EmbeddingCostPerMillion
             };
 
-            await _costParameterRepository.AddAsync(newParameter);
+            await _costParameterRepository.Add(newParameter);
             await _unitOfWork.SaveChangesAsync();
 
             return Ok(new ModelCostParameter
@@ -272,7 +272,7 @@ public class TokenUsageApiController : ControllerBase
             return NotFound();
         }
 
-        await _costParameterRepository.DeleteAsync(parameter);
+        await _costParameterRepository.Remove(parameter);
         await _unitOfWork.SaveChangesAsync();
 
         return NoContent();

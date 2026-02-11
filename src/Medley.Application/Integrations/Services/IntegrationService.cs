@@ -41,7 +41,7 @@ public class IntegrationService : IIntegrationService
 
     public async Task AddAsync(Integration integration, CancellationToken cancellationToken = default)
     {
-        await _integrationRepository.AddAsync(integration);
+        await _integrationRepository.Add(integration);
     }
 
     public async Task DeleteAsync(Integration integration, CancellationToken cancellationToken = default)

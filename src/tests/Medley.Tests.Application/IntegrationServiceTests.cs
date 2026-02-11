@@ -123,14 +123,14 @@ public class IntegrationServiceTests
             Name = "Test Integration"
         };
 
-        _mockRepository.Setup(r => r.AddAsync(integration))
+        _mockRepository.Setup(r => r.Add(integration))
             .Returns(Task.CompletedTask);
 
         // Act
         await _service.AddAsync(integration);
 
         // Assert
-        _mockRepository.Verify(r => r.AddAsync(integration), Times.Once);
+        _mockRepository.Verify(r => r.Add(integration), Times.Once);
     }
 
     [Fact]

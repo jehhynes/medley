@@ -28,7 +28,7 @@ public class Repository<T> : IRepository<T> where T : class
         return _dbSet.AsQueryable();
     }
 
-    public virtual Task AddAsync(T entity)
+    public virtual Task Add(T entity)
     {
         var entry = _context.Entry(entity);
         if (entry.State == EntityState.Detached)
@@ -39,7 +39,7 @@ public class Repository<T> : IRepository<T> where T : class
         //await _context.SaveChangesAsync(); //We don't want to flush every time an entity is added.
     }
 
-    public virtual Task DeleteAsync(T entity)
+    public virtual Task Remove(T entity)
     {
         _dbSet.Remove(entity);
         return Task.CompletedTask;

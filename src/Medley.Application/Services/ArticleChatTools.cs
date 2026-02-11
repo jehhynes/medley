@@ -497,7 +497,7 @@ public class ArticleChatTools
                 Conversation = conversation
             };
 
-            await _planRepository.AddAsync(plan);
+            await _planRepository.Add(plan);
 
             // Set as current plan on the article
             article.CurrentPlanId = plan.Id;
@@ -524,7 +524,7 @@ public class ArticleChatTools
                     Instructions = rec.Instructions
                 };
 
-                await _planKnowledgeUnitRepository.AddAsync(planKnowledgeUnit);
+                await _planKnowledgeUnitRepository.Add(planKnowledgeUnit);
             }
 
             // Register post-commit action to send SignalR notification
@@ -964,7 +964,7 @@ public class ArticleChatTools
                     Instructions = rec.Instructions
                 };
 
-                await _planKnowledgeUnitRepository.AddAsync(planKnowledgeUnit);
+                await _planKnowledgeUnitRepository.Add(planKnowledgeUnit);
                 addedCount++;
                 
                 _logger.LogDebug("Added knowledge unit {KnowledgeUnitId} to plan {PlanId}", 

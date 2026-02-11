@@ -47,7 +47,7 @@ public class RepositoryTests : DatabaseTestBase
         var user = new User { Id = userId, UserName = "newuser", Email = "newuser@test.com", FullName = "New User" };
 
         // Act
-        await _repository.AddAsync(user);
+        await _repository.Add(user);
 
         // Assert
         var savedUser = await _dbContext.Users.FindAsync(userId);
@@ -69,7 +69,7 @@ public class RepositoryTests : DatabaseTestBase
         // Act - Update the user through the repository
         user.UserName = "updateduser";
         user.Email = "updated@test.com";
-        await _repository.AddAsync(user);
+        await _repository.Add(user);
 
         // Assert
         var savedUser = await _dbContext.Users.FindAsync(userId);

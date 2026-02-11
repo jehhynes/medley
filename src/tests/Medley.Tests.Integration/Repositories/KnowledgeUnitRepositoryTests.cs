@@ -93,7 +93,7 @@ public class KnowledgeUnitRepositoryTests : DatabaseTestBase
         };
 
         // Act
-        await _repository.AddAsync(knowledgeUnit);
+        await _repository.Add(knowledgeUnit);
         await _dbContext.SaveChangesAsync();
 
         // Assert

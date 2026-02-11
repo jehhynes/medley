@@ -238,7 +238,7 @@ public class ArticlesApiController : ControllerBase
             CreatedBy = currentUser
         };
 
-        await _articleRepository.AddAsync(article);
+        await _articleRepository.Add(article);
 
         // Register post-commit action to send SignalR notification
         HttpContext.RegisterPostCommitAction(async () =>
