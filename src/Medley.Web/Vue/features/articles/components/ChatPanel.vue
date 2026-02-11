@@ -185,9 +185,13 @@
             <button 
               v-else
               @click="stopConversation"
+              :disabled="isStopping"
               class="btn btn-danger chat-send-btn"
               title="Stop generation">
-              <i class="bi bi-stop-fill"></i>
+              <span v-if="isStopping" class="spinner-border spinner-border-sm" role="status">
+                <span class="visually-hidden">Stopping...</span>
+              </span>
+              <i v-else class="bi bi-stop-fill"></i>
             </button>
           </div>
         </div>
@@ -271,7 +275,8 @@ const selectedConversationId = computed({
   }
 });
 const mode = computed(() => currentConversation.value?.mode || newConversationMode.value);
-const isRunning = computed(() => currentConversation.value?.isRunning || false);
+const isStopping = ref<boolean>(false);
+const isRunning = computed(() => currentConversation.value?.isRunning || isStopping.value);
 
 const isConnected = computed<boolean>(() => {
   return !!(props.connection && props.connection.state === signalR.HubConnectionState.Connected);
@@ -466,11 +471,15 @@ async function sendMessage(): Promise<void> {
 }
 
 async function stopConversation(): Promise<void> {
-  if (!conversationId.value || !isRunning.value) return;
+  if (!conversationId.value || isStopping.value) return;
+  if (!currentConversation.value?.isRunning) return;
 
+  isStopping.value = true;
+  
   try {
     await apiClients.articleChat.stopConversation(props.articleId!, conversationId.value);
     // isRunning will be set to false by ChatTurnComplete event
+    // isStopping will be reset in onTurnComplete or onChatError
   } catch (err) {
     console.error('Error stopping conversation:', err);
     error.value = 'Failed to stop conversation';
@@ -478,6 +487,7 @@ async function stopConversation(): Promise<void> {
     if (currentConversation.value) {
       currentConversation.value.isRunning = false;
     }
+    isStopping.value = false;
   }
 }
 
@@ -647,6 +657,7 @@ function onTurnComplete(data: ChatTurnCompletePayload) {
   if (currentConversation.value) {
     currentConversation.value.isRunning = false;
   }
+  isStopping.value = false;
 }
 
 function onChatError(data: ChatErrorPayload) {
@@ -659,6 +670,7 @@ function onChatError(data: ChatErrorPayload) {
   if (currentConversation.value) {
     currentConversation.value.isRunning = false;
   }
+  isStopping.value = false;
 }
 
 function scrollToBottom(): void {
