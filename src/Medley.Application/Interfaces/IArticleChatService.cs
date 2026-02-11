@@ -45,24 +45,6 @@ public interface IArticleChatService
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Mark a conversation as complete
-    /// </summary>
-    /// <param name="conversationId">The conversation ID</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    Task CompleteConversationAsync(
-        Guid conversationId,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Cancel a conversation
-    /// </summary>
-    /// <param name="conversationId">The conversation ID</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    Task CancelConversationAsync(
-        Guid conversationId,
-        CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Update the mode of an existing conversation
     /// </summary>
     /// <param name="conversationId">The conversation ID</param>

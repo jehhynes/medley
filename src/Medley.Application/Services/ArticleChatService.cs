@@ -420,61 +420,6 @@ public class ArticleChatService : IArticleChatService
         return await query.ToListAsync(cancellationToken);
     }
 
-    public async Task CompleteConversationAsync(
-        Guid conversationId,
-        CancellationToken cancellationToken = default)
-    {
-        var conversation = await _conversationRepository.GetByIdAsync(conversationId);
-        if (conversation == null)
-        {
-            throw new InvalidOperationException($"Conversation {conversationId} not found");
-        }
-
-        conversation.State = ConversationState.Complete;
-        conversation.CompletedAt = DateTimeOffset.UtcNow;
-
-        
-        
-        // Clear the article's current conversation reference if it matches this conversation
-        var article = await _articleRepository.GetByIdAsync(conversation.ArticleId);
-        if (article != null && article.CurrentConversationId == conversationId)
-        {
-            article.CurrentConversationId = null;
-            
-        }
-        
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        _logger.LogInformation("Completed conversation {ConversationId}", conversationId);
-    }
-
-    public async Task CancelConversationAsync(
-        Guid conversationId,
-        CancellationToken cancellationToken = default)
-    {
-        var conversation = await _conversationRepository.GetByIdAsync(conversationId);
-        if (conversation == null)
-        {
-            throw new InvalidOperationException($"Conversation {conversationId} not found");
-        }
-
-        conversation.State = ConversationState.Archived;
-
-        
-        
-        // Clear the article's current conversation reference if it matches this conversation
-        var article = await _articleRepository.GetByIdAsync(conversation.ArticleId);
-        if (article != null && article.CurrentConversationId == conversationId)
-        {
-            article.CurrentConversationId = null;
-            
-        }
-        
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        _logger.LogInformation("Cancelled conversation {ConversationId}", conversationId);
-    }
-
     public async Task UpdateConversationModeAsync(
         Guid conversationId,
         ConversationMode mode,

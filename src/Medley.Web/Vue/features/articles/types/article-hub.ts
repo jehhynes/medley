@@ -127,18 +127,6 @@ export interface ChatMessageReceivedPayload {
   articleId: string;
 }
 
-export interface ConversationCompletedPayload {
-  conversationId: string;
-  articleId: string;
-  completedAt: string;
-}
-
-export interface ConversationCancelledPayload {
-  conversationId: string;
-  articleId: string;
-  timestamp: string;
-}
-
 export interface ArticleHubServerMethods {
   ArticleCreated: (payload: ArticleCreatedPayload) => void;
   ArticleUpdated: (payload: ArticleUpdatedPayload) => void;
@@ -156,8 +144,6 @@ export interface ArticleHubServerMethods {
   ChatMessageComplete: (payload: ChatMessageCompletePayload) => void;
   ChatError: (payload: ChatErrorPayload) => void;
   ChatMessageReceived: (payload: ChatMessageReceivedPayload) => void;
-  ConversationCompleted: (payload: ConversationCompletedPayload) => void;
-  ConversationCancelled: (payload: ConversationCancelledPayload) => void;
 }
 
 /** Typed hub connection with compile-time type safety for event handlers */

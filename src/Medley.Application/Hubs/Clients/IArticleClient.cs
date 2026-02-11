@@ -86,16 +86,6 @@ public interface IArticleClient
     Task ChatMessageReceived(ChatMessageReceivedPayload payload);
 
     /// <summary>
-    /// Notifies clients that a conversation was completed
-    /// </summary>
-    Task ConversationCompleted(ConversationCompletedPayload payload);
-
-    /// <summary>
-    /// Notifies clients that a conversation was cancelled
-    /// </summary>
-    Task ConversationCancelled(ConversationCancelledPayload payload);
-
-    /// <summary>
     /// Notifies clients that a review was added to an article
     /// </summary>
     Task ArticleReviewAdded(Guid articleId, Application.Models.DTOs.ArticleReviewDto review);

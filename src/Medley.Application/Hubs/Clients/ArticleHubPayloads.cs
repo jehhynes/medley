@@ -195,26 +195,6 @@ public record ChatMessageReceivedPayload
 }
 
 /// <summary>
-/// Payload for ConversationCompleted event
-/// </summary>
-public record ConversationCompletedPayload
-{
-    public required Guid ConversationId { get; init; }
-    public required Guid ArticleId { get; init; }
-    public required DateTimeOffset CompletedAt { get; init; }
-}
-
-/// <summary>
-/// Payload for ConversationCancelled event
-/// </summary>
-public record ConversationCancelledPayload
-{
-    public required Guid ConversationId { get; init; }
-    public required Guid ArticleId { get; init; }
-    public required DateTimeOffset Timestamp { get; init; }
-}
-
-/// <summary>
 /// Payload for ArticleReviewAdded event
 /// </summary>
 public record ArticleReviewAddedPayload
