@@ -33,77 +33,79 @@ public class AuthController : Controller
         _logger = logger;
     }
 
-    ///// <summary>
-    ///// Display registration form
-    ///// </summary>
-    //[HttpGet]
-    //[AllowAnonymous]
-    //public IActionResult Register(string? returnUrl = null)
-    //{
-    //    ViewData["ReturnUrl"] = returnUrl;
-    //    return View();
-    //}
+    /// <summary>
+    /// Display registration form
+    /// </summary>
+    [HttpGet]
+    [AllowAnonymous]
+    public IActionResult Register(string? returnUrl = null)
+    {
+        ViewData["ReturnUrl"] = returnUrl;
+        return View();
+    }
 
-    ///// <summary>
-    ///// Process user registration
-    ///// </summary>
-    //[HttpPost]
-    //[AllowAnonymous]
-    //[ValidateAntiForgeryToken]
-    //public async Task<IActionResult> Register(RegisterViewModel model, string? returnUrl = null)
-    //{
-    //    ViewData["ReturnUrl"] = returnUrl;
+    /// <summary>
+    /// Process user registration
+    /// </summary>
+    [HttpPost]
+    [AllowAnonymous]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Register(RegisterViewModel model, string? returnUrl = null)
+    {
+        ViewData["ReturnUrl"] = returnUrl;
 
-    //    if (!ModelState.IsValid)
-    //    {
-    //        return View(model);
-    //    }
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
 
-    //    var user = new User
-    //    {
-    //        UserName = model.Email,
-    //        Email = model.Email,
-    //        FullName = model.FullName,
-    //        IsActive = true,
-    //        CreatedAt = DateTimeOffset.UtcNow
-    //    };
+        // Only allow registration if no users exist (initial setup only)
+        var existingUsersCount = _userManager.Users.Count();
+        if (existingUsersCount > 0)
+        {
+            _logger.LogWarning("Registration attempt blocked - system already has users");
+            throw new InvalidOperationException("Registration is only available during initial setup. The system already has registered users.");
+        }
 
-    //    var result = await _userManager.CreateAsync(user, model.Password);
+        var user = new User
+        {
+            UserName = model.Email,
+            Email = model.Email,
+            FullName = model.FullName,
+            IsActive = true,
+            EmailConfirmed = true, // Automatically confirm email for initial setup
+            CreatedAt = DateTimeOffset.UtcNow
+        };
 
-    //    if (result.Succeeded)
-    //    {
-    //        _logger.LogInformation("User {Email} created successfully", model.Email);
+        var result = await _userManager.CreateAsync(user, model.Password);
 
-    //        // Generate email confirmation token and send email
-    //        var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-    //        var callbackUrl = Url.Action(
-    //            nameof(ConfirmEmail),
-    //            "Auth",
-    //            new { userId = user.Id, code },
-    //            protocol: Request.Scheme);
+        if (result.Succeeded)
+        {
+            // Add Admin role to the first user
+            var roleResult = await _userManager.AddToRoleAsync(user, "Admin");
+            if (!roleResult.Succeeded)
+            {
+                _logger.LogError("Failed to add Admin role to user {Email}: {Errors}", 
+                    model.Email, 
+                    string.Join(", ", roleResult.Errors.Select(e => e.Description)));
+            }
+            else
+            {
+                _logger.LogInformation("Admin role assigned to user {Email}", model.Email);
+            }
 
-    //        try
-    //        {
-    //            var emailBody = EmailTemplateService.GetEmailConfirmationTemplate(callbackUrl!);
-    //            await _emailService.SendEmailAsync(model.Email, "Confirm your email - Medley", emailBody);
-    //            TempData["Success"] = "Registration successful! Please check your email to confirm your account.";
-    //        }
-    //        catch (Exception ex)
-    //        {
-    //            _logger.LogError(ex, "Failed to send confirmation email to {Email}", model.Email);
-    //            TempData["Warning"] = "Account created but confirmation email failed to send. Please contact support.";
-    //        }
+            _logger.LogInformation("User {Email} created successfully during initial setup", model.Email);
+            TempData["Success"] = "Registration successful! You can now log in.";
+            return RedirectToAction(nameof(Login));
+        }
 
-    //        return RedirectToAction(nameof(Login));
-    //    }
+        foreach (var error in result.Errors)
+        {
+            ModelState.AddModelError(string.Empty, error.Description);
+        }
 
-    //    foreach (var error in result.Errors)
-    //    {
-    //        ModelState.AddModelError(string.Empty, error.Description);
-    //    }
-
-    //    return View(model);
-    //}
+        return View(model);
+    }
 
     /// <summary>
     /// Display login form
@@ -112,6 +114,14 @@ public class AuthController : Controller
     [AllowAnonymous]
     public IActionResult Login(string? returnUrl = null)
     {
+        // Redirect to registration if no users exist (initial setup)
+        var existingUsersCount = _userManager.Users.Count();
+        if (existingUsersCount == 0)
+        {
+            _logger.LogInformation("No users exist - redirecting to registration for initial setup");
+            return RedirectToAction(nameof(Register), new { returnUrl });
+        }
+
         ViewData["ReturnUrl"] = returnUrl;
         return View();
     }

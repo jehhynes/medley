@@ -30,4 +30,6 @@ public class RegisterViewModel
     [Display(Name = "Confirm Password")]
     [Compare("Password", ErrorMessage = "Password and confirmation password do not match")]
     public string ConfirmPassword { get; set; } = string.Empty;
+
+    public string? ReturnUrl { get; set; }
 }
