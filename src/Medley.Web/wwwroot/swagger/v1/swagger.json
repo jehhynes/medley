@@ -4750,11 +4750,13 @@
         "description": "",
         "x-enumNames": [
           "Unknown",
-          "Meeting"
+          "Meeting",
+          "YouTube"
         ],
         "enum": [
           "Unknown",
-          "Meeting"
+          "Meeting",
+          "YouTube"
         ]
       },
       "SpeakerSummaryDto": {
@@ -5376,12 +5378,14 @@
         "x-enumNames": [
           "Unknown",
           "Collector_GoogleDrive",
-          "Collector_Fellow"
+          "Collector_Fellow",
+          "Youtube_SocialKit"
         ],
         "enum": [
           "Unknown",
           "Collector_GoogleDrive",
-          "Collector_Fellow"
+          "Collector_Fellow",
+          "Youtube_SocialKit"
         ]
       },
       "SpeechSegmentDto": {

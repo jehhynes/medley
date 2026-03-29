@@ -85,6 +85,7 @@ public static class DependencyInjection
         services.AddScoped<INotificationService, SignalRNotificationService>();
         services.AddScoped<IKnowledgeBuilderImportService, KnowledgeBuilderImportService>();
         services.AddScoped<ICollectorImportService, CollectorImportService>();
+        services.AddScoped<IYouTubeImportService, YouTubeImportService>();
         services.AddScoped<ISourceMetadataProvider, SourceMetadataProvider>();
         services.AddScoped<ITaggingService, TaggingService>();
         services.AddScoped<IContentChunkingService, ContentChunkingService>();
@@ -119,6 +120,9 @@ public static class DependencyInjection
 
         // Configure Zendesk settings
         services.Configure<ZendeskSettings>(configuration.GetSection("Zendesk"));
+
+        // Configure SocialKit settings
+        services.Configure<SocialKitSettings>(configuration.GetSection("SocialKit"));
 
         // Configure Hangfire
         services.AddHangfire(configuration => configuration

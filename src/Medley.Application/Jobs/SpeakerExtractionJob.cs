@@ -3,6 +3,7 @@ using Hangfire.Console;
 using Hangfire.MissionControl;
 using Hangfire.Server;
 using Medley.Application.Integrations.Models.Collector;
+using Medley.Application.Integrations.Models.YouTube;
 using Medley.Application.Interfaces;
 using Medley.Domain.Entities;
 using Medley.Domain.Enums;
@@ -84,9 +85,10 @@ public class SpeakerExtractionJob : BaseHangfireJob<SpeakerExtractionJob>
 
             // Get the batch of sources to process (both Fellow and Google Drive)
             var query = _sourceRepository.Query()
-                .Where(s => s.SpeakersExtracted == null && 
-                       (s.MetadataType == SourceMetadataType.Collector_Fellow || 
-                        s.MetadataType == SourceMetadataType.Collector_GoogleDrive));
+                .Where(s => s.SpeakersExtracted == null &&
+                       (s.MetadataType == SourceMetadataType.Collector_Fellow ||
+                        s.MetadataType == SourceMetadataType.Collector_GoogleDrive ||
+                        s.MetadataType == SourceMetadataType.Youtube_SocialKit));
 
             // Filter by source if specified
             if (sourceId.HasValue)
@@ -210,6 +212,7 @@ public class SpeakerExtractionJob : BaseHangfireJob<SpeakerExtractionJob>
             {
                 SourceMetadataType.Collector_Fellow => await ExtractSpeakersFromFellowSourceAsync(source, organization, cancellationToken),
                 SourceMetadataType.Collector_GoogleDrive => await ExtractSpeakersFromGoogleDriveSourceAsync(source, organization, cancellationToken),
+                SourceMetadataType.Youtube_SocialKit => await ExtractSpeakersFromYouTubeSourceAsync(source, cancellationToken),
                 _ => await HandleUnsupportedMetadataTypeAsync(source, cancellationToken)
             };
         }
@@ -402,6 +405,52 @@ public class SpeakerExtractionJob : BaseHangfireJob<SpeakerExtractionJob>
         source.SpeakersExtracted = DateTimeOffset.UtcNow;
 
         LogDebug($"Extracted {speakers.Count} speaker(s) for Google Drive source {source.Id} ({source.Name})");
+
+        return speakers.Count;
+    }
+
+    /// <summary>
+    /// Extracts speakers from a YouTube source using the channel name
+    /// </summary>
+    private async Task<int> ExtractSpeakersFromYouTubeSourceAsync(Source source, CancellationToken cancellationToken)
+    {
+        YouTubeVideoMetadata? metadata;
+        try
+        {
+            metadata = JsonSerializer.Deserialize<YouTubeVideoMetadata>(source.MetadataJson);
+        }
+        catch (JsonException)
+        {
+            LogDebug($"Failed to deserialize YouTube metadata for source {source.Id}. Marking as processed.");
+            source.SpeakersExtracted = DateTimeOffset.UtcNow;
+            return 0;
+        }
+
+        if (string.IsNullOrWhiteSpace(metadata?.ChannelName))
+        {
+            LogDebug($"No channel name found for YouTube source {source.Id}. Marking as processed.");
+            source.SpeakersExtracted = DateTimeOffset.UtcNow;
+            return 0;
+        }
+
+        var speakerInfoList = new List<SpeakerInfo>
+        {
+            new SpeakerInfo
+            {
+                Name = metadata.ChannelName.Trim(),
+                Email = null,
+                IsInternal = false
+            }
+        };
+
+        var speakers = await FindOrCreateSpeakersAsync(speakerInfoList, cancellationToken);
+        var primarySpeaker = speakers.FirstOrDefault();
+
+        await AssociateSpeakersWithSourceAsync(source, speakers, primarySpeaker?.Id, cancellationToken);
+
+        source.SpeakersExtracted = DateTimeOffset.UtcNow;
+
+        LogDebug($"Extracted {speakers.Count} speaker(s) for YouTube source {source.Id} ({source.Name})");
 
         return speakers.Count;
     }

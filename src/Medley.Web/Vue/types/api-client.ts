@@ -3693,6 +3693,7 @@ export interface FragmentDto {
 export enum SourceType {
     Unknown = "Unknown",
     Meeting = "Meeting",
+    YouTube = "YouTube",
 }
 
 export interface SpeakerSummaryDto {
@@ -3889,6 +3890,7 @@ export enum SourceMetadataType {
     Unknown = "Unknown",
     Collector_GoogleDrive = "Collector_GoogleDrive",
     Collector_Fellow = "Collector_Fellow",
+    Youtube_SocialKit = "Youtube_SocialKit",
 }
 
 export interface SpeechSegmentDto {

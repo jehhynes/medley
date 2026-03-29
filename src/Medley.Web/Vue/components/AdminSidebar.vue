@@ -109,6 +109,14 @@
             </a>
           </li>
           <li class="list-item">
+            <a href="/Admin/YouTubeImport" class="list-item-content" :class="{ active: currentPage === 'YouTubeImport' }">
+              <i class="list-item-icon bi bi-youtube text-danger"></i>
+              <div class="list-item-body">
+                <div class="list-item-title">YouTube Import</div>
+              </div>
+            </a>
+          </li>
+          <li class="list-item">
             <a href="/Admin/TokenUsage" class="list-item-content" :class="{ active: currentPage === 'TokenUsage' }">
               <i class="list-item-icon bi bi-graph-up"></i>
               <div class="list-item-body">
@@ -155,6 +163,7 @@ const currentPage = computed<string>(() => {
   if (path.includes('/Admin/Users')) return 'Users';
   if (path.includes('/Admin/KnowledgeBuilderImport')) return 'KnowledgeBuilderImport';
   if (path.includes('/Admin/SourceImport')) return 'SourceImport';
+  if (path.includes('/Admin/YouTubeImport')) return 'YouTubeImport';
   if (path.includes('/Admin/TokenUsage')) return 'TokenUsage';
   
   return '';

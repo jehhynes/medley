@@ -1,5 +1,6 @@
 using Medley.Application.Integrations.Models.Collector;
 using Medley.Application.Integrations.Models.Fellow;
+using Medley.Application.Integrations.Models.YouTube;
 using Medley.Application.Interfaces;
 using Medley.Application.Models;
 using Medley.Domain.Entities;
@@ -81,6 +82,18 @@ public class ContentChunkingService : IContentChunkingService
                 {
                     // Google Drive transcripts don't break at sentence endings, so we need to re-segment
                     return SplitGoogleSegmentsBySentence(googleVideo.Transcript);
+                }
+            }
+            else if (source.MetadataType == SourceMetadataType.Youtube_SocialKit)
+            {
+                var youtubeMetadata = JsonSerializer.Deserialize<YouTubeVideoMetadata>(source.MetadataJson);
+                if (youtubeMetadata?.TranscriptSegments != null && youtubeMetadata.TranscriptSegments.Count > 0)
+                {
+                    // YouTube segments have no speaker info; split by sentence like Google Drive
+                    var fullText = string.Join(" ", youtubeMetadata.TranscriptSegments.Select(s => s.Text ?? string.Empty));
+                    return SplitTextBySentences(fullText, 200)
+                        .Select((line, idx) => new SpeechSegment { Index = idx, Speaker = null, Text = line, CharacterCount = line.Length })
+                        .ToList();
                 }
             }
         }
