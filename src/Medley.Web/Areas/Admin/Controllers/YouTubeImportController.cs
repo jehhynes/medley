@@ -82,6 +82,45 @@ public class YouTubeImportController : Controller
         return View("Index", model);
     }
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Search(YouTubeImportViewModel model)
+    {
+        if (string.IsNullOrWhiteSpace(model.SearchQuery))
+        {
+            ModelState.AddModelError("", "Please enter a search term.");
+            return View("Index", model);
+        }
+
+        var maxResults = Math.Clamp(model.SearchMaxResults, 1, 100);
+
+        try
+        {
+            _logger.LogInformation("Starting YouTube search import: '{Query}', max {Max}", model.SearchQuery, maxResults);
+
+            var integration = await GetOrCreateManualIntegrationAsync();
+            var result = await _importService.SearchAndImportAsync(model.SearchQuery.Trim(), maxResults, integration);
+
+            model.SearchResult = result;
+
+            if (result.Success)
+            {
+                TempData["SearchSuccess"] = $"Successfully imported {result.SourcesImported} video(s)!";
+            }
+            else
+            {
+                TempData["SearchError"] = "Search import completed with errors. Please review the details below.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during YouTube search import");
+            ModelState.AddModelError("", $"An error occurred: {ex.Message}");
+        }
+
+        return View("Index", model);
+    }
+
     private async Task<Integration> GetOrCreateManualIntegrationAsync()
     {
         var existing = await _integrationService.Query()

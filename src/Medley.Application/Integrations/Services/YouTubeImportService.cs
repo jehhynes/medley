@@ -183,22 +183,54 @@ public partial class YouTubeImportService : IYouTubeImportService
         return envelope.Data;
     }
 
+    public async Task<SourceImportResult> SearchAndImportAsync(string query, int maxResults, Integration integration)
+    {
+        _logger.LogInformation("Searching YouTube for '{Query}' (max {Max} results)", query, maxResults);
+
+        var searchResults = await FetchSearchResultsAsync(query, maxResults);
+
+        if (searchResults.Count == 0)
+        {
+            return new SourceImportResult { Success = true, Duration = TimeSpan.Zero };
+        }
+
+        // Deduplicate within the search results by video ID before hitting the DB
+        var urls = searchResults
+            .Where(r => !string.IsNullOrWhiteSpace(r.Url))
+            .DistinctBy(r => r.VideoId)
+            .Select(r => r.Url!)
+            .ToList();
+
+        return await ImportAsync(urls, integration);
+    }
+
     private async Task<SocialKitSearchResult?> FetchSearchResultAsync(string videoId)
     {
-        var requestUrl = $"{BaseUrl}/youtube/search?query={Uri.EscapeDataString(videoId)}&limit=1&access_key={Uri.EscapeDataString(_settings.ApiKey)}";
+        var results = await FetchSearchResultsAsync(videoId, limit: 1);
+        if (results.Count == 0)
+        {
+            _logger.LogWarning("SocialKit search API returned no results for video ID: {VideoId}", videoId);
+            return null;
+        }
+        return results[0];
+    }
+
+    private async Task<List<SocialKitSearchResult>> FetchSearchResultsAsync(string query, int limit)
+    {
+        var requestUrl = $"{BaseUrl}/youtube/search?query={Uri.EscapeDataString(query)}&limit={limit}&access_key={Uri.EscapeDataString(_settings.ApiKey)}";
         var response = await _httpClient.GetAsync(requestUrl);
         response.EnsureSuccessStatusCode();
 
         var json = await response.Content.ReadAsStringAsync();
         var envelope = JsonSerializer.Deserialize<SocialKitEnvelope<SearchApiData>>(json, _jsonOptions);
 
-        if (envelope?.Success != true || envelope.Data?.Results is null || envelope.Data.Results.Count == 0)
+        if (envelope?.Success != true || envelope.Data?.Results is null)
         {
-            _logger.LogWarning("SocialKit search API returned no results for video ID: {VideoId}", videoId);
-            return null;
+            _logger.LogWarning("SocialKit search API returned unsuccessful response for query: {Query}", query);
+            return [];
         }
 
-        return envelope.Data.Results[0];
+        return envelope.Data.Results;
     }
 
     /// <summary>

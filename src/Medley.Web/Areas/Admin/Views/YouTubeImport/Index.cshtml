@@ -4,14 +4,75 @@
     ViewData["Title"] = "Import YouTube Videos";
 }
 
+@functions {
+    void RenderResults(Medley.Application.Models.SourceImportResult result)
+    {
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="text-center p-3 bg-body-secondary rounded">
+                    <h3 class="mb-1 text-primary">@result.TotalSourcesProcessed</h3>
+                    <small class="text-muted">Total Processed</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center p-3 bg-body-secondary rounded">
+                    <h3 class="mb-1 text-success">@result.SourcesImported</h3>
+                    <small class="text-muted">Imported</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center p-3 bg-body-secondary rounded">
+                    <h3 class="mb-1 text-warning">@result.SourcesSkipped</h3>
+                    <small class="text-muted">Skipped</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center p-3 bg-body-secondary rounded">
+                    <h3 class="mb-1 text-info">@result.Duration.TotalSeconds.ToString("F2")s</h3>
+                    <small class="text-muted">Duration</small>
+                </div>
+            </div>
+        </div>
+
+        @if (result.Errors.Any())
+        {
+            <div class="alert alert-danger">
+                <h5 class="alert-heading"><i class="bi bi-exclamation-circle me-2"></i>Errors (@result.Errors.Count)</h5>
+                <ul class="mb-0">
+                    @foreach (var error in result.Errors) { <li>@error</li> }
+                </ul>
+            </div>
+        }
+
+        @if (result.Warnings.Any())
+        {
+            <div class="alert alert-warning">
+                <h5 class="alert-heading"><i class="bi bi-exclamation-triangle me-2"></i>Warnings (@result.Warnings.Count)</h5>
+                <ul class="mb-0">
+                    @foreach (var warning in result.Warnings) { <li>@warning</li> }
+                </ul>
+            </div>
+        }
+
+        @if (result.Success && !result.Errors.Any())
+        {
+            <div class="alert alert-success mb-0">
+                <i class="bi bi-check-circle me-2"></i>All videos were imported successfully!
+            </div>
+        }
+    }
+}
+
 <div class="container-fluid py-4">
-    <div class="row">
-        <div class="col-12">
-            <div class="card" style="max-width:50rem;">
+    <div class="row g-4">
+
+        @* URL Import *@
+        <div class="col-12 col-xl-6">
+            <div class="card h-auto" style="max-width:50rem;">
                 <div class="card-header">
                     <h5 class="card-title mb-0">
-                        <i class="bi bi-youtube me-2 text-danger"></i>
-                        Import YouTube Videos
+                        <i class="bi bi-link-45deg me-2"></i>
+                        Import by URL
                     </h5>
                 </div>
                 <div class="card-body">
@@ -22,7 +83,6 @@
                             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                         </div>
                     }
-
                     @if (TempData["Error"] != null)
                     {
                         <div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -31,28 +91,24 @@
                         </div>
                     }
 
-                    <div class="mb-4">
-                        <p class="text-muted">
-                            Paste one or more YouTube URLs below (one per line). Each video's transcript and metadata
-                            will be fetched via SocialKit and saved as a source.
-                        </p>
-                    </div>
+                    <p class="text-muted">
+                        Paste one or more YouTube URLs (one per line). Each video's transcript and metadata
+                        will be fetched via SocialKit and saved as a source.
+                    </p>
 
                     <form asp-action="Import" method="post" id="importForm">
                         @Html.AntiForgeryToken()
-
                         <div asp-validation-summary="All" class="text-danger mb-3"></div>
 
                         <div class="mb-4">
                             <label asp-for="UrlsText" class="form-label fw-bold">YouTube URLs</label>
-                            <textarea asp-for="UrlsText" class="form-control font-monospace" rows="10"
+                            <textarea asp-for="UrlsText" class="form-control font-monospace" rows="8"
                                       placeholder="https://www.youtube.com/watch?v=...&#10;https://youtu.be/...&#10;https://www.youtube.com/shorts/..."></textarea>
                         </div>
 
                         <div class="d-grid">
                             <button type="submit" class="btn btn-danger btn-lg" id="importBtn">
-                                <i class="bi bi-cloud-download me-2"></i>
-                                Import Videos
+                                <i class="bi bi-cloud-download me-2"></i>Import Videos
                             </button>
                         </div>
                     </form>
@@ -61,84 +117,83 @@
 
             @if (Model.ImportResult != null)
             {
-                <div class="card mt-4" style="max-width:50rem;">
+                <div class="card mt-3" style="max-width:50rem;">
                     <div class="card-header">
-                        <h4 class="card-title mb-0">
-                            <i class="bi bi-bar-chart me-2"></i>
-                            Import Results
-                        </h4>
+                        <h5 class="card-title mb-0"><i class="bi bi-bar-chart me-2"></i>Import Results</h5>
                     </div>
                     <div class="card-body">
-                        <div class="row mb-4">
-                            <div class="col-md-3">
-                                <div class="text-center p-3 bg-body-secondary rounded">
-                                    <h3 class="mb-1 text-primary">@Model.ImportResult.TotalSourcesProcessed</h3>
-                                    <small class="text-muted">Total Processed</small>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="text-center p-3 bg-body-secondary rounded">
-                                    <h3 class="mb-1 text-success">@Model.ImportResult.SourcesImported</h3>
-                                    <small class="text-muted">Imported</small>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="text-center p-3 bg-body-secondary rounded">
-                                    <h3 class="mb-1 text-warning">@Model.ImportResult.SourcesSkipped</h3>
-                                    <small class="text-muted">Skipped</small>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="text-center p-3 bg-body-secondary rounded">
-                                    <h3 class="mb-1 text-info">@Model.ImportResult.Duration.TotalSeconds.ToString("F2")s</h3>
-                                    <small class="text-muted">Duration</small>
-                                </div>
-                            </div>
-                        </div>
-
-                        @if (Model.ImportResult.Errors.Any())
-                        {
-                            <div class="alert alert-danger">
-                                <h5 class="alert-heading">
-                                    <i class="bi bi-exclamation-circle me-2"></i>
-                                    Errors (@Model.ImportResult.Errors.Count)
-                                </h5>
-                                <ul class="mb-0">
-                                    @foreach (var error in Model.ImportResult.Errors)
-                                    {
-                                        <li>@error</li>
-                                    }
-                                </ul>
-                            </div>
-                        }
-
-                        @if (Model.ImportResult.Warnings.Any())
-                        {
-                            <div class="alert alert-warning">
-                                <h5 class="alert-heading">
-                                    <i class="bi bi-exclamation-triangle me-2"></i>
-                                    Warnings (@Model.ImportResult.Warnings.Count)
-                                </h5>
-                                <ul class="mb-0">
-                                    @foreach (var warning in Model.ImportResult.Warnings)
-                                    {
-                                        <li>@warning</li>
-                                    }
-                                </ul>
-                            </div>
-                        }
-
-                        @if (Model.ImportResult.Success && !Model.ImportResult.Errors.Any())
-                        {
-                            <div class="alert alert-success mb-0">
-                                <i class="bi bi-check-circle me-2"></i>
-                                All videos were imported successfully!
-                            </div>
-                        }
+                        @{ RenderResults(Model.ImportResult); }
                     </div>
                 </div>
             }
         </div>
+
+        @* Search Import *@
+        <div class="col-12 col-xl-6">
+            <div class="card h-auto" style="max-width:50rem;">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-search me-2"></i>
+                        Import by Search
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (TempData["SearchSuccess"] != null)
+                    {
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <i class="bi bi-check-circle me-2"></i>@TempData["SearchSuccess"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    }
+                    @if (TempData["SearchError"] != null)
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="bi bi-exclamation-triangle me-2"></i>@TempData["SearchError"]
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    }
+
+                    <p class="text-muted">
+                        Search YouTube via SocialKit and import all matching results. Videos already in the
+                        library (matched by video ID) are skipped automatically.
+                    </p>
+
+                    <form asp-action="Search" method="post" id="searchForm">
+                        @Html.AntiForgeryToken()
+                        <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+                        <div class="mb-3">
+                            <label asp-for="SearchQuery" class="form-label fw-bold">Search Term</label>
+                            <input asp-for="SearchQuery" class="form-control" placeholder="e.g. kubernetes tutorial" />
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="SearchMaxResults" class="form-label fw-bold">Max Results <span class="text-muted fw-normal">(1–100)</span></label>
+                            <input asp-for="SearchMaxResults" type="number" class="form-control" min="1" max="100" />
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-danger btn-lg" id="searchBtn">
+                                <i class="bi bi-search me-2"></i>Search &amp; Import
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            @if (Model.SearchResult != null)
+            {
+                <div class="card mt-3" style="max-width:50rem;">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0"><i class="bi bi-bar-chart me-2"></i>Search Import Results</h5>
+                    </div>
+                    <div class="card-body">
+                        @{ RenderResults(Model.SearchResult); }
+                    </div>
+                </div>
+            }
+        </div>
+
     </div>
 </div>
 
@@ -149,6 +204,11 @@
             const btn = document.getElementById('importBtn');
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Importing...';
+        });
+        document.getElementById('searchForm').addEventListener('submit', function () {
+            const btn = document.getElementById('searchBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Searching...';
         });
     </script>
 }
