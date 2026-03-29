@@ -28,6 +28,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Npgsql;
 using OllamaSharp;
+using Anthropic;
 using OpenAI;
 
 namespace Medley.Infrastructure;
@@ -178,6 +179,7 @@ public static class DependencyInjection
         services.Configure<AwsSettings>(configuration.GetSection("AWS"));
         services.Configure<S3Settings>(configuration.GetSection("AWS:S3"));
         services.Configure<BedrockSettings>(configuration.GetSection("AWS:Bedrock"));
+        services.Configure<AnthropicSettings>(configuration.GetSection("Anthropic"));
 
         // Get AWS settings for service registration
         var awsSettings = configuration.GetSection("AWS").Get<AwsSettings>() ?? new AwsSettings();
@@ -240,23 +242,56 @@ public static class DependencyInjection
                 throw new InvalidOperationException($"Unsupported file storage provider: {fileStorageSettings.Provider}");
         }
 
-        // Register AI processing service only when AWS clients are available
-        if (hasCredentials && !environment.IsTesting())
+        // Register AI processing service based on configured provider
+        var aiProvider = configuration["AI:Provider"] ?? "Bedrock";
+
+        if (aiProvider.Equals("Anthropic", StringComparison.OrdinalIgnoreCase) && !environment.IsTesting())
+        {
+            var anthropicSettings = configuration.GetSection("Anthropic").Get<AnthropicSettings>() ?? new AnthropicSettings();
+
+            if (string.IsNullOrEmpty(anthropicSettings.ApiKey))
+                throw new InvalidOperationException("Anthropic:ApiKey must be configured when AI:Provider is 'Anthropic'.");
+
+            services.AddScoped<IChatClient>(sp =>
+            {
+                var settings = sp.GetRequiredService<IOptions<AnthropicSettings>>().Value;
+
+                var anthropicClient = new AnthropicClient { ApiKey = settings.ApiKey };
+                var baseChatClient = anthropicClient.AsIChatClient(settings.ModelId);
+
+                var aiCallContext = sp.GetRequiredService<AiCallContext>();
+                var serviceScopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
+                var middlewareLogger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Application.Middleware.TokenTrackingChatClientMiddleware>>();
+
+                return new Application.Middleware.TokenTrackingChatClientMiddleware(
+                    baseChatClient,
+                    aiCallContext,
+                    serviceScopeFactory,
+                    middlewareLogger,
+                    settings.ModelId);
+            });
+
+            services.AddScoped<IAiProcessingService, AnthropicAiService>();
+
+            // Configure chat service
+            ConfigureChatService(services, configuration);
+        }
+        else if (hasCredentials && !environment.IsTesting())
         {
             // Register IChatClient with token tracking middleware (shared by all services)
             services.AddScoped<IChatClient>(sp =>
             {
                 var bedrockClient = sp.GetRequiredService<AmazonBedrockRuntimeClient>();
                 var bedrockSettings = sp.GetRequiredService<IOptions<BedrockSettings>>();
-                
+
                 // Create base ChatClient from Bedrock client
                 var baseChatClient = bedrockClient.AsIChatClient(bedrockSettings.Value.ModelId);
-                
+
                 // Wrap with token tracking middleware
                 var aiCallContext = sp.GetRequiredService<AiCallContext>();
                 var serviceScopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
                 var middlewareLogger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Application.Middleware.TokenTrackingChatClientMiddleware>>();
-                
+
                 return new Application.Middleware.TokenTrackingChatClientMiddleware(
                     baseChatClient,
                     aiCallContext,
@@ -264,16 +299,6 @@ public static class DependencyInjection
                     middlewareLogger,
                     bedrockSettings.Value.ModelId);
             });
-            
-            // Register BedrockAiService (uses registered IChatClient)
-            //services.AddScoped<IAiProcessingService>(sp =>
-            //{
-            //    var chatClient = sp.GetRequiredService<IChatClient>();
-            //    var bedrockSettings = sp.GetRequiredService<IOptions<BedrockSettings>>();
-            //    var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<BedrockAiService>>();
-                
-            //    return new BedrockAiService(chatClient, bedrockSettings, logger);
-            //});
 
             services.AddScoped<IAiProcessingService, BedrockAiService>();
 
