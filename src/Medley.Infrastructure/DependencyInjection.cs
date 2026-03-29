@@ -184,6 +184,7 @@ public static class DependencyInjection
         services.Configure<S3Settings>(configuration.GetSection("AWS:S3"));
         services.Configure<BedrockSettings>(configuration.GetSection("AWS:Bedrock"));
         services.Configure<AnthropicSettings>(configuration.GetSection("Anthropic"));
+        services.Configure<OpenAiSettings>(configuration.GetSection("OpenAI"));
 
         // Get AWS settings for service registration
         var awsSettings = configuration.GetSection("AWS").Get<AwsSettings>() ?? new AwsSettings();
@@ -249,7 +250,38 @@ public static class DependencyInjection
         // Register AI processing service based on configured provider
         var aiProvider = configuration["AI:Provider"] ?? "Bedrock";
 
-        if (aiProvider.Equals("Anthropic", StringComparison.OrdinalIgnoreCase) && !environment.IsTesting())
+        if (aiProvider.Equals("OpenAI", StringComparison.OrdinalIgnoreCase) && !environment.IsTesting())
+        {
+            var openAiSettings = configuration.GetSection("OpenAI").Get<OpenAiSettings>() ?? new OpenAiSettings();
+
+            if (string.IsNullOrEmpty(openAiSettings.ApiKey))
+                throw new InvalidOperationException("OpenAI:ApiKey must be configured when AI:Provider is 'OpenAI'.");
+
+            services.AddScoped<IChatClient>(sp =>
+            {
+                var settings = sp.GetRequiredService<IOptions<OpenAiSettings>>().Value;
+
+                var openAiClient = new OpenAIClient(settings.ApiKey);
+                var baseChatClient = openAiClient.GetChatClient(settings.ModelId).AsIChatClient();
+
+                var aiCallContext = sp.GetRequiredService<AiCallContext>();
+                var serviceScopeFactory = sp.GetRequiredService<IServiceScopeFactory>();
+                var middlewareLogger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<Application.Middleware.TokenTrackingChatClientMiddleware>>();
+
+                return new Application.Middleware.TokenTrackingChatClientMiddleware(
+                    baseChatClient,
+                    aiCallContext,
+                    serviceScopeFactory,
+                    middlewareLogger,
+                    settings.ModelId);
+            });
+
+            services.AddScoped<IAiProcessingService, OpenAiService>();
+
+            // Configure chat service
+            ConfigureChatService(services, configuration);
+        }
+        else if (aiProvider.Equals("Anthropic", StringComparison.OrdinalIgnoreCase) && !environment.IsTesting())
         {
             var anthropicSettings = configuration.GetSection("Anthropic").Get<AnthropicSettings>() ?? new AnthropicSettings();
 
