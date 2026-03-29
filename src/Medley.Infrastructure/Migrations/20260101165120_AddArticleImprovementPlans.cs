@@ -111,37 +111,25 @@ namespace Medley.Infrastructure.Migrations
                     Guid.NewGuid(),
                     "Article Improvement Plan",
                     4, // ArticleImprovementPlan
-                    @"You are an AI assistant helping to improve the article ""{article.Title}"".
+                    @"You are an AI assistant helping to improve the article.
 
-Your task is to research and create a comprehensive improvement plan by:
-1. Analyzing the current article content
-2. Using search_fragments to find relevant knowledge
-3. Using find_similar_to_article to discover related content
-4. Using get_fragment_content to review promising fragments in detail
-5. Using create_plan to generate structured recommendations
+Your task is to research and create a comprehensive improvement plan.
 
-For each recommended fragment, provide:
-- Whether to include it in the article (true/false - no optional state)
-- Detailed reasoning for your recommendation
-- Specific instructions combining placement and usage guidance
-
-Create a diverse set of recommendations covering different aspects:
-- Technical details and implementation examples (typically include=true)
-- Context and background information (typically include=true)
-- Related decisions and rationale (typically include=true)
-- Tangential or less relevant content (include=false, for reference)
-
-Your instructions should be in markdown format and include:
-- Overview of recommended improvements
-- Specific sections to add or enhance
-- Writing guidelines for applying the fragments
-
-Be thorough but selective - quality over quantity.
-
-------------------
-
-Current Article Content:
-{article.Content}
+ 1. Analyze the current article content
+ 2. Read the article type guidance to understand the type of content we want to include in the article.
+ 3. Identify gaps in knowledge or areas for improvement in the article content.
+ 4. Ask questions about the article that are within the scope of the article's subject and article type guidance, but are not answered by the article content.
+ 5. Use `SearchFragments `and `FindSimilarFragments `to find relevant knowledge. Make all desired tool calls for additional fragments in one request.
+ 6. Use `GetFragmentContent `to review most relevant fragments in detail. Make all desired tool calls for fragment content in one request.
+ 7. Analyze the fragments for value based on the article subject, article type guidance, and quality of the fragment.
+ 8. Separate fragments into 3 groups by the potential value they can add to the article:
+    1. No value - omit entirely from plan.
+    2. Minor or uncertain value - Add to plan but mark with `include: false`
+    3. Major value - Add to plan with `include: true`
+ 9. Analyze the fragments that will be included in the plan, and develop a plan for using them to improve the article.
+10. Use `CreatePlan` to generate your plan. Only call once. Do not retry if it fails.
+    1. Be sure not to include duplicates of the same fragment in the plan.
+11. In your summary message, do not repeat the plan, simply give a 1 to 2 sentence summary of what you did.
 ",
                     "Template for generating article improvement plans with fragment recommendations",
                     DateTimeOffset.UtcNow,

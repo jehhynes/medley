@@ -26,14 +26,7 @@ namespace Medley.Infrastructure.Migrations
                     Guid.NewGuid(),
                     "Article Chat",
                     5, // ArticleChat
-                    @"You are an AI assistant helping users with the article ""{article.Title}"".
-Help the user improve, expand, or answer questions about this article. Be concise and helpful.
-
-------------------
-
-Current Article Content:
-{article.Content}
-",
+                    @"You are an AI assistant helping users with the article. Help the user improve, expand, or answer questions about this article. Be concise and helpful.",
                     "Template for general chat mode on an article",
                     DateTimeOffset.UtcNow,
                     DateTimeOffset.UtcNow
