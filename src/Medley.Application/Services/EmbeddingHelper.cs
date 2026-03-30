@@ -27,8 +27,13 @@ public class EmbeddingHelper : IEmbeddingHelper
     /// </summary>
     public bool ShouldNormalizeEmbeddings()
     {
-        return _embeddingSettings.Provider.Equals("Ollama", StringComparison.OrdinalIgnoreCase)
-               && _embeddingSettings.Ollama.Model.Contains("qwen3", StringComparison.OrdinalIgnoreCase);
+        if (_embeddingSettings.Provider.Equals("Ollama", StringComparison.OrdinalIgnoreCase))
+            return _embeddingSettings.Ollama.Model.Contains("qwen3", StringComparison.OrdinalIgnoreCase);
+
+        if (_embeddingSettings.Provider.Equals("OpenRouter", StringComparison.OrdinalIgnoreCase))
+            return _embeddingSettings.OpenRouter.Model.Contains("qwen3", StringComparison.OrdinalIgnoreCase);
+
+        return false;
     }
 
     /// <summary>

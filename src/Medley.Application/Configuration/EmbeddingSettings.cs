@@ -24,6 +24,11 @@ public class EmbeddingSettings
     /// Settings for OpenAI provider
     /// </summary>
     public OpenAIEmbeddingSettings OpenAI { get; set; } = new();
+
+    /// <summary>
+    /// Settings for OpenRouter provider
+    /// </summary>
+    public OpenRouterEmbeddingSettings OpenRouter { get; set; } = new();
 }
 
 /// <summary>
@@ -40,6 +45,22 @@ public class OllamaEmbeddingSettings
     /// Model name for embeddings (e.g., "qwen3-embedding:4b")
     /// </summary>
     public string Model { get; set; } = "qwen3-embedding:4b";
+}
+
+/// <summary>
+/// Configuration settings for OpenRouter embeddings
+/// </summary>
+public class OpenRouterEmbeddingSettings
+{
+    /// <summary>
+    /// OpenRouter API key
+    /// </summary>
+    public string ApiKey { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Model name for embeddings (e.g., "qwen/qwen3-embedding-4b")
+    /// </summary>
+    public string Model { get; set; } = "qwen/qwen3-embedding-4b";
 }
 
 /// <summary>

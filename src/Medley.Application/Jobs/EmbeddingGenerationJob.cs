@@ -351,11 +351,20 @@ public class EmbeddingGenerationJob : BaseHangfireJob<EmbeddingGenerationJob>
     /// <param name="fragmentId">Optional fragment ID to process a specific fragment</param>
     public async Task GenerateFragmentClusteringEmbeddings(PerformContext context, CancellationToken cancellationToken, Guid? sourceId = null, Guid? fragmentId = null)
     {
-        // Validate that we're using qwen3-embedding model
-        if (!(_embeddingSettings.Provider.Equals("Ollama", StringComparison.OrdinalIgnoreCase) &&
-              _embeddingSettings.Ollama.Model.Contains("qwen3-embedding", StringComparison.OrdinalIgnoreCase)))
+        // Validate that we're using qwen3-embedding model (Ollama or OpenRouter)
+        var isOllamaQwen3 = _embeddingSettings.Provider.Equals("Ollama", StringComparison.OrdinalIgnoreCase)
+                            && _embeddingSettings.Ollama.Model.Contains("qwen3-embedding", StringComparison.OrdinalIgnoreCase);
+        var isOpenRouterQwen3 = _embeddingSettings.Provider.Equals("OpenRouter", StringComparison.OrdinalIgnoreCase)
+                                && _embeddingSettings.OpenRouter.Model.Contains("qwen3-embedding", StringComparison.OrdinalIgnoreCase);
+
+        if (!isOllamaQwen3 && !isOpenRouterQwen3)
         {
-            var errorMessage = $"Fragment clustering embeddings require qwen3-embedding model. Current configuration: Provider={_embeddingSettings.Provider}, Model={_embeddingSettings.Ollama.Model}";
+            var currentModel = _embeddingSettings.Provider.Equals("Ollama", StringComparison.OrdinalIgnoreCase)
+                ? _embeddingSettings.Ollama.Model
+                : _embeddingSettings.Provider.Equals("OpenRouter", StringComparison.OrdinalIgnoreCase)
+                    ? _embeddingSettings.OpenRouter.Model
+                    : "unknown";
+            var errorMessage = $"Fragment clustering embeddings require qwen3-embedding model. Current configuration: Provider={_embeddingSettings.Provider}, Model={currentModel}";
             LogError(context, new InvalidOperationException(errorMessage), errorMessage);
             throw new InvalidOperationException(errorMessage);
         }

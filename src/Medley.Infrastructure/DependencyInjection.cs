@@ -386,14 +386,16 @@ public static class DependencyInjection
             var innerGenerator = provider switch
             {
                 "openai" => ConfigureOpenAIEmbedding(embeddingSettings),
+                "openrouter" => ConfigureOpenRouterEmbedding(embeddingSettings),
                 "ollama" => ConfigureOllamaEmbedding(embeddingSettings),
                 _ => throw new InvalidOperationException($"Unsupported embedding provider: {embeddingSettings.Provider}")
             };
-            
+
             // Determine model name for tracking
             var modelName = provider switch
             {
                 "openai" => embeddingSettings.OpenAI.Model,
+                "openrouter" => embeddingSettings.OpenRouter.Model,
                 "ollama" => embeddingSettings.Ollama.Model,
                 _ => "unknown"
             };
@@ -430,6 +432,20 @@ public static class DependencyInjection
         var openAIClient = new OpenAIClient(settings.OpenAI.ApiKey);
 
         return openAIClient.GetEmbeddingClient(settings.OpenAI.Model)
+            .AsIEmbeddingGenerator();
+    }
+
+    private static IEmbeddingGenerator<string, Embedding<float>> ConfigureOpenRouterEmbedding(EmbeddingSettings settings)
+    {
+        if (string.IsNullOrEmpty(settings.OpenRouter.ApiKey))
+        {
+            throw new InvalidOperationException("OpenRouter API key is required when using OpenRouter embedding provider. Please configure Embedding:OpenRouter:ApiKey in your appsettings.");
+        }
+
+        var options = new OpenAIClientOptions { Endpoint = new Uri("https://openrouter.ai/api/v1") };
+        var openRouterClient = new OpenAIClient(new System.ClientModel.ApiKeyCredential(settings.OpenRouter.ApiKey), options);
+
+        return openRouterClient.GetEmbeddingClient(settings.OpenRouter.Model)
             .AsIEmbeddingGenerator();
     }
 }
