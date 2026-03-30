@@ -391,7 +391,7 @@ public class ArticleChatService : IArticleChatService
                 Conversation = conversation,
                 Role = role,
                 Text = aiMessage.Text ?? string.Empty,
-                CreatedAt = aiMessage.CreatedAt ?? DateTimeOffset.UtcNow,
+                CreatedAt = createdAt,
                 UserId = null, // Assistant message has no user id
                 SerializedMessage = JsonSerializer.Serialize(aiMessage)
             };
