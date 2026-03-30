@@ -8,6 +8,7 @@ namespace Medley.Domain.Entities;
 /// Represents a message in a chat conversation
 /// </summary>
 [Index(nameof(ConversationId), nameof(CreatedAt), Name = "IX_ChatMessages_ConversationId_CreatedAt")]
+[Index(nameof(ProviderMessageId), Name = "IX_ChatMessages_ProviderMessageId")]
 public class ChatMessage : BaseEntity
 {
     /// <summary>
@@ -48,6 +49,12 @@ public class ChatMessage : BaseEntity
     /// When this message was created
     /// </summary>
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+
+    /// <summary>
+    /// The message ID assigned by the AI provider (e.g. "msg_abc123" from OpenAI).
+    /// Used for deduplication; distinct from the internal DB identity.
+    /// </summary>
+    public string? ProviderMessageId { get; set; }
 
     /// <summary>
     /// Full serialized Microsoft.Extensions.AI ChatMessage as JSON for Agent Framework

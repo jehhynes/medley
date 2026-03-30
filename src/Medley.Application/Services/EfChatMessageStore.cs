@@ -74,20 +74,12 @@ public sealed class EfChatMessageStore : ChatMessageStore
 
         foreach (var aiMessage in messages)
         {
-            Guid messageId;
-            // Use the message ID from the AI message if available, or generate one for tool messages
-            if (!string.IsNullOrEmpty(aiMessage.MessageId) && Guid.TryParse(aiMessage.MessageId, out var parsedMessageId))
-            {
-                messageId = parsedMessageId;
-            }
-            else
-            {
-                messageId = Guid.NewGuid();
-            }
+            var providerMessageId = aiMessage.MessageId; // Provider-assigned string ID (may not be a Guid)
 
-            if (_messageRepository.Query().Where(x => x.Id == messageId).Any())
+            if (!string.IsNullOrEmpty(providerMessageId) &&
+                await _messageRepository.Query().AnyAsync(m => m.ProviderMessageId == providerMessageId, cancellationToken))
             {
-                // Message with this ID already exists, skip to avoid duplicates. This is expected when streaming.
+                // Message with this provider ID already exists, skip to avoid duplicates. This is expected when streaming.
                 continue;
             }
 
@@ -102,7 +94,7 @@ public sealed class EfChatMessageStore : ChatMessageStore
                     // This tool result already exists, skip to avoid duplicates
                     continue;
                 }
-                
+
                 // Add the new CallIds to the set for subsequent messages in this batch
                 foreach (var callId in callIds)
                 {
@@ -125,7 +117,8 @@ public sealed class EfChatMessageStore : ChatMessageStore
 
             var chatMessage = new DomainChatMessage
             {
-                Id = aiMessage.Role == ChatRole.Tool ? Guid.NewGuid() : messageId, // Tool call messages don't have unique IDs, so generate one
+                Id = Guid.NewGuid(),
+                ProviderMessageId = providerMessageId,
                 Conversation = conversation,
                 Role = messageRole,
                 Text = aiMessage.Text ?? string.Empty,

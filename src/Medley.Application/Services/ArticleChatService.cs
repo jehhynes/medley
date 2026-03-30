@@ -386,7 +386,8 @@ public class ArticleChatService : IArticleChatService
 
             var message = new DomainChatMessage()
             {
-                Id = role == ChatMessageRole.Tool || aiMessage.MessageId == null ? Guid.NewGuid() : Guid.Parse(aiMessage.MessageId), //Tool messages don't have unique IDs from the chat client
+                Id = Guid.NewGuid(),
+                ProviderMessageId = aiMessage.MessageId,
                 Conversation = conversation,
                 Role = role,
                 Text = aiMessage.Text ?? string.Empty,
